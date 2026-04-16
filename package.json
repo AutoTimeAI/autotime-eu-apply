@@ -1,7 +1,7 @@
 {
   "name": "autotime-eu-apply",
   "private": true,
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "dev:extension": "pnpm --filter extension dev",
@@ -9,5 +9,11 @@
     "build:extension": "pnpm --filter extension build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "eslint": "9.38.0",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "typescript": "^6.0.2"
   }
 }
