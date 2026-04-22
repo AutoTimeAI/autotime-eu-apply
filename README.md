@@ -28,6 +28,9 @@ The extension currently supports:
 - Viewing saved applications in the popup.
 - Deleting saved application records.
 - Basic autofill for obvious first name, last name, email, and phone fields.
+- Basic textarea autofill for obvious sponsorship, relocation, work authorisation,
+  and notice period questions.
+- Application notes and editable application status tracking.
 
 The extension does not submit forms and does not use Firebase or a backend yet.
 
@@ -81,6 +84,7 @@ Current unit tests cover:
 
 - Name splitting for autofill.
 - Autofill field detection.
+- Reusable answer field detection.
 - Safe fill eligibility checks.
 - Profile storage.
 - Reusable answer storage.

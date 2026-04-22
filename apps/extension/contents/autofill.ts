@@ -1,8 +1,11 @@
-import { getProfile, type CandidateProfile } from "../lib/storage"
+import { getProfile, getReusableAnswers } from "../lib/storage"
 import {
   canFillInput,
   detectFieldFromText,
+  detectReusableAnswerFromText,
   getFieldValues,
+  getReusableAnswerValues,
+  type ReusableAnswerField,
   type ProfileField
 } from "../lib/autofill"
 
@@ -15,18 +18,22 @@ type AutofillResponse = {
   message?: string
 }
 
-function getInputText(input: HTMLInputElement) {
-  const labelText = Array.from(input.labels ?? [])
+type TextControl = HTMLInputElement | HTMLTextAreaElement
+
+function getControlText(control: TextControl) {
+  const labelText = Array.from(control.labels ?? [])
     .map((label) => label.textContent ?? "")
     .join(" ")
 
+  const parentText = control.parentElement?.textContent ?? ""
+
   return [
-    input.autocomplete,
-    input.name,
-    input.id,
-    input.placeholder,
-    input.getAttribute("aria-label"),
-    labelText
+    control.name,
+    control.id,
+    control.placeholder,
+    control.getAttribute("aria-label"),
+    labelText,
+    parentText
   ]
     .filter(Boolean)
     .join(" ")
@@ -34,7 +41,13 @@ function getInputText(input: HTMLInputElement) {
 }
 
 function detectField(input: HTMLInputElement): ProfileField | null {
-  return detectFieldFromText(input.type, getInputText(input))
+  return detectFieldFromText(input.type, getControlText(input))
+}
+
+function detectReusableField(
+  textarea: HTMLTextAreaElement
+): ReusableAnswerField | null {
+  return detectReusableAnswerFromText(getControlText(textarea))
 }
 
 function canFill(input: HTMLInputElement) {
@@ -47,48 +60,79 @@ function canFill(input: HTMLInputElement) {
   })
 }
 
-function setInputValue(input: HTMLInputElement, value: string) {
-  const valueSetter = Object.getOwnPropertyDescriptor(input, "value")?.set
-  const prototype = Object.getPrototypeOf(input) as HTMLInputElement
+function canFillTextarea(textarea: HTMLTextAreaElement) {
+  return (
+    !textarea.disabled &&
+    !textarea.readOnly &&
+    textarea.getClientRects().length > 0 &&
+    textarea.value.trim() === ""
+  )
+}
+
+function setControlValue(control: TextControl, value: string) {
+  const valueSetter = Object.getOwnPropertyDescriptor(control, "value")?.set
+  const prototype = Object.getPrototypeOf(control) as TextControl
   const prototypeValueSetter = Object.getOwnPropertyDescriptor(
     prototype,
     "value"
   )?.set
 
   if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
-    prototypeValueSetter.call(input, value)
+    prototypeValueSetter.call(control, value)
   } else {
-    input.value = value
+    control.value = value
   }
 
-  input.dispatchEvent(new Event("input", { bubbles: true }))
-  input.dispatchEvent(new Event("change", { bubbles: true }))
+  control.dispatchEvent(new Event("input", { bubbles: true }))
+  control.dispatchEvent(new Event("change", { bubbles: true }))
 }
 
 async function autofillProfile(): Promise<AutofillResponse> {
   const profile = await getProfile()
+  const answers = await getReusableAnswers()
 
-  if (!profile) {
-    return { filledFields: [], message: "No saved profile found" }
+  if (!profile && !answers) {
+    return {
+      filledFields: [],
+      message: "No saved profile or reusable answers found"
+    }
   }
 
-  const values = getFieldValues(profile)
+  const profileValues = profile ? getFieldValues(profile) : null
+  const answerValues = answers ? getReusableAnswerValues(answers) : null
   const filledFields: string[] = []
 
   document.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
-    if (!canFill(input)) {
+    if (!profileValues || !canFill(input)) {
       return
     }
 
     const field = detectField(input)
-    if (!field || !values[field]) {
+    if (!field || !profileValues[field]) {
       return
     }
 
-    setInputValue(input, values[field])
+    setControlValue(input, profileValues[field])
     filledFields.push(field)
     console.log(`[AutoTime EU Apply] Filled ${field}`, input)
   })
+
+  document
+    .querySelectorAll<HTMLTextAreaElement>("textarea")
+    .forEach((textarea) => {
+      if (!answerValues || !canFillTextarea(textarea)) {
+        return
+      }
+
+      const field = detectReusableField(textarea)
+      if (!field || !answerValues[field]) {
+        return
+      }
+
+      setControlValue(textarea, answerValues[field])
+      filledFields.push(field)
+      console.log(`[AutoTime EU Apply] Filled ${field}`, textarea)
+    })
 
   console.log("[AutoTime EU Apply] Autofill complete", filledFields)
 

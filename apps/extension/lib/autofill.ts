@@ -1,6 +1,11 @@
-import type { CandidateProfile } from "./storage"
+import type { CandidateProfile, ReusableAnswers } from "./storage"
 
 export type ProfileField = "firstName" | "lastName" | "email" | "phone"
+export type ReusableAnswerField =
+  | "sponsorshipAnswer"
+  | "relocationAnswer"
+  | "workAuthorisationAnswer"
+  | "noticePeriodAnswer"
 
 type FillableInputState = {
   disabled: boolean
@@ -41,6 +46,17 @@ export function getFieldValues(
   }
 }
 
+export function getReusableAnswerValues(
+  answers: ReusableAnswers
+): Record<ReusableAnswerField, string> {
+  return {
+    sponsorshipAnswer: answers.sponsorshipAnswer,
+    relocationAnswer: answers.relocationAnswer,
+    workAuthorisationAnswer: answers.workAuthorisationAnswer,
+    noticePeriodAnswer: answers.noticePeriodAnswer
+  }
+}
+
 export function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term))
 }
@@ -78,6 +94,54 @@ export function detectFieldFromText(
     text.includes("surname")
   ) {
     return "lastName"
+  }
+
+  return null
+}
+
+export function detectReusableAnswerFromText(
+  fieldText: string
+): ReusableAnswerField | null {
+  const text = fieldText.toLowerCase()
+
+  if (
+    includesAny(text, [
+      "sponsor",
+      "sponsorship",
+      "visa support",
+      "require a visa",
+      "need a visa"
+    ])
+  ) {
+    return "sponsorshipAnswer"
+  }
+
+  if (includesAny(text, ["relocat", "move to", "willing to move"])) {
+    return "relocationAnswer"
+  }
+
+  if (
+    includesAny(text, [
+      "authorised to work",
+      "authorized to work",
+      "work authorisation",
+      "work authorization",
+      "right to work",
+      "eligible to work"
+    ])
+  ) {
+    return "workAuthorisationAnswer"
+  }
+
+  if (
+    includesAny(text, [
+      "notice period",
+      "start date",
+      "available to start",
+      "availability"
+    ])
+  ) {
+    return "noticePeriodAnswer"
   }
 
   return null

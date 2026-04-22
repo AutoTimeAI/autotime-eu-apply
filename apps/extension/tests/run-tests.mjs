@@ -2,8 +2,10 @@ import assert from "node:assert/strict"
 import {
   canFillInput,
   detectFieldFromText,
+  detectReusableAnswerFromText,
   getFieldValues,
-  getNameParts
+  getNameParts,
+  getReusableAnswerValues
 } from "../lib/autofill.ts"
 import {
   deleteApplication,
@@ -79,9 +81,46 @@ test("detects obvious application form fields", () => {
   assert.equal(detectFieldFromText("text", "mobile number"), "phone")
 })
 
+test("maps reusable answers to autofill fields", () => {
+  assert.deepEqual(
+    getReusableAnswerValues({
+      sponsorshipAnswer: "I do not require sponsorship.",
+      relocationAnswer: "I am open to relocation.",
+      workAuthorisationAnswer: "I am authorised to work.",
+      noticePeriodAnswer: "My notice period is one month."
+    }),
+    {
+      sponsorshipAnswer: "I do not require sponsorship.",
+      relocationAnswer: "I am open to relocation.",
+      workAuthorisationAnswer: "I am authorised to work.",
+      noticePeriodAnswer: "My notice period is one month."
+    }
+  )
+})
+
+test("detects obvious reusable answer questions", () => {
+  assert.equal(
+    detectReusableAnswerFromText("Do you require visa sponsorship?"),
+    "sponsorshipAnswer"
+  )
+  assert.equal(
+    detectReusableAnswerFromText("Are you willing to relocate?"),
+    "relocationAnswer"
+  )
+  assert.equal(
+    detectReusableAnswerFromText("Are you authorised to work in this country?"),
+    "workAuthorisationAnswer"
+  )
+  assert.equal(
+    detectReusableAnswerFromText("What is your notice period?"),
+    "noticePeriodAnswer"
+  )
+})
+
 test("ignores unclear fields", () => {
   assert.equal(detectFieldFromText("text", "search jobs"), null)
   assert.equal(detectFieldFromText("url", "portfolio"), null)
+  assert.equal(detectReusableAnswerFromText("Tell us about yourself"), null)
 })
 
 test("fills only empty visible enabled supported inputs", () => {
