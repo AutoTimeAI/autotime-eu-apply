@@ -15,6 +15,11 @@ The Chrome extension source of truth is `apps/extension`.
 
 ## Extension MVP
 
+Current status:
+
+- `MVP v1`: Done
+- `MVP v1.1`: In progress, first tracker feature done
+
 The extension currently supports:
 
 - Candidate profile settings stored in `chrome.storage.local`.
