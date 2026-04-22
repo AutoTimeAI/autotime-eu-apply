@@ -28,6 +28,7 @@ The extension currently supports:
 - Viewing saved applications in the popup.
 - Deleting saved application records.
 - Editing saved application role title, company, source, notes, and status.
+- Searching saved applications and filtering them by status.
 - Basic autofill for obvious first name, last name, email, and phone fields.
 - Basic textarea autofill for obvious sponsorship, relocation, work authorisation,
   and notice period questions.
@@ -90,6 +91,7 @@ Current unit tests cover:
 - Profile storage.
 - Reusable answer storage.
 - Saved application create/delete behavior.
+- Saved application search and status filtering.
 
 ## Chrome Extension Notes
 

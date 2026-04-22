@@ -8,6 +8,10 @@ import {
   type ApplicationStatus,
   type ApplicationRecord
 } from "../lib/storage"
+import {
+  filterApplications,
+  type ApplicationStatusFilter
+} from "../lib/applications"
 
 type AutofillResponse = {
   filledFields: string[]
@@ -32,7 +36,16 @@ function getHostname(url: string) {
 
 export default function Popup() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] =
+    useState<ApplicationStatusFilter>("all")
   const [status, setStatus] = useState("")
+
+  const visibleApplications = filterApplications(
+    applications,
+    searchQuery,
+    statusFilter
+  )
 
   const loadApplications = async () => {
     const saved = await getApplications()
@@ -152,11 +165,35 @@ export default function Popup() {
       <section>
         <h2>Saved Applications</h2>
 
+        <div className="application-filters">
+          <input
+            placeholder="Search applications"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as ApplicationStatusFilter)
+            }
+          >
+            <option value="all">all</option>
+            {applicationStatuses.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {applications.length === 0 ? (
           <p>No saved applications yet.</p>
+        ) : visibleApplications.length === 0 ? (
+          <p>No applications match your filters.</p>
         ) : (
           <div className="application-list">
-            {applications.map((record) => (
+            {visibleApplications.map((record) => (
               <article className="application-record" key={record.id}>
                 <div>
                   <h3>{record.roleTitle || record.title}</h3>

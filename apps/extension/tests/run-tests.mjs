@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { filterApplications } from "../lib/applications.ts"
 import {
   canFillInput,
   detectFieldFromText,
@@ -233,6 +234,48 @@ test("updates application tracker fields", async () => {
       notes: "Recruiter screen booked."
     }
   ])
+})
+
+test("filters applications by query and status", () => {
+  const applications = [
+    {
+      id: "draft",
+      title: "Original title",
+      roleTitle: "Frontend Engineer",
+      company: "Example Co",
+      source: "example.com",
+      url: "https://example.com/jobs/frontend",
+      notes: "React role",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "draft"
+    },
+    {
+      id: "interview",
+      title: "Backend Engineer",
+      company: "Server Co",
+      source: "server.example",
+      url: "https://server.example/jobs/backend",
+      notes: "Recruiter screen booked",
+      createdAt: "2026-04-02T00:00:00.000Z",
+      status: "interview"
+    }
+  ]
+
+  assert.deepEqual(
+    filterApplications(applications, "react", "all").map(
+      (application) => application.id
+    ),
+    ["draft"]
+  )
+
+  assert.deepEqual(
+    filterApplications(applications, "engineer", "interview").map(
+      (application) => application.id
+    ),
+    ["interview"]
+  )
+
+  assert.deepEqual(filterApplications(applications, "missing", "all"), [])
 })
 
 let failed = 0

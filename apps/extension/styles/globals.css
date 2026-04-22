@@ -50,6 +50,12 @@ section {
   gap: 10px;
 }
 
+.application-filters {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .application-record {
   display: grid;
   gap: 8px;
