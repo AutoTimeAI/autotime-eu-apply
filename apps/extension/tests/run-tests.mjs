@@ -203,7 +203,7 @@ test("saves applications newest first and deletes by id", async () => {
   assert.deepEqual(await getApplications(), [first])
 })
 
-test("updates application status and notes", async () => {
+test("updates application tracker fields", async () => {
   resetStorage()
 
   const record = {
@@ -216,6 +216,9 @@ test("updates application status and notes", async () => {
 
   await saveApplication(record)
   await updateApplication("application", {
+    company: "Example Co",
+    roleTitle: "Frontend Engineer",
+    source: "example.com",
     status: "interview",
     notes: "Recruiter screen booked."
   })
@@ -223,6 +226,9 @@ test("updates application status and notes", async () => {
   assert.deepEqual(await getApplications(), [
     {
       ...record,
+      company: "Example Co",
+      roleTitle: "Frontend Engineer",
+      source: "example.com",
       status: "interview",
       notes: "Recruiter screen booked."
     }

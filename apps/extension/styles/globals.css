@@ -35,6 +35,7 @@ label {
   gap: 6px;
 }
 
+input,
 select,
 textarea {
   width: 100%;

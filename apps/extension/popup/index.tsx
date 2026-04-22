@@ -22,6 +22,14 @@ const applicationStatuses: ApplicationStatus[] = [
   "offer"
 ]
 
+function getHostname(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return ""
+  }
+}
+
 export default function Popup() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([])
   const [status, setStatus] = useState("")
@@ -55,7 +63,9 @@ export default function Popup() {
     const record: ApplicationRecord = {
       id: crypto.randomUUID(),
       title: activeTab.title,
+      roleTitle: activeTab.title,
       url: activeTab.url,
+      source: getHostname(activeTab.url),
       createdAt: new Date().toISOString(),
       status: "draft"
     }
@@ -106,7 +116,12 @@ export default function Popup() {
 
   const updateSavedApplication = async (
     id: string,
-    changes: Partial<Pick<ApplicationRecord, "notes" | "status">>
+    changes: Partial<
+      Pick<
+        ApplicationRecord,
+        "company" | "notes" | "roleTitle" | "source" | "status"
+      >
+    >
   ) => {
     await updateApplication(id, changes)
     setApplications((current) =>
@@ -144,14 +159,54 @@ export default function Popup() {
             {applications.map((record) => (
               <article className="application-record" key={record.id}>
                 <div>
-                  <h3>{record.title}</h3>
+                  <h3>{record.roleTitle || record.title}</h3>
+                  {record.company && <p>{record.company}</p>}
                   <a href={record.url} target="_blank" rel="noreferrer">
                     {record.url}
                   </a>
                   <p>
                     {formatCreatedDate(record.createdAt)} - {record.status}
+                    {record.source ? ` - ${record.source}` : ""}
                   </p>
                 </div>
+
+                <label>
+                  Role title
+                  <input
+                    value={record.roleTitle ?? record.title}
+                    onChange={(event) =>
+                      updateSavedApplication(record.id, {
+                        roleTitle: event.target.value
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Company
+                  <input
+                    placeholder="Company"
+                    value={record.company ?? ""}
+                    onChange={(event) =>
+                      updateSavedApplication(record.id, {
+                        company: event.target.value
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Source
+                  <input
+                    placeholder="Source"
+                    value={record.source ?? ""}
+                    onChange={(event) =>
+                      updateSavedApplication(record.id, {
+                        source: event.target.value
+                      })
+                    }
+                  />
+                </label>
 
                 <label>
                   Status

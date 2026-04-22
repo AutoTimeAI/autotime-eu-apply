@@ -27,6 +27,7 @@ The extension currently supports:
 - Saving the current tab as an application draft.
 - Viewing saved applications in the popup.
 - Deleting saved application records.
+- Editing saved application role title, company, source, notes, and status.
 - Basic autofill for obvious first name, last name, email, and phone fields.
 - Basic textarea autofill for obvious sponsorship, relocation, work authorisation,
   and notice period questions.

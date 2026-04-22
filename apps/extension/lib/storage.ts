@@ -28,6 +28,8 @@ export type ApplicationRecord = {
   title: string
   url: string
   company?: string
+  roleTitle?: string
+  source?: string
   createdAt: string
   status: ApplicationStatus
   notes?: string
@@ -74,7 +76,9 @@ export async function deleteApplication(id: string) {
 
 export async function updateApplication(
   id: string,
-  changes: Partial<Pick<ApplicationRecord, "notes" | "status">>
+  changes: Partial<
+    Pick<ApplicationRecord, "company" | "notes" | "roleTitle" | "source" | "status">
+  >
 ) {
   const existing = await getApplications()
   const updated = existing.map((record) =>
