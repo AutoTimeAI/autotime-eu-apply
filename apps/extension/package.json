@@ -1,12 +1,20 @@
 {
   "name": "extension",
+  "displayName": "AutoTime EU Apply",
+  "version": "0.0.1",
+  "description": "Cross-border job application copilot for Europe",
   "private": true,
+  "type": "module",
+  "manifest": {
+  "permissions": ["storage","tabs"]
+},
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package",
     "lint": "echo lint-pending",
-    "typecheck": "echo typecheck-pending"
+    "test": "node --experimental-strip-types tests/run-tests.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -16,9 +24,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/chrome": "^0.1.40",
-    "@types/react": "18",
-    "@types/react-dom": "18",
+    "@types/chrome": "^0.1.29",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.5.0",
     "plasmo": "^0.90.5",
     "postcss": "^8.5.10",

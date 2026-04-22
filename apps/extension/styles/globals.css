@@ -1,0 +1,53 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #0b1020;
+  color: #f5f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+main {
+  min-width: 320px;
+  padding: 16px;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: #93c5fd;
+  overflow-wrap: anywhere;
+}
+
+textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+section {
+  margin-top: 20px;
+}
+
+.application-list {
+  display: grid;
+  gap: 10px;
+}
+
+.application-record {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #26324f;
+  border-radius: 8px;
+}
+
+.application-record h3,
+.application-record p {
+  margin: 0;
+}
