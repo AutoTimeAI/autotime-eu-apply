@@ -4,6 +4,8 @@ import {
   deleteApplication,
   getApplications,
   saveApplication,
+  updateApplication,
+  type ApplicationStatus,
   type ApplicationRecord
 } from "../lib/storage"
 
@@ -11,6 +13,14 @@ type AutofillResponse = {
   filledFields: string[]
   message?: string
 }
+
+const applicationStatuses: ApplicationStatus[] = [
+  "draft",
+  "applied",
+  "interview",
+  "rejected",
+  "offer"
+]
 
 export default function Popup() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([])
@@ -94,6 +104,18 @@ export default function Popup() {
     setApplications((current) => current.filter((record) => record.id !== id))
   }
 
+  const updateSavedApplication = async (
+    id: string,
+    changes: Partial<Pick<ApplicationRecord, "notes" | "status">>
+  ) => {
+    await updateApplication(id, changes)
+    setApplications((current) =>
+      current.map((record) =>
+        record.id === id ? { ...record, ...changes } : record
+      )
+    )
+  }
+
   const formatCreatedDate = (createdAt: string) =>
     new Date(createdAt).toLocaleDateString(undefined, {
       day: "numeric",
@@ -130,6 +152,34 @@ export default function Popup() {
                     {formatCreatedDate(record.createdAt)} - {record.status}
                   </p>
                 </div>
+
+                <label>
+                  Status
+                  <select
+                    value={record.status}
+                    onChange={(event) =>
+                      updateSavedApplication(record.id, {
+                        status: event.target.value as ApplicationStatus
+                      })
+                    }
+                  >
+                    {applicationStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <textarea
+                  placeholder="Notes"
+                  value={record.notes ?? ""}
+                  onChange={(event) =>
+                    updateSavedApplication(record.id, {
+                      notes: event.target.value
+                    })
+                  }
+                />
 
                 <button onClick={() => deleteSavedApplication(record.id)}>
                   Delete

@@ -16,13 +16,21 @@ export type ReusableAnswers = {
   noticePeriodAnswer: string
 }
 
+export type ApplicationStatus =
+  | "draft"
+  | "applied"
+  | "interview"
+  | "rejected"
+  | "offer"
+
 export type ApplicationRecord = {
   id: string
   title: string
   url: string
   company?: string
   createdAt: string
-  status: "draft" | "saved" | "applied"
+  status: ApplicationStatus
+  notes?: string
 }
 
 const PROFILE_KEY = "candidate-profile"
@@ -61,5 +69,16 @@ export async function saveApplication(record: ApplicationRecord) {
 export async function deleteApplication(id: string) {
   const existing = await getApplications()
   const updated = existing.filter((record) => record.id !== id)
+  await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
+}
+
+export async function updateApplication(
+  id: string,
+  changes: Partial<Pick<ApplicationRecord, "notes" | "status">>
+) {
+  const existing = await getApplications()
+  const updated = existing.map((record) =>
+    record.id === id ? { ...record, ...changes } : record
+  )
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }

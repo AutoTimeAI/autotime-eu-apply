@@ -12,7 +12,8 @@ import {
   getReusableAnswers,
   saveApplication,
   saveProfile,
-  saveReusableAnswers
+  saveReusableAnswers,
+  updateApplication
 } from "../lib/storage.ts"
 
 const tests = []
@@ -161,6 +162,32 @@ test("saves applications newest first and deletes by id", async () => {
   await deleteApplication("second")
 
   assert.deepEqual(await getApplications(), [first])
+})
+
+test("updates application status and notes", async () => {
+  resetStorage()
+
+  const record = {
+    id: "application",
+    title: "Saved role",
+    url: "https://example.com/role",
+    createdAt: "2026-04-03T00:00:00.000Z",
+    status: "draft"
+  }
+
+  await saveApplication(record)
+  await updateApplication("application", {
+    status: "interview",
+    notes: "Recruiter screen booked."
+  })
+
+  assert.deepEqual(await getApplications(), [
+    {
+      ...record,
+      status: "interview",
+      notes: "Recruiter screen booked."
+    }
+  ])
 })
 
 let failed = 0
