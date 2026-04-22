@@ -29,6 +29,8 @@ The extension currently supports:
 - Deleting saved application records.
 - Editing saved application role title, company, source, notes, and status.
 - Searching saved applications and filtering them by status.
+- Preventing duplicate saved applications for the same URL.
+- Exporting saved applications to CSV.
 - Basic autofill for obvious first name, last name, email, and phone fields.
 - Basic textarea autofill for obvious sponsorship, relocation, work authorisation,
   and notice period questions.
@@ -92,6 +94,8 @@ Current unit tests cover:
 - Reusable answer storage.
 - Saved application create/delete behavior.
 - Saved application search and status filtering.
+- Saved application duplicate URL detection.
+- Saved application CSV export formatting.
 
 ## Chrome Extension Notes
 

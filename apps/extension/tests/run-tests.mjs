@@ -1,5 +1,9 @@
 import assert from "node:assert/strict"
-import { filterApplications } from "../lib/applications.ts"
+import {
+  applicationsToCsv,
+  filterApplications,
+  hasApplicationWithUrl
+} from "../lib/applications.ts"
 import {
   canFillInput,
   detectFieldFromText,
@@ -276,6 +280,51 @@ test("filters applications by query and status", () => {
   )
 
   assert.deepEqual(filterApplications(applications, "missing", "all"), [])
+})
+
+test("detects duplicate application urls", () => {
+  const applications = [
+    {
+      id: "existing",
+      title: "Existing role",
+      url: "https://Example.com/jobs/123#overview",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "draft"
+    }
+  ]
+
+  assert.equal(
+    hasApplicationWithUrl(applications, "https://example.com/jobs/123"),
+    true
+  )
+  assert.equal(
+    hasApplicationWithUrl(applications, "https://example.com/jobs/456"),
+    false
+  )
+})
+
+test("exports applications to csv", () => {
+  const csv = applicationsToCsv([
+    {
+      id: "application",
+      title: 'Senior "Frontend" Engineer',
+      roleTitle: "Frontend Engineer",
+      company: "Example Co",
+      source: "example.com",
+      url: "https://example.com/jobs/frontend",
+      notes: "Remote, EU role",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "applied"
+    }
+  ])
+
+  assert.equal(
+    csv,
+    [
+      '"Title","Role Title","Company","URL","Source","Created At","Status","Notes"',
+      '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","applied","Remote, EU role"'
+    ].join("\n")
+  )
 })
 
 let failed = 0

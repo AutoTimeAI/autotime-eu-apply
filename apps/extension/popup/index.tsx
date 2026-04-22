@@ -9,7 +9,9 @@ import {
   type ApplicationRecord
 } from "../lib/storage"
 import {
+  applicationsToCsv,
   filterApplications,
+  hasApplicationWithUrl,
   type ApplicationStatusFilter
 } from "../lib/applications"
 
@@ -73,6 +75,12 @@ export default function Popup() {
       return
     }
 
+    if (hasApplicationWithUrl(applications, activeTab.url)) {
+      setStatus("This application is already saved")
+      setTimeout(() => setStatus(""), 2500)
+      return
+    }
+
     const record: ApplicationRecord = {
       id: crypto.randomUUID(),
       title: activeTab.title,
@@ -88,6 +96,26 @@ export default function Popup() {
 
     setStatus("Application draft saved")
     setTimeout(() => setStatus(""), 2000)
+  }
+
+  const exportApplications = () => {
+    if (applications.length === 0) {
+      setStatus("No applications to export")
+      setTimeout(() => setStatus(""), 2500)
+      return
+    }
+
+    const csv = applicationsToCsv(applications)
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "autotime-applications.csv"
+    link.click()
+    URL.revokeObjectURL(url)
+
+    setStatus("Applications exported")
+    setTimeout(() => setStatus(""), 2500)
   }
 
   const autofillCurrentPage = async () => {
@@ -159,6 +187,7 @@ export default function Popup() {
         <button onClick={openSettings}>Open Profile Settings</button>
         <button onClick={saveCurrentTabAsDraft}>Save Application Draft</button>
         <button onClick={autofillCurrentPage}>Autofill Profile Fields</button>
+        <button onClick={exportApplications}>Export CSV</button>
         {status && <p>{status}</p>}
       </div>
 
