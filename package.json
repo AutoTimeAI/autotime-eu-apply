@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
+    "build": "pnpm build:extension",
     "dev:web": "pnpm --filter web dev",
     "dev:extension": "pnpm --filter extension dev",
     "build:web": "pnpm --filter web build",

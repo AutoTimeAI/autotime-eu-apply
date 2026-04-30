@@ -11,13 +11,15 @@
     ]
   },
   "include": [
-    ".plasmo/index.d.ts",
+    ".wxt/**/*.d.ts",
     "**/*.ts",
     "**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     "build",
+    ".output",
+    ".wxt",
     ".plasmo"
   ]
 }
