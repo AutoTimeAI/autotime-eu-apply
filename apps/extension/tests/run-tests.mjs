@@ -28,6 +28,12 @@ import {
   saveTrackerDraft,
   updateApplication
 } from "../lib/storage.ts"
+import {
+  validateApplicationContentDraft,
+  validateJobAnalysisDraft,
+  validateProfile,
+  validateTrackerDraft
+} from "../lib/validation.ts"
 
 const tests = []
 
@@ -234,6 +240,85 @@ test("saves and loads tracker draft", async () => {
   await saveTrackerDraft(draft)
 
   assert.deepEqual(await getTrackerDraft(), draft)
+})
+
+test("validates missing and mismatched profile fields", () => {
+  const issues = validateProfile({
+    fullName: "",
+    email: "not-an-email",
+    phone: "abc",
+    currentCountry: "",
+    currentCity: "",
+    sponsorshipNeeded: false,
+    relocationWillingness: "depends",
+    noticePeriod: ""
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    [
+      "fullName",
+      "currentCountry",
+      "currentCity",
+      "noticePeriod",
+      "email",
+      "phone"
+    ]
+  )
+})
+
+test("validates job analysis draft fields", () => {
+  const issues = validateJobAnalysisDraft({
+    jobTitle: "",
+    company: "",
+    jobUrl: "ftp://example.com/job",
+    location: "",
+    workMode: "unknown",
+    notes: ""
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    ["jobTitle", "company", "location", "workMode", "jobUrl"]
+  )
+})
+
+test("validates application content draft fields", () => {
+  const issues = validateApplicationContentDraft({
+    coverLetter: "Too short",
+    profileSummary: "Short",
+    motivationAnswer: "",
+    strengthsAnswer: "",
+    availabilityAnswer: ""
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    ["motivationAnswer", "coverLetter", "profileSummary"]
+  )
+})
+
+test("validates tracker draft fields", () => {
+  const issues = validateTrackerDraft({
+    roleTitle: "",
+    company: "",
+    applicationUrl: "not-a-url",
+    status: "draft",
+    nextAction: "",
+    nextActionDate: "not-a-date",
+    notes: ""
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    [
+      "roleTitle",
+      "company",
+      "nextAction",
+      "applicationUrl",
+      "nextActionDate"
+    ]
+  )
 })
 
 test("saves applications newest first and deletes by id", async () => {
