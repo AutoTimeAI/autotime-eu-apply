@@ -165,25 +165,21 @@ function SidePanelApp() {
     const loadProfile = async () => {
       const savedProfile = await getProfile()
       if (savedProfile) {
-        setProfile(savedProfile)
         setSavedProfile(savedProfile)
       }
 
       const savedJobAnalysisDraft = await getJobAnalysisDraft()
       if (savedJobAnalysisDraft) {
-        setJobAnalysisDraft(savedJobAnalysisDraft)
         setSavedJobAnalysisDraft(savedJobAnalysisDraft)
       }
 
       const savedApplicationContentDraft = await getApplicationContentDraft()
       if (savedApplicationContentDraft) {
-        setApplicationContentDraft(savedApplicationContentDraft)
         setSavedApplicationContentDraft(savedApplicationContentDraft)
       }
 
       const savedTrackerDraft = await getTrackerDraft()
       if (savedTrackerDraft) {
-        setTrackerDraft(savedTrackerDraft)
         setSavedTrackerDraft(savedTrackerDraft)
       }
     }
