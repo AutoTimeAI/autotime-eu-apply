@@ -147,6 +147,16 @@ section {
   font-size: 12px;
 }
 
+.status-message {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  background: #123522;
+  color: #dcfce7;
+  font-weight: 700;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;

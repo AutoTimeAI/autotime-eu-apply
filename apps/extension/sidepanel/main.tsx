@@ -194,7 +194,7 @@ function SidePanelApp() {
 
     await saveProfile(profile)
     setStatus("Profile saved")
-    setTimeout(() => setStatus(""), 2000)
+    setTimeout(() => setStatus(""), 3500)
   }
 
   const handleSaveJobAnalysis = async () => {
@@ -207,7 +207,7 @@ function SidePanelApp() {
 
     await saveJobAnalysisDraft(jobAnalysisDraft)
     setJobStatus("Job analysis draft saved")
-    setTimeout(() => setJobStatus(""), 2000)
+    setTimeout(() => setJobStatus(""), 3500)
   }
 
   const handleSaveApplicationContent = async () => {
@@ -222,7 +222,7 @@ function SidePanelApp() {
 
     await saveApplicationContentDraft(applicationContentDraft)
     setContentStatus("Application content draft saved")
-    setTimeout(() => setContentStatus(""), 2000)
+    setTimeout(() => setContentStatus(""), 3500)
   }
 
   const handleSaveTracker = async () => {
@@ -235,7 +235,7 @@ function SidePanelApp() {
 
     await saveTrackerDraft(trackerDraft)
     setTrackerStatus("Tracker draft saved")
-    setTimeout(() => setTrackerStatus(""), 2000)
+    setTimeout(() => setTrackerStatus(""), 3500)
   }
 
   return (
@@ -458,7 +458,11 @@ function SidePanelApp() {
               Save Profile
             </button>
 
-            {status && <p role="status">{status}</p>}
+            {status && (
+              <p className="status-message" role="status">
+                {status}
+              </p>
+            )}
           </div>
         </section>
       ) : activeSection === "job-analysis" ? (
@@ -602,7 +606,11 @@ function SidePanelApp() {
               Save Job Analysis
             </button>
 
-            {jobStatus && <p role="status">{jobStatus}</p>}
+            {jobStatus && (
+              <p className="status-message" role="status">
+                {jobStatus}
+              </p>
+            )}
           </div>
         </section>
       ) : activeSection === "application-content" ? (
@@ -750,7 +758,11 @@ function SidePanelApp() {
               Save Application Content
             </button>
 
-            {contentStatus && <p role="status">{contentStatus}</p>}
+            {contentStatus && (
+              <p className="status-message" role="status">
+                {contentStatus}
+              </p>
+            )}
           </div>
         </section>
       ) : activeSection === "tracker" ? (
@@ -906,7 +918,11 @@ function SidePanelApp() {
               Save Tracker
             </button>
 
-            {trackerStatus && <p role="status">{trackerStatus}</p>}
+            {trackerStatus && (
+              <p className="status-message" role="status">
+                {trackerStatus}
+              </p>
+            )}
           </div>
         </section>
       ) : (
