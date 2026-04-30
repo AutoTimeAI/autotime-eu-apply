@@ -27,7 +27,12 @@ import {
   validateTrackerDraft
 } from "../lib/validation"
 
-type Section = "profile" | "job-analysis" | "application-content" | "tracker"
+type Section =
+  | "profile"
+  | "profile-view"
+  | "job-analysis"
+  | "application-content"
+  | "tracker"
 type SaveAttempts = Record<Section, boolean>
 
 const emptyProfile: CandidateProfile = {
@@ -78,6 +83,7 @@ const applicationStatuses: ApplicationStatus[] = [
 
 const sections: Array<{ id: Section; label: string }> = [
   { id: "profile", label: "Profile" },
+  { id: "profile-view", label: "View Profile" },
   { id: "job-analysis", label: "Job Analysis" },
   { id: "application-content", label: "Application Content" },
   { id: "tracker", label: "Tracker" }
@@ -87,11 +93,15 @@ function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
   const [saveAttempts, setSaveAttempts] = useState<SaveAttempts>({
     profile: false,
+    "profile-view": false,
     "job-analysis": false,
     "application-content": false,
     tracker: false
   })
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
+  const [savedProfile, setSavedProfile] = useState<CandidateProfile | null>(
+    null
+  )
   const [jobAnalysisDraft, setJobAnalysisDraft] =
     useState<JobAnalysisDraft>(emptyJobAnalysisDraft)
   const [applicationContentDraft, setApplicationContentDraft] =
@@ -122,6 +132,7 @@ function SidePanelApp() {
     setActiveSection(section)
     setSaveAttempts({
       profile: false,
+      "profile-view": false,
       "job-analysis": false,
       "application-content": false,
       tracker: false
@@ -137,6 +148,7 @@ function SidePanelApp() {
       const savedProfile = await getProfile()
       if (savedProfile) {
         setProfile(savedProfile)
+        setSavedProfile(savedProfile)
       }
 
       const savedJobAnalysisDraft = await getJobAnalysisDraft()
@@ -161,6 +173,7 @@ function SidePanelApp() {
   useEffect(() => {
     const statusRefs: Record<Section, HTMLParagraphElement | null> = {
       profile: profileStatusRef.current,
+      "profile-view": null,
       "job-analysis": jobStatusRef.current,
       "application-content": contentStatusRef.current,
       tracker: trackerStatusRef.current
@@ -168,6 +181,7 @@ function SidePanelApp() {
 
     const activeStatus = {
       profile: status,
+      "profile-view": "",
       "job-analysis": jobStatus,
       "application-content": contentStatus,
       tracker: trackerStatus
@@ -222,6 +236,7 @@ function SidePanelApp() {
     }
 
     await saveProfile(profile)
+    setSavedProfile(profile)
     setStatus("Profile saved")
     setTimeout(() => setStatus(""), 3500)
   }
@@ -498,6 +513,49 @@ function SidePanelApp() {
               </p>
             )}
           </div>
+        </section>
+      ) : activeSection === "profile-view" ? (
+        <section className="panel-section">
+          <h2>View Profile</h2>
+
+          {savedProfile ? (
+            <dl className="profile-summary">
+              <div>
+                <dt>Full name</dt>
+                <dd>{savedProfile.fullName}</dd>
+              </div>
+              <div>
+                <dt>Email</dt>
+                <dd>{savedProfile.email}</dd>
+              </div>
+              <div>
+                <dt>Phone</dt>
+                <dd>{savedProfile.phone}</dd>
+              </div>
+              <div>
+                <dt>Current country</dt>
+                <dd>{savedProfile.currentCountry}</dd>
+              </div>
+              <div>
+                <dt>Current city</dt>
+                <dd>{savedProfile.currentCity}</dd>
+              </div>
+              <div>
+                <dt>Sponsorship needed</dt>
+                <dd>{savedProfile.sponsorshipNeeded ? "Yes" : "No"}</dd>
+              </div>
+              <div>
+                <dt>Relocation willingness</dt>
+                <dd>{savedProfile.relocationWillingness}</dd>
+              </div>
+              <div>
+                <dt>Notice period</dt>
+                <dd>{savedProfile.noticePeriod}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="empty-state">No saved profile yet.</p>
+          )}
         </section>
       ) : activeSection === "job-analysis" ? (
         <section className="panel-section">
