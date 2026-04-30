@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import {
+  clearApplicationContentDraft,
+  clearJobAnalysisDraft,
+  clearProfile,
+  clearTrackerDraft,
   getApplicationContentDraft,
   getJobAnalysisDraft,
   getProfile,
@@ -318,6 +322,30 @@ function SidePanelApp() {
     setTimeout(() => setTrackerStatus(""), 3500)
   }
 
+  const handleClearProfile = async () => {
+    await clearProfile()
+    setSavedProfile(null)
+    setProfile(emptyProfile)
+  }
+
+  const handleClearJobAnalysis = async () => {
+    await clearJobAnalysisDraft()
+    setSavedJobAnalysisDraft(null)
+    setJobAnalysisDraft(emptyJobAnalysisDraft)
+  }
+
+  const handleClearApplicationContent = async () => {
+    await clearApplicationContentDraft()
+    setSavedApplicationContentDraft(null)
+    setApplicationContentDraft(emptyApplicationContentDraft)
+  }
+
+  const handleClearTracker = async () => {
+    await clearTrackerDraft()
+    setSavedTrackerDraft(null)
+    setTrackerDraft(emptyTrackerDraft)
+  }
+
   return (
     <main className="side-panel-shell">
       <header>
@@ -555,40 +583,49 @@ function SidePanelApp() {
           <h2>View Profile</h2>
 
           {savedProfile ? (
-            <dl className="profile-summary">
-              <div>
-                <dt>Full name</dt>
-                <dd>{savedProfile.fullName}</dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd>{savedProfile.email}</dd>
-              </div>
-              <div>
-                <dt>Phone</dt>
-                <dd>{savedProfile.phone}</dd>
-              </div>
-              <div>
-                <dt>Current country</dt>
-                <dd>{savedProfile.currentCountry}</dd>
-              </div>
-              <div>
-                <dt>Current city</dt>
-                <dd>{savedProfile.currentCity}</dd>
-              </div>
-              <div>
-                <dt>Sponsorship needed</dt>
-                <dd>{savedProfile.sponsorshipNeeded ? "Yes" : "No"}</dd>
-              </div>
-              <div>
-                <dt>Relocation willingness</dt>
-                <dd>{savedProfile.relocationWillingness}</dd>
-              </div>
-              <div>
-                <dt>Notice period</dt>
-                <dd>{savedProfile.noticePeriod}</dd>
-              </div>
-            </dl>
+            <>
+              <dl className="profile-summary">
+                <div>
+                  <dt>Full name</dt>
+                  <dd>{savedProfile.fullName}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{savedProfile.email}</dd>
+                </div>
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{savedProfile.phone}</dd>
+                </div>
+                <div>
+                  <dt>Current country</dt>
+                  <dd>{savedProfile.currentCountry}</dd>
+                </div>
+                <div>
+                  <dt>Current city</dt>
+                  <dd>{savedProfile.currentCity}</dd>
+                </div>
+                <div>
+                  <dt>Sponsorship needed</dt>
+                  <dd>{savedProfile.sponsorshipNeeded ? "Yes" : "No"}</dd>
+                </div>
+                <div>
+                  <dt>Relocation willingness</dt>
+                  <dd>{savedProfile.relocationWillingness}</dd>
+                </div>
+                <div>
+                  <dt>Notice period</dt>
+                  <dd>{savedProfile.noticePeriod}</dd>
+                </div>
+              </dl>
+              <button
+                className="danger-button"
+                type="button"
+                onClick={handleClearProfile}
+              >
+                Clear Saved Profile
+              </button>
+            </>
           ) : (
             <p className="empty-state">No saved profile yet.</p>
           )}
@@ -751,40 +788,49 @@ function SidePanelApp() {
           <h2>View Job Analysis</h2>
 
           {savedJobAnalysisDraft ? (
-            <dl className="profile-summary">
-              <div>
-                <dt>Job title</dt>
-                <dd>{savedJobAnalysisDraft.jobTitle}</dd>
-              </div>
-              <div>
-                <dt>Company</dt>
-                <dd>{savedJobAnalysisDraft.company}</dd>
-              </div>
-              <div>
-                <dt>Job URL</dt>
-                <dd>
-                  <a
-                    href={savedJobAnalysisDraft.jobUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {savedJobAnalysisDraft.jobUrl}
-                  </a>
-                </dd>
-              </div>
-              <div>
-                <dt>Location/country</dt>
-                <dd>{savedJobAnalysisDraft.location}</dd>
-              </div>
-              <div>
-                <dt>Work mode</dt>
-                <dd>{savedJobAnalysisDraft.workMode}</dd>
-              </div>
-              <div>
-                <dt>Notes</dt>
-                <dd>{savedJobAnalysisDraft.notes || "None"}</dd>
-              </div>
-            </dl>
+            <>
+              <dl className="profile-summary">
+                <div>
+                  <dt>Job title</dt>
+                  <dd>{savedJobAnalysisDraft.jobTitle}</dd>
+                </div>
+                <div>
+                  <dt>Company</dt>
+                  <dd>{savedJobAnalysisDraft.company}</dd>
+                </div>
+                <div>
+                  <dt>Job URL</dt>
+                  <dd>
+                    <a
+                      href={savedJobAnalysisDraft.jobUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {savedJobAnalysisDraft.jobUrl}
+                    </a>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Location/country</dt>
+                  <dd>{savedJobAnalysisDraft.location}</dd>
+                </div>
+                <div>
+                  <dt>Work mode</dt>
+                  <dd>{savedJobAnalysisDraft.workMode}</dd>
+                </div>
+                <div>
+                  <dt>Notes</dt>
+                  <dd>{savedJobAnalysisDraft.notes || "None"}</dd>
+                </div>
+              </dl>
+              <button
+                className="danger-button"
+                type="button"
+                onClick={handleClearJobAnalysis}
+              >
+                Clear Saved Job Analysis
+              </button>
+            </>
           ) : (
             <p className="empty-state">No saved job analysis yet.</p>
           )}
@@ -951,30 +997,41 @@ function SidePanelApp() {
           <h2>View Content</h2>
 
           {savedApplicationContentDraft ? (
-            <dl className="profile-summary">
-              <div>
-                <dt>Cover letter</dt>
-                <dd>{savedApplicationContentDraft.coverLetter}</dd>
-              </div>
-              <div>
-                <dt>Profile summary</dt>
-                <dd>{savedApplicationContentDraft.profileSummary}</dd>
-              </div>
-              <div>
-                <dt>Motivation answer</dt>
-                <dd>{savedApplicationContentDraft.motivationAnswer}</dd>
-              </div>
-              <div>
-                <dt>Strengths answer</dt>
-                <dd>{savedApplicationContentDraft.strengthsAnswer || "None"}</dd>
-              </div>
-              <div>
-                <dt>Availability answer</dt>
-                <dd>
-                  {savedApplicationContentDraft.availabilityAnswer || "None"}
-                </dd>
-              </div>
-            </dl>
+            <>
+              <dl className="profile-summary">
+                <div>
+                  <dt>Cover letter</dt>
+                  <dd>{savedApplicationContentDraft.coverLetter}</dd>
+                </div>
+                <div>
+                  <dt>Profile summary</dt>
+                  <dd>{savedApplicationContentDraft.profileSummary}</dd>
+                </div>
+                <div>
+                  <dt>Motivation answer</dt>
+                  <dd>{savedApplicationContentDraft.motivationAnswer}</dd>
+                </div>
+                <div>
+                  <dt>Strengths answer</dt>
+                  <dd>
+                    {savedApplicationContentDraft.strengthsAnswer || "None"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Availability answer</dt>
+                  <dd>
+                    {savedApplicationContentDraft.availabilityAnswer || "None"}
+                  </dd>
+                </div>
+              </dl>
+              <button
+                className="danger-button"
+                type="button"
+                onClick={handleClearApplicationContent}
+              >
+                Clear Saved Content
+              </button>
+            </>
           ) : (
             <p className="empty-state">No saved application content yet.</p>
           )}
@@ -1149,44 +1206,53 @@ function SidePanelApp() {
           <h2>View Tracker</h2>
 
           {savedTrackerDraft ? (
-            <dl className="profile-summary">
-              <div>
-                <dt>Role title</dt>
-                <dd>{savedTrackerDraft.roleTitle}</dd>
-              </div>
-              <div>
-                <dt>Company</dt>
-                <dd>{savedTrackerDraft.company}</dd>
-              </div>
-              <div>
-                <dt>Application URL</dt>
-                <dd>
-                  <a
-                    href={savedTrackerDraft.applicationUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {savedTrackerDraft.applicationUrl}
-                  </a>
-                </dd>
-              </div>
-              <div>
-                <dt>Status</dt>
-                <dd>{savedTrackerDraft.status}</dd>
-              </div>
-              <div>
-                <dt>Next action</dt>
-                <dd>{savedTrackerDraft.nextAction}</dd>
-              </div>
-              <div>
-                <dt>Next action date</dt>
-                <dd>{savedTrackerDraft.nextActionDate}</dd>
-              </div>
-              <div>
-                <dt>Notes</dt>
-                <dd>{savedTrackerDraft.notes || "None"}</dd>
-              </div>
-            </dl>
+            <>
+              <dl className="profile-summary">
+                <div>
+                  <dt>Role title</dt>
+                  <dd>{savedTrackerDraft.roleTitle}</dd>
+                </div>
+                <div>
+                  <dt>Company</dt>
+                  <dd>{savedTrackerDraft.company}</dd>
+                </div>
+                <div>
+                  <dt>Application URL</dt>
+                  <dd>
+                    <a
+                      href={savedTrackerDraft.applicationUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {savedTrackerDraft.applicationUrl}
+                    </a>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{savedTrackerDraft.status}</dd>
+                </div>
+                <div>
+                  <dt>Next action</dt>
+                  <dd>{savedTrackerDraft.nextAction}</dd>
+                </div>
+                <div>
+                  <dt>Next action date</dt>
+                  <dd>{savedTrackerDraft.nextActionDate}</dd>
+                </div>
+                <div>
+                  <dt>Notes</dt>
+                  <dd>{savedTrackerDraft.notes || "None"}</dd>
+                </div>
+              </dl>
+              <button
+                className="danger-button"
+                type="button"
+                onClick={handleClearTracker}
+              >
+                Clear Saved Tracker
+              </button>
+            </>
           ) : (
             <p className="empty-state">No saved tracker draft yet.</p>
           )}

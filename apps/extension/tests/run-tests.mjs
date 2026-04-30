@@ -13,6 +13,10 @@ import {
   getReusableAnswerValues
 } from "../lib/autofill.ts"
 import {
+  clearApplicationContentDraft,
+  clearJobAnalysisDraft,
+  clearProfile,
+  clearTrackerDraft,
   deleteApplication,
   getApplicationContentDraft,
   getApplications,
@@ -53,6 +57,9 @@ globalThis.chrome = {
         Object.entries(values).forEach(([key, value]) => {
           store.set(key, value)
         })
+      },
+      async remove(key) {
+        store.delete(key)
       }
     }
   }
@@ -174,6 +181,10 @@ test("saves and loads candidate profile", async () => {
   await saveProfile(profile)
 
   assert.deepEqual(await getProfile(), profile)
+
+  await clearProfile()
+
+  assert.equal(await getProfile(), null)
 })
 
 test("saves and loads reusable answers", async () => {
@@ -206,6 +217,10 @@ test("saves and loads job analysis draft", async () => {
   await saveJobAnalysisDraft(draft)
 
   assert.deepEqual(await getJobAnalysisDraft(), draft)
+
+  await clearJobAnalysisDraft()
+
+  assert.equal(await getJobAnalysisDraft(), null)
 })
 
 test("saves and loads application content draft", async () => {
@@ -222,6 +237,10 @@ test("saves and loads application content draft", async () => {
   await saveApplicationContentDraft(draft)
 
   assert.deepEqual(await getApplicationContentDraft(), draft)
+
+  await clearApplicationContentDraft()
+
+  assert.equal(await getApplicationContentDraft(), null)
 })
 
 test("saves and loads tracker draft", async () => {
@@ -240,6 +259,10 @@ test("saves and loads tracker draft", async () => {
   await saveTrackerDraft(draft)
 
   assert.deepEqual(await getTrackerDraft(), draft)
+
+  await clearTrackerDraft()
+
+  assert.equal(await getTrackerDraft(), null)
 })
 
 test("validates missing and mismatched profile fields", () => {

@@ -78,6 +78,10 @@ export async function getProfile(): Promise<CandidateProfile | null> {
   return (result[PROFILE_KEY] as CandidateProfile) ?? null
 }
 
+export async function clearProfile() {
+  await chrome.storage.local.remove(PROFILE_KEY)
+}
+
 export async function saveReusableAnswers(answers: ReusableAnswers) {
   await chrome.storage.local.set({ [REUSABLE_ANSWERS_KEY]: answers })
 }
@@ -96,6 +100,10 @@ export async function getJobAnalysisDraft(): Promise<JobAnalysisDraft | null> {
   return (result[JOB_ANALYSIS_KEY] as JobAnalysisDraft) ?? null
 }
 
+export async function clearJobAnalysisDraft() {
+  await chrome.storage.local.remove(JOB_ANALYSIS_KEY)
+}
+
 export async function saveApplicationContentDraft(
   draft: ApplicationContentDraft
 ) {
@@ -107,6 +115,10 @@ export async function getApplicationContentDraft(): Promise<ApplicationContentDr
   return (result[APPLICATION_CONTENT_KEY] as ApplicationContentDraft) ?? null
 }
 
+export async function clearApplicationContentDraft() {
+  await chrome.storage.local.remove(APPLICATION_CONTENT_KEY)
+}
+
 export async function saveTrackerDraft(draft: TrackerDraft) {
   await chrome.storage.local.set({ [TRACKER_DRAFT_KEY]: draft })
 }
@@ -114,6 +126,10 @@ export async function saveTrackerDraft(draft: TrackerDraft) {
 export async function getTrackerDraft(): Promise<TrackerDraft | null> {
   const result = await chrome.storage.local.get(TRACKER_DRAFT_KEY)
   return (result[TRACKER_DRAFT_KEY] as TrackerDraft) ?? null
+}
+
+export async function clearTrackerDraft() {
+  await chrome.storage.local.remove(TRACKER_DRAFT_KEY)
 }
 
 export async function getApplications(): Promise<ApplicationRecord[]> {
