@@ -5,12 +5,16 @@ import {
   getApplicationContentDraft,
   getJobAnalysisDraft,
   getProfile,
+  getTrackerDraft,
   saveApplicationContentDraft,
   saveJobAnalysisDraft,
   saveProfile,
+  saveTrackerDraft,
+  type ApplicationStatus,
   type ApplicationContentDraft,
   type CandidateProfile,
-  type JobAnalysisDraft
+  type JobAnalysisDraft,
+  type TrackerDraft
 } from "../lib/storage"
 
 type Section = "profile" | "job-analysis" | "application-content" | "tracker"
@@ -24,6 +28,10 @@ type JobAnalysisIssue = {
 }
 type ApplicationContentIssue = {
   field: keyof ApplicationContentDraft
+  message: string
+}
+type TrackerIssue = {
+  field: keyof TrackerDraft
   message: string
 }
 
@@ -54,6 +62,24 @@ const emptyApplicationContentDraft: ApplicationContentDraft = {
   strengthsAnswer: "",
   availabilityAnswer: ""
 }
+
+const emptyTrackerDraft: TrackerDraft = {
+  roleTitle: "",
+  company: "",
+  applicationUrl: "",
+  status: "draft",
+  nextAction: "",
+  nextActionDate: "",
+  notes: ""
+}
+
+const applicationStatuses: ApplicationStatus[] = [
+  "draft",
+  "applied",
+  "interview",
+  "rejected",
+  "offer"
+]
 
 const sections: Array<{ id: Section; label: string }> = [
   { id: "profile", label: "Profile" },
@@ -91,6 +117,17 @@ const requiredApplicationContentFields: Array<{
   { field: "coverLetter", label: "Cover letter" },
   { field: "profileSummary", label: "Profile summary" },
   { field: "motivationAnswer", label: "Motivation answer" }
+]
+
+const requiredTrackerFields: Array<{
+  field: keyof TrackerDraft
+  label: string
+}> = [
+  { field: "roleTitle", label: "Role title" },
+  { field: "company", label: "Company" },
+  { field: "applicationUrl", label: "Application URL" },
+  { field: "nextAction", label: "Next action" },
+  { field: "nextActionDate", label: "Next action date" }
 ]
 
 function validateProfile(profile: CandidateProfile): ProfileIssue[] {
@@ -186,6 +223,47 @@ function validateApplicationContentDraft(
   return issues
 }
 
+function validateTrackerDraft(draft: TrackerDraft): TrackerIssue[] {
+  const issues: TrackerIssue[] = []
+
+  for (const { field, label } of requiredTrackerFields) {
+    const value = draft[field]
+
+    if (typeof value === "string" && value.trim() === "") {
+      issues.push({ field, message: `${label} is required.` })
+    }
+  }
+
+  if (draft.applicationUrl.trim() !== "") {
+    try {
+      const url = new URL(draft.applicationUrl)
+      if (!["http:", "https:"].includes(url.protocol)) {
+        issues.push({
+          field: "applicationUrl",
+          message: "Application URL must start with http or https."
+        })
+      }
+    } catch {
+      issues.push({
+        field: "applicationUrl",
+        message: "Application URL format does not match."
+      })
+    }
+  }
+
+  if (
+    draft.nextActionDate.trim() !== "" &&
+    Number.isNaN(new Date(`${draft.nextActionDate}T00:00:00`).getTime())
+  ) {
+    issues.push({
+      field: "nextActionDate",
+      message: "Next action date format does not match."
+    })
+  }
+
+  return issues
+}
+
 function getIssueForField(
   issues: ProfileIssue[],
   field: keyof CandidateProfile
@@ -207,6 +285,13 @@ function getApplicationContentIssueForField(
   return issues.find((issue) => issue.field === field)?.message
 }
 
+function getTrackerIssueForField(
+  issues: TrackerIssue[],
+  field: keyof TrackerDraft
+) {
+  return issues.find((issue) => issue.field === field)?.message
+}
+
 function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
@@ -214,15 +299,19 @@ function SidePanelApp() {
     useState<JobAnalysisDraft>(emptyJobAnalysisDraft)
   const [applicationContentDraft, setApplicationContentDraft] =
     useState<ApplicationContentDraft>(emptyApplicationContentDraft)
+  const [trackerDraft, setTrackerDraft] =
+    useState<TrackerDraft>(emptyTrackerDraft)
   const [status, setStatus] = useState("")
   const [jobStatus, setJobStatus] = useState("")
   const [contentStatus, setContentStatus] = useState("")
+  const [trackerStatus, setTrackerStatus] = useState("")
 
   const profileIssues = validateProfile(profile)
   const jobAnalysisIssues = validateJobAnalysisDraft(jobAnalysisDraft)
   const applicationContentIssues = validateApplicationContentDraft(
     applicationContentDraft
   )
+  const trackerIssues = validateTrackerDraft(trackerDraft)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -239,6 +328,11 @@ function SidePanelApp() {
       const savedApplicationContentDraft = await getApplicationContentDraft()
       if (savedApplicationContentDraft) {
         setApplicationContentDraft(savedApplicationContentDraft)
+      }
+
+      const savedTrackerDraft = await getTrackerDraft()
+      if (savedTrackerDraft) {
+        setTrackerDraft(savedTrackerDraft)
       }
     }
 
@@ -266,6 +360,13 @@ function SidePanelApp() {
     value: ApplicationContentDraft[K]
   ) => {
     setApplicationContentDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateTrackerField = <K extends keyof TrackerDraft>(
+    key: K,
+    value: TrackerDraft[K]
+  ) => {
+    setTrackerDraft((current) => ({ ...current, [key]: value }))
   }
 
   const handleSaveProfile = async () => {
@@ -301,6 +402,17 @@ function SidePanelApp() {
     await saveApplicationContentDraft(applicationContentDraft)
     setContentStatus("Application content draft saved")
     setTimeout(() => setContentStatus(""), 2000)
+  }
+
+  const handleSaveTracker = async () => {
+    if (trackerIssues.length > 0) {
+      setTrackerStatus("Complete the highlighted tracker fields before saving.")
+      return
+    }
+
+    await saveTrackerDraft(trackerDraft)
+    setTrackerStatus("Tracker draft saved")
+    setTimeout(() => setTrackerStatus(""), 2000)
   }
 
   return (
@@ -342,6 +454,11 @@ function SidePanelApp() {
                   !
                 </span>
               )}
+            {section.id === "tracker" && trackerIssues.length > 0 && (
+              <span className="nav-alert" aria-label="Tracker needs attention">
+                !
+              </span>
+            )}
           </button>
         ))}
       </nav>
@@ -772,6 +889,152 @@ function SidePanelApp() {
             </button>
 
             {contentStatus && <p role="status">{contentStatus}</p>}
+          </div>
+        </section>
+      ) : activeSection === "tracker" ? (
+        <section className="panel-section">
+          <h2>Tracker</h2>
+
+          <div className="form-grid">
+            {trackerIssues.length > 0 && (
+              <div className="alert-panel" role="alert">
+                <strong>Tracker needs attention</strong>
+                <ul>
+                  {trackerIssues.map((issue) => (
+                    <li key={`${issue.field}-${issue.message}`}>
+                      {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <label>
+              Role title
+              {getTrackerIssueForField(trackerIssues, "roleTitle") && (
+                <span className="field-alert">
+                  {getTrackerIssueForField(trackerIssues, "roleTitle")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getTrackerIssueForField(trackerIssues, "roleTitle")
+                )}
+                value={trackerDraft.roleTitle}
+                onChange={(event) =>
+                  updateTrackerField("roleTitle", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Company
+              {getTrackerIssueForField(trackerIssues, "company") && (
+                <span className="field-alert">
+                  {getTrackerIssueForField(trackerIssues, "company")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getTrackerIssueForField(trackerIssues, "company")
+                )}
+                value={trackerDraft.company}
+                onChange={(event) =>
+                  updateTrackerField("company", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Application URL
+              {getTrackerIssueForField(trackerIssues, "applicationUrl") && (
+                <span className="field-alert">
+                  {getTrackerIssueForField(trackerIssues, "applicationUrl")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getTrackerIssueForField(trackerIssues, "applicationUrl")
+                )}
+                type="url"
+                value={trackerDraft.applicationUrl}
+                onChange={(event) =>
+                  updateTrackerField("applicationUrl", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Status
+              <select
+                value={trackerDraft.status}
+                onChange={(event) =>
+                  updateTrackerField(
+                    "status",
+                    event.target.value as ApplicationStatus
+                  )
+                }
+              >
+                {applicationStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Next action
+              {getTrackerIssueForField(trackerIssues, "nextAction") && (
+                <span className="field-alert">
+                  {getTrackerIssueForField(trackerIssues, "nextAction")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getTrackerIssueForField(trackerIssues, "nextAction")
+                )}
+                value={trackerDraft.nextAction}
+                onChange={(event) =>
+                  updateTrackerField("nextAction", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Next action date
+              {getTrackerIssueForField(trackerIssues, "nextActionDate") && (
+                <span className="field-alert">
+                  {getTrackerIssueForField(trackerIssues, "nextActionDate")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getTrackerIssueForField(trackerIssues, "nextActionDate")
+                )}
+                type="date"
+                value={trackerDraft.nextActionDate}
+                onChange={(event) =>
+                  updateTrackerField("nextActionDate", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Notes
+              <textarea
+                value={trackerDraft.notes}
+                onChange={(event) =>
+                  updateTrackerField("notes", event.target.value)
+                }
+              />
+            </label>
+
+            <button type="button" onClick={handleSaveTracker}>
+              Save Tracker
+            </button>
+
+            {trackerStatus && <p role="status">{trackerStatus}</p>}
           </div>
         </section>
       ) : (

@@ -52,11 +52,22 @@ export type ApplicationContentDraft = {
   availabilityAnswer: string
 }
 
+export type TrackerDraft = {
+  roleTitle: string
+  company: string
+  applicationUrl: string
+  status: ApplicationStatus
+  nextAction: string
+  nextActionDate: string
+  notes: string
+}
+
 const PROFILE_KEY = "candidate-profile"
 const REUSABLE_ANSWERS_KEY = "reusable-answers"
 const APPLICATIONS_KEY = "saved-applications"
 const JOB_ANALYSIS_KEY = "job-analysis-draft"
 const APPLICATION_CONTENT_KEY = "application-content-draft"
+const TRACKER_DRAFT_KEY = "tracker-draft"
 
 export async function saveProfile(profile: CandidateProfile) {
   await chrome.storage.local.set({ [PROFILE_KEY]: profile })
@@ -94,6 +105,15 @@ export async function saveApplicationContentDraft(
 export async function getApplicationContentDraft(): Promise<ApplicationContentDraft | null> {
   const result = await chrome.storage.local.get(APPLICATION_CONTENT_KEY)
   return (result[APPLICATION_CONTENT_KEY] as ApplicationContentDraft) ?? null
+}
+
+export async function saveTrackerDraft(draft: TrackerDraft) {
+  await chrome.storage.local.set({ [TRACKER_DRAFT_KEY]: draft })
+}
+
+export async function getTrackerDraft(): Promise<TrackerDraft | null> {
+  const result = await chrome.storage.local.get(TRACKER_DRAFT_KEY)
+  return (result[TRACKER_DRAFT_KEY] as TrackerDraft) ?? null
 }
 
 export async function getApplications(): Promise<ApplicationRecord[]> {

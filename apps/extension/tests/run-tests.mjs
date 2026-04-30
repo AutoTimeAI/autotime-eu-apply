@@ -19,11 +19,13 @@ import {
   getJobAnalysisDraft,
   getProfile,
   getReusableAnswers,
+  getTrackerDraft,
   saveApplicationContentDraft,
   saveApplication,
   saveJobAnalysisDraft,
   saveProfile,
   saveReusableAnswers,
+  saveTrackerDraft,
   updateApplication
 } from "../lib/storage.ts"
 
@@ -214,6 +216,24 @@ test("saves and loads application content draft", async () => {
   await saveApplicationContentDraft(draft)
 
   assert.deepEqual(await getApplicationContentDraft(), draft)
+})
+
+test("saves and loads tracker draft", async () => {
+  resetStorage()
+
+  const draft = {
+    roleTitle: "Frontend Engineer",
+    company: "Example Co",
+    applicationUrl: "https://example.com/jobs/frontend",
+    status: "draft",
+    nextAction: "Tailor cover letter",
+    nextActionDate: "2026-05-01",
+    notes: "Manual tracker draft only."
+  }
+
+  await saveTrackerDraft(draft)
+
+  assert.deepEqual(await getTrackerDraft(), draft)
 })
 
 test("saves applications newest first and deletes by id", async () => {
