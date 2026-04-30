@@ -95,6 +95,12 @@ const sections: Array<{ id: Section; label: string }> = [
   { id: "tracker-view", label: "View Tracker" }
 ]
 
+function getStatusClassName(message: string) {
+  return message.startsWith("Complete ")
+    ? "status-message status-message-error"
+    : "status-message"
+}
+
 function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
   const [saveAttempts, setSaveAttempts] = useState<SaveAttempts>({
@@ -534,7 +540,7 @@ function SidePanelApp() {
 
             {status && (
               <p
-                className="status-message"
+                className={getStatusClassName(status)}
                 ref={profileStatusRef}
                 role="status"
                 tabIndex={-1}
@@ -730,7 +736,7 @@ function SidePanelApp() {
 
             {jobStatus && (
               <p
-                className="status-message"
+                className={getStatusClassName(jobStatus)}
                 ref={jobStatusRef}
                 role="status"
                 tabIndex={-1}
@@ -930,7 +936,7 @@ function SidePanelApp() {
 
             {contentStatus && (
               <p
-                className="status-message"
+                className={getStatusClassName(contentStatus)}
                 ref={contentStatusRef}
                 role="status"
                 tabIndex={-1}
@@ -1128,7 +1134,7 @@ function SidePanelApp() {
 
             {trackerStatus && (
               <p
-                className="status-message"
+                className={getStatusClassName(trackerStatus)}
                 ref={trackerStatusRef}
                 role="status"
                 tabIndex={-1}

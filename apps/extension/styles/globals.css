@@ -170,6 +170,12 @@ section {
   font-weight: 700;
 }
 
+.status-message-error {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #7f1d1d;
+}
+
 .profile-summary {
   display: grid;
   gap: 10px;
