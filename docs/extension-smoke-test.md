@@ -45,6 +45,14 @@ apps/extension/.output/chrome-mv3
 5. Open the matching view tab.
 6. Confirm the saved data is visible.
 
+## Clear Saved Data
+
+1. Open each view tab with saved data.
+2. Click the matching Clear Saved button.
+3. Confirm the view tab returns to its empty-state message.
+4. Close and reopen the side panel.
+5. Confirm the cleared saved data stays cleared.
+
 ## Reload Persistence
 
 1. Close and reopen the side panel.
