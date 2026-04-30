@@ -31,8 +31,11 @@ type Section =
   | "profile"
   | "profile-view"
   | "job-analysis"
+  | "job-analysis-view"
   | "application-content"
+  | "application-content-view"
   | "tracker"
+  | "tracker-view"
 type SaveAttempts = Record<Section, boolean>
 
 const emptyProfile: CandidateProfile = {
@@ -85,8 +88,11 @@ const sections: Array<{ id: Section; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "profile-view", label: "View Profile" },
   { id: "job-analysis", label: "Job Analysis" },
+  { id: "job-analysis-view", label: "View Job Analysis" },
   { id: "application-content", label: "Application Content" },
-  { id: "tracker", label: "Tracker" }
+  { id: "application-content-view", label: "View Content" },
+  { id: "tracker", label: "Tracker" },
+  { id: "tracker-view", label: "View Tracker" }
 ]
 
 function SidePanelApp() {
@@ -95,8 +101,11 @@ function SidePanelApp() {
     profile: false,
     "profile-view": false,
     "job-analysis": false,
-    "application-content": false,
-    tracker: false
+      "job-analysis-view": false,
+      "application-content": false,
+      "application-content-view": false,
+      tracker: false,
+      "tracker-view": false
   })
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
   const [savedProfile, setSavedProfile] = useState<CandidateProfile | null>(
@@ -104,10 +113,16 @@ function SidePanelApp() {
   )
   const [jobAnalysisDraft, setJobAnalysisDraft] =
     useState<JobAnalysisDraft>(emptyJobAnalysisDraft)
+  const [savedJobAnalysisDraft, setSavedJobAnalysisDraft] =
+    useState<JobAnalysisDraft | null>(null)
   const [applicationContentDraft, setApplicationContentDraft] =
     useState<ApplicationContentDraft>(emptyApplicationContentDraft)
+  const [savedApplicationContentDraft, setSavedApplicationContentDraft] =
+    useState<ApplicationContentDraft | null>(null)
   const [trackerDraft, setTrackerDraft] =
     useState<TrackerDraft>(emptyTrackerDraft)
+  const [savedTrackerDraft, setSavedTrackerDraft] =
+    useState<TrackerDraft | null>(null)
   const [status, setStatus] = useState("")
   const [jobStatus, setJobStatus] = useState("")
   const [contentStatus, setContentStatus] = useState("")
@@ -134,8 +149,11 @@ function SidePanelApp() {
       profile: false,
       "profile-view": false,
       "job-analysis": false,
+      "job-analysis-view": false,
       "application-content": false,
-      tracker: false
+      "application-content-view": false,
+      tracker: false,
+      "tracker-view": false
     })
     setStatus("")
     setJobStatus("")
@@ -154,16 +172,19 @@ function SidePanelApp() {
       const savedJobAnalysisDraft = await getJobAnalysisDraft()
       if (savedJobAnalysisDraft) {
         setJobAnalysisDraft(savedJobAnalysisDraft)
+        setSavedJobAnalysisDraft(savedJobAnalysisDraft)
       }
 
       const savedApplicationContentDraft = await getApplicationContentDraft()
       if (savedApplicationContentDraft) {
         setApplicationContentDraft(savedApplicationContentDraft)
+        setSavedApplicationContentDraft(savedApplicationContentDraft)
       }
 
       const savedTrackerDraft = await getTrackerDraft()
       if (savedTrackerDraft) {
         setTrackerDraft(savedTrackerDraft)
+        setSavedTrackerDraft(savedTrackerDraft)
       }
     }
 
@@ -175,16 +196,22 @@ function SidePanelApp() {
       profile: profileStatusRef.current,
       "profile-view": null,
       "job-analysis": jobStatusRef.current,
+      "job-analysis-view": null,
       "application-content": contentStatusRef.current,
-      tracker: trackerStatusRef.current
+      "application-content-view": null,
+      tracker: trackerStatusRef.current,
+      "tracker-view": null
     }
 
     const activeStatus = {
       profile: status,
       "profile-view": "",
       "job-analysis": jobStatus,
+      "job-analysis-view": "",
       "application-content": contentStatus,
-      tracker: trackerStatus
+      "application-content-view": "",
+      tracker: trackerStatus,
+      "tracker-view": ""
     }[activeSection]
 
     const statusElement = statusRefs[activeSection]
@@ -250,6 +277,7 @@ function SidePanelApp() {
     }
 
     await saveJobAnalysisDraft(jobAnalysisDraft)
+    setSavedJobAnalysisDraft(jobAnalysisDraft)
     setJobStatus("Job analysis draft saved")
     setTimeout(() => setJobStatus(""), 3500)
   }
@@ -265,6 +293,7 @@ function SidePanelApp() {
     }
 
     await saveApplicationContentDraft(applicationContentDraft)
+    setSavedApplicationContentDraft(applicationContentDraft)
     setContentStatus("Application content draft saved")
     setTimeout(() => setContentStatus(""), 3500)
   }
@@ -278,6 +307,7 @@ function SidePanelApp() {
     }
 
     await saveTrackerDraft(trackerDraft)
+    setSavedTrackerDraft(trackerDraft)
     setTrackerStatus("Tracker draft saved")
     setTimeout(() => setTrackerStatus(""), 3500)
   }
@@ -710,6 +740,49 @@ function SidePanelApp() {
             )}
           </div>
         </section>
+      ) : activeSection === "job-analysis-view" ? (
+        <section className="panel-section">
+          <h2>View Job Analysis</h2>
+
+          {savedJobAnalysisDraft ? (
+            <dl className="profile-summary">
+              <div>
+                <dt>Job title</dt>
+                <dd>{savedJobAnalysisDraft.jobTitle}</dd>
+              </div>
+              <div>
+                <dt>Company</dt>
+                <dd>{savedJobAnalysisDraft.company}</dd>
+              </div>
+              <div>
+                <dt>Job URL</dt>
+                <dd>
+                  <a
+                    href={savedJobAnalysisDraft.jobUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {savedJobAnalysisDraft.jobUrl}
+                  </a>
+                </dd>
+              </div>
+              <div>
+                <dt>Location/country</dt>
+                <dd>{savedJobAnalysisDraft.location}</dd>
+              </div>
+              <div>
+                <dt>Work mode</dt>
+                <dd>{savedJobAnalysisDraft.workMode}</dd>
+              </div>
+              <div>
+                <dt>Notes</dt>
+                <dd>{savedJobAnalysisDraft.notes || "None"}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="empty-state">No saved job analysis yet.</p>
+          )}
+        </section>
       ) : activeSection === "application-content" ? (
         <section className="panel-section">
           <h2>Application Content</h2>
@@ -866,6 +939,39 @@ function SidePanelApp() {
               </p>
             )}
           </div>
+        </section>
+      ) : activeSection === "application-content-view" ? (
+        <section className="panel-section">
+          <h2>View Content</h2>
+
+          {savedApplicationContentDraft ? (
+            <dl className="profile-summary">
+              <div>
+                <dt>Cover letter</dt>
+                <dd>{savedApplicationContentDraft.coverLetter}</dd>
+              </div>
+              <div>
+                <dt>Profile summary</dt>
+                <dd>{savedApplicationContentDraft.profileSummary}</dd>
+              </div>
+              <div>
+                <dt>Motivation answer</dt>
+                <dd>{savedApplicationContentDraft.motivationAnswer}</dd>
+              </div>
+              <div>
+                <dt>Strengths answer</dt>
+                <dd>{savedApplicationContentDraft.strengthsAnswer || "None"}</dd>
+              </div>
+              <div>
+                <dt>Availability answer</dt>
+                <dd>
+                  {savedApplicationContentDraft.availabilityAnswer || "None"}
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="empty-state">No saved application content yet.</p>
+          )}
         </section>
       ) : activeSection === "tracker" ? (
         <section className="panel-section">
@@ -1031,6 +1137,53 @@ function SidePanelApp() {
               </p>
             )}
           </div>
+        </section>
+      ) : activeSection === "tracker-view" ? (
+        <section className="panel-section">
+          <h2>View Tracker</h2>
+
+          {savedTrackerDraft ? (
+            <dl className="profile-summary">
+              <div>
+                <dt>Role title</dt>
+                <dd>{savedTrackerDraft.roleTitle}</dd>
+              </div>
+              <div>
+                <dt>Company</dt>
+                <dd>{savedTrackerDraft.company}</dd>
+              </div>
+              <div>
+                <dt>Application URL</dt>
+                <dd>
+                  <a
+                    href={savedTrackerDraft.applicationUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {savedTrackerDraft.applicationUrl}
+                  </a>
+                </dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{savedTrackerDraft.status}</dd>
+              </div>
+              <div>
+                <dt>Next action</dt>
+                <dd>{savedTrackerDraft.nextAction}</dd>
+              </div>
+              <div>
+                <dt>Next action date</dt>
+                <dd>{savedTrackerDraft.nextActionDate}</dd>
+              </div>
+              <div>
+                <dt>Notes</dt>
+                <dd>{savedTrackerDraft.notes || "None"}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="empty-state">No saved tracker draft yet.</p>
+          )}
         </section>
       ) : (
         <PlaceholderSection section={activeSection} />
