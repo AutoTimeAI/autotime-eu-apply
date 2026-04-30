@@ -2,14 +2,21 @@ import { useEffect, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import {
+  getJobAnalysisDraft,
   getProfile,
+  saveJobAnalysisDraft,
   saveProfile,
-  type CandidateProfile
+  type CandidateProfile,
+  type JobAnalysisDraft
 } from "../lib/storage"
 
 type Section = "profile" | "job-analysis" | "application-content" | "tracker"
 type ProfileIssue = {
   field: keyof CandidateProfile
+  message: string
+}
+type JobAnalysisIssue = {
+  field: keyof JobAnalysisDraft
   message: string
 }
 
@@ -22,6 +29,15 @@ const emptyProfile: CandidateProfile = {
   sponsorshipNeeded: false,
   relocationWillingness: "depends",
   noticePeriod: ""
+}
+
+const emptyJobAnalysisDraft: JobAnalysisDraft = {
+  jobTitle: "",
+  company: "",
+  jobUrl: "",
+  location: "",
+  workMode: "unknown",
+  notes: ""
 }
 
 const sections: Array<{ id: Section; label: string }> = [
@@ -41,6 +57,16 @@ const requiredProfileFields: Array<{
   { field: "currentCountry", label: "Current country" },
   { field: "currentCity", label: "Current city" },
   { field: "noticePeriod", label: "Notice period" }
+]
+
+const requiredJobAnalysisFields: Array<{
+  field: keyof JobAnalysisDraft
+  label: string
+}> = [
+  { field: "jobTitle", label: "Job title" },
+  { field: "company", label: "Company" },
+  { field: "jobUrl", label: "Job URL" },
+  { field: "location", label: "Location/country" }
 ]
 
 function validateProfile(profile: CandidateProfile): ProfileIssue[] {
@@ -71,6 +97,40 @@ function validateProfile(profile: CandidateProfile): ProfileIssue[] {
   return issues
 }
 
+function validateJobAnalysisDraft(
+  draft: JobAnalysisDraft
+): JobAnalysisIssue[] {
+  const issues: JobAnalysisIssue[] = []
+
+  for (const { field, label } of requiredJobAnalysisFields) {
+    const value = draft[field]
+
+    if (typeof value === "string" && value.trim() === "") {
+      issues.push({ field, message: `${label} is required.` })
+    }
+  }
+
+  if (draft.workMode === "unknown") {
+    issues.push({ field: "workMode", message: "Work mode is required." })
+  }
+
+  if (draft.jobUrl.trim() !== "") {
+    try {
+      const url = new URL(draft.jobUrl)
+      if (!["http:", "https:"].includes(url.protocol)) {
+        issues.push({
+          field: "jobUrl",
+          message: "Job URL must start with http or https."
+        })
+      }
+    } catch {
+      issues.push({ field: "jobUrl", message: "Job URL format does not match." })
+    }
+  }
+
+  return issues
+}
+
 function getIssueForField(
   issues: ProfileIssue[],
   field: keyof CandidateProfile
@@ -78,18 +138,34 @@ function getIssueForField(
   return issues.find((issue) => issue.field === field)?.message
 }
 
+function getJobIssueForField(
+  issues: JobAnalysisIssue[],
+  field: keyof JobAnalysisDraft
+) {
+  return issues.find((issue) => issue.field === field)?.message
+}
+
 function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
+  const [jobAnalysisDraft, setJobAnalysisDraft] =
+    useState<JobAnalysisDraft>(emptyJobAnalysisDraft)
   const [status, setStatus] = useState("")
+  const [jobStatus, setJobStatus] = useState("")
 
   const profileIssues = validateProfile(profile)
+  const jobAnalysisIssues = validateJobAnalysisDraft(jobAnalysisDraft)
 
   useEffect(() => {
     const loadProfile = async () => {
       const savedProfile = await getProfile()
       if (savedProfile) {
         setProfile(savedProfile)
+      }
+
+      const savedJobAnalysisDraft = await getJobAnalysisDraft()
+      if (savedJobAnalysisDraft) {
+        setJobAnalysisDraft(savedJobAnalysisDraft)
       }
     }
 
@@ -103,6 +179,13 @@ function SidePanelApp() {
     setProfile((current) => ({ ...current, [key]: value }))
   }
 
+  const updateJobAnalysisField = <K extends keyof JobAnalysisDraft>(
+    key: K,
+    value: JobAnalysisDraft[K]
+  ) => {
+    setJobAnalysisDraft((current) => ({ ...current, [key]: value }))
+  }
+
   const handleSaveProfile = async () => {
     if (profileIssues.length > 0) {
       setStatus("Complete the highlighted profile fields before saving.")
@@ -112,6 +195,17 @@ function SidePanelApp() {
     await saveProfile(profile)
     setStatus("Profile saved")
     setTimeout(() => setStatus(""), 2000)
+  }
+
+  const handleSaveJobAnalysis = async () => {
+    if (jobAnalysisIssues.length > 0) {
+      setJobStatus("Complete the highlighted job analysis fields before saving.")
+      return
+    }
+
+    await saveJobAnalysisDraft(jobAnalysisDraft)
+    setJobStatus("Job analysis draft saved")
+    setTimeout(() => setJobStatus(""), 2000)
   }
 
   return (
@@ -135,6 +229,15 @@ function SidePanelApp() {
                 !
               </span>
             )}
+            {section.id === "job-analysis" &&
+              jobAnalysisIssues.length > 0 && (
+                <span
+                  className="nav-alert"
+                  aria-label="Job Analysis needs attention"
+                >
+                  !
+                </span>
+              )}
           </button>
         ))}
       </nav>
@@ -290,6 +393,140 @@ function SidePanelApp() {
             </button>
 
             {status && <p role="status">{status}</p>}
+          </div>
+        </section>
+      ) : activeSection === "job-analysis" ? (
+        <section className="panel-section">
+          <h2>Job Analysis</h2>
+
+          <div className="form-grid">
+            {jobAnalysisIssues.length > 0 && (
+              <div className="alert-panel" role="alert">
+                <strong>Job Analysis needs attention</strong>
+                <ul>
+                  {jobAnalysisIssues.map((issue) => (
+                    <li key={`${issue.field}-${issue.message}`}>
+                      {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <label>
+              Job title
+              {getJobIssueForField(jobAnalysisIssues, "jobTitle") && (
+                <span className="field-alert">
+                  {getJobIssueForField(jobAnalysisIssues, "jobTitle")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getJobIssueForField(jobAnalysisIssues, "jobTitle")
+                )}
+                value={jobAnalysisDraft.jobTitle}
+                onChange={(event) =>
+                  updateJobAnalysisField("jobTitle", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Company
+              {getJobIssueForField(jobAnalysisIssues, "company") && (
+                <span className="field-alert">
+                  {getJobIssueForField(jobAnalysisIssues, "company")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getJobIssueForField(jobAnalysisIssues, "company")
+                )}
+                value={jobAnalysisDraft.company}
+                onChange={(event) =>
+                  updateJobAnalysisField("company", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Job URL
+              {getJobIssueForField(jobAnalysisIssues, "jobUrl") && (
+                <span className="field-alert">
+                  {getJobIssueForField(jobAnalysisIssues, "jobUrl")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getJobIssueForField(jobAnalysisIssues, "jobUrl")
+                )}
+                type="url"
+                value={jobAnalysisDraft.jobUrl}
+                onChange={(event) =>
+                  updateJobAnalysisField("jobUrl", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Location/country
+              {getJobIssueForField(jobAnalysisIssues, "location") && (
+                <span className="field-alert">
+                  {getJobIssueForField(jobAnalysisIssues, "location")}
+                </span>
+              )}
+              <input
+                aria-invalid={Boolean(
+                  getJobIssueForField(jobAnalysisIssues, "location")
+                )}
+                value={jobAnalysisDraft.location}
+                onChange={(event) =>
+                  updateJobAnalysisField("location", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Work mode
+              {getJobIssueForField(jobAnalysisIssues, "workMode") && (
+                <span className="field-alert">
+                  {getJobIssueForField(jobAnalysisIssues, "workMode")}
+                </span>
+              )}
+              <select
+                aria-invalid={Boolean(
+                  getJobIssueForField(jobAnalysisIssues, "workMode")
+                )}
+                value={jobAnalysisDraft.workMode}
+                onChange={(event) =>
+                  updateJobAnalysisField(
+                    "workMode",
+                    event.target.value as JobAnalysisDraft["workMode"]
+                  )
+                }
+              >
+                <option value="unknown">Select work mode</option>
+                <option value="onsite">On-site</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="remote">Remote</option>
+              </select>
+            </label>
+
+            <label>
+              Notes
+              <textarea
+                value={jobAnalysisDraft.notes}
+                onChange={(event) =>
+                  updateJobAnalysisField("notes", event.target.value)
+                }
+              />
+            </label>
+
+            <button type="button" onClick={handleSaveJobAnalysis}>
+              Save Job Analysis
+            </button>
+
+            {jobStatus && <p role="status">{jobStatus}</p>}
           </div>
         </section>
       ) : (

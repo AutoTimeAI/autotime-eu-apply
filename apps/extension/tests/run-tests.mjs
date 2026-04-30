@@ -15,9 +15,11 @@ import {
 import {
   deleteApplication,
   getApplications,
+  getJobAnalysisDraft,
   getProfile,
   getReusableAnswers,
   saveApplication,
+  saveJobAnalysisDraft,
   saveProfile,
   saveReusableAnswers,
   updateApplication
@@ -177,6 +179,23 @@ test("saves and loads reusable answers", async () => {
   await saveReusableAnswers(answers)
 
   assert.deepEqual(await getReusableAnswers(), answers)
+})
+
+test("saves and loads job analysis draft", async () => {
+  resetStorage()
+
+  const draft = {
+    jobTitle: "Frontend Engineer",
+    company: "Example Co",
+    jobUrl: "https://example.com/jobs/frontend",
+    location: "Germany",
+    workMode: "remote",
+    notes: "Manual notes only."
+  }
+
+  await saveJobAnalysisDraft(draft)
+
+  assert.deepEqual(await getJobAnalysisDraft(), draft)
 })
 
 test("saves applications newest first and deletes by id", async () => {

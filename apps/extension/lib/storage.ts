@@ -35,9 +35,19 @@ export type ApplicationRecord = {
   notes?: string
 }
 
+export type JobAnalysisDraft = {
+  jobTitle: string
+  company: string
+  jobUrl: string
+  location: string
+  workMode: "onsite" | "hybrid" | "remote" | "unknown"
+  notes: string
+}
+
 const PROFILE_KEY = "candidate-profile"
 const REUSABLE_ANSWERS_KEY = "reusable-answers"
 const APPLICATIONS_KEY = "saved-applications"
+const JOB_ANALYSIS_KEY = "job-analysis-draft"
 
 export async function saveProfile(profile: CandidateProfile) {
   await chrome.storage.local.set({ [PROFILE_KEY]: profile })
@@ -55,6 +65,15 @@ export async function saveReusableAnswers(answers: ReusableAnswers) {
 export async function getReusableAnswers(): Promise<ReusableAnswers | null> {
   const result = await chrome.storage.local.get(REUSABLE_ANSWERS_KEY)
   return (result[REUSABLE_ANSWERS_KEY] as ReusableAnswers) ?? null
+}
+
+export async function saveJobAnalysisDraft(draft: JobAnalysisDraft) {
+  await chrome.storage.local.set({ [JOB_ANALYSIS_KEY]: draft })
+}
+
+export async function getJobAnalysisDraft(): Promise<JobAnalysisDraft | null> {
+  const result = await chrome.storage.local.get(JOB_ANALYSIS_KEY)
+  return (result[JOB_ANALYSIS_KEY] as JobAnalysisDraft) ?? null
 }
 
 export async function getApplications(): Promise<ApplicationRecord[]> {
