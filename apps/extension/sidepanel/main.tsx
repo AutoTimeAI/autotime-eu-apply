@@ -28,7 +28,7 @@ import {
 } from "../lib/validation"
 
 type Section = "profile" | "job-analysis" | "application-content" | "tracker"
-type VisitedSections = Record<Section, boolean>
+type SaveAttempts = Record<Section, boolean>
 
 const emptyProfile: CandidateProfile = {
   fullName: "",
@@ -85,8 +85,8 @@ const sections: Array<{ id: Section; label: string }> = [
 
 function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
-  const [visitedSections, setVisitedSections] = useState<VisitedSections>({
-    profile: true,
+  const [saveAttempts, setSaveAttempts] = useState<SaveAttempts>({
+    profile: false,
     "job-analysis": false,
     "application-content": false,
     tracker: false
@@ -110,13 +110,12 @@ function SidePanelApp() {
   )
   const trackerIssues = validateTrackerDraft(trackerDraft)
 
-  const markSectionVisited = (section: Section) => {
-    setVisitedSections((current) => ({ ...current, [section]: true }))
+  const markSaveAttempted = (section: Section) => {
+    setSaveAttempts((current) => ({ ...current, [section]: true }))
   }
 
   const goToSection = (section: Section) => {
     setActiveSection(section)
-    markSectionVisited(section)
   }
 
   useEffect(() => {
@@ -176,7 +175,7 @@ function SidePanelApp() {
   }
 
   const handleSaveProfile = async () => {
-    markSectionVisited("profile")
+    markSaveAttempted("profile")
 
     if (profileIssues.length > 0) {
       setStatus("Complete the highlighted profile fields before saving.")
@@ -189,7 +188,7 @@ function SidePanelApp() {
   }
 
   const handleSaveJobAnalysis = async () => {
-    markSectionVisited("job-analysis")
+    markSaveAttempted("job-analysis")
 
     if (jobAnalysisIssues.length > 0) {
       setJobStatus("Complete the highlighted job analysis fields before saving.")
@@ -202,7 +201,7 @@ function SidePanelApp() {
   }
 
   const handleSaveApplicationContent = async () => {
-    markSectionVisited("application-content")
+    markSaveAttempted("application-content")
 
     if (applicationContentIssues.length > 0) {
       setContentStatus(
@@ -217,7 +216,7 @@ function SidePanelApp() {
   }
 
   const handleSaveTracker = async () => {
-    markSectionVisited("tracker")
+    markSaveAttempted("tracker")
 
     if (trackerIssues.length > 0) {
       setTrackerStatus("Complete the highlighted tracker fields before saving.")
@@ -246,14 +245,14 @@ function SidePanelApp() {
           >
             {section.label}
             {section.id === "profile" &&
-              visitedSections.profile &&
+              saveAttempts.profile &&
               profileIssues.length > 0 && (
               <span className="nav-alert" aria-label="Profile needs attention">
                 !
               </span>
             )}
             {section.id === "job-analysis" &&
-              visitedSections["job-analysis"] &&
+              saveAttempts["job-analysis"] &&
               jobAnalysisIssues.length > 0 && (
                 <span
                   className="nav-alert"
@@ -263,7 +262,7 @@ function SidePanelApp() {
                 </span>
               )}
             {section.id === "application-content" &&
-              visitedSections["application-content"] &&
+              saveAttempts["application-content"] &&
               applicationContentIssues.length > 0 && (
                 <span
                   className="nav-alert"
@@ -273,7 +272,7 @@ function SidePanelApp() {
                 </span>
               )}
             {section.id === "tracker" &&
-              visitedSections.tracker &&
+              saveAttempts.tracker &&
               trackerIssues.length > 0 && (
               <span className="nav-alert" aria-label="Tracker needs attention">
                 !
@@ -288,7 +287,7 @@ function SidePanelApp() {
           <h2>Profile</h2>
 
           <div className="form-grid">
-            {profileIssues.length > 0 && (
+            {saveAttempts.profile && profileIssues.length > 0 && (
               <div className="alert-panel" role="alert">
                 <strong>Profile needs attention</strong>
                 <ul>
@@ -303,13 +302,17 @@ function SidePanelApp() {
 
             <label>
               Full name
-              {getIssueForField(profileIssues, "fullName") && (
+              {saveAttempts.profile &&
+                getIssueForField(profileIssues, "fullName") && (
                 <span className="field-alert">
                   {getIssueForField(profileIssues, "fullName")}
                 </span>
               )}
               <input
-                aria-invalid={Boolean(getIssueForField(profileIssues, "fullName"))}
+                aria-invalid={Boolean(
+                  saveAttempts.profile &&
+                    getIssueForField(profileIssues, "fullName")
+                )}
                 value={profile.fullName}
                 onChange={(event) =>
                   updateField("fullName", event.target.value)
@@ -319,13 +322,16 @@ function SidePanelApp() {
 
             <label>
               Email
-              {getIssueForField(profileIssues, "email") && (
+              {saveAttempts.profile &&
+                getIssueForField(profileIssues, "email") && (
                 <span className="field-alert">
                   {getIssueForField(profileIssues, "email")}
                 </span>
               )}
               <input
-                aria-invalid={Boolean(getIssueForField(profileIssues, "email"))}
+                aria-invalid={Boolean(
+                  saveAttempts.profile && getIssueForField(profileIssues, "email")
+                )}
                 type="email"
                 value={profile.email}
                 onChange={(event) => updateField("email", event.target.value)}
@@ -334,13 +340,16 @@ function SidePanelApp() {
 
             <label>
               Phone
-              {getIssueForField(profileIssues, "phone") && (
+              {saveAttempts.profile &&
+                getIssueForField(profileIssues, "phone") && (
                 <span className="field-alert">
                   {getIssueForField(profileIssues, "phone")}
                 </span>
               )}
               <input
-                aria-invalid={Boolean(getIssueForField(profileIssues, "phone"))}
+                aria-invalid={Boolean(
+                  saveAttempts.profile && getIssueForField(profileIssues, "phone")
+                )}
                 value={profile.phone}
                 onChange={(event) => updateField("phone", event.target.value)}
               />
@@ -348,14 +357,16 @@ function SidePanelApp() {
 
             <label>
               Current country
-              {getIssueForField(profileIssues, "currentCountry") && (
+              {saveAttempts.profile &&
+                getIssueForField(profileIssues, "currentCountry") && (
                 <span className="field-alert">
                   {getIssueForField(profileIssues, "currentCountry")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getIssueForField(profileIssues, "currentCountry")
+                  saveAttempts.profile &&
+                    getIssueForField(profileIssues, "currentCountry")
                 )}
                 value={profile.currentCountry}
                 onChange={(event) =>
@@ -366,14 +377,16 @@ function SidePanelApp() {
 
             <label>
               Current city
-              {getIssueForField(profileIssues, "currentCity") && (
+              {saveAttempts.profile &&
+                getIssueForField(profileIssues, "currentCity") && (
                 <span className="field-alert">
                   {getIssueForField(profileIssues, "currentCity")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getIssueForField(profileIssues, "currentCity")
+                  saveAttempts.profile &&
+                    getIssueForField(profileIssues, "currentCity")
                 )}
                 value={profile.currentCity}
                 onChange={(event) =>
@@ -384,14 +397,16 @@ function SidePanelApp() {
 
             <label>
               Notice period
-              {getIssueForField(profileIssues, "noticePeriod") && (
+              {saveAttempts.profile &&
+                getIssueForField(profileIssues, "noticePeriod") && (
                 <span className="field-alert">
                   {getIssueForField(profileIssues, "noticePeriod")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getIssueForField(profileIssues, "noticePeriod")
+                  saveAttempts.profile &&
+                    getIssueForField(profileIssues, "noticePeriod")
                 )}
                 value={profile.noticePeriod}
                 onChange={(event) =>
@@ -441,7 +456,7 @@ function SidePanelApp() {
           <h2>Job Analysis</h2>
 
           <div className="form-grid">
-            {jobAnalysisIssues.length > 0 && (
+            {saveAttempts["job-analysis"] && jobAnalysisIssues.length > 0 && (
               <div className="alert-panel" role="alert">
                 <strong>Job Analysis needs attention</strong>
                 <ul>
@@ -456,14 +471,16 @@ function SidePanelApp() {
 
             <label>
               Job title
-              {getJobIssueForField(jobAnalysisIssues, "jobTitle") && (
+              {saveAttempts["job-analysis"] &&
+                getJobIssueForField(jobAnalysisIssues, "jobTitle") && (
                 <span className="field-alert">
                   {getJobIssueForField(jobAnalysisIssues, "jobTitle")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getJobIssueForField(jobAnalysisIssues, "jobTitle")
+                  saveAttempts["job-analysis"] &&
+                    getJobIssueForField(jobAnalysisIssues, "jobTitle")
                 )}
                 value={jobAnalysisDraft.jobTitle}
                 onChange={(event) =>
@@ -474,14 +491,16 @@ function SidePanelApp() {
 
             <label>
               Company
-              {getJobIssueForField(jobAnalysisIssues, "company") && (
+              {saveAttempts["job-analysis"] &&
+                getJobIssueForField(jobAnalysisIssues, "company") && (
                 <span className="field-alert">
                   {getJobIssueForField(jobAnalysisIssues, "company")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getJobIssueForField(jobAnalysisIssues, "company")
+                  saveAttempts["job-analysis"] &&
+                    getJobIssueForField(jobAnalysisIssues, "company")
                 )}
                 value={jobAnalysisDraft.company}
                 onChange={(event) =>
@@ -492,14 +511,16 @@ function SidePanelApp() {
 
             <label>
               Job URL
-              {getJobIssueForField(jobAnalysisIssues, "jobUrl") && (
+              {saveAttempts["job-analysis"] &&
+                getJobIssueForField(jobAnalysisIssues, "jobUrl") && (
                 <span className="field-alert">
                   {getJobIssueForField(jobAnalysisIssues, "jobUrl")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getJobIssueForField(jobAnalysisIssues, "jobUrl")
+                  saveAttempts["job-analysis"] &&
+                    getJobIssueForField(jobAnalysisIssues, "jobUrl")
                 )}
                 type="url"
                 value={jobAnalysisDraft.jobUrl}
@@ -511,14 +532,16 @@ function SidePanelApp() {
 
             <label>
               Location/country
-              {getJobIssueForField(jobAnalysisIssues, "location") && (
+              {saveAttempts["job-analysis"] &&
+                getJobIssueForField(jobAnalysisIssues, "location") && (
                 <span className="field-alert">
                   {getJobIssueForField(jobAnalysisIssues, "location")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getJobIssueForField(jobAnalysisIssues, "location")
+                  saveAttempts["job-analysis"] &&
+                    getJobIssueForField(jobAnalysisIssues, "location")
                 )}
                 value={jobAnalysisDraft.location}
                 onChange={(event) =>
@@ -529,14 +552,16 @@ function SidePanelApp() {
 
             <label>
               Work mode
-              {getJobIssueForField(jobAnalysisIssues, "workMode") && (
+              {saveAttempts["job-analysis"] &&
+                getJobIssueForField(jobAnalysisIssues, "workMode") && (
                 <span className="field-alert">
                   {getJobIssueForField(jobAnalysisIssues, "workMode")}
                 </span>
               )}
               <select
                 aria-invalid={Boolean(
-                  getJobIssueForField(jobAnalysisIssues, "workMode")
+                  saveAttempts["job-analysis"] &&
+                    getJobIssueForField(jobAnalysisIssues, "workMode")
                 )}
                 value={jobAnalysisDraft.workMode}
                 onChange={(event) =>
@@ -575,7 +600,8 @@ function SidePanelApp() {
           <h2>Application Content</h2>
 
           <div className="form-grid">
-            {applicationContentIssues.length > 0 && (
+            {saveAttempts["application-content"] &&
+              applicationContentIssues.length > 0 && (
               <div className="alert-panel" role="alert">
                 <strong>Application Content needs attention</strong>
                 <ul>
@@ -590,10 +616,11 @@ function SidePanelApp() {
 
             <label>
               Cover letter
-              {getApplicationContentIssueForField(
-                applicationContentIssues,
-                "coverLetter"
-              ) && (
+              {saveAttempts["application-content"] &&
+                getApplicationContentIssueForField(
+                  applicationContentIssues,
+                  "coverLetter"
+                ) && (
                 <span className="field-alert">
                   {getApplicationContentIssueForField(
                     applicationContentIssues,
@@ -603,7 +630,8 @@ function SidePanelApp() {
               )}
               <textarea
                 aria-invalid={Boolean(
-                  getApplicationContentIssueForField(
+                  saveAttempts["application-content"] &&
+                    getApplicationContentIssueForField(
                     applicationContentIssues,
                     "coverLetter"
                   )
@@ -620,10 +648,11 @@ function SidePanelApp() {
 
             <label>
               Profile summary
-              {getApplicationContentIssueForField(
-                applicationContentIssues,
-                "profileSummary"
-              ) && (
+              {saveAttempts["application-content"] &&
+                getApplicationContentIssueForField(
+                  applicationContentIssues,
+                  "profileSummary"
+                ) && (
                 <span className="field-alert">
                   {getApplicationContentIssueForField(
                     applicationContentIssues,
@@ -633,7 +662,8 @@ function SidePanelApp() {
               )}
               <textarea
                 aria-invalid={Boolean(
-                  getApplicationContentIssueForField(
+                  saveAttempts["application-content"] &&
+                    getApplicationContentIssueForField(
                     applicationContentIssues,
                     "profileSummary"
                   )
@@ -650,10 +680,11 @@ function SidePanelApp() {
 
             <label>
               Motivation answer
-              {getApplicationContentIssueForField(
-                applicationContentIssues,
-                "motivationAnswer"
-              ) && (
+              {saveAttempts["application-content"] &&
+                getApplicationContentIssueForField(
+                  applicationContentIssues,
+                  "motivationAnswer"
+                ) && (
                 <span className="field-alert">
                   {getApplicationContentIssueForField(
                     applicationContentIssues,
@@ -663,7 +694,8 @@ function SidePanelApp() {
               )}
               <textarea
                 aria-invalid={Boolean(
-                  getApplicationContentIssueForField(
+                  saveAttempts["application-content"] &&
+                    getApplicationContentIssueForField(
                     applicationContentIssues,
                     "motivationAnswer"
                   )
@@ -716,7 +748,7 @@ function SidePanelApp() {
           <h2>Tracker</h2>
 
           <div className="form-grid">
-            {trackerIssues.length > 0 && (
+            {saveAttempts.tracker && trackerIssues.length > 0 && (
               <div className="alert-panel" role="alert">
                 <strong>Tracker needs attention</strong>
                 <ul>
@@ -731,14 +763,16 @@ function SidePanelApp() {
 
             <label>
               Role title
-              {getTrackerIssueForField(trackerIssues, "roleTitle") && (
+              {saveAttempts.tracker &&
+                getTrackerIssueForField(trackerIssues, "roleTitle") && (
                 <span className="field-alert">
                   {getTrackerIssueForField(trackerIssues, "roleTitle")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getTrackerIssueForField(trackerIssues, "roleTitle")
+                  saveAttempts.tracker &&
+                    getTrackerIssueForField(trackerIssues, "roleTitle")
                 )}
                 value={trackerDraft.roleTitle}
                 onChange={(event) =>
@@ -749,14 +783,16 @@ function SidePanelApp() {
 
             <label>
               Company
-              {getTrackerIssueForField(trackerIssues, "company") && (
+              {saveAttempts.tracker &&
+                getTrackerIssueForField(trackerIssues, "company") && (
                 <span className="field-alert">
                   {getTrackerIssueForField(trackerIssues, "company")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getTrackerIssueForField(trackerIssues, "company")
+                  saveAttempts.tracker &&
+                    getTrackerIssueForField(trackerIssues, "company")
                 )}
                 value={trackerDraft.company}
                 onChange={(event) =>
@@ -767,14 +803,16 @@ function SidePanelApp() {
 
             <label>
               Application URL
-              {getTrackerIssueForField(trackerIssues, "applicationUrl") && (
+              {saveAttempts.tracker &&
+                getTrackerIssueForField(trackerIssues, "applicationUrl") && (
                 <span className="field-alert">
                   {getTrackerIssueForField(trackerIssues, "applicationUrl")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getTrackerIssueForField(trackerIssues, "applicationUrl")
+                  saveAttempts.tracker &&
+                    getTrackerIssueForField(trackerIssues, "applicationUrl")
                 )}
                 type="url"
                 value={trackerDraft.applicationUrl}
@@ -805,14 +843,16 @@ function SidePanelApp() {
 
             <label>
               Next action
-              {getTrackerIssueForField(trackerIssues, "nextAction") && (
+              {saveAttempts.tracker &&
+                getTrackerIssueForField(trackerIssues, "nextAction") && (
                 <span className="field-alert">
                   {getTrackerIssueForField(trackerIssues, "nextAction")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getTrackerIssueForField(trackerIssues, "nextAction")
+                  saveAttempts.tracker &&
+                    getTrackerIssueForField(trackerIssues, "nextAction")
                 )}
                 value={trackerDraft.nextAction}
                 onChange={(event) =>
@@ -823,14 +863,16 @@ function SidePanelApp() {
 
             <label>
               Next action date
-              {getTrackerIssueForField(trackerIssues, "nextActionDate") && (
+              {saveAttempts.tracker &&
+                getTrackerIssueForField(trackerIssues, "nextActionDate") && (
                 <span className="field-alert">
                   {getTrackerIssueForField(trackerIssues, "nextActionDate")}
                 </span>
               )}
               <input
                 aria-invalid={Boolean(
-                  getTrackerIssueForField(trackerIssues, "nextActionDate")
+                  saveAttempts.tracker &&
+                    getTrackerIssueForField(trackerIssues, "nextActionDate")
                 )}
                 type="date"
                 value={trackerDraft.nextActionDate}
