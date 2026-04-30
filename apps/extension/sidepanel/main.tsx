@@ -2,10 +2,13 @@ import { useEffect, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import {
+  getApplicationContentDraft,
   getJobAnalysisDraft,
   getProfile,
+  saveApplicationContentDraft,
   saveJobAnalysisDraft,
   saveProfile,
+  type ApplicationContentDraft,
   type CandidateProfile,
   type JobAnalysisDraft
 } from "../lib/storage"
@@ -17,6 +20,10 @@ type ProfileIssue = {
 }
 type JobAnalysisIssue = {
   field: keyof JobAnalysisDraft
+  message: string
+}
+type ApplicationContentIssue = {
+  field: keyof ApplicationContentDraft
   message: string
 }
 
@@ -38,6 +45,14 @@ const emptyJobAnalysisDraft: JobAnalysisDraft = {
   location: "",
   workMode: "unknown",
   notes: ""
+}
+
+const emptyApplicationContentDraft: ApplicationContentDraft = {
+  coverLetter: "",
+  profileSummary: "",
+  motivationAnswer: "",
+  strengthsAnswer: "",
+  availabilityAnswer: ""
 }
 
 const sections: Array<{ id: Section; label: string }> = [
@@ -67,6 +82,15 @@ const requiredJobAnalysisFields: Array<{
   { field: "company", label: "Company" },
   { field: "jobUrl", label: "Job URL" },
   { field: "location", label: "Location/country" }
+]
+
+const requiredApplicationContentFields: Array<{
+  field: keyof ApplicationContentDraft
+  label: string
+}> = [
+  { field: "coverLetter", label: "Cover letter" },
+  { field: "profileSummary", label: "Profile summary" },
+  { field: "motivationAnswer", label: "Motivation answer" }
 ]
 
 function validateProfile(profile: CandidateProfile): ProfileIssue[] {
@@ -131,6 +155,37 @@ function validateJobAnalysisDraft(
   return issues
 }
 
+function validateApplicationContentDraft(
+  draft: ApplicationContentDraft
+): ApplicationContentIssue[] {
+  const issues: ApplicationContentIssue[] = []
+
+  for (const { field, label } of requiredApplicationContentFields) {
+    if (draft[field].trim() === "") {
+      issues.push({ field, message: `${label} is required.` })
+    }
+  }
+
+  if (draft.coverLetter.trim() !== "" && draft.coverLetter.trim().length < 80) {
+    issues.push({
+      field: "coverLetter",
+      message: "Cover letter looks too short."
+    })
+  }
+
+  if (
+    draft.profileSummary.trim() !== "" &&
+    draft.profileSummary.trim().length < 40
+  ) {
+    issues.push({
+      field: "profileSummary",
+      message: "Profile summary looks too short."
+    })
+  }
+
+  return issues
+}
+
 function getIssueForField(
   issues: ProfileIssue[],
   field: keyof CandidateProfile
@@ -145,16 +200,29 @@ function getJobIssueForField(
   return issues.find((issue) => issue.field === field)?.message
 }
 
+function getApplicationContentIssueForField(
+  issues: ApplicationContentIssue[],
+  field: keyof ApplicationContentDraft
+) {
+  return issues.find((issue) => issue.field === field)?.message
+}
+
 function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
   const [jobAnalysisDraft, setJobAnalysisDraft] =
     useState<JobAnalysisDraft>(emptyJobAnalysisDraft)
+  const [applicationContentDraft, setApplicationContentDraft] =
+    useState<ApplicationContentDraft>(emptyApplicationContentDraft)
   const [status, setStatus] = useState("")
   const [jobStatus, setJobStatus] = useState("")
+  const [contentStatus, setContentStatus] = useState("")
 
   const profileIssues = validateProfile(profile)
   const jobAnalysisIssues = validateJobAnalysisDraft(jobAnalysisDraft)
+  const applicationContentIssues = validateApplicationContentDraft(
+    applicationContentDraft
+  )
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -166,6 +234,11 @@ function SidePanelApp() {
       const savedJobAnalysisDraft = await getJobAnalysisDraft()
       if (savedJobAnalysisDraft) {
         setJobAnalysisDraft(savedJobAnalysisDraft)
+      }
+
+      const savedApplicationContentDraft = await getApplicationContentDraft()
+      if (savedApplicationContentDraft) {
+        setApplicationContentDraft(savedApplicationContentDraft)
       }
     }
 
@@ -184,6 +257,15 @@ function SidePanelApp() {
     value: JobAnalysisDraft[K]
   ) => {
     setJobAnalysisDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateApplicationContentField = <
+    K extends keyof ApplicationContentDraft
+  >(
+    key: K,
+    value: ApplicationContentDraft[K]
+  ) => {
+    setApplicationContentDraft((current) => ({ ...current, [key]: value }))
   }
 
   const handleSaveProfile = async () => {
@@ -206,6 +288,19 @@ function SidePanelApp() {
     await saveJobAnalysisDraft(jobAnalysisDraft)
     setJobStatus("Job analysis draft saved")
     setTimeout(() => setJobStatus(""), 2000)
+  }
+
+  const handleSaveApplicationContent = async () => {
+    if (applicationContentIssues.length > 0) {
+      setContentStatus(
+        "Complete the highlighted application content fields before saving."
+      )
+      return
+    }
+
+    await saveApplicationContentDraft(applicationContentDraft)
+    setContentStatus("Application content draft saved")
+    setTimeout(() => setContentStatus(""), 2000)
   }
 
   return (
@@ -234,6 +329,15 @@ function SidePanelApp() {
                 <span
                   className="nav-alert"
                   aria-label="Job Analysis needs attention"
+                >
+                  !
+                </span>
+              )}
+            {section.id === "application-content" &&
+              applicationContentIssues.length > 0 && (
+                <span
+                  className="nav-alert"
+                  aria-label="Application Content needs attention"
                 >
                   !
                 </span>
@@ -527,6 +631,147 @@ function SidePanelApp() {
             </button>
 
             {jobStatus && <p role="status">{jobStatus}</p>}
+          </div>
+        </section>
+      ) : activeSection === "application-content" ? (
+        <section className="panel-section">
+          <h2>Application Content</h2>
+
+          <div className="form-grid">
+            {applicationContentIssues.length > 0 && (
+              <div className="alert-panel" role="alert">
+                <strong>Application Content needs attention</strong>
+                <ul>
+                  {applicationContentIssues.map((issue) => (
+                    <li key={`${issue.field}-${issue.message}`}>
+                      {issue.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <label>
+              Cover letter
+              {getApplicationContentIssueForField(
+                applicationContentIssues,
+                "coverLetter"
+              ) && (
+                <span className="field-alert">
+                  {getApplicationContentIssueForField(
+                    applicationContentIssues,
+                    "coverLetter"
+                  )}
+                </span>
+              )}
+              <textarea
+                aria-invalid={Boolean(
+                  getApplicationContentIssueForField(
+                    applicationContentIssues,
+                    "coverLetter"
+                  )
+                )}
+                value={applicationContentDraft.coverLetter}
+                onChange={(event) =>
+                  updateApplicationContentField(
+                    "coverLetter",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Profile summary
+              {getApplicationContentIssueForField(
+                applicationContentIssues,
+                "profileSummary"
+              ) && (
+                <span className="field-alert">
+                  {getApplicationContentIssueForField(
+                    applicationContentIssues,
+                    "profileSummary"
+                  )}
+                </span>
+              )}
+              <textarea
+                aria-invalid={Boolean(
+                  getApplicationContentIssueForField(
+                    applicationContentIssues,
+                    "profileSummary"
+                  )
+                )}
+                value={applicationContentDraft.profileSummary}
+                onChange={(event) =>
+                  updateApplicationContentField(
+                    "profileSummary",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Motivation answer
+              {getApplicationContentIssueForField(
+                applicationContentIssues,
+                "motivationAnswer"
+              ) && (
+                <span className="field-alert">
+                  {getApplicationContentIssueForField(
+                    applicationContentIssues,
+                    "motivationAnswer"
+                  )}
+                </span>
+              )}
+              <textarea
+                aria-invalid={Boolean(
+                  getApplicationContentIssueForField(
+                    applicationContentIssues,
+                    "motivationAnswer"
+                  )
+                )}
+                value={applicationContentDraft.motivationAnswer}
+                onChange={(event) =>
+                  updateApplicationContentField(
+                    "motivationAnswer",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Strengths answer
+              <textarea
+                value={applicationContentDraft.strengthsAnswer}
+                onChange={(event) =>
+                  updateApplicationContentField(
+                    "strengthsAnswer",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Availability answer
+              <textarea
+                value={applicationContentDraft.availabilityAnswer}
+                onChange={(event) =>
+                  updateApplicationContentField(
+                    "availabilityAnswer",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <button type="button" onClick={handleSaveApplicationContent}>
+              Save Application Content
+            </button>
+
+            {contentStatus && <p role="status">{contentStatus}</p>}
           </div>
         </section>
       ) : (

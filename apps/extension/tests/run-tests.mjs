@@ -14,10 +14,12 @@ import {
 } from "../lib/autofill.ts"
 import {
   deleteApplication,
+  getApplicationContentDraft,
   getApplications,
   getJobAnalysisDraft,
   getProfile,
   getReusableAnswers,
+  saveApplicationContentDraft,
   saveApplication,
   saveJobAnalysisDraft,
   saveProfile,
@@ -196,6 +198,22 @@ test("saves and loads job analysis draft", async () => {
   await saveJobAnalysisDraft(draft)
 
   assert.deepEqual(await getJobAnalysisDraft(), draft)
+})
+
+test("saves and loads application content draft", async () => {
+  resetStorage()
+
+  const draft = {
+    coverLetter: "Dear hiring team...",
+    profileSummary: "Frontend engineer with EU product experience.",
+    motivationAnswer: "I am interested in this role because...",
+    strengthsAnswer: "My strengths include...",
+    availabilityAnswer: "I am available after one month."
+  }
+
+  await saveApplicationContentDraft(draft)
+
+  assert.deepEqual(await getApplicationContentDraft(), draft)
 })
 
 test("saves applications newest first and deletes by id", async () => {
