@@ -116,6 +116,16 @@ function SidePanelApp() {
 
   const goToSection = (section: Section) => {
     setActiveSection(section)
+    setSaveAttempts({
+      profile: false,
+      "job-analysis": false,
+      "application-content": false,
+      tracker: false
+    })
+    setStatus("")
+    setJobStatus("")
+    setContentStatus("")
+    setTrackerStatus("")
   }
 
   useEffect(() => {
