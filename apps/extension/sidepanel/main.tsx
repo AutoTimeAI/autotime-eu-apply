@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import {
@@ -102,6 +102,10 @@ function SidePanelApp() {
   const [jobStatus, setJobStatus] = useState("")
   const [contentStatus, setContentStatus] = useState("")
   const [trackerStatus, setTrackerStatus] = useState("")
+  const profileStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const jobStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const contentStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const trackerStatusRef = useRef<HTMLParagraphElement | null>(null)
 
   const profileIssues = validateProfile(profile)
   const jobAnalysisIssues = validateJobAnalysisDraft(jobAnalysisDraft)
@@ -153,6 +157,31 @@ function SidePanelApp() {
 
     loadProfile()
   }, [])
+
+  useEffect(() => {
+    const statusRefs: Record<Section, HTMLParagraphElement | null> = {
+      profile: profileStatusRef.current,
+      "job-analysis": jobStatusRef.current,
+      "application-content": contentStatusRef.current,
+      tracker: trackerStatusRef.current
+    }
+
+    const activeStatus = {
+      profile: status,
+      "job-analysis": jobStatus,
+      "application-content": contentStatus,
+      tracker: trackerStatus
+    }[activeSection]
+
+    const statusElement = statusRefs[activeSection]
+
+    if (!activeStatus || !statusElement) {
+      return
+    }
+
+    statusElement.scrollIntoView({ behavior: "smooth", block: "center" })
+    statusElement.focus({ preventScroll: true })
+  }, [activeSection, status, jobStatus, contentStatus, trackerStatus])
 
   const updateField = <K extends keyof CandidateProfile>(
     key: K,
@@ -459,7 +488,12 @@ function SidePanelApp() {
             </button>
 
             {status && (
-              <p className="status-message" role="status">
+              <p
+                className="status-message"
+                ref={profileStatusRef}
+                role="status"
+                tabIndex={-1}
+              >
                 {status}
               </p>
             )}
@@ -607,7 +641,12 @@ function SidePanelApp() {
             </button>
 
             {jobStatus && (
-              <p className="status-message" role="status">
+              <p
+                className="status-message"
+                ref={jobStatusRef}
+                role="status"
+                tabIndex={-1}
+              >
                 {jobStatus}
               </p>
             )}
@@ -759,7 +798,12 @@ function SidePanelApp() {
             </button>
 
             {contentStatus && (
-              <p className="status-message" role="status">
+              <p
+                className="status-message"
+                ref={contentStatusRef}
+                role="status"
+                tabIndex={-1}
+              >
                 {contentStatus}
               </p>
             )}
@@ -919,7 +963,12 @@ function SidePanelApp() {
             </button>
 
             {trackerStatus && (
-              <p className="status-message" role="status">
+              <p
+                className="status-message"
+                ref={trackerStatusRef}
+                role="status"
+                tabIndex={-1}
+              >
                 {trackerStatus}
               </p>
             )}
