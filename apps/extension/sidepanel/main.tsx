@@ -264,6 +264,7 @@ function SidePanelApp() {
 
     await saveProfile(profile)
     setSavedProfile(profile)
+    setProfile(emptyProfile)
     setStatus("Profile saved")
     setTimeout(() => setStatus(""), 3500)
   }
@@ -278,6 +279,7 @@ function SidePanelApp() {
 
     await saveJobAnalysisDraft(jobAnalysisDraft)
     setSavedJobAnalysisDraft(jobAnalysisDraft)
+    setJobAnalysisDraft(emptyJobAnalysisDraft)
     setJobStatus("Job analysis draft saved")
     setTimeout(() => setJobStatus(""), 3500)
   }
@@ -294,6 +296,7 @@ function SidePanelApp() {
 
     await saveApplicationContentDraft(applicationContentDraft)
     setSavedApplicationContentDraft(applicationContentDraft)
+    setApplicationContentDraft(emptyApplicationContentDraft)
     setContentStatus("Application content draft saved")
     setTimeout(() => setContentStatus(""), 3500)
   }
@@ -308,6 +311,7 @@ function SidePanelApp() {
 
     await saveTrackerDraft(trackerDraft)
     setSavedTrackerDraft(trackerDraft)
+    setTrackerDraft(emptyTrackerDraft)
     setTrackerStatus("Tracker draft saved")
     setTimeout(() => setTrackerStatus(""), 3500)
   }
