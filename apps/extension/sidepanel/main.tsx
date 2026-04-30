@@ -28,6 +28,7 @@ import {
 } from "../lib/validation"
 
 type Section = "profile" | "job-analysis" | "application-content" | "tracker"
+type VisitedSections = Record<Section, boolean>
 
 const emptyProfile: CandidateProfile = {
   fullName: "",
@@ -84,6 +85,12 @@ const sections: Array<{ id: Section; label: string }> = [
 
 function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
+  const [visitedSections, setVisitedSections] = useState<VisitedSections>({
+    profile: true,
+    "job-analysis": false,
+    "application-content": false,
+    tracker: false
+  })
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
   const [jobAnalysisDraft, setJobAnalysisDraft] =
     useState<JobAnalysisDraft>(emptyJobAnalysisDraft)
@@ -102,6 +109,15 @@ function SidePanelApp() {
     applicationContentDraft
   )
   const trackerIssues = validateTrackerDraft(trackerDraft)
+
+  const markSectionVisited = (section: Section) => {
+    setVisitedSections((current) => ({ ...current, [section]: true }))
+  }
+
+  const goToSection = (section: Section) => {
+    setActiveSection(section)
+    markSectionVisited(section)
+  }
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -160,6 +176,8 @@ function SidePanelApp() {
   }
 
   const handleSaveProfile = async () => {
+    markSectionVisited("profile")
+
     if (profileIssues.length > 0) {
       setStatus("Complete the highlighted profile fields before saving.")
       return
@@ -171,6 +189,8 @@ function SidePanelApp() {
   }
 
   const handleSaveJobAnalysis = async () => {
+    markSectionVisited("job-analysis")
+
     if (jobAnalysisIssues.length > 0) {
       setJobStatus("Complete the highlighted job analysis fields before saving.")
       return
@@ -182,6 +202,8 @@ function SidePanelApp() {
   }
 
   const handleSaveApplicationContent = async () => {
+    markSectionVisited("application-content")
+
     if (applicationContentIssues.length > 0) {
       setContentStatus(
         "Complete the highlighted application content fields before saving."
@@ -195,6 +217,8 @@ function SidePanelApp() {
   }
 
   const handleSaveTracker = async () => {
+    markSectionVisited("tracker")
+
     if (trackerIssues.length > 0) {
       setTrackerStatus("Complete the highlighted tracker fields before saving.")
       return
@@ -217,16 +241,19 @@ function SidePanelApp() {
             aria-current={activeSection === section.id ? "page" : undefined}
             className={activeSection === section.id ? "active" : ""}
             key={section.id}
-            onClick={() => setActiveSection(section.id)}
+            onClick={() => goToSection(section.id)}
             type="button"
           >
             {section.label}
-            {section.id === "profile" && profileIssues.length > 0 && (
+            {section.id === "profile" &&
+              visitedSections.profile &&
+              profileIssues.length > 0 && (
               <span className="nav-alert" aria-label="Profile needs attention">
                 !
               </span>
             )}
             {section.id === "job-analysis" &&
+              visitedSections["job-analysis"] &&
               jobAnalysisIssues.length > 0 && (
                 <span
                   className="nav-alert"
@@ -236,6 +263,7 @@ function SidePanelApp() {
                 </span>
               )}
             {section.id === "application-content" &&
+              visitedSections["application-content"] &&
               applicationContentIssues.length > 0 && (
                 <span
                   className="nav-alert"
@@ -244,7 +272,9 @@ function SidePanelApp() {
                   !
                 </span>
               )}
-            {section.id === "tracker" && trackerIssues.length > 0 && (
+            {section.id === "tracker" &&
+              visitedSections.tracker &&
+              trackerIssues.length > 0 && (
               <span className="nav-alert" aria-label="Tracker needs attention">
                 !
               </span>
