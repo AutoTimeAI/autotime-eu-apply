@@ -49,6 +49,9 @@ apps/extension/.output/chrome-mv3
 6. Confirm the saved data is visible.
 7. For View Job Analysis, confirm fit score, recommendation, positioning angle,
    and score factors are visible after saving.
+8. In Job Analysis, paste a job description that includes analyst, payments, or
+   systems language and confirm the saved analysis uses that text in the score
+   and positioning output.
 
 ## Autofill
 

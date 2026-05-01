@@ -171,6 +171,10 @@ export function JobAnalysisView({
               </dd>
             </div>
             <div>
+              <dt>Pasted job description</dt>
+              <dd>{draft.jobDescription || "None"}</dd>
+            </div>
+            <div>
               <dt>Notes</dt>
               <dd>{draft.notes || "None"}</dd>
             </div>

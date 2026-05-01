@@ -244,6 +244,7 @@ test("infers transparent job fit analysis", () => {
       jobUrl: "https://example.com/jobs/business-analyst",
       location: "United Kingdom",
       workMode: "hybrid",
+      jobDescription: "",
       notes: "Payments platform requirements and stakeholder delivery."
     },
     {
@@ -260,6 +261,33 @@ test("infers transparent job fit analysis", () => {
 
   assert.equal(analysis.recommendation, "strong-fit")
   assert.equal(analysis.fitScore, 100)
+  assert.equal(
+    analysis.positioningAngle,
+    "Position around FinTech systems, application support, and cross-functional delivery."
+  )
+  assert.ok(
+    analysis.scoreFactors?.includes(
+      "Role title aligns with the target analyst/systems role family."
+    )
+  )
+})
+
+test("uses pasted job description text in job fit analysis", () => {
+  const analysis = inferJobFitAnalysis(
+    {
+      jobTitle: "Associate Consultant",
+      company: "Example Co",
+      jobUrl: "https://example.com/jobs/consultant",
+      location: "United Kingdom",
+      workMode: "remote",
+      jobDescription:
+        "Business analyst role supporting payments requirements and systems stakeholders.",
+      notes: ""
+    },
+    null
+  )
+
+  assert.equal(analysis.recommendation, "strong-fit")
   assert.equal(
     analysis.positioningAngle,
     "Position around FinTech systems, application support, and cross-functional delivery."
@@ -322,6 +350,7 @@ test("saves and loads job analysis draft", async () => {
     jobUrl: "https://example.com/jobs/frontend",
     location: "Germany",
     workMode: "remote",
+    jobDescription: "Frontend role using React and TypeScript.",
     notes: "Manual notes only."
   }
 
@@ -430,6 +459,7 @@ test("validates job analysis draft fields", () => {
     jobUrl: "ftp://example.com/job",
     location: "",
     workMode: "unknown",
+    jobDescription: "",
     notes: ""
   })
 

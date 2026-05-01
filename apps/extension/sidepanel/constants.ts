@@ -44,6 +44,7 @@ export const emptyJobAnalysisDraft: JobAnalysisDraft = {
   jobUrl: "",
   location: "",
   workMode: "unknown",
+  jobDescription: "",
   notes: ""
 }
 

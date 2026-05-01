@@ -19,8 +19,16 @@ validation can remain local until backend/web integration begins.
 
 Current status:
 
-- `MVP v1`: Done
-- `MVP v1.1`: Done
+- Repo implementation slice: usable local-first extension workflow is in place.
+- Full uploaded MVP spec: not complete yet.
+- Approximate spec completion: 60-70%.
+- Next milestone: close the full-spec MVP gaps listed in
+  `docs/mvp-spec-alignment.md`, then run the manual Chrome smoke test.
+
+This status is based on the uploaded `EU Apply.7z` product spec pack,
+especially `AutoTime_MVP_Consolidated_Summary.docx`,
+`AutoTime_EU_Apply_Final_Build_Execution_Spec_v1.docx`, and
+`AutoTime_EU_Apply_MVP_Execution_Document.docx`.
 
 The extension currently supports:
 
@@ -31,6 +39,8 @@ The extension currently supports:
 - Creating, viewing, and clearing reusable answers from the side panel.
 - Saving the current tab as an application draft from the side panel.
 - Importing the active job page into the side-panel tracker.
+- Pasting a manual job description into Job Analysis when page extraction is
+  incomplete or unavailable.
 - Transparent local job-fit scoring with visible factors, recommendation, and
   positioning angle.
 - Saving side-panel tracker entries into the saved applications list.
@@ -47,6 +57,10 @@ The extension currently supports:
 
 The extension does not submit forms and does not use Firebase or a backend yet.
 The web app does not depend on Firebase until backend work starts.
+
+Known full-spec gaps include AI-backed analysis and content generation, richer
+profile memory, spec-aligned tracker statuses, generated content snapshots, AI
+usage/cost logging, and deeper extraction for priority job platforms.
 
 ## Local Setup
 
@@ -138,6 +152,14 @@ The manual extension smoke-test checklist lives at:
 
 ```text
 docs/extension-smoke-test.md
+```
+
+Run that checklist before tagging or shipping an MVP build.
+
+The full MVP spec alignment checklist lives at:
+
+```text
+docs/mvp-spec-alignment.md
 ```
 
 ## Repository Notes

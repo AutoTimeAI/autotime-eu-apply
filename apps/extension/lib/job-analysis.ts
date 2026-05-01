@@ -53,6 +53,7 @@ export function inferJobFitAnalysis(
     draft.company,
     draft.location,
     draft.workMode,
+    draft.jobDescription,
     draft.notes
   ]
     .join(" ")

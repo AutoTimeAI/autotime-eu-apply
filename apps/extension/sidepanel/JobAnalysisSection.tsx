@@ -136,6 +136,16 @@ export function JobAnalysisSection({
         </label>
 
         <label>
+          Pasted job description
+          <textarea
+            value={draft.jobDescription}
+            onChange={(event) =>
+              onFieldChange("jobDescription", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
           Notes
           <textarea
             value={draft.notes}
