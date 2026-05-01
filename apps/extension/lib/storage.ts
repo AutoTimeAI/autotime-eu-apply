@@ -76,6 +76,38 @@ const JOB_ANALYSIS_KEY = "job-analysis-draft"
 const APPLICATION_CONTENT_KEY = "application-content-draft"
 const TRACKER_DRAFT_KEY = "tracker-draft"
 
+function normalizeJobAnalysisDraft(
+  draft: Partial<JobAnalysisDraft>
+): JobAnalysisDraft {
+  const normalized: JobAnalysisDraft = {
+    jobTitle: draft.jobTitle ?? "",
+    company: draft.company ?? "",
+    jobUrl: draft.jobUrl ?? "",
+    location: draft.location ?? "",
+    workMode: draft.workMode ?? "unknown",
+    jobDescription: draft.jobDescription ?? "",
+    notes: draft.notes ?? ""
+  }
+
+  if (draft.fitScore !== undefined) {
+    normalized.fitScore = draft.fitScore
+  }
+
+  if (draft.recommendation !== undefined) {
+    normalized.recommendation = draft.recommendation
+  }
+
+  if (draft.positioningAngle !== undefined) {
+    normalized.positioningAngle = draft.positioningAngle
+  }
+
+  if (draft.scoreFactors !== undefined) {
+    normalized.scoreFactors = draft.scoreFactors
+  }
+
+  return normalized
+}
+
 export async function saveProfile(profile: CandidateProfile) {
   await chrome.storage.local.set({ [PROFILE_KEY]: profile })
 }
@@ -108,7 +140,8 @@ export async function saveJobAnalysisDraft(draft: JobAnalysisDraft) {
 
 export async function getJobAnalysisDraft(): Promise<JobAnalysisDraft | null> {
   const result = await chrome.storage.local.get(JOB_ANALYSIS_KEY)
-  return (result[JOB_ANALYSIS_KEY] as JobAnalysisDraft) ?? null
+  const draft = result[JOB_ANALYSIS_KEY] as Partial<JobAnalysisDraft> | undefined
+  return draft ? normalizeJobAnalysisDraft(draft) : null
 }
 
 export async function clearJobAnalysisDraft() {

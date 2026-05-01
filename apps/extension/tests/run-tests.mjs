@@ -363,6 +363,31 @@ test("saves and loads job analysis draft", async () => {
   assert.equal(await getJobAnalysisDraft(), null)
 })
 
+test("loads legacy job analysis draft without pasted description", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "job-analysis-draft": {
+      jobTitle: "Legacy Analyst",
+      company: "Example Co",
+      jobUrl: "https://example.com/jobs/legacy",
+      location: "United Kingdom",
+      workMode: "hybrid",
+      notes: "Saved before pasted descriptions existed."
+    }
+  })
+
+  assert.deepEqual(await getJobAnalysisDraft(), {
+    jobTitle: "Legacy Analyst",
+    company: "Example Co",
+    jobUrl: "https://example.com/jobs/legacy",
+    location: "United Kingdom",
+    workMode: "hybrid",
+    jobDescription: "",
+    notes: "Saved before pasted descriptions existed."
+  })
+})
+
 test("saves and loads application content draft", async () => {
   resetStorage()
 
