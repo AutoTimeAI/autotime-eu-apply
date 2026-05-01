@@ -1,5 +1,6 @@
 import type {
   ApplicationContentDraft,
+  ApplicationContentSnapshot,
   CandidateProfile,
   JobAnalysisDraft,
   ReusableAnswers,
@@ -9,6 +10,45 @@ import type {
 type SavedViewProps<T> = {
   draft: T | null
   onClear: () => void
+}
+
+function ContentSnapshotView({
+  snapshot
+}: {
+  snapshot: ApplicationContentSnapshot | undefined
+}) {
+  if (!snapshot) {
+    return null
+  }
+
+  return (
+    <>
+      <div>
+        <dt>Content snapshot saved</dt>
+        <dd>{new Date(snapshot.savedAt).toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt>Snapshot cover letter</dt>
+        <dd>{snapshot.coverLetter || "None"}</dd>
+      </div>
+      <div>
+        <dt>Snapshot profile summary</dt>
+        <dd>{snapshot.profileSummary || "None"}</dd>
+      </div>
+      <div>
+        <dt>Snapshot motivation answer</dt>
+        <dd>{snapshot.motivationAnswer || "None"}</dd>
+      </div>
+      <div>
+        <dt>Snapshot strengths answer</dt>
+        <dd>{snapshot.strengthsAnswer || "None"}</dd>
+      </div>
+      <div>
+        <dt>Snapshot availability answer</dt>
+        <dd>{snapshot.availabilityAnswer || "None"}</dd>
+      </div>
+    </>
+  )
 }
 
 export function ProfileView({
@@ -35,12 +75,36 @@ export function ProfileView({
               <dd>{draft.phone}</dd>
             </div>
             <div>
+              <dt>LinkedIn URL</dt>
+              <dd>{draft.linkedInUrl || "None"}</dd>
+            </div>
+            <div>
+              <dt>GitHub URL</dt>
+              <dd>{draft.githubUrl || "None"}</dd>
+            </div>
+            <div>
+              <dt>Portfolio URL</dt>
+              <dd>{draft.portfolioUrl || "None"}</dd>
+            </div>
+            <div>
               <dt>Current country</dt>
               <dd>{draft.currentCountry}</dd>
             </div>
             <div>
               <dt>Current city</dt>
               <dd>{draft.currentCity}</dd>
+            </div>
+            <div>
+              <dt>Target countries</dt>
+              <dd>{draft.targetCountries || "None"}</dd>
+            </div>
+            <div>
+              <dt>Target roles</dt>
+              <dd>{draft.targetRoles || "None"}</dd>
+            </div>
+            <div>
+              <dt>Work-right details</dt>
+              <dd>{draft.workRightDetails || "None"}</dd>
             </div>
             <div>
               <dt>Sponsorship needed</dt>
@@ -53,6 +117,22 @@ export function ProfileView({
             <div>
               <dt>Notice period</dt>
               <dd>{draft.noticePeriod}</dd>
+            </div>
+            <div>
+              <dt>Salary expectation</dt>
+              <dd>{draft.salaryExpectation || "None"}</dd>
+            </div>
+            <div>
+              <dt>Base CV text</dt>
+              <dd>{draft.baseCvText || "None"}</dd>
+            </div>
+            <div>
+              <dt>Project summaries</dt>
+              <dd>{draft.projectSummaries || "None"}</dd>
+            </div>
+            <div>
+              <dt>Experience highlights</dt>
+              <dd>{draft.experienceHighlights || "None"}</dd>
             </div>
           </dl>
           <button className="danger-button" type="button" onClick={onClear}>
@@ -273,6 +353,7 @@ export function TrackerView({ draft, onClear }: SavedViewProps<TrackerDraft>) {
               <dt>Notes</dt>
               <dd>{draft.notes || "None"}</dd>
             </div>
+            <ContentSnapshotView snapshot={draft.contentSnapshot} />
           </dl>
           <button className="danger-button" type="button" onClick={onClear}>
             Clear Saved Tracker

@@ -73,7 +73,13 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
     "Status",
     "Next Action",
     "Next Action Date",
-    "Notes"
+    "Notes",
+    "Content Snapshot Saved At",
+    "Snapshot Cover Letter",
+    "Snapshot Profile Summary",
+    "Snapshot Motivation Answer",
+    "Snapshot Strengths Answer",
+    "Snapshot Availability Answer"
   ]
 
   const rows = applications.map((application) => [
@@ -86,7 +92,13 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
     application.status,
     application.nextAction,
     application.nextActionDate,
-    application.notes
+    application.notes,
+    application.contentSnapshot?.savedAt,
+    application.contentSnapshot?.coverLetter,
+    application.contentSnapshot?.profileSummary,
+    application.contentSnapshot?.motivationAnswer,
+    application.contentSnapshot?.strengthsAnswer,
+    application.contentSnapshot?.availabilityAnswer
   ])
 
   return [headers, ...rows]

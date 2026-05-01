@@ -24,11 +24,21 @@ export const emptyProfile: CandidateProfile = {
   fullName: "",
   email: "",
   phone: "",
+  linkedInUrl: "",
+  githubUrl: "",
+  portfolioUrl: "",
   currentCountry: "",
   currentCity: "",
+  targetCountries: "",
+  targetRoles: "",
+  workRightDetails: "",
   sponsorshipNeeded: false,
   relocationWillingness: "depends",
-  noticePeriod: ""
+  salaryExpectation: "",
+  noticePeriod: "",
+  baseCvText: "",
+  projectSummaries: "",
+  experienceHighlights: ""
 }
 
 export const emptyReusableAnswers: ReusableAnswers = {
@@ -60,18 +70,19 @@ export const emptyTrackerDraft: TrackerDraft = {
   roleTitle: "",
   company: "",
   applicationUrl: "",
-  status: "draft",
+  status: "Saved",
   nextAction: "",
   nextActionDate: "",
   notes: ""
 }
 
 export const applicationStatuses: ApplicationStatus[] = [
-  "draft",
-  "applied",
-  "interview",
-  "rejected",
-  "offer"
+  "Saved",
+  "Applying",
+  "Applied",
+  "Interview",
+  "Rejected",
+  "Closed"
 ]
 
 export const noticePeriodOptions = [

@@ -207,6 +207,47 @@ export function ApplicationsSection({
                 />
               </label>
 
+              {application.contentSnapshot && (
+                <dl className="profile-summary">
+                  <div>
+                    <dt>Content snapshot saved</dt>
+                    <dd>
+                      {new Date(
+                        application.contentSnapshot.savedAt
+                      ).toLocaleString()}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Snapshot cover letter</dt>
+                    <dd>{application.contentSnapshot.coverLetter || "None"}</dd>
+                  </div>
+                  <div>
+                    <dt>Snapshot profile summary</dt>
+                    <dd>
+                      {application.contentSnapshot.profileSummary || "None"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Snapshot motivation answer</dt>
+                    <dd>
+                      {application.contentSnapshot.motivationAnswer || "None"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Snapshot strengths answer</dt>
+                    <dd>
+                      {application.contentSnapshot.strengthsAnswer || "None"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Snapshot availability answer</dt>
+                    <dd>
+                      {application.contentSnapshot.availabilityAnswer || "None"}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+
               <button
                 className="danger-button"
                 type="button"

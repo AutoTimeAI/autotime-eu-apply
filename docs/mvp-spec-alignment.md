@@ -24,11 +24,16 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
   saved applications.
 - Profile, reusable answers, job analysis, application content, tracker, and
   applications sections.
+- Expanded profile memory for LinkedIn, GitHub, portfolio, target countries,
+  target roles, work-right details, salary expectation, base CV text, project
+  summaries, and experience highlights.
 - Basic active-tab job page import and fallback from tab title/URL.
 - Manual pasted job description fallback in Job Analysis.
 - Local transparent fit scoring with visible factors and positioning angle.
 - Editable application tracker with search, status filtering, notes, next
   action, next action date, delete, duplicate URL detection, and CSV export.
+- Spec-aligned tracker statuses: `Saved`, `Applying`, `Applied`, `Interview`,
+  `Rejected`, and `Closed`, with legacy lowercase status normalization.
 - Basic form autofill for obvious name, email, phone, and reusable answer
   textarea prompts.
 - Unit tests for autofill, storage, validation, job page inference, scoring,
@@ -37,15 +42,13 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 
 ## Full-Spec Gaps
 
-- Richer profile memory: LinkedIn, GitHub/portfolio, CV text, project summaries,
-  target countries, target roles, salary expectation, work-right details, and
-  reusable answer snippets beyond the current small set.
+- Deeper use of saved profile memory in generated content and application
+  answers.
+- Reusable answer snippets beyond the current small set.
 - AI-backed analysis, positioning, and content generation using the approved
   controlled-cost API model.
 - AI usage/cost logging by feature name, timestamp, model, and approximate cost.
 - Generated tailored content snapshots attached to tracker records.
-- Spec-aligned tracker status model: `Saved`, `Applying`, `Applied`,
-  `Interview`, `Rejected`, `Closed`.
 - More complete job extraction for priority platforms: LinkedIn, Greenhouse,
   Lever, and Workday.
 - Structured job insights: title, company, location, skills, seniority, summary,
@@ -70,11 +73,9 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 
 ## Recommended Next Build Order
 
-1. Expand profile memory to match the spec-critical fields.
-2. Align tracker statuses and migrate/display existing records safely.
-3. Add generated content snapshot fields to tracker/application records.
-4. Add controlled-cost AI integration for analysis, positioning, and editable
+1. Add generated content snapshot fields to tracker/application records.
+2. Add controlled-cost AI integration for analysis, positioning, and editable
    content generation.
-5. Add usage/cost logging for AI calls.
-6. Improve platform extraction for LinkedIn, Greenhouse, Lever, and Workday.
-7. Run the manual Chrome smoke test and record founder validation metrics.
+3. Add usage/cost logging for AI calls.
+4. Improve platform extraction for LinkedIn, Greenhouse, Lever, and Workday.
+5. Run the manual Chrome smoke test and record founder validation metrics.

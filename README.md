@@ -33,11 +33,14 @@ especially `AutoTime_MVP_Consolidated_Summary.docx`,
 The extension currently supports:
 
 - Candidate profile settings stored in `chrome.storage.local`.
+- Expanded profile memory for links, target countries and roles, work-right
+  details, salary expectation, base CV text, project summaries, and experience
+  highlights.
 - Country and notice-period profile inputs with required-field validation.
 - International phone validation against the selected country calling code.
 - Reusable answers for sponsorship, relocation, work authorisation, and notice period.
 - Creating, viewing, and clearing reusable answers from the side panel.
-- Saving the current tab as an application draft from the side panel.
+- Saving the current tab as a saved application from the side panel.
 - Importing the active job page into the side-panel tracker.
 - Pasting a manual job description into Job Analysis when page extraction is
   incomplete or unavailable.
@@ -52,15 +55,16 @@ The extension currently supports:
   and notice period questions.
 - Triggering profile and reusable-answer autofill from the side panel.
 - Side-panel drafts for profile, job analysis, application content, and tracker.
-- Application notes and editable application status tracking.
+- Application notes and editable spec-aligned status tracking: `Saved`,
+  `Applying`, `Applied`, `Interview`, `Rejected`, and `Closed`.
 - Next-action and next-action-date tracking for saved applications.
 
 The extension does not submit forms and does not use Firebase or a backend yet.
 The web app does not depend on Firebase until backend work starts.
 
-Known full-spec gaps include AI-backed analysis and content generation, richer
-profile memory, spec-aligned tracker statuses, generated content snapshots, AI
-usage/cost logging, and deeper extraction for priority job platforms.
+Known full-spec gaps include AI-backed analysis and content generation,
+generated content snapshots, AI usage/cost logging, profile-to-content reuse,
+and deeper extraction for priority job platforms.
 
 ## Local Setup
 
@@ -122,12 +126,13 @@ Current unit tests cover:
 - Safe fill eligibility checks.
 - Job page detail inference for tracker import.
 - Transparent job-fit scoring and positioning inference.
-- Profile storage.
+- Expanded profile storage and legacy profile normalization.
 - Reusable answer storage.
 - Job analysis, application content, and tracker draft storage.
 - Profile and draft validation.
 - Saved application create/delete behavior.
 - Saved application search and status filtering.
+- Legacy tracker and application status normalization.
 - Saved application duplicate URL detection.
 - Saved application CSV export formatting.
 

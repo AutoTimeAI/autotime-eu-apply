@@ -47,9 +47,12 @@ apps/extension/.output/chrome-mv3
 4. Confirm the edit form clears after successful save.
 5. Open the matching view tab.
 6. Confirm the saved data is visible.
-7. For View Job Analysis, confirm fit score, recommendation, positioning angle,
+7. For View Profile, confirm links, target countries and roles, work-right
+   details, salary expectation, CV text, projects, and experience highlights
+   are visible after saving.
+8. For View Job Analysis, confirm fit score, recommendation, positioning angle,
    and score factors are visible after saving.
-8. In Job Analysis, paste a job description that includes analyst, payments, or
+9. In Job Analysis, paste a job description that includes analyst, payments, or
    systems language and confirm the saved analysis uses that text in the score
    and positioning output.
 
@@ -80,9 +83,11 @@ apps/extension/.output/chrome-mv3
 5. Save a valid tracker entry.
 6. Confirm the tracker entry appears in the saved application list.
 7. Edit status, next action, next action date, and notes.
-8. Search for the edited next action.
-9. Export CSV and confirm the file includes the tracker fields.
-10. Delete the application and confirm it is removed from the list.
+8. Confirm the status options are `Saved`, `Applying`, `Applied`,
+   `Interview`, `Rejected`, and `Closed`.
+9. Search for the edited next action.
+10. Export CSV and confirm the file includes the tracker fields.
+11. Delete the application and confirm it is removed from the list.
 
 ## Clear Saved Data
 

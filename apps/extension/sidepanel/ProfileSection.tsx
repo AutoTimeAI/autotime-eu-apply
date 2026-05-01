@@ -100,6 +100,39 @@ export function ProfileSection({
         </label>
 
         <label>
+          LinkedIn URL
+          <input
+            type="url"
+            value={profile.linkedInUrl}
+            onChange={(event) =>
+              onFieldChange("linkedInUrl", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          GitHub URL
+          <input
+            type="url"
+            value={profile.githubUrl}
+            onChange={(event) =>
+              onFieldChange("githubUrl", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Portfolio URL
+          <input
+            type="url"
+            value={profile.portfolioUrl}
+            onChange={(event) =>
+              onFieldChange("portfolioUrl", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
           Current country
           {saveAttempted && getIssueForField(issues, "currentCountry") && (
             <span className="field-alert">
@@ -143,6 +176,36 @@ export function ProfileSection({
         </label>
 
         <label>
+          Target countries
+          <textarea
+            value={profile.targetCountries}
+            onChange={(event) =>
+              onFieldChange("targetCountries", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Target roles
+          <textarea
+            value={profile.targetRoles}
+            onChange={(event) =>
+              onFieldChange("targetRoles", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Work-right details
+          <textarea
+            value={profile.workRightDetails}
+            onChange={(event) =>
+              onFieldChange("workRightDetails", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
           Notice period
           {saveAttempted && getIssueForField(issues, "noticePeriod") && (
             <span className="field-alert">
@@ -165,6 +228,16 @@ export function ProfileSection({
               </option>
             ))}
           </select>
+        </label>
+
+        <label>
+          Salary expectation
+          <input
+            value={profile.salaryExpectation}
+            onChange={(event) =>
+              onFieldChange("salaryExpectation", event.target.value)
+            }
+          />
         </label>
 
         <label className="checkbox-row">
@@ -193,6 +266,36 @@ export function ProfileSection({
             <option value="no">No</option>
             <option value="depends">Depends</option>
           </select>
+        </label>
+
+        <label>
+          Base CV text
+          <textarea
+            value={profile.baseCvText}
+            onChange={(event) =>
+              onFieldChange("baseCvText", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Project summaries
+          <textarea
+            value={profile.projectSummaries}
+            onChange={(event) =>
+              onFieldChange("projectSummaries", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Experience highlights
+          <textarea
+            value={profile.experienceHighlights}
+            onChange={(event) =>
+              onFieldChange("experienceHighlights", event.target.value)
+            }
+          />
         </label>
 
         <button type="button" onClick={onSave}>

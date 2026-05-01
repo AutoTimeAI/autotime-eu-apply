@@ -2,11 +2,21 @@ export type CandidateProfile = {
   fullName: string
   email: string
   phone: string
+  linkedInUrl: string
+  githubUrl: string
+  portfolioUrl: string
   currentCountry: string
   currentCity: string
+  targetCountries: string
+  targetRoles: string
+  workRightDetails: string
   sponsorshipNeeded: boolean
   relocationWillingness: "yes" | "no" | "depends"
+  salaryExpectation: string
   noticePeriod: string
+  baseCvText: string
+  projectSummaries: string
+  experienceHighlights: string
 }
 
 export type ReusableAnswers = {
@@ -17,11 +27,25 @@ export type ReusableAnswers = {
 }
 
 export type ApplicationStatus =
+  | "Saved"
+  | "Applying"
+  | "Applied"
+  | "Interview"
+  | "Rejected"
+  | "Closed"
+
+export type ApplicationContentSnapshot = ApplicationContentDraft & {
+  savedAt: string
+}
+
+type LegacyApplicationStatus =
+  | ApplicationStatus
   | "draft"
   | "applied"
   | "interview"
   | "rejected"
   | "offer"
+  | "closed"
 
 export type ApplicationRecord = {
   id: string
@@ -35,6 +59,7 @@ export type ApplicationRecord = {
   nextAction?: string
   nextActionDate?: string
   notes?: string
+  contentSnapshot?: ApplicationContentSnapshot
 }
 
 export type JobAnalysisDraft = {
@@ -67,6 +92,15 @@ export type TrackerDraft = {
   nextAction: string
   nextActionDate: string
   notes: string
+  contentSnapshot?: ApplicationContentSnapshot
+}
+
+type StoredApplicationRecord = Omit<ApplicationRecord, "status"> & {
+  status: LegacyApplicationStatus
+}
+
+type StoredTrackerDraft = Omit<TrackerDraft, "status"> & {
+  status: LegacyApplicationStatus
 }
 
 const PROFILE_KEY = "candidate-profile"
@@ -75,6 +109,55 @@ const APPLICATIONS_KEY = "saved-applications"
 const JOB_ANALYSIS_KEY = "job-analysis-draft"
 const APPLICATION_CONTENT_KEY = "application-content-draft"
 const TRACKER_DRAFT_KEY = "tracker-draft"
+
+function normalizeProfile(profile: Partial<CandidateProfile>): CandidateProfile {
+  return {
+    fullName: profile.fullName ?? "",
+    email: profile.email ?? "",
+    phone: profile.phone ?? "",
+    linkedInUrl: profile.linkedInUrl ?? "",
+    githubUrl: profile.githubUrl ?? "",
+    portfolioUrl: profile.portfolioUrl ?? "",
+    currentCountry: profile.currentCountry ?? "",
+    currentCity: profile.currentCity ?? "",
+    targetCountries: profile.targetCountries ?? "",
+    targetRoles: profile.targetRoles ?? "",
+    workRightDetails: profile.workRightDetails ?? "",
+    sponsorshipNeeded: profile.sponsorshipNeeded ?? false,
+    relocationWillingness: profile.relocationWillingness ?? "depends",
+    salaryExpectation: profile.salaryExpectation ?? "",
+    noticePeriod: profile.noticePeriod ?? "",
+    baseCvText: profile.baseCvText ?? "",
+    projectSummaries: profile.projectSummaries ?? "",
+    experienceHighlights: profile.experienceHighlights ?? ""
+  }
+}
+
+function normalizeApplicationStatus(
+  status: LegacyApplicationStatus | undefined
+): ApplicationStatus {
+  switch (status) {
+    case "Applying":
+    case "Applied":
+    case "Interview":
+    case "Rejected":
+    case "Closed":
+    case "Saved":
+      return status
+    case "applied":
+      return "Applied"
+    case "interview":
+      return "Interview"
+    case "rejected":
+      return "Rejected"
+    case "offer":
+    case "closed":
+      return "Closed"
+    case "draft":
+    default:
+      return "Saved"
+  }
+}
 
 function normalizeJobAnalysisDraft(
   draft: Partial<JobAnalysisDraft>
@@ -108,13 +191,64 @@ function normalizeJobAnalysisDraft(
   return normalized
 }
 
+function normalizeTrackerDraft(draft: Partial<StoredTrackerDraft>): TrackerDraft {
+  const normalized: TrackerDraft = {
+    roleTitle: draft.roleTitle ?? "",
+    company: draft.company ?? "",
+    applicationUrl: draft.applicationUrl ?? "",
+    status: normalizeApplicationStatus(draft.status),
+    nextAction: draft.nextAction ?? "",
+    nextActionDate: draft.nextActionDate ?? "",
+    notes: draft.notes ?? ""
+  }
+
+  if (draft.contentSnapshot !== undefined) {
+    normalized.contentSnapshot = normalizeApplicationContentSnapshot(
+      draft.contentSnapshot
+    )
+  }
+
+  return normalized
+}
+
+function normalizeApplicationRecord(
+  application: StoredApplicationRecord
+): ApplicationRecord {
+  const normalized: ApplicationRecord = {
+    ...application,
+    status: normalizeApplicationStatus(application.status)
+  }
+
+  if (application.contentSnapshot !== undefined) {
+    normalized.contentSnapshot = normalizeApplicationContentSnapshot(
+      application.contentSnapshot
+    )
+  }
+
+  return normalized
+}
+
+function normalizeApplicationContentSnapshot(
+  snapshot: Partial<ApplicationContentSnapshot>
+): ApplicationContentSnapshot {
+  return {
+    coverLetter: snapshot.coverLetter ?? "",
+    profileSummary: snapshot.profileSummary ?? "",
+    motivationAnswer: snapshot.motivationAnswer ?? "",
+    strengthsAnswer: snapshot.strengthsAnswer ?? "",
+    availabilityAnswer: snapshot.availabilityAnswer ?? "",
+    savedAt: snapshot.savedAt ?? new Date().toISOString()
+  }
+}
+
 export async function saveProfile(profile: CandidateProfile) {
   await chrome.storage.local.set({ [PROFILE_KEY]: profile })
 }
 
 export async function getProfile(): Promise<CandidateProfile | null> {
   const result = await chrome.storage.local.get(PROFILE_KEY)
-  return (result[PROFILE_KEY] as CandidateProfile) ?? null
+  const profile = result[PROFILE_KEY] as Partial<CandidateProfile> | undefined
+  return profile ? normalizeProfile(profile) : null
 }
 
 export async function clearProfile() {
@@ -164,12 +298,17 @@ export async function clearApplicationContentDraft() {
 }
 
 export async function saveTrackerDraft(draft: TrackerDraft) {
-  await chrome.storage.local.set({ [TRACKER_DRAFT_KEY]: draft })
+  await chrome.storage.local.set({
+    [TRACKER_DRAFT_KEY]: normalizeTrackerDraft(draft)
+  })
 }
 
 export async function getTrackerDraft(): Promise<TrackerDraft | null> {
   const result = await chrome.storage.local.get(TRACKER_DRAFT_KEY)
-  return (result[TRACKER_DRAFT_KEY] as TrackerDraft) ?? null
+  const draft = result[TRACKER_DRAFT_KEY] as
+    | Partial<StoredTrackerDraft>
+    | undefined
+  return draft ? normalizeTrackerDraft(draft) : null
 }
 
 export async function clearTrackerDraft() {
@@ -178,12 +317,14 @@ export async function clearTrackerDraft() {
 
 export async function getApplications(): Promise<ApplicationRecord[]> {
   const result = await chrome.storage.local.get(APPLICATIONS_KEY)
-  return (result[APPLICATIONS_KEY] as ApplicationRecord[]) ?? []
+  const applications =
+    (result[APPLICATIONS_KEY] as StoredApplicationRecord[] | undefined) ?? []
+  return applications.map(normalizeApplicationRecord)
 }
 
 export async function saveApplication(record: ApplicationRecord) {
   const existing = await getApplications()
-  const updated = [record, ...existing]
+  const updated = [normalizeApplicationRecord(record), ...existing]
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }
 
@@ -205,12 +346,15 @@ export async function updateApplication(
       | "roleTitle"
       | "source"
       | "status"
+      | "contentSnapshot"
     >
   >
 ) {
   const existing = await getApplications()
   const updated = existing.map((record) =>
-    record.id === id ? { ...record, ...changes } : record
+    record.id === id
+      ? normalizeApplicationRecord({ ...record, ...changes })
+      : record
   )
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }

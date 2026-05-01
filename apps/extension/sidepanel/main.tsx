@@ -33,6 +33,7 @@ import {
   saveTrackerDraft,
   updateApplication,
   type ApplicationRecord,
+  type ApplicationContentSnapshot,
   type ApplicationContentDraft,
   type CandidateProfile,
   type JobAnalysisDraft,
@@ -362,12 +363,12 @@ function SidePanelApp() {
       url: activeTab.url,
       source: getHostname(activeTab.url),
       createdAt: new Date().toISOString(),
-      status: "draft"
+      status: "Saved"
     }
 
     await saveApplication(record)
     setApplications((current) => [record, ...current])
-    setApplicationsStatus("Application draft saved")
+    setApplicationsStatus("Application saved")
     setTimeout(() => setApplicationsStatus(""), 2500)
   }
 
@@ -510,7 +511,8 @@ function SidePanelApp() {
       status: draft.status,
       nextAction: draft.nextAction,
       nextActionDate: draft.nextActionDate,
-      notes: draft.notes
+      notes: draft.notes,
+      contentSnapshot: draft.contentSnapshot
     }
 
     if (existingApplication) {
@@ -529,6 +531,19 @@ function SidePanelApp() {
     await saveApplication(record)
   }
 
+  const createContentSnapshot = (
+    draft: ApplicationContentDraft | null
+  ): ApplicationContentSnapshot | undefined => {
+    if (!draft) {
+      return undefined
+    }
+
+    return {
+      ...draft,
+      savedAt: new Date().toISOString()
+    }
+  }
+
   const handleSaveTracker = async () => {
     markSaveAttempted("tracker")
 
@@ -537,10 +552,15 @@ function SidePanelApp() {
       return
     }
 
-    await saveTrackerDraft(trackerDraft)
-    await saveTrackerApplication(trackerDraft)
+    const draftWithSnapshot: TrackerDraft = {
+      ...trackerDraft,
+      contentSnapshot: createContentSnapshot(savedApplicationContentDraft)
+    }
+
+    await saveTrackerDraft(draftWithSnapshot)
+    await saveTrackerApplication(draftWithSnapshot)
     await loadApplications()
-    setSavedTrackerDraft(trackerDraft)
+    setSavedTrackerDraft(draftWithSnapshot)
     setTrackerDraft(emptyTrackerDraft)
     clearSaveAttempt("tracker")
     setTrackerStatus("Tracker saved to applications")

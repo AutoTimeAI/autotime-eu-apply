@@ -306,11 +306,21 @@ test("saves and loads candidate profile", async () => {
     fullName: "Ada Lovelace",
     email: "ada@example.com",
     phone: "+44 1234",
+    linkedInUrl: "https://www.linkedin.com/in/ada",
+    githubUrl: "https://github.com/ada",
+    portfolioUrl: "https://ada.example.com",
     currentCountry: "United Kingdom",
     currentCity: "London",
+    targetCountries: "United Kingdom, Germany, Netherlands",
+    targetRoles: "Business Analyst, Product Analyst",
+    workRightDetails: "Graduate visa until 2027.",
     sponsorshipNeeded: false,
     relocationWillingness: "depends",
-    noticePeriod: "1 month"
+    salaryExpectation: "GBP 45,000+",
+    noticePeriod: "1 month",
+    baseCvText: "Analyst CV with payments and systems delivery experience.",
+    projectSummaries: "Payments migration; operations dashboard.",
+    experienceHighlights: "Stakeholder management, requirements, UAT."
   }
 
   await saveProfile(profile)
@@ -320,6 +330,44 @@ test("saves and loads candidate profile", async () => {
   await clearProfile()
 
   assert.equal(await getProfile(), null)
+})
+
+test("loads legacy candidate profile with expanded memory defaults", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "candidate-profile": {
+      fullName: "Grace Hopper",
+      email: "grace@example.com",
+      phone: "+1 555 0100",
+      currentCountry: "United States",
+      currentCity: "Arlington",
+      sponsorshipNeeded: true,
+      relocationWillingness: "yes",
+      noticePeriod: "2 months"
+    }
+  })
+
+  assert.deepEqual(await getProfile(), {
+    fullName: "Grace Hopper",
+    email: "grace@example.com",
+    phone: "+1 555 0100",
+    linkedInUrl: "",
+    githubUrl: "",
+    portfolioUrl: "",
+    currentCountry: "United States",
+    currentCity: "Arlington",
+    targetCountries: "",
+    targetRoles: "",
+    workRightDetails: "",
+    sponsorshipNeeded: true,
+    relocationWillingness: "yes",
+    salaryExpectation: "",
+    noticePeriod: "2 months",
+    baseCvText: "",
+    projectSummaries: "",
+    experienceHighlights: ""
+  })
 })
 
 test("saves and loads reusable answers", async () => {
@@ -415,10 +463,18 @@ test("saves and loads tracker draft", async () => {
     roleTitle: "Frontend Engineer",
     company: "Example Co",
     applicationUrl: "https://example.com/jobs/frontend",
-    status: "draft",
+    status: "Applying",
     nextAction: "Tailor cover letter",
     nextActionDate: "2026-05-01",
-    notes: "Manual tracker draft only."
+    notes: "Manual tracker draft only.",
+    contentSnapshot: {
+      coverLetter: "Cover letter snapshot with enough detail.",
+      profileSummary: "Profile summary snapshot.",
+      motivationAnswer: "Motivation snapshot.",
+      strengthsAnswer: "Strengths snapshot.",
+      availabilityAnswer: "Availability snapshot.",
+      savedAt: "2026-05-01T12:00:00.000Z"
+    }
   }
 
   await saveTrackerDraft(draft)
@@ -428,6 +484,58 @@ test("saves and loads tracker draft", async () => {
   await clearTrackerDraft()
 
   assert.equal(await getTrackerDraft(), null)
+})
+
+test("loads legacy tracker status as spec status", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "tracker-draft": {
+      roleTitle: "Frontend Engineer",
+      company: "Example Co",
+      applicationUrl: "https://example.com/jobs/frontend",
+      status: "draft",
+      nextAction: "Tailor cover letter",
+      nextActionDate: "2026-05-01",
+      notes: "Legacy status value."
+    }
+  })
+
+  assert.deepEqual(await getTrackerDraft(), {
+    roleTitle: "Frontend Engineer",
+    company: "Example Co",
+    applicationUrl: "https://example.com/jobs/frontend",
+    status: "Saved",
+    nextAction: "Tailor cover letter",
+    nextActionDate: "2026-05-01",
+    notes: "Legacy status value."
+  })
+})
+
+test("normalizes legacy tracker content snapshot defaults", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "tracker-draft": {
+      roleTitle: "Frontend Engineer",
+      company: "Example Co",
+      applicationUrl: "https://example.com/jobs/frontend",
+      status: "applied",
+      nextAction: "Follow up",
+      nextActionDate: "2026-05-01",
+      notes: "Partial legacy snapshot.",
+      contentSnapshot: {
+        coverLetter: "Saved cover letter."
+      }
+    }
+  })
+
+  const draft = await getTrackerDraft()
+
+  assert.equal(draft.status, "Applied")
+  assert.equal(draft.contentSnapshot.coverLetter, "Saved cover letter.")
+  assert.equal(draft.contentSnapshot.profileSummary, "")
+  assert.equal(typeof draft.contentSnapshot.savedAt, "string")
 })
 
 test("validates missing and mismatched profile fields", () => {
@@ -533,7 +641,7 @@ test("validates tracker draft fields", () => {
     roleTitle: "",
     company: "",
     applicationUrl: "not-a-url",
-    status: "draft",
+    status: "Saved",
     nextAction: "",
     nextActionDate: "not-a-date",
     notes: ""
@@ -553,7 +661,7 @@ test("saves applications newest first and deletes by id", async () => {
     title: "First role",
     url: "https://example.com/first",
     createdAt: "2026-04-01T00:00:00.000Z",
-    status: "draft"
+    status: "Saved"
   }
 
   const second = {
@@ -561,7 +669,7 @@ test("saves applications newest first and deletes by id", async () => {
     title: "Second role",
     url: "https://example.com/second",
     createdAt: "2026-04-02T00:00:00.000Z",
-    status: "draft"
+    status: "Saved"
   }
 
   await saveApplication(first)
@@ -574,6 +682,40 @@ test("saves applications newest first and deletes by id", async () => {
   assert.deepEqual(await getApplications(), [first])
 })
 
+test("loads legacy application statuses as spec statuses", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "saved-applications": [
+      {
+        id: "draft",
+        title: "Saved role",
+        url: "https://example.com/saved",
+        createdAt: "2026-04-01T00:00:00.000Z",
+        status: "draft"
+      },
+      {
+        id: "offer",
+        title: "Closed role",
+        url: "https://example.com/closed",
+        createdAt: "2026-04-02T00:00:00.000Z",
+        status: "offer"
+      }
+    ]
+  })
+
+  assert.deepEqual(
+    (await getApplications()).map((application) => ({
+      id: application.id,
+      status: application.status
+    })),
+    [
+      { id: "draft", status: "Saved" },
+      { id: "offer", status: "Closed" }
+    ]
+  )
+})
+
 test("updates application tracker fields", async () => {
   resetStorage()
 
@@ -582,7 +724,7 @@ test("updates application tracker fields", async () => {
     title: "Saved role",
     url: "https://example.com/role",
     createdAt: "2026-04-03T00:00:00.000Z",
-    status: "draft"
+    status: "Saved"
   }
 
   await saveApplication(record)
@@ -590,7 +732,7 @@ test("updates application tracker fields", async () => {
     company: "Example Co",
     roleTitle: "Frontend Engineer",
     source: "example.com",
-    status: "interview",
+    status: "Interview",
     nextAction: "Send follow-up",
     nextActionDate: "2026-04-10",
     notes: "Recruiter screen booked."
@@ -602,7 +744,7 @@ test("updates application tracker fields", async () => {
       company: "Example Co",
       roleTitle: "Frontend Engineer",
       source: "example.com",
-      status: "interview",
+      status: "Interview",
       nextAction: "Send follow-up",
       nextActionDate: "2026-04-10",
       notes: "Recruiter screen booked."
@@ -621,7 +763,7 @@ test("filters applications by query and status", () => {
       url: "https://example.com/jobs/frontend",
       notes: "React role",
       createdAt: "2026-04-01T00:00:00.000Z",
-      status: "draft"
+      status: "Saved"
     },
     {
       id: "interview",
@@ -632,7 +774,7 @@ test("filters applications by query and status", () => {
       nextAction: "Prepare system design notes",
       notes: "Recruiter screen booked",
       createdAt: "2026-04-02T00:00:00.000Z",
-      status: "interview"
+      status: "Interview"
     }
   ]
 
@@ -644,7 +786,7 @@ test("filters applications by query and status", () => {
   )
 
   assert.deepEqual(
-    filterApplications(applications, "engineer", "interview").map(
+    filterApplications(applications, "engineer", "Interview").map(
       (application) => application.id
     ),
     ["interview"]
@@ -666,7 +808,7 @@ test("detects duplicate application urls", () => {
       title: "Existing role",
       url: "https://Example.com/jobs/123#overview",
       createdAt: "2026-04-01T00:00:00.000Z",
-      status: "draft"
+      status: "Saved"
     }
   ]
 
@@ -691,17 +833,25 @@ test("exports applications to csv", () => {
       url: "https://example.com/jobs/frontend",
       nextAction: "Follow up",
       nextActionDate: "2026-04-10",
-      notes: "Remote, EU role",
-      createdAt: "2026-04-01T00:00:00.000Z",
-      status: "applied"
+    notes: "Remote, EU role",
+    createdAt: "2026-04-01T00:00:00.000Z",
+      status: "Applied",
+      contentSnapshot: {
+        coverLetter: "Tailored cover letter.",
+        profileSummary: "Analyst profile summary.",
+        motivationAnswer: "Motivation answer.",
+        strengthsAnswer: "Strengths answer.",
+        availabilityAnswer: "Available in one month.",
+        savedAt: "2026-04-01T12:00:00.000Z"
+      }
     }
   ])
 
   assert.equal(
     csv,
     [
-      '"Title","Role Title","Company","URL","Source","Created At","Status","Next Action","Next Action Date","Notes"',
-      '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","applied","Follow up","2026-04-10","Remote, EU role"'
+      '"Title","Role Title","Company","URL","Source","Created At","Status","Next Action","Next Action Date","Notes","Content Snapshot Saved At","Snapshot Cover Letter","Snapshot Profile Summary","Snapshot Motivation Answer","Snapshot Strengths Answer","Snapshot Availability Answer"',
+      '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","Applied","Follow up","2026-04-10","Remote, EU role","2026-04-01T12:00:00.000Z","Tailored cover letter.","Analyst profile summary.","Motivation answer.","Strengths answer.","Available in one month."'
     ].join("\n")
   )
 })
