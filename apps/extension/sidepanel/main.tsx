@@ -4,8 +4,7 @@ import "../styles/globals.css"
 import { countryOptions } from "../lib/countries"
 import {
   formatJobPageNotes,
-  inferJobPageDetails,
-  type JobPageDetails
+  inferJobPageDetails
 } from "../lib/job-page"
 import { inferJobFitAnalysis } from "../lib/job-analysis"
 import {
@@ -43,6 +42,31 @@ import {
   type TrackerDraft
 } from "../lib/storage"
 import {
+  applicationStatuses,
+  emptyApplicationContentDraft,
+  emptyJobAnalysisDraft,
+  emptyProfile,
+  emptyReusableAnswers,
+  emptyTrackerDraft,
+  noticePeriodOptions,
+  type Section
+} from "./constants"
+import { ApplicationsSection } from "./ApplicationsSection"
+import { SectionNav } from "./SectionNav"
+import {
+  ApplicationContentView,
+  JobAnalysisView,
+  ProfileView,
+  ReusableAnswersView,
+  TrackerView
+} from "./SavedViews"
+import type { AutofillResponse, JobPageResponse, SaveAttempts } from "./types"
+import {
+  getHostname,
+  getStatusClassName,
+  normalizeApplicationUrl
+} from "./utils"
+import {
   getApplicationContentIssueForField,
   getIssueForField,
   getJobIssueForField,
@@ -54,138 +78,6 @@ import {
   validateReusableAnswers,
   validateTrackerDraft
 } from "../lib/validation"
-
-type Section =
-  | "profile"
-  | "profile-view"
-  | "reusable-answers"
-  | "reusable-answers-view"
-  | "job-analysis"
-  | "job-analysis-view"
-  | "application-content"
-  | "application-content-view"
-  | "tracker"
-  | "tracker-view"
-  | "applications"
-type SaveAttempts = Record<Section, boolean>
-type JobPageResponse = JobPageDetails & {
-  message?: string
-}
-type AutofillResponse = {
-  filledFields: string[]
-  message?: string
-}
-
-const emptyProfile: CandidateProfile = {
-  fullName: "",
-  email: "",
-  phone: "",
-  currentCountry: "",
-  currentCity: "",
-  sponsorshipNeeded: false,
-  relocationWillingness: "depends",
-  noticePeriod: ""
-}
-
-const emptyReusableAnswers: ReusableAnswers = {
-  sponsorshipAnswer: "",
-  relocationAnswer: "",
-  workAuthorisationAnswer: "",
-  noticePeriodAnswer: ""
-}
-
-const emptyJobAnalysisDraft: JobAnalysisDraft = {
-  jobTitle: "",
-  company: "",
-  jobUrl: "",
-  location: "",
-  workMode: "unknown",
-  notes: ""
-}
-
-const emptyApplicationContentDraft: ApplicationContentDraft = {
-  coverLetter: "",
-  profileSummary: "",
-  motivationAnswer: "",
-  strengthsAnswer: "",
-  availabilityAnswer: ""
-}
-
-const emptyTrackerDraft: TrackerDraft = {
-  roleTitle: "",
-  company: "",
-  applicationUrl: "",
-  status: "draft",
-  nextAction: "",
-  nextActionDate: "",
-  notes: ""
-}
-
-const applicationStatuses: ApplicationStatus[] = [
-  "draft",
-  "applied",
-  "interview",
-  "rejected",
-  "offer"
-]
-
-const noticePeriodOptions = [
-  "Immediately available",
-  "1 week",
-  "2 weeks",
-  "1 month",
-  "2 months",
-  "3 months",
-  "More than 3 months",
-  "Negotiable"
-]
-
-function getHostname(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "")
-  } catch {
-    return ""
-  }
-}
-
-function normalizeApplicationUrl(url: string) {
-  try {
-    const parsed = new URL(url)
-    parsed.hash = ""
-    parsed.hostname = parsed.hostname.toLowerCase()
-    return parsed.toString().replace(/\/$/, "")
-  } catch {
-    return url.trim().toLowerCase().replace(/\/$/, "")
-  }
-}
-
-function formatCreatedDate(createdAt: string) {
-  return new Date(createdAt).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric"
-  })
-}
-
-const sections: Array<{ id: Section; label: string }> = [
-  { id: "profile", label: "Profile" },
-  { id: "profile-view", label: "View Profile" },
-  { id: "reusable-answers", label: "Reusable Answers" },
-  { id: "reusable-answers-view", label: "View Answers" },
-  { id: "job-analysis", label: "Job Analysis" },
-  { id: "job-analysis-view", label: "View Job Analysis" },
-  { id: "application-content", label: "Application Content" },
-  { id: "application-content-view", label: "View Content" },
-  { id: "tracker", label: "Tracker" },
-  { id: "tracker-view", label: "View Tracker" },
-  { id: "applications", label: "Applications" }
-]
-
-function getStatusClassName(message: string) {
-  return message.startsWith("Complete ") || message.startsWith("Could not ")
-    ? "status-message status-message-error"
-    : "status-message"
-}
 
 function SidePanelApp() {
   const [activeSection, setActiveSection] = useState<Section>("profile")
@@ -758,69 +650,16 @@ function SidePanelApp() {
         <h1>AutoTime EU Apply</h1>
       </header>
 
-      <nav className="section-nav" aria-label="AutoTime sections">
-        {sections.map((section) => (
-          <button
-            aria-current={activeSection === section.id ? "page" : undefined}
-            className={activeSection === section.id ? "active" : ""}
-            key={section.id}
-            onClick={() => goToSection(section.id)}
-            type="button"
-          >
-            {section.label}
-            {section.id === "profile" &&
-              saveAttempts.profile &&
-              profileIssues.length > 0 && (
-                <span
-                  className="nav-alert"
-                  aria-label="Profile needs attention"
-                >
-                  !
-                </span>
-              )}
-            {section.id === "job-analysis" &&
-              saveAttempts["job-analysis"] &&
-              jobAnalysisIssues.length > 0 && (
-                <span
-                  className="nav-alert"
-                  aria-label="Job Analysis needs attention"
-                >
-                  !
-                </span>
-              )}
-            {section.id === "application-content" &&
-              saveAttempts["application-content"] &&
-              applicationContentIssues.length > 0 && (
-                <span
-                  className="nav-alert"
-                  aria-label="Application Content needs attention"
-                >
-                  !
-                </span>
-              )}
-            {section.id === "reusable-answers" &&
-              saveAttempts["reusable-answers"] &&
-              reusableAnswerIssues.length > 0 && (
-                <span
-                  className="nav-alert"
-                  aria-label="Reusable Answers need attention"
-                >
-                  !
-                </span>
-              )}
-            {section.id === "tracker" &&
-              saveAttempts.tracker &&
-              trackerIssues.length > 0 && (
-                <span
-                  className="nav-alert"
-                  aria-label="Tracker needs attention"
-                >
-                  !
-                </span>
-              )}
-          </button>
-        ))}
-      </nav>
+      <SectionNav
+        activeSection={activeSection}
+        applicationContentIssueCount={applicationContentIssues.length}
+        jobAnalysisIssueCount={jobAnalysisIssues.length}
+        onSectionChange={goToSection}
+        profileIssueCount={profileIssues.length}
+        reusableAnswerIssueCount={reusableAnswerIssues.length}
+        saveAttempts={saveAttempts}
+        trackerIssueCount={trackerIssues.length}
+      />
 
       {activeSection === "profile" ? (
         <section className="panel-section">
@@ -1021,57 +860,7 @@ function SidePanelApp() {
           </div>
         </section>
       ) : activeSection === "profile-view" ? (
-        <section className="panel-section">
-          <h2>View Profile</h2>
-
-          {savedProfile ? (
-            <>
-              <dl className="profile-summary">
-                <div>
-                  <dt>Full name</dt>
-                  <dd>{savedProfile.fullName}</dd>
-                </div>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{savedProfile.email}</dd>
-                </div>
-                <div>
-                  <dt>Phone</dt>
-                  <dd>{savedProfile.phone}</dd>
-                </div>
-                <div>
-                  <dt>Current country</dt>
-                  <dd>{savedProfile.currentCountry}</dd>
-                </div>
-                <div>
-                  <dt>Current city</dt>
-                  <dd>{savedProfile.currentCity}</dd>
-                </div>
-                <div>
-                  <dt>Sponsorship needed</dt>
-                  <dd>{savedProfile.sponsorshipNeeded ? "Yes" : "No"}</dd>
-                </div>
-                <div>
-                  <dt>Relocation willingness</dt>
-                  <dd>{savedProfile.relocationWillingness}</dd>
-                </div>
-                <div>
-                  <dt>Notice period</dt>
-                  <dd>{savedProfile.noticePeriod}</dd>
-                </div>
-              </dl>
-              <button
-                className="danger-button"
-                type="button"
-                onClick={handleClearProfile}
-              >
-                Clear Saved Profile
-              </button>
-            </>
-          ) : (
-            <p className="empty-state">No saved profile yet.</p>
-          )}
-        </section>
+        <ProfileView draft={savedProfile} onClear={handleClearProfile} />
       ) : activeSection === "reusable-answers" ? (
         <section className="panel-section">
           <h2>Reusable Answers</h2>
@@ -1227,43 +1016,10 @@ function SidePanelApp() {
           </div>
         </section>
       ) : activeSection === "reusable-answers-view" ? (
-        <section className="panel-section">
-          <h2>View Answers</h2>
-
-          {savedReusableAnswers ? (
-            <>
-              <dl className="profile-summary">
-                <div>
-                  <dt>Sponsorship answer</dt>
-                  <dd>{savedReusableAnswers.sponsorshipAnswer || "None"}</dd>
-                </div>
-                <div>
-                  <dt>Relocation answer</dt>
-                  <dd>{savedReusableAnswers.relocationAnswer || "None"}</dd>
-                </div>
-                <div>
-                  <dt>Work authorisation answer</dt>
-                  <dd>
-                    {savedReusableAnswers.workAuthorisationAnswer || "None"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Notice period answer</dt>
-                  <dd>{savedReusableAnswers.noticePeriodAnswer || "None"}</dd>
-                </div>
-              </dl>
-              <button
-                className="danger-button"
-                type="button"
-                onClick={handleClearReusableAnswers}
-              >
-                Clear Saved Answers
-              </button>
-            </>
-          ) : (
-            <p className="empty-state">No saved reusable answers yet.</p>
-          )}
-        </section>
+        <ReusableAnswersView
+          draft={savedReusableAnswers}
+          onClear={handleClearReusableAnswers}
+        />
       ) : activeSection === "job-analysis" ? (
         <section className="panel-section">
           <h2>Job Analysis</h2>
@@ -1418,89 +1174,10 @@ function SidePanelApp() {
           </div>
         </section>
       ) : activeSection === "job-analysis-view" ? (
-        <section className="panel-section">
-          <h2>View Job Analysis</h2>
-
-          {savedJobAnalysisDraft ? (
-            <>
-              <dl className="profile-summary">
-                <div>
-                  <dt>Job title</dt>
-                  <dd>{savedJobAnalysisDraft.jobTitle}</dd>
-                </div>
-                <div>
-                  <dt>Company</dt>
-                  <dd>{savedJobAnalysisDraft.company}</dd>
-                </div>
-                <div>
-                  <dt>Job URL</dt>
-                  <dd>
-                    <a
-                      href={savedJobAnalysisDraft.jobUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {savedJobAnalysisDraft.jobUrl}
-                    </a>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Location/country</dt>
-                  <dd>{savedJobAnalysisDraft.location}</dd>
-                </div>
-                <div>
-                  <dt>Work mode</dt>
-                  <dd>{savedJobAnalysisDraft.workMode}</dd>
-                </div>
-                <div>
-                  <dt>Fit score</dt>
-                  <dd>
-                    {typeof savedJobAnalysisDraft.fitScore === "number"
-                      ? `${savedJobAnalysisDraft.fitScore}/100`
-                      : "Not scored"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Recommendation</dt>
-                  <dd>
-                    {savedJobAnalysisDraft.recommendation || "Not scored"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Positioning angle</dt>
-                  <dd>{savedJobAnalysisDraft.positioningAngle || "None"}</dd>
-                </div>
-                <div>
-                  <dt>Score factors</dt>
-                  <dd>
-                    {savedJobAnalysisDraft.scoreFactors?.length ? (
-                      <ul className="summary-list">
-                        {savedJobAnalysisDraft.scoreFactors.map((factor) => (
-                          <li key={factor}>{factor}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "None"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Notes</dt>
-                  <dd>{savedJobAnalysisDraft.notes || "None"}</dd>
-                </div>
-              </dl>
-              <button
-                className="danger-button"
-                type="button"
-                onClick={handleClearJobAnalysis}
-              >
-                Clear Saved Job Analysis
-              </button>
-            </>
-          ) : (
-            <p className="empty-state">No saved job analysis yet.</p>
-          )}
-        </section>
+        <JobAnalysisView
+          draft={savedJobAnalysisDraft}
+          onClear={handleClearJobAnalysis}
+        />
       ) : activeSection === "application-content" ? (
         <section className="panel-section">
           <h2>Application Content</h2>
@@ -1659,49 +1336,10 @@ function SidePanelApp() {
           </div>
         </section>
       ) : activeSection === "application-content-view" ? (
-        <section className="panel-section">
-          <h2>View Content</h2>
-
-          {savedApplicationContentDraft ? (
-            <>
-              <dl className="profile-summary">
-                <div>
-                  <dt>Cover letter</dt>
-                  <dd>{savedApplicationContentDraft.coverLetter}</dd>
-                </div>
-                <div>
-                  <dt>Profile summary</dt>
-                  <dd>{savedApplicationContentDraft.profileSummary}</dd>
-                </div>
-                <div>
-                  <dt>Motivation answer</dt>
-                  <dd>{savedApplicationContentDraft.motivationAnswer}</dd>
-                </div>
-                <div>
-                  <dt>Strengths answer</dt>
-                  <dd>
-                    {savedApplicationContentDraft.strengthsAnswer || "None"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Availability answer</dt>
-                  <dd>
-                    {savedApplicationContentDraft.availabilityAnswer || "None"}
-                  </dd>
-                </div>
-              </dl>
-              <button
-                className="danger-button"
-                type="button"
-                onClick={handleClearApplicationContent}
-              >
-                Clear Saved Content
-              </button>
-            </>
-          ) : (
-            <p className="empty-state">No saved application content yet.</p>
-          )}
-        </section>
+        <ApplicationContentView
+          draft={savedApplicationContentDraft}
+          onClear={handleClearApplicationContent}
+        />
       ) : activeSection === "tracker" ? (
         <section className="panel-section">
           <h2>Tracker</h2>
@@ -1872,238 +1510,22 @@ function SidePanelApp() {
           </div>
         </section>
       ) : activeSection === "tracker-view" ? (
-        <section className="panel-section">
-          <h2>View Tracker</h2>
-
-          {savedTrackerDraft ? (
-            <>
-              <dl className="profile-summary">
-                <div>
-                  <dt>Role title</dt>
-                  <dd>{savedTrackerDraft.roleTitle}</dd>
-                </div>
-                <div>
-                  <dt>Company</dt>
-                  <dd>{savedTrackerDraft.company}</dd>
-                </div>
-                <div>
-                  <dt>Application URL</dt>
-                  <dd>
-                    <a
-                      href={savedTrackerDraft.applicationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {savedTrackerDraft.applicationUrl}
-                    </a>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Status</dt>
-                  <dd>{savedTrackerDraft.status}</dd>
-                </div>
-                <div>
-                  <dt>Next action</dt>
-                  <dd>{savedTrackerDraft.nextAction}</dd>
-                </div>
-                <div>
-                  <dt>Next action date</dt>
-                  <dd>{savedTrackerDraft.nextActionDate}</dd>
-                </div>
-                <div>
-                  <dt>Notes</dt>
-                  <dd>{savedTrackerDraft.notes || "None"}</dd>
-                </div>
-              </dl>
-              <button
-                className="danger-button"
-                type="button"
-                onClick={handleClearTracker}
-              >
-                Clear Saved Tracker
-              </button>
-            </>
-          ) : (
-            <p className="empty-state">No saved tracker draft yet.</p>
-          )}
-        </section>
+        <TrackerView draft={savedTrackerDraft} onClear={handleClearTracker} />
       ) : activeSection === "applications" ? (
-        <section className="panel-section">
-          <h2>Applications</h2>
-
-          <div className="application-actions">
-            <button type="button" onClick={saveCurrentTabAsApplication}>
-              Save Current Tab
-            </button>
-            <button type="button" onClick={exportApplications}>
-              Export CSV
-            </button>
-          </div>
-
-          <div className="application-filters">
-            <input
-              placeholder="Search applications"
-              value={applicationSearchQuery}
-              onChange={(event) =>
-                setApplicationSearchQuery(event.target.value)
-              }
-            />
-
-            <select
-              value={applicationStatusFilter}
-              onChange={(event) =>
-                setApplicationStatusFilter(
-                  event.target.value as ApplicationStatusFilter
-                )
-              }
-            >
-              <option value="all">all</option>
-              {applicationStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {applicationsStatus && (
-            <p
-              className={getStatusClassName(applicationsStatus)}
-              ref={applicationsStatusRef}
-              role="status"
-              tabIndex={-1}
-            >
-              {applicationsStatus}
-            </p>
-          )}
-
-          {applications.length === 0 ? (
-            <p className="empty-state">No saved applications yet.</p>
-          ) : visibleApplications.length === 0 ? (
-            <p className="empty-state">No applications match your filters.</p>
-          ) : (
-            <div className="application-list">
-              {visibleApplications.map((application) => (
-                <article className="application-record" key={application.id}>
-                  <div>
-                    <h3>{application.roleTitle || application.title}</h3>
-                    {application.company && <p>{application.company}</p>}
-                    <a href={application.url} target="_blank" rel="noreferrer">
-                      {application.url}
-                    </a>
-                    <p>
-                      {formatCreatedDate(application.createdAt)} -{" "}
-                      {application.status}
-                      {application.source ? ` - ${application.source}` : ""}
-                    </p>
-                  </div>
-
-                  <label>
-                    Role title
-                    <input
-                      value={application.roleTitle ?? application.title}
-                      onChange={(event) =>
-                        updateSavedApplication(application.id, {
-                          roleTitle: event.target.value
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Company
-                    <input
-                      placeholder="Company"
-                      value={application.company ?? ""}
-                      onChange={(event) =>
-                        updateSavedApplication(application.id, {
-                          company: event.target.value
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Source
-                    <input
-                      placeholder="Source"
-                      value={application.source ?? ""}
-                      onChange={(event) =>
-                        updateSavedApplication(application.id, {
-                          source: event.target.value
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Status
-                    <select
-                      value={application.status}
-                      onChange={(event) =>
-                        updateSavedApplication(application.id, {
-                          status: event.target.value as ApplicationStatus
-                        })
-                      }
-                    >
-                      {applicationStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label>
-                    Next action
-                    <input
-                      placeholder="Next action"
-                      value={application.nextAction ?? ""}
-                      onChange={(event) =>
-                        updateSavedApplication(application.id, {
-                          nextAction: event.target.value
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Next action date
-                    <input
-                      type="date"
-                      value={application.nextActionDate ?? ""}
-                      onChange={(event) =>
-                        updateSavedApplication(application.id, {
-                          nextActionDate: event.target.value
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Notes
-                    <textarea
-                      value={application.notes ?? ""}
-                      onChange={(event) =>
-                        updateSavedApplication(application.id, {
-                          notes: event.target.value
-                        })
-                      }
-                    />
-                  </label>
-
-                  <button
-                    className="danger-button"
-                    type="button"
-                    onClick={() => deleteSavedApplication(application.id)}
-                  >
-                    Delete
-                  </button>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+        <ApplicationsSection
+          applications={applications}
+          searchQuery={applicationSearchQuery}
+          status={applicationsStatus}
+          statusFilter={applicationStatusFilter}
+          statusRef={applicationsStatusRef}
+          visibleApplications={visibleApplications}
+          onDeleteApplication={deleteSavedApplication}
+          onExportApplications={exportApplications}
+          onSaveCurrentTab={saveCurrentTabAsApplication}
+          onSearchQueryChange={setApplicationSearchQuery}
+          onStatusFilterChange={setApplicationStatusFilter}
+          onUpdateApplication={updateSavedApplication}
+        />
       ) : (
         <section className="panel-section">
           <h2>AutoTime EU Apply</h2>

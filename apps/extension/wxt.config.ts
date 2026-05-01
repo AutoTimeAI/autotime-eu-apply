@@ -5,7 +5,7 @@ export default defineConfig({
   manifest: {
     name: "AutoTime EU Apply",
     description: "Cross-border job application copilot for Europe",
-    permissions: ["activeTab", "storage"],
+    permissions: ["activeTab", "sidePanel", "storage"],
     action: {
       default_title: "AutoTime EU Apply"
     }

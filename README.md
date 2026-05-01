@@ -9,16 +9,18 @@ web app shell, and a shared package.
 
 - `apps/extension` - Chrome extension built with WXT.
 - `apps/web` - Basic Next.js web app shell.
-- `packages/shared` - Shared package for future common types and schemas.
+- `packages/shared` - Reserved for v2 shared types and schemas.
 
 The Chrome extension source of truth is `apps/extension`.
+`packages/shared` is intentionally unused in the MVP so extension storage and
+validation can remain local until backend/web integration begins.
 
 ## Extension MVP
 
 Current status:
 
 - `MVP v1`: Done
-- `MVP v1.1`: In progress, tracker import and application list flow done
+- `MVP v1.1`: Done
 
 The extension currently supports:
 
@@ -44,6 +46,7 @@ The extension currently supports:
 - Next-action and next-action-date tracking for saved applications.
 
 The extension does not submit forms and does not use Firebase or a backend yet.
+The web app does not depend on Firebase until backend work starts.
 
 ## Local Setup
 
@@ -121,6 +124,9 @@ The extension uses these Chrome permissions:
 - `storage` for `chrome.storage.local`.
 - `activeTab` for reading/importing the current job page and sending autofill messages.
 - `sidePanel` for opening the Chrome side panel.
+
+The WXT content script is configured with `matches: ["<all_urls>"]` so the side
+panel can request autofill and job-page import on normal application pages.
 
 After building, load the generated extension from:
 

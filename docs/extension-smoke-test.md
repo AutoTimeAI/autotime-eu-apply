@@ -4,7 +4,7 @@ Use this checklist after changes to the WXT side panel shell.
 
 ## Build And Reload
 
-1. Run `npm run build`.
+1. Run `pnpm build:extension`.
 2. Open `chrome://extensions`.
 3. Enable Developer mode.
 4. Load or reload the unpacked extension from:
