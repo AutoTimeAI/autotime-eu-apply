@@ -29,6 +29,8 @@ The extension currently supports:
 - Creating, viewing, and clearing reusable answers from the side panel.
 - Saving the current tab as an application draft from the side panel.
 - Importing the active job page into the side-panel tracker.
+- Transparent local job-fit scoring with visible factors, recommendation, and
+  positioning angle.
 - Saving side-panel tracker entries into the saved applications list.
 - Viewing, editing, searching, filtering, deleting, and exporting saved
   applications from the side panel.
@@ -102,6 +104,7 @@ Current unit tests cover:
 - Reusable answer field detection.
 - Safe fill eligibility checks.
 - Job page detail inference for tracker import.
+- Transparent job-fit scoring and positioning inference.
 - Profile storage.
 - Reusable answer storage.
 - Job analysis, application content, and tracker draft storage.

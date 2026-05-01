@@ -44,6 +44,10 @@ export type JobAnalysisDraft = {
   location: string
   workMode: "onsite" | "hybrid" | "remote" | "unknown"
   notes: string
+  fitScore?: number
+  recommendation?: "strong-fit" | "possible-fit" | "low-fit"
+  positioningAngle?: string
+  scoreFactors?: string[]
 }
 
 export type ApplicationContentDraft = {

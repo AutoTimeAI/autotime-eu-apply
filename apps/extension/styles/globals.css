@@ -211,6 +211,11 @@ section {
   overflow-wrap: anywhere;
 }
 
+.summary-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
 .empty-state {
   margin: 0;
   color: #5b6475;

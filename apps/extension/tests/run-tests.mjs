@@ -13,6 +13,7 @@ import {
   getReusableAnswerValues
 } from "../lib/autofill.ts"
 import { formatJobPageNotes, inferJobPageDetails } from "../lib/job-page.ts"
+import { inferJobFitAnalysis } from "../lib/job-analysis.ts"
 import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
@@ -232,6 +233,41 @@ test("formats imported job page notes from detected metadata", () => {
       "Source: example.com",
       "Page title: Senior Frontend Engineer at Example Co - Careers"
     ].join("\n")
+  )
+})
+
+test("infers transparent job fit analysis", () => {
+  const analysis = inferJobFitAnalysis(
+    {
+      jobTitle: "FinTech Business Analyst",
+      company: "Example Bank",
+      jobUrl: "https://example.com/jobs/business-analyst",
+      location: "United Kingdom",
+      workMode: "hybrid",
+      notes: "Payments platform requirements and stakeholder delivery."
+    },
+    {
+      fullName: "Rajan Kumar",
+      email: "rajan@example.com",
+      phone: "+44 1234 567890",
+      currentCountry: "United Kingdom",
+      currentCity: "London",
+      sponsorshipNeeded: false,
+      relocationWillingness: "depends",
+      noticePeriod: "1 month"
+    }
+  )
+
+  assert.equal(analysis.recommendation, "strong-fit")
+  assert.equal(analysis.fitScore, 100)
+  assert.equal(
+    analysis.positioningAngle,
+    "Position around FinTech systems, application support, and cross-functional delivery."
+  )
+  assert.ok(
+    analysis.scoreFactors?.includes(
+      "Role title aligns with the target analyst/systems role family."
+    )
   )
 })
 

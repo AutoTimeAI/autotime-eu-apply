@@ -7,6 +7,7 @@ import {
   inferJobPageDetails,
   type JobPageDetails
 } from "../lib/job-page"
+import { inferJobFitAnalysis } from "../lib/job-analysis"
 import {
   applicationsToCsv,
   filterApplications,
@@ -582,8 +583,11 @@ function SidePanelApp() {
       return
     }
 
-    await saveJobAnalysisDraft(jobAnalysisDraft)
-    setSavedJobAnalysisDraft(jobAnalysisDraft)
+    const analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
+    const analysedDraft = { ...jobAnalysisDraft, ...analysis }
+
+    await saveJobAnalysisDraft(analysedDraft)
+    setSavedJobAnalysisDraft(analysedDraft)
     setJobAnalysisDraft(emptyJobAnalysisDraft)
     clearSaveAttempt("job-analysis")
     setJobStatus("Job analysis draft saved")
@@ -1447,6 +1451,38 @@ function SidePanelApp() {
                 <div>
                   <dt>Work mode</dt>
                   <dd>{savedJobAnalysisDraft.workMode}</dd>
+                </div>
+                <div>
+                  <dt>Fit score</dt>
+                  <dd>
+                    {typeof savedJobAnalysisDraft.fitScore === "number"
+                      ? `${savedJobAnalysisDraft.fitScore}/100`
+                      : "Not scored"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Recommendation</dt>
+                  <dd>
+                    {savedJobAnalysisDraft.recommendation || "Not scored"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Positioning angle</dt>
+                  <dd>{savedJobAnalysisDraft.positioningAngle || "None"}</dd>
+                </div>
+                <div>
+                  <dt>Score factors</dt>
+                  <dd>
+                    {savedJobAnalysisDraft.scoreFactors?.length ? (
+                      <ul className="summary-list">
+                        {savedJobAnalysisDraft.scoreFactors.map((factor) => (
+                          <li key={factor}>{factor}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      "None"
+                    )}
+                  </dd>
                 </div>
                 <div>
                   <dt>Notes</dt>

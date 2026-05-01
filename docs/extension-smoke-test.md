@@ -47,6 +47,8 @@ apps/extension/.output/chrome-mv3
 4. Confirm the edit form clears after successful save.
 5. Open the matching view tab.
 6. Confirm the saved data is visible.
+7. For View Job Analysis, confirm fit score, recommendation, positioning angle,
+   and score factors are visible after saving.
 
 ## Autofill
 
