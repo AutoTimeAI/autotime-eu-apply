@@ -80,6 +80,8 @@ function parseTitle(title = "") {
 export function inferJobPageDetails(
   input: JobPageTextInput
 ): JobPageDetails {
+  // Prefer explicit page text over title parsing because job-board titles often
+  // include branding, location, or generic words such as "Careers".
   const parsedTitle = parseTitle(input.title)
   const roleTitle = cleanText(input.heading) || parsedTitle.roleTitle
   const company = cleanText(input.company) || parsedTitle.company

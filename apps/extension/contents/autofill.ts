@@ -71,6 +71,7 @@ function canFillTextarea(textarea: HTMLTextAreaElement) {
 }
 
 function setControlValue(control: TextControl, value: string) {
+  // Use the native value setter so React-controlled forms observe the change.
   const valueSetter = Object.getOwnPropertyDescriptor(control, "value")?.set
   const prototype = Object.getPrototypeOf(control) as TextControl
   const prototypeValueSetter = Object.getOwnPropertyDescriptor(
@@ -115,6 +116,8 @@ function getFirstText(selectors: string[]) {
 }
 
 function detectJobPage(): JobPageResponse {
+  // These selectors cover common job-board conventions while title parsing
+  // provides a fallback for pages without structured job metadata.
   const pageTitle =
     getMetaContent(["og:title", "twitter:title"]) || document.title
   const company =
