@@ -1,4 +1,5 @@
 import { getProfile, getReusableAnswers } from "../lib/storage"
+import { inferJobPageDetails, type JobPageDetails } from "../lib/job-page"
 import {
   canFillInput,
   detectFieldFromText,
@@ -9,12 +10,12 @@ import {
   type ProfileField
 } from "../lib/autofill"
 
-export const config = {
-  matches: ["<all_urls>"]
-}
-
 type AutofillResponse = {
   filledFields: string[]
+  message?: string
+}
+
+type JobPageResponse = JobPageDetails & {
   message?: string
 }
 
@@ -87,6 +88,70 @@ function setControlValue(control: TextControl, value: string) {
   control.dispatchEvent(new Event("change", { bubbles: true }))
 }
 
+function getMetaContent(names: string[]) {
+  for (const name of names) {
+    const element = document.querySelector<HTMLMetaElement>(
+      `meta[name="${name}"], meta[property="${name}"]`
+    )
+
+    const content = element?.content.trim()
+    if (content) {
+      return content
+    }
+  }
+
+  return ""
+}
+
+function getFirstText(selectors: string[]) {
+  for (const selector of selectors) {
+    const text = document.querySelector(selector)?.textContent?.trim()
+    if (text) {
+      return text
+    }
+  }
+
+  return ""
+}
+
+function detectJobPage(): JobPageResponse {
+  const pageTitle =
+    getMetaContent(["og:title", "twitter:title"]) || document.title
+  const company =
+    getFirstText([
+      "[data-testid='company-name']",
+      "[data-testid='job-company-name']",
+      "[class*='company']",
+      "[data-automation-id='company']"
+    ]) || getMetaContent(["og:site_name", "application-name"])
+  const location = getFirstText([
+    "[data-testid='job-location']",
+    "[class*='location']",
+    "[data-automation-id='locations']"
+  ])
+
+  const details = inferJobPageDetails({
+    title: pageTitle,
+    heading: getFirstText([
+      "h1",
+      "[data-testid='job-title']",
+      "[data-automation-id='jobPostingHeader']"
+    ]),
+    company,
+    location,
+    url: window.location.href
+  })
+
+  if (!details.roleTitle && !details.company) {
+    return {
+      ...details,
+      message: "Could not detect job details on this page"
+    }
+  }
+
+  return details
+}
+
 async function autofillProfile(): Promise<AutofillResponse> {
   const profile = await getProfile()
   const answers = await getReusableAnswers()
@@ -139,11 +204,18 @@ async function autofillProfile(): Promise<AutofillResponse> {
   return { filledFields }
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== "AUTOTIME_AUTOFILL_PROFILE") {
-    return false
-  }
+export function registerAutotimeContentScript() {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "AUTOTIME_AUTOFILL_PROFILE") {
+      autofillProfile().then(sendResponse)
+      return true
+    }
 
-  autofillProfile().then(sendResponse)
-  return true
-})
+    if (message?.type === "AUTOTIME_DETECT_JOB_PAGE") {
+      sendResponse(detectJobPage())
+      return false
+    }
+
+    return false
+  })
+}

@@ -12,6 +12,7 @@ import {
   getNameParts,
   getReusableAnswerValues
 } from "../lib/autofill.ts"
+import { inferJobPageDetails } from "../lib/job-page.ts"
 import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
@@ -162,6 +163,41 @@ test("fills only empty visible enabled supported inputs", () => {
   assert.equal(canFillInput({ ...fillable, readOnly: true }), false)
   assert.equal(canFillInput({ ...fillable, isVisible: false }), false)
   assert.equal(canFillInput({ ...fillable, type: "password" }), false)
+})
+
+test("infers job page details from common page text", () => {
+  assert.deepEqual(
+    inferJobPageDetails({
+      title: "Senior Frontend Engineer at Example Co - Careers",
+      url: "https://example.com/jobs/frontend"
+    }),
+    {
+      roleTitle: "Senior Frontend Engineer",
+      company: "Example Co",
+      location: "",
+      url: "https://example.com/jobs/frontend",
+      source: "example.com",
+      pageTitle: "Senior Frontend Engineer at Example Co - Careers"
+    }
+  )
+
+  assert.deepEqual(
+    inferJobPageDetails({
+      title: "Backend Engineer | Example Jobs",
+      heading: "Staff Backend Engineer",
+      company: "Example Co",
+      location: "London, United Kingdom",
+      url: "https://jobs.example.co/backend"
+    }),
+    {
+      roleTitle: "Staff Backend Engineer",
+      company: "Example Co",
+      location: "London, United Kingdom",
+      url: "https://jobs.example.co/backend",
+      source: "jobs.example.co",
+      pageTitle: "Backend Engineer | Example Jobs"
+    }
+  )
 })
 
 test("saves and loads candidate profile", async () => {

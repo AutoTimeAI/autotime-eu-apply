@@ -45,6 +45,15 @@ apps/extension/.output/chrome-mv3
 5. Open the matching view tab.
 6. Confirm the saved data is visible.
 
+## Current Job Page Import
+
+1. Open a job posting page in the active tab.
+2. Open the Tracker tab in the side panel.
+3. Click Import Current Job Page.
+4. Confirm role title and application URL are filled.
+5. Confirm company and location notes are filled when the page exposes them.
+6. Confirm existing typed tracker fields are not overwritten.
+
 ## Clear Saved Data
 
 1. Open each view tab with saved data.

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import { countryOptions } from "../lib/countries"
+import { inferJobPageDetails, type JobPageDetails } from "../lib/job-page"
 import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
@@ -42,6 +43,9 @@ type Section =
   | "tracker"
   | "tracker-view"
 type SaveAttempts = Record<Section, boolean>
+type JobPageResponse = JobPageDetails & {
+  message?: string
+}
 
 const emptyProfile: CandidateProfile = {
   fullName: "",
@@ -112,7 +116,7 @@ const sections: Array<{ id: Section; label: string }> = [
 ]
 
 function getStatusClassName(message: string) {
-  return message.startsWith("Complete ")
+  return message.startsWith("Complete ") || message.startsWith("Could not ")
     ? "status-message status-message-error"
     : "status-message"
 }
@@ -347,6 +351,68 @@ function SidePanelApp() {
     clearSaveAttempt("tracker")
     setTrackerStatus("Tracker draft saved")
     setTimeout(() => setTrackerStatus(""), 3500)
+  }
+
+  const handleImportCurrentJobPage = async () => {
+    setTrackerStatus("Detecting current job page...")
+
+    const tabs = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+    const activeTab = tabs[0]
+
+    if (!activeTab?.id) {
+      setTrackerStatus("Could not access current tab.")
+      return
+    }
+
+    try {
+      const details = (await chrome.tabs.sendMessage(activeTab.id, {
+        type: "AUTOTIME_DETECT_JOB_PAGE"
+      })) as JobPageResponse
+
+      if (details.message && !details.roleTitle && !details.company) {
+        setTrackerStatus(details.message)
+        return
+      }
+
+      setTrackerDraft((current) => ({
+        ...current,
+        roleTitle: current.roleTitle || details.roleTitle,
+        company: current.company || details.company,
+        applicationUrl: current.applicationUrl || details.url,
+        nextAction: current.nextAction || "Tailor application",
+        notes:
+          current.notes ||
+          [details.location && `Location: ${details.location}`]
+            .filter(Boolean)
+            .join("\n")
+      }))
+      clearSaveAttempt("tracker")
+      setTrackerStatus("Current job page imported")
+      setTimeout(() => setTrackerStatus(""), 3500)
+    } catch {
+      const details = inferJobPageDetails({
+        title: activeTab.title,
+        url: activeTab.url
+      })
+
+      if (!details.roleTitle && !details.url) {
+        setTrackerStatus("Could not detect job details on this page.")
+        return
+      }
+
+      setTrackerDraft((current) => ({
+        ...current,
+        roleTitle: current.roleTitle || details.roleTitle,
+        applicationUrl: current.applicationUrl || details.url,
+        nextAction: current.nextAction || "Tailor application"
+      }))
+      clearSaveAttempt("tracker")
+      setTrackerStatus("Current tab imported")
+      setTimeout(() => setTrackerStatus(""), 3500)
+    }
   }
 
   const handleClearProfile = async () => {
@@ -1082,6 +1148,10 @@ function SidePanelApp() {
           <h2>Tracker</h2>
 
           <div className="form-grid">
+            <button type="button" onClick={handleImportCurrentJobPage}>
+              Import Current Job Page
+            </button>
+
             {saveAttempts.tracker && trackerIssues.length > 0 && (
               <div className="alert-panel" role="alert">
                 <strong>Tracker needs attention</strong>
