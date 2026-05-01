@@ -18,7 +18,7 @@ The Chrome extension source of truth is `apps/extension`.
 Current status:
 
 - `MVP v1`: Done
-- `MVP v1.1`: In progress, tracker import flow done
+- `MVP v1.1`: In progress, tracker import and application list flow done
 
 The extension currently supports:
 
@@ -26,19 +26,20 @@ The extension currently supports:
 - Country and notice-period profile inputs with required-field validation.
 - International phone validation against the selected country calling code.
 - Reusable answers for sponsorship, relocation, work authorisation, and notice period.
-- Saving the current tab as an application draft.
+- Creating, viewing, and clearing reusable answers from the side panel.
+- Saving the current tab as an application draft from the side panel.
 - Importing the active job page into the side-panel tracker.
-- Viewing saved applications in the popup.
-- Deleting saved application records.
-- Editing saved application role title, company, source, notes, and status.
-- Searching saved applications and filtering them by status.
+- Saving side-panel tracker entries into the saved applications list.
+- Viewing, editing, searching, filtering, deleting, and exporting saved
+  applications from the side panel.
 - Preventing duplicate saved applications for the same URL.
-- Exporting saved applications to CSV.
 - Basic autofill for obvious first name, last name, email, and phone fields.
 - Basic textarea autofill for obvious sponsorship, relocation, work authorisation,
   and notice period questions.
+- Triggering profile and reusable-answer autofill from the side panel.
 - Side-panel drafts for profile, job analysis, application content, and tracker.
 - Application notes and editable application status tracking.
+- Next-action and next-action-date tracking for saved applications.
 
 The extension does not submit forms and does not use Firebase or a backend yet.
 

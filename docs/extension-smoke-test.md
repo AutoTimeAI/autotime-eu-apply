@@ -20,12 +20,15 @@ apps/extension/.output/chrome-mv3
 3. Confirm navigation shows:
    - Profile
    - View Profile
+   - Reusable Answers
+   - View Answers
    - Job Analysis
    - View Job Analysis
    - Application Content
    - View Content
    - Tracker
    - View Tracker
+   - Applications
 
 ## Validation
 
@@ -45,6 +48,15 @@ apps/extension/.output/chrome-mv3
 5. Open the matching view tab.
 6. Confirm the saved data is visible.
 
+## Autofill
+
+1. Save a valid profile.
+2. Save reusable answers.
+3. Open a page with obvious empty name, email, phone, or textarea questions.
+4. Open the Profile tab in the side panel.
+5. Click Autofill Current Page.
+6. Confirm matching empty fields are filled or a clear no-fields message appears.
+
 ## Current Job Page Import
 
 1. Open a job posting page in the active tab.
@@ -53,6 +65,19 @@ apps/extension/.output/chrome-mv3
 4. Confirm role title and application URL are filled.
 5. Confirm company and location notes are filled when the page exposes them.
 6. Confirm existing typed tracker fields are not overwritten.
+
+## Applications
+
+1. Open the Applications tab.
+2. Click Save Current Tab.
+3. Confirm the current tab appears in the saved application list.
+4. Click Save Current Tab again and confirm the duplicate warning appears.
+5. Save a valid tracker entry.
+6. Confirm the tracker entry appears in the saved application list.
+7. Edit status, next action, next action date, and notes.
+8. Search for the edited next action.
+9. Export CSV and confirm the file includes the tracker fields.
+10. Delete the application and confirm it is removed from the list.
 
 ## Clear Saved Data
 

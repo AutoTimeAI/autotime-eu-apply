@@ -2,6 +2,7 @@ import type {
   ApplicationContentDraft,
   CandidateProfile,
   JobAnalysisDraft,
+  ReusableAnswers,
   TrackerDraft
 } from "./storage"
 import { getCountryCallingCode } from "./countries.ts"
@@ -18,6 +19,11 @@ export type JobAnalysisIssue = {
 
 export type ApplicationContentIssue = {
   field: keyof ApplicationContentDraft
+  message: string
+}
+
+export type ReusableAnswerIssue = {
+  field: keyof ReusableAnswers
   message: string
 }
 
@@ -55,6 +61,16 @@ const requiredApplicationContentFields: Array<{
   { field: "coverLetter", label: "Cover letter" },
   { field: "profileSummary", label: "Profile summary" },
   { field: "motivationAnswer", label: "Motivation answer" }
+]
+
+const requiredReusableAnswerFields: Array<{
+  field: keyof ReusableAnswers
+  label: string
+}> = [
+  { field: "sponsorshipAnswer", label: "Sponsorship answer" },
+  { field: "relocationAnswer", label: "Relocation answer" },
+  { field: "workAuthorisationAnswer", label: "Work authorisation answer" },
+  { field: "noticePeriodAnswer", label: "Notice period answer" }
 ]
 
 const requiredTrackerFields: Array<{
@@ -140,7 +156,10 @@ export function validateJobAnalysisDraft(
         })
       }
     } catch {
-      issues.push({ field: "jobUrl", message: "Job URL format does not match." })
+      issues.push({
+        field: "jobUrl",
+        message: "Job URL format does not match."
+      })
     }
   }
 
@@ -173,6 +192,20 @@ export function validateApplicationContentDraft(
       field: "profileSummary",
       message: "Profile summary looks too short."
     })
+  }
+
+  return issues
+}
+
+export function validateReusableAnswers(
+  answers: ReusableAnswers
+): ReusableAnswerIssue[] {
+  const issues: ReusableAnswerIssue[] = []
+
+  for (const { field, label } of requiredReusableAnswerFields) {
+    if (answers[field].trim() === "") {
+      issues.push({ field, message: `${label} is required.` })
+    }
   }
 
   return issues
@@ -236,6 +269,13 @@ export function getJobIssueForField(
 export function getApplicationContentIssueForField(
   issues: ApplicationContentIssue[],
   field: keyof ApplicationContentDraft
+) {
+  return issues.find((issue) => issue.field === field)?.message
+}
+
+export function getReusableAnswerIssueForField(
+  issues: ReusableAnswerIssue[],
+  field: keyof ReusableAnswers
 ) {
   return issues.find((issue) => issue.field === field)?.message
 }

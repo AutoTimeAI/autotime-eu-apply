@@ -8,19 +8,29 @@ import {
   type JobPageDetails
 } from "../lib/job-page"
 import {
+  applicationsToCsv,
+  filterApplications,
+  hasApplicationWithUrl,
+  type ApplicationStatusFilter
+} from "../lib/applications"
+import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
   clearProfile,
+  clearReusableAnswers,
   clearTrackerDraft,
+  deleteApplication,
   getApplications,
   getApplicationContentDraft,
   getJobAnalysisDraft,
   getProfile,
+  getReusableAnswers,
   getTrackerDraft,
   saveApplication,
   saveApplicationContentDraft,
   saveJobAnalysisDraft,
   saveProfile,
+  saveReusableAnswers,
   saveTrackerDraft,
   updateApplication,
   type ApplicationStatus,
@@ -28,30 +38,40 @@ import {
   type ApplicationContentDraft,
   type CandidateProfile,
   type JobAnalysisDraft,
+  type ReusableAnswers,
   type TrackerDraft
 } from "../lib/storage"
 import {
   getApplicationContentIssueForField,
   getIssueForField,
   getJobIssueForField,
+  getReusableAnswerIssueForField,
   getTrackerIssueForField,
   validateApplicationContentDraft,
   validateJobAnalysisDraft,
   validateProfile,
+  validateReusableAnswers,
   validateTrackerDraft
 } from "../lib/validation"
 
 type Section =
   | "profile"
   | "profile-view"
+  | "reusable-answers"
+  | "reusable-answers-view"
   | "job-analysis"
   | "job-analysis-view"
   | "application-content"
   | "application-content-view"
   | "tracker"
   | "tracker-view"
+  | "applications"
 type SaveAttempts = Record<Section, boolean>
 type JobPageResponse = JobPageDetails & {
+  message?: string
+}
+type AutofillResponse = {
+  filledFields: string[]
   message?: string
 }
 
@@ -64,6 +84,13 @@ const emptyProfile: CandidateProfile = {
   sponsorshipNeeded: false,
   relocationWillingness: "depends",
   noticePeriod: ""
+}
+
+const emptyReusableAnswers: ReusableAnswers = {
+  sponsorshipAnswer: "",
+  relocationAnswer: "",
+  workAuthorisationAnswer: "",
+  noticePeriodAnswer: ""
 }
 
 const emptyJobAnalysisDraft: JobAnalysisDraft = {
@@ -131,15 +158,26 @@ function normalizeApplicationUrl(url: string) {
   }
 }
 
+function formatCreatedDate(createdAt: string) {
+  return new Date(createdAt).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  })
+}
+
 const sections: Array<{ id: Section; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "profile-view", label: "View Profile" },
+  { id: "reusable-answers", label: "Reusable Answers" },
+  { id: "reusable-answers-view", label: "View Answers" },
   { id: "job-analysis", label: "Job Analysis" },
   { id: "job-analysis-view", label: "View Job Analysis" },
   { id: "application-content", label: "Application Content" },
   { id: "application-content-view", label: "View Content" },
   { id: "tracker", label: "Tracker" },
-  { id: "tracker-view", label: "View Tracker" }
+  { id: "tracker-view", label: "View Tracker" },
+  { id: "applications", label: "Applications" }
 ]
 
 function getStatusClassName(message: string) {
@@ -153,17 +191,24 @@ function SidePanelApp() {
   const [saveAttempts, setSaveAttempts] = useState<SaveAttempts>({
     profile: false,
     "profile-view": false,
+    "reusable-answers": false,
+    "reusable-answers-view": false,
     "job-analysis": false,
     "job-analysis-view": false,
     "application-content": false,
     "application-content-view": false,
     tracker: false,
-    "tracker-view": false
+    "tracker-view": false,
+    applications: false
   })
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
   const [savedProfile, setSavedProfile] = useState<CandidateProfile | null>(
     null
   )
+  const [reusableAnswers, setReusableAnswers] =
+    useState<ReusableAnswers>(emptyReusableAnswers)
+  const [savedReusableAnswers, setSavedReusableAnswers] =
+    useState<ReusableAnswers | null>(null)
   const [jobAnalysisDraft, setJobAnalysisDraft] = useState<JobAnalysisDraft>(
     emptyJobAnalysisDraft
   )
@@ -177,14 +222,22 @@ function SidePanelApp() {
     useState<TrackerDraft>(emptyTrackerDraft)
   const [savedTrackerDraft, setSavedTrackerDraft] =
     useState<TrackerDraft | null>(null)
+  const [applications, setApplications] = useState<ApplicationRecord[]>([])
+  const [applicationSearchQuery, setApplicationSearchQuery] = useState("")
+  const [applicationStatusFilter, setApplicationStatusFilter] =
+    useState<ApplicationStatusFilter>("all")
   const [status, setStatus] = useState("")
+  const [reusableStatus, setReusableStatus] = useState("")
   const [jobStatus, setJobStatus] = useState("")
   const [contentStatus, setContentStatus] = useState("")
   const [trackerStatus, setTrackerStatus] = useState("")
+  const [applicationsStatus, setApplicationsStatus] = useState("")
   const profileStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const reusableStatusRef = useRef<HTMLParagraphElement | null>(null)
   const jobStatusRef = useRef<HTMLParagraphElement | null>(null)
   const contentStatusRef = useRef<HTMLParagraphElement | null>(null)
   const trackerStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const applicationsStatusRef = useRef<HTMLParagraphElement | null>(null)
 
   const profileIssues = useMemo(() => validateProfile(profile), [profile])
   const jobAnalysisIssues = useMemo(
@@ -195,9 +248,22 @@ function SidePanelApp() {
     () => validateApplicationContentDraft(applicationContentDraft),
     [applicationContentDraft]
   )
+  const reusableAnswerIssues = useMemo(
+    () => validateReusableAnswers(reusableAnswers),
+    [reusableAnswers]
+  )
   const trackerIssues = useMemo(
     () => validateTrackerDraft(trackerDraft),
     [trackerDraft]
+  )
+  const visibleApplications = useMemo(
+    () =>
+      filterApplications(
+        applications,
+        applicationSearchQuery,
+        applicationStatusFilter
+      ),
+    [applications, applicationSearchQuery, applicationStatusFilter]
   )
 
   const markSaveAttempted = (section: Section) => {
@@ -213,17 +279,27 @@ function SidePanelApp() {
     setSaveAttempts({
       profile: false,
       "profile-view": false,
+      "reusable-answers": false,
+      "reusable-answers-view": false,
       "job-analysis": false,
       "job-analysis-view": false,
       "application-content": false,
       "application-content-view": false,
       tracker: false,
-      "tracker-view": false
+      "tracker-view": false,
+      applications: false
     })
     setStatus("")
+    setReusableStatus("")
     setJobStatus("")
     setContentStatus("")
     setTrackerStatus("")
+    setApplicationsStatus("")
+  }
+
+  const loadApplications = async () => {
+    const savedApplications = await getApplications()
+    setApplications(savedApplications)
   }
 
   useEffect(() => {
@@ -231,6 +307,11 @@ function SidePanelApp() {
       const savedProfile = await getProfile()
       if (savedProfile) {
         setSavedProfile(savedProfile)
+      }
+
+      const savedReusableAnswers = await getReusableAnswers()
+      if (savedReusableAnswers) {
+        setSavedReusableAnswers(savedReusableAnswers)
       }
 
       const savedJobAnalysisDraft = await getJobAnalysisDraft()
@@ -247,6 +328,8 @@ function SidePanelApp() {
       if (savedTrackerDraft) {
         setSavedTrackerDraft(savedTrackerDraft)
       }
+
+      await loadApplications()
     }
 
     loadProfile()
@@ -256,23 +339,29 @@ function SidePanelApp() {
     const statusRefs: Record<Section, HTMLParagraphElement | null> = {
       profile: profileStatusRef.current,
       "profile-view": null,
+      "reusable-answers": reusableStatusRef.current,
+      "reusable-answers-view": null,
       "job-analysis": jobStatusRef.current,
       "job-analysis-view": null,
       "application-content": contentStatusRef.current,
       "application-content-view": null,
       tracker: trackerStatusRef.current,
-      "tracker-view": null
+      "tracker-view": null,
+      applications: applicationsStatusRef.current
     }
 
     const activeStatus = {
       profile: status,
       "profile-view": "",
+      "reusable-answers": reusableStatus,
+      "reusable-answers-view": "",
       "job-analysis": jobStatus,
       "job-analysis-view": "",
       "application-content": contentStatus,
       "application-content-view": "",
       tracker: trackerStatus,
-      "tracker-view": ""
+      "tracker-view": "",
+      applications: applicationsStatus
     }[activeSection]
 
     const statusElement = statusRefs[activeSection]
@@ -283,13 +372,28 @@ function SidePanelApp() {
 
     statusElement.scrollIntoView({ behavior: "smooth", block: "center" })
     statusElement.focus({ preventScroll: true })
-  }, [activeSection, status, jobStatus, contentStatus, trackerStatus])
+  }, [
+    activeSection,
+    status,
+    reusableStatus,
+    jobStatus,
+    contentStatus,
+    trackerStatus,
+    applicationsStatus
+  ])
 
   const updateField = <K extends keyof CandidateProfile>(
     key: K,
     value: CandidateProfile[K]
   ) => {
     setProfile((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateReusableAnswer = <K extends keyof ReusableAnswers>(
+    key: K,
+    value: ReusableAnswers[K]
+  ) => {
+    setReusableAnswers((current) => ({ ...current, [key]: value }))
   }
 
   const updateJobAnalysisField = <K extends keyof JobAnalysisDraft>(
@@ -315,6 +419,93 @@ function SidePanelApp() {
     setTrackerDraft((current) => ({ ...current, [key]: value }))
   }
 
+  const updateSavedApplication = async (
+    id: string,
+    changes: Partial<
+      Pick<
+        ApplicationRecord,
+        | "company"
+        | "nextAction"
+        | "nextActionDate"
+        | "notes"
+        | "roleTitle"
+        | "source"
+        | "status"
+      >
+    >
+  ) => {
+    await updateApplication(id, changes)
+    setApplications((current) =>
+      current.map((application) =>
+        application.id === id ? { ...application, ...changes } : application
+      )
+    )
+  }
+
+  const deleteSavedApplication = async (id: string) => {
+    await deleteApplication(id)
+    setApplications((current) =>
+      current.filter((application) => application.id !== id)
+    )
+    setApplicationsStatus("Application deleted")
+    setTimeout(() => setApplicationsStatus(""), 2500)
+  }
+
+  const saveCurrentTabAsApplication = async () => {
+    const tabs = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+    const activeTab = tabs[0]
+
+    if (!activeTab?.url || !activeTab.title) {
+      setApplicationsStatus("Could not read current tab")
+      setTimeout(() => setApplicationsStatus(""), 2500)
+      return
+    }
+
+    if (hasApplicationWithUrl(applications, activeTab.url)) {
+      setApplicationsStatus("This application is already saved")
+      setTimeout(() => setApplicationsStatus(""), 2500)
+      return
+    }
+
+    const record: ApplicationRecord = {
+      id: crypto.randomUUID(),
+      title: activeTab.title,
+      roleTitle: activeTab.title,
+      url: activeTab.url,
+      source: getHostname(activeTab.url),
+      createdAt: new Date().toISOString(),
+      status: "draft"
+    }
+
+    await saveApplication(record)
+    setApplications((current) => [record, ...current])
+    setApplicationsStatus("Application draft saved")
+    setTimeout(() => setApplicationsStatus(""), 2500)
+  }
+
+  const exportApplications = () => {
+    if (applications.length === 0) {
+      setApplicationsStatus("No applications to export")
+      setTimeout(() => setApplicationsStatus(""), 2500)
+      return
+    }
+
+    const csv = applicationsToCsv(applications)
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "autotime-applications.csv"
+    link.click()
+    URL.revokeObjectURL(url)
+
+    setApplicationsStatus("Applications exported")
+    setTimeout(() => setApplicationsStatus(""), 2500)
+  }
+
   const handleSaveProfile = async () => {
     markSaveAttempted("profile")
 
@@ -329,6 +520,56 @@ function SidePanelApp() {
     clearSaveAttempt("profile")
     setStatus("Profile saved")
     setTimeout(() => setStatus(""), 3500)
+  }
+
+  const handleAutofillCurrentPage = async () => {
+    const tabs = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+    const activeTab = tabs[0]
+
+    if (!activeTab?.id) {
+      setStatus("Could not access current tab")
+      setTimeout(() => setStatus(""), 2500)
+      return
+    }
+
+    try {
+      const response = (await chrome.tabs.sendMessage(activeTab.id, {
+        type: "AUTOTIME_AUTOFILL_PROFILE"
+      })) as AutofillResponse
+
+      if (response.message) {
+        setStatus(response.message)
+      } else if (response.filledFields.length === 0) {
+        setStatus("No obvious empty fields found")
+      } else {
+        setStatus(`Filled ${response.filledFields.length} fields`)
+      }
+    } catch {
+      setStatus("Autofill is not available on this page")
+    }
+
+    setTimeout(() => setStatus(""), 2500)
+  }
+
+  const handleSaveReusableAnswers = async () => {
+    markSaveAttempted("reusable-answers")
+
+    if (reusableAnswerIssues.length > 0) {
+      setReusableStatus(
+        "Complete the highlighted reusable answer fields before saving."
+      )
+      return
+    }
+
+    await saveReusableAnswers(reusableAnswers)
+    setSavedReusableAnswers(reusableAnswers)
+    setReusableAnswers(emptyReusableAnswers)
+    clearSaveAttempt("reusable-answers")
+    setReusableStatus("Reusable answers saved")
+    setTimeout(() => setReusableStatus(""), 3500)
   }
 
   const handleSaveJobAnalysis = async () => {
@@ -410,6 +651,7 @@ function SidePanelApp() {
 
     await saveTrackerDraft(trackerDraft)
     await saveTrackerApplication(trackerDraft)
+    await loadApplications()
     setSavedTrackerDraft(trackerDraft)
     setTrackerDraft(emptyTrackerDraft)
     clearSaveAttempt("tracker")
@@ -482,6 +724,12 @@ function SidePanelApp() {
     setProfile(emptyProfile)
   }
 
+  const handleClearReusableAnswers = async () => {
+    await clearReusableAnswers()
+    setSavedReusableAnswers(null)
+    setReusableAnswers(emptyReusableAnswers)
+  }
+
   const handleClearJobAnalysis = async () => {
     await clearJobAnalysisDraft()
     setSavedJobAnalysisDraft(null)
@@ -542,6 +790,16 @@ function SidePanelApp() {
                 <span
                   className="nav-alert"
                   aria-label="Application Content needs attention"
+                >
+                  !
+                </span>
+              )}
+            {section.id === "reusable-answers" &&
+              saveAttempts["reusable-answers"] &&
+              reusableAnswerIssues.length > 0 && (
+                <span
+                  className="nav-alert"
+                  aria-label="Reusable Answers need attention"
                 >
                   !
                 </span>
@@ -742,6 +1000,10 @@ function SidePanelApp() {
               Save Profile
             </button>
 
+            <button type="button" onClick={handleAutofillCurrentPage}>
+              Autofill Current Page
+            </button>
+
             {status && (
               <p
                 className={getStatusClassName(status)}
@@ -804,6 +1066,198 @@ function SidePanelApp() {
             </>
           ) : (
             <p className="empty-state">No saved profile yet.</p>
+          )}
+        </section>
+      ) : activeSection === "reusable-answers" ? (
+        <section className="panel-section">
+          <h2>Reusable Answers</h2>
+
+          <div className="form-grid">
+            {saveAttempts["reusable-answers"] &&
+              reusableAnswerIssues.length > 0 && (
+                <div className="alert-panel" role="alert">
+                  <strong>Reusable Answers need attention</strong>
+                  <ul>
+                    {reusableAnswerIssues.map((issue) => (
+                      <li key={`${issue.field}-${issue.message}`}>
+                        {issue.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+            <label>
+              Sponsorship answer
+              {saveAttempts["reusable-answers"] &&
+                getReusableAnswerIssueForField(
+                  reusableAnswerIssues,
+                  "sponsorshipAnswer"
+                ) && (
+                  <span className="field-alert">
+                    {getReusableAnswerIssueForField(
+                      reusableAnswerIssues,
+                      "sponsorshipAnswer"
+                    )}
+                  </span>
+                )}
+              <textarea
+                aria-invalid={Boolean(
+                  saveAttempts["reusable-answers"] &&
+                  getReusableAnswerIssueForField(
+                    reusableAnswerIssues,
+                    "sponsorshipAnswer"
+                  )
+                )}
+                value={reusableAnswers.sponsorshipAnswer}
+                onChange={(event) =>
+                  updateReusableAnswer("sponsorshipAnswer", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Relocation answer
+              {saveAttempts["reusable-answers"] &&
+                getReusableAnswerIssueForField(
+                  reusableAnswerIssues,
+                  "relocationAnswer"
+                ) && (
+                  <span className="field-alert">
+                    {getReusableAnswerIssueForField(
+                      reusableAnswerIssues,
+                      "relocationAnswer"
+                    )}
+                  </span>
+                )}
+              <textarea
+                aria-invalid={Boolean(
+                  saveAttempts["reusable-answers"] &&
+                  getReusableAnswerIssueForField(
+                    reusableAnswerIssues,
+                    "relocationAnswer"
+                  )
+                )}
+                value={reusableAnswers.relocationAnswer}
+                onChange={(event) =>
+                  updateReusableAnswer("relocationAnswer", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              Work authorisation answer
+              {saveAttempts["reusable-answers"] &&
+                getReusableAnswerIssueForField(
+                  reusableAnswerIssues,
+                  "workAuthorisationAnswer"
+                ) && (
+                  <span className="field-alert">
+                    {getReusableAnswerIssueForField(
+                      reusableAnswerIssues,
+                      "workAuthorisationAnswer"
+                    )}
+                  </span>
+                )}
+              <textarea
+                aria-invalid={Boolean(
+                  saveAttempts["reusable-answers"] &&
+                  getReusableAnswerIssueForField(
+                    reusableAnswerIssues,
+                    "workAuthorisationAnswer"
+                  )
+                )}
+                value={reusableAnswers.workAuthorisationAnswer}
+                onChange={(event) =>
+                  updateReusableAnswer(
+                    "workAuthorisationAnswer",
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              Notice period answer
+              {saveAttempts["reusable-answers"] &&
+                getReusableAnswerIssueForField(
+                  reusableAnswerIssues,
+                  "noticePeriodAnswer"
+                ) && (
+                  <span className="field-alert">
+                    {getReusableAnswerIssueForField(
+                      reusableAnswerIssues,
+                      "noticePeriodAnswer"
+                    )}
+                  </span>
+                )}
+              <textarea
+                aria-invalid={Boolean(
+                  saveAttempts["reusable-answers"] &&
+                  getReusableAnswerIssueForField(
+                    reusableAnswerIssues,
+                    "noticePeriodAnswer"
+                  )
+                )}
+                value={reusableAnswers.noticePeriodAnswer}
+                onChange={(event) =>
+                  updateReusableAnswer("noticePeriodAnswer", event.target.value)
+                }
+              />
+            </label>
+
+            <button type="button" onClick={handleSaveReusableAnswers}>
+              Save Reusable Answers
+            </button>
+
+            {reusableStatus && (
+              <p
+                className={getStatusClassName(reusableStatus)}
+                ref={reusableStatusRef}
+                role="status"
+                tabIndex={-1}
+              >
+                {reusableStatus}
+              </p>
+            )}
+          </div>
+        </section>
+      ) : activeSection === "reusable-answers-view" ? (
+        <section className="panel-section">
+          <h2>View Answers</h2>
+
+          {savedReusableAnswers ? (
+            <>
+              <dl className="profile-summary">
+                <div>
+                  <dt>Sponsorship answer</dt>
+                  <dd>{savedReusableAnswers.sponsorshipAnswer || "None"}</dd>
+                </div>
+                <div>
+                  <dt>Relocation answer</dt>
+                  <dd>{savedReusableAnswers.relocationAnswer || "None"}</dd>
+                </div>
+                <div>
+                  <dt>Work authorisation answer</dt>
+                  <dd>
+                    {savedReusableAnswers.workAuthorisationAnswer || "None"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Notice period answer</dt>
+                  <dd>{savedReusableAnswers.noticePeriodAnswer || "None"}</dd>
+                </div>
+              </dl>
+              <button
+                className="danger-button"
+                type="button"
+                onClick={handleClearReusableAnswers}
+              >
+                Clear Saved Answers
+              </button>
+            </>
+          ) : (
+            <p className="empty-state">No saved reusable answers yet.</p>
           )}
         </section>
       ) : activeSection === "job-analysis" ? (
@@ -1437,21 +1891,189 @@ function SidePanelApp() {
             <p className="empty-state">No saved tracker draft yet.</p>
           )}
         </section>
+      ) : activeSection === "applications" ? (
+        <section className="panel-section">
+          <h2>Applications</h2>
+
+          <div className="application-actions">
+            <button type="button" onClick={saveCurrentTabAsApplication}>
+              Save Current Tab
+            </button>
+            <button type="button" onClick={exportApplications}>
+              Export CSV
+            </button>
+          </div>
+
+          <div className="application-filters">
+            <input
+              placeholder="Search applications"
+              value={applicationSearchQuery}
+              onChange={(event) =>
+                setApplicationSearchQuery(event.target.value)
+              }
+            />
+
+            <select
+              value={applicationStatusFilter}
+              onChange={(event) =>
+                setApplicationStatusFilter(
+                  event.target.value as ApplicationStatusFilter
+                )
+              }
+            >
+              <option value="all">all</option>
+              {applicationStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {applicationsStatus && (
+            <p
+              className={getStatusClassName(applicationsStatus)}
+              ref={applicationsStatusRef}
+              role="status"
+              tabIndex={-1}
+            >
+              {applicationsStatus}
+            </p>
+          )}
+
+          {applications.length === 0 ? (
+            <p className="empty-state">No saved applications yet.</p>
+          ) : visibleApplications.length === 0 ? (
+            <p className="empty-state">No applications match your filters.</p>
+          ) : (
+            <div className="application-list">
+              {visibleApplications.map((application) => (
+                <article className="application-record" key={application.id}>
+                  <div>
+                    <h3>{application.roleTitle || application.title}</h3>
+                    {application.company && <p>{application.company}</p>}
+                    <a href={application.url} target="_blank" rel="noreferrer">
+                      {application.url}
+                    </a>
+                    <p>
+                      {formatCreatedDate(application.createdAt)} -{" "}
+                      {application.status}
+                      {application.source ? ` - ${application.source}` : ""}
+                    </p>
+                  </div>
+
+                  <label>
+                    Role title
+                    <input
+                      value={application.roleTitle ?? application.title}
+                      onChange={(event) =>
+                        updateSavedApplication(application.id, {
+                          roleTitle: event.target.value
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Company
+                    <input
+                      placeholder="Company"
+                      value={application.company ?? ""}
+                      onChange={(event) =>
+                        updateSavedApplication(application.id, {
+                          company: event.target.value
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Source
+                    <input
+                      placeholder="Source"
+                      value={application.source ?? ""}
+                      onChange={(event) =>
+                        updateSavedApplication(application.id, {
+                          source: event.target.value
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Status
+                    <select
+                      value={application.status}
+                      onChange={(event) =>
+                        updateSavedApplication(application.id, {
+                          status: event.target.value as ApplicationStatus
+                        })
+                      }
+                    >
+                      {applicationStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Next action
+                    <input
+                      placeholder="Next action"
+                      value={application.nextAction ?? ""}
+                      onChange={(event) =>
+                        updateSavedApplication(application.id, {
+                          nextAction: event.target.value
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Next action date
+                    <input
+                      type="date"
+                      value={application.nextActionDate ?? ""}
+                      onChange={(event) =>
+                        updateSavedApplication(application.id, {
+                          nextActionDate: event.target.value
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Notes
+                    <textarea
+                      value={application.notes ?? ""}
+                      onChange={(event) =>
+                        updateSavedApplication(application.id, {
+                          notes: event.target.value
+                        })
+                      }
+                    />
+                  </label>
+
+                  <button
+                    className="danger-button"
+                    type="button"
+                    onClick={() => deleteSavedApplication(application.id)}
+                  >
+                    Delete
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       ) : (
-        <PlaceholderSection section={activeSection} />
+        <section className="panel-section">
+          <h2>AutoTime EU Apply</h2>
+        </section>
       )}
     </main>
-  )
-}
-
-function PlaceholderSection({ section }: { section: Section }) {
-  const title = sections.find((item) => item.id === section)?.label
-
-  return (
-    <section className="panel-section">
-      <h2>{title}</h2>
-      <p>This section is ready for the next MVP step.</p>
-    </section>
   )
 }
 

@@ -17,6 +17,7 @@ import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
   clearProfile,
+  clearReusableAnswers,
   clearTrackerDraft,
   deleteApplication,
   getApplicationContentDraft,
@@ -37,6 +38,7 @@ import {
   validateApplicationContentDraft,
   validateJobAnalysisDraft,
   validateProfile,
+  validateReusableAnswers,
   validateTrackerDraft
 } from "../lib/validation.ts"
 
@@ -269,6 +271,10 @@ test("saves and loads reusable answers", async () => {
   await saveReusableAnswers(answers)
 
   assert.deepEqual(await getReusableAnswers(), answers)
+
+  await clearReusableAnswers()
+
+  assert.equal(await getReusableAnswers(), null)
 })
 
 test("saves and loads job analysis draft", async () => {
@@ -409,6 +415,25 @@ test("validates application content draft fields", () => {
   assert.deepEqual(
     issues.map((issue) => issue.field),
     ["motivationAnswer", "coverLetter", "profileSummary"]
+  )
+})
+
+test("validates reusable answer fields", () => {
+  const issues = validateReusableAnswers({
+    sponsorshipAnswer: "",
+    relocationAnswer: "",
+    workAuthorisationAnswer: "",
+    noticePeriodAnswer: ""
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    [
+      "sponsorshipAnswer",
+      "relocationAnswer",
+      "workAuthorisationAnswer",
+      "noticePeriodAnswer"
+    ]
   )
 })
 

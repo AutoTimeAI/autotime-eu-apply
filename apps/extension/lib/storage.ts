@@ -93,6 +93,10 @@ export async function getReusableAnswers(): Promise<ReusableAnswers | null> {
   return (result[REUSABLE_ANSWERS_KEY] as ReusableAnswers) ?? null
 }
 
+export async function clearReusableAnswers() {
+  await chrome.storage.local.remove(REUSABLE_ANSWERS_KEY)
+}
+
 export async function saveJobAnalysisDraft(draft: JobAnalysisDraft) {
   await chrome.storage.local.set({ [JOB_ANALYSIS_KEY]: draft })
 }

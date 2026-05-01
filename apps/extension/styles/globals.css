@@ -87,7 +87,8 @@ section {
 }
 
 .section-nav button,
-.form-grid button {
+.form-grid button,
+.application-actions button {
   position: relative;
   min-height: 38px;
   border: 1px solid #c2cee3;
