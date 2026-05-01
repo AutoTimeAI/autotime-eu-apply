@@ -160,7 +160,13 @@ export default function Popup() {
     changes: Partial<
       Pick<
         ApplicationRecord,
-        "company" | "notes" | "roleTitle" | "source" | "status"
+        | "company"
+        | "notes"
+        | "roleTitle"
+        | "source"
+        | "status"
+        | "nextAction"
+        | "nextActionDate"
       >
     >
   ) => {
@@ -290,6 +296,32 @@ export default function Popup() {
                       </option>
                     ))}
                   </select>
+                </label>
+
+                <label>
+                  Next action
+                  <input
+                    placeholder="Next action"
+                    value={record.nextAction ?? ""}
+                    onChange={(event) =>
+                      updateSavedApplication(record.id, {
+                        nextAction: event.target.value
+                      })
+                    }
+                  />
+                </label>
+
+                <label>
+                  Next action date
+                  <input
+                    type="date"
+                    value={record.nextActionDate ?? ""}
+                    onChange={(event) =>
+                      updateSavedApplication(record.id, {
+                        nextActionDate: event.target.value
+                      })
+                    }
+                  />
                 </label>
 
                 <textarea

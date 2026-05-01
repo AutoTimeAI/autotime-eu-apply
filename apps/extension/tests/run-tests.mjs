@@ -425,13 +425,7 @@ test("validates tracker draft fields", () => {
 
   assert.deepEqual(
     issues.map((issue) => issue.field),
-    [
-      "roleTitle",
-      "company",
-      "nextAction",
-      "applicationUrl",
-      "nextActionDate"
-    ]
+    ["roleTitle", "company", "nextAction", "applicationUrl", "nextActionDate"]
   )
 })
 
@@ -481,6 +475,8 @@ test("updates application tracker fields", async () => {
     roleTitle: "Frontend Engineer",
     source: "example.com",
     status: "interview",
+    nextAction: "Send follow-up",
+    nextActionDate: "2026-04-10",
     notes: "Recruiter screen booked."
   })
 
@@ -491,6 +487,8 @@ test("updates application tracker fields", async () => {
       roleTitle: "Frontend Engineer",
       source: "example.com",
       status: "interview",
+      nextAction: "Send follow-up",
+      nextActionDate: "2026-04-10",
       notes: "Recruiter screen booked."
     }
   ])
@@ -515,6 +513,7 @@ test("filters applications by query and status", () => {
       company: "Server Co",
       source: "server.example",
       url: "https://server.example/jobs/backend",
+      nextAction: "Prepare system design notes",
       notes: "Recruiter screen booked",
       createdAt: "2026-04-02T00:00:00.000Z",
       status: "interview"
@@ -536,6 +535,12 @@ test("filters applications by query and status", () => {
   )
 
   assert.deepEqual(filterApplications(applications, "missing", "all"), [])
+  assert.deepEqual(
+    filterApplications(applications, "system design", "all").map(
+      (application) => application.id
+    ),
+    ["interview"]
+  )
 })
 
 test("detects duplicate application urls", () => {
@@ -568,6 +573,8 @@ test("exports applications to csv", () => {
       company: "Example Co",
       source: "example.com",
       url: "https://example.com/jobs/frontend",
+      nextAction: "Follow up",
+      nextActionDate: "2026-04-10",
       notes: "Remote, EU role",
       createdAt: "2026-04-01T00:00:00.000Z",
       status: "applied"
@@ -577,8 +584,8 @@ test("exports applications to csv", () => {
   assert.equal(
     csv,
     [
-      '"Title","Role Title","Company","URL","Source","Created At","Status","Notes"',
-      '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","applied","Remote, EU role"'
+      '"Title","Role Title","Company","URL","Source","Created At","Status","Next Action","Next Action Date","Notes"',
+      '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","applied","Follow up","2026-04-10","Remote, EU role"'
     ].join("\n")
   )
 })

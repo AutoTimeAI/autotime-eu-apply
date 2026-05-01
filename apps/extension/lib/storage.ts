@@ -32,6 +32,8 @@ export type ApplicationRecord = {
   source?: string
   createdAt: string
   status: ApplicationStatus
+  nextAction?: string
+  nextActionDate?: string
   notes?: string
 }
 
@@ -152,7 +154,16 @@ export async function deleteApplication(id: string) {
 export async function updateApplication(
   id: string,
   changes: Partial<
-    Pick<ApplicationRecord, "company" | "notes" | "roleTitle" | "source" | "status">
+    Pick<
+      ApplicationRecord,
+      | "company"
+      | "nextAction"
+      | "nextActionDate"
+      | "notes"
+      | "roleTitle"
+      | "source"
+      | "status"
+    >
   >
 ) {
   const existing = await getApplications()

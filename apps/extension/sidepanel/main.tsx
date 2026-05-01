@@ -12,15 +12,19 @@ import {
   clearJobAnalysisDraft,
   clearProfile,
   clearTrackerDraft,
+  getApplications,
   getApplicationContentDraft,
   getJobAnalysisDraft,
   getProfile,
   getTrackerDraft,
+  saveApplication,
   saveApplicationContentDraft,
   saveJobAnalysisDraft,
   saveProfile,
   saveTrackerDraft,
+  updateApplication,
   type ApplicationStatus,
+  type ApplicationRecord,
   type ApplicationContentDraft,
   type CandidateProfile,
   type JobAnalysisDraft,
@@ -108,6 +112,25 @@ const noticePeriodOptions = [
   "Negotiable"
 ]
 
+function getHostname(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return ""
+  }
+}
+
+function normalizeApplicationUrl(url: string) {
+  try {
+    const parsed = new URL(url)
+    parsed.hash = ""
+    parsed.hostname = parsed.hostname.toLowerCase()
+    return parsed.toString().replace(/\/$/, "")
+  } catch {
+    return url.trim().toLowerCase().replace(/\/$/, "")
+  }
+}
+
 const sections: Array<{ id: Section; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "profile-view", label: "View Profile" },
@@ -141,8 +164,9 @@ function SidePanelApp() {
   const [savedProfile, setSavedProfile] = useState<CandidateProfile | null>(
     null
   )
-  const [jobAnalysisDraft, setJobAnalysisDraft] =
-    useState<JobAnalysisDraft>(emptyJobAnalysisDraft)
+  const [jobAnalysisDraft, setJobAnalysisDraft] = useState<JobAnalysisDraft>(
+    emptyJobAnalysisDraft
+  )
   const [savedJobAnalysisDraft, setSavedJobAnalysisDraft] =
     useState<JobAnalysisDraft | null>(null)
   const [applicationContentDraft, setApplicationContentDraft] =
@@ -311,7 +335,9 @@ function SidePanelApp() {
     markSaveAttempted("job-analysis")
 
     if (jobAnalysisIssues.length > 0) {
-      setJobStatus("Complete the highlighted job analysis fields before saving.")
+      setJobStatus(
+        "Complete the highlighted job analysis fields before saving."
+      )
       return
     }
 
@@ -341,6 +367,39 @@ function SidePanelApp() {
     setTimeout(() => setContentStatus(""), 3500)
   }
 
+  const saveTrackerApplication = async (draft: TrackerDraft) => {
+    const existingApplications = await getApplications()
+    const normalizedUrl = normalizeApplicationUrl(draft.applicationUrl)
+    const existingApplication = existingApplications.find(
+      (application) =>
+        normalizeApplicationUrl(application.url) === normalizedUrl
+    )
+    const trackerFields = {
+      roleTitle: draft.roleTitle,
+      company: draft.company,
+      source: getHostname(draft.applicationUrl),
+      status: draft.status,
+      nextAction: draft.nextAction,
+      nextActionDate: draft.nextActionDate,
+      notes: draft.notes
+    }
+
+    if (existingApplication) {
+      await updateApplication(existingApplication.id, trackerFields)
+      return
+    }
+
+    const record: ApplicationRecord = {
+      id: crypto.randomUUID(),
+      title: draft.roleTitle,
+      url: draft.applicationUrl,
+      createdAt: new Date().toISOString(),
+      ...trackerFields
+    }
+
+    await saveApplication(record)
+  }
+
   const handleSaveTracker = async () => {
     markSaveAttempted("tracker")
 
@@ -350,10 +409,11 @@ function SidePanelApp() {
     }
 
     await saveTrackerDraft(trackerDraft)
+    await saveTrackerApplication(trackerDraft)
     setSavedTrackerDraft(trackerDraft)
     setTrackerDraft(emptyTrackerDraft)
     clearSaveAttempt("tracker")
-    setTrackerStatus("Tracker draft saved")
+    setTrackerStatus("Tracker saved to applications")
     setTimeout(() => setTrackerStatus(""), 3500)
   }
 
@@ -459,10 +519,13 @@ function SidePanelApp() {
             {section.id === "profile" &&
               saveAttempts.profile &&
               profileIssues.length > 0 && (
-              <span className="nav-alert" aria-label="Profile needs attention">
-                !
-              </span>
-            )}
+                <span
+                  className="nav-alert"
+                  aria-label="Profile needs attention"
+                >
+                  !
+                </span>
+              )}
             {section.id === "job-analysis" &&
               saveAttempts["job-analysis"] &&
               jobAnalysisIssues.length > 0 && (
@@ -486,10 +549,13 @@ function SidePanelApp() {
             {section.id === "tracker" &&
               saveAttempts.tracker &&
               trackerIssues.length > 0 && (
-              <span className="nav-alert" aria-label="Tracker needs attention">
-                !
-              </span>
-            )}
+                <span
+                  className="nav-alert"
+                  aria-label="Tracker needs attention"
+                >
+                  !
+                </span>
+              )}
           </button>
         ))}
       </nav>
@@ -516,14 +582,14 @@ function SidePanelApp() {
               Full name
               {saveAttempts.profile &&
                 getIssueForField(profileIssues, "fullName") && (
-                <span className="field-alert">
-                  {getIssueForField(profileIssues, "fullName")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getIssueForField(profileIssues, "fullName")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts.profile &&
-                    getIssueForField(profileIssues, "fullName")
+                  getIssueForField(profileIssues, "fullName")
                 )}
                 value={profile.fullName}
                 onChange={(event) =>
@@ -536,13 +602,14 @@ function SidePanelApp() {
               Email
               {saveAttempts.profile &&
                 getIssueForField(profileIssues, "email") && (
-                <span className="field-alert">
-                  {getIssueForField(profileIssues, "email")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getIssueForField(profileIssues, "email")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
-                  saveAttempts.profile && getIssueForField(profileIssues, "email")
+                  saveAttempts.profile &&
+                  getIssueForField(profileIssues, "email")
                 )}
                 type="email"
                 value={profile.email}
@@ -554,13 +621,14 @@ function SidePanelApp() {
               Phone
               {saveAttempts.profile &&
                 getIssueForField(profileIssues, "phone") && (
-                <span className="field-alert">
-                  {getIssueForField(profileIssues, "phone")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getIssueForField(profileIssues, "phone")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
-                  saveAttempts.profile && getIssueForField(profileIssues, "phone")
+                  saveAttempts.profile &&
+                  getIssueForField(profileIssues, "phone")
                 )}
                 value={profile.phone}
                 onChange={(event) => updateField("phone", event.target.value)}
@@ -571,14 +639,14 @@ function SidePanelApp() {
               Current country
               {saveAttempts.profile &&
                 getIssueForField(profileIssues, "currentCountry") && (
-                <span className="field-alert">
-                  {getIssueForField(profileIssues, "currentCountry")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getIssueForField(profileIssues, "currentCountry")}
+                  </span>
+                )}
               <select
                 aria-invalid={Boolean(
                   saveAttempts.profile &&
-                    getIssueForField(profileIssues, "currentCountry")
+                  getIssueForField(profileIssues, "currentCountry")
                 )}
                 value={profile.currentCountry}
                 onChange={(event) =>
@@ -598,14 +666,14 @@ function SidePanelApp() {
               Current city
               {saveAttempts.profile &&
                 getIssueForField(profileIssues, "currentCity") && (
-                <span className="field-alert">
-                  {getIssueForField(profileIssues, "currentCity")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getIssueForField(profileIssues, "currentCity")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts.profile &&
-                    getIssueForField(profileIssues, "currentCity")
+                  getIssueForField(profileIssues, "currentCity")
                 )}
                 value={profile.currentCity}
                 onChange={(event) =>
@@ -618,14 +686,14 @@ function SidePanelApp() {
               Notice period
               {saveAttempts.profile &&
                 getIssueForField(profileIssues, "noticePeriod") && (
-                <span className="field-alert">
-                  {getIssueForField(profileIssues, "noticePeriod")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getIssueForField(profileIssues, "noticePeriod")}
+                  </span>
+                )}
               <select
                 aria-invalid={Boolean(
                   saveAttempts.profile &&
-                    getIssueForField(profileIssues, "noticePeriod")
+                  getIssueForField(profileIssues, "noticePeriod")
                 )}
                 value={profile.noticePeriod}
                 onChange={(event) =>
@@ -760,14 +828,14 @@ function SidePanelApp() {
               Job title
               {saveAttempts["job-analysis"] &&
                 getJobIssueForField(jobAnalysisIssues, "jobTitle") && (
-                <span className="field-alert">
-                  {getJobIssueForField(jobAnalysisIssues, "jobTitle")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getJobIssueForField(jobAnalysisIssues, "jobTitle")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts["job-analysis"] &&
-                    getJobIssueForField(jobAnalysisIssues, "jobTitle")
+                  getJobIssueForField(jobAnalysisIssues, "jobTitle")
                 )}
                 value={jobAnalysisDraft.jobTitle}
                 onChange={(event) =>
@@ -780,14 +848,14 @@ function SidePanelApp() {
               Company
               {saveAttempts["job-analysis"] &&
                 getJobIssueForField(jobAnalysisIssues, "company") && (
-                <span className="field-alert">
-                  {getJobIssueForField(jobAnalysisIssues, "company")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getJobIssueForField(jobAnalysisIssues, "company")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts["job-analysis"] &&
-                    getJobIssueForField(jobAnalysisIssues, "company")
+                  getJobIssueForField(jobAnalysisIssues, "company")
                 )}
                 value={jobAnalysisDraft.company}
                 onChange={(event) =>
@@ -800,14 +868,14 @@ function SidePanelApp() {
               Job URL
               {saveAttempts["job-analysis"] &&
                 getJobIssueForField(jobAnalysisIssues, "jobUrl") && (
-                <span className="field-alert">
-                  {getJobIssueForField(jobAnalysisIssues, "jobUrl")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getJobIssueForField(jobAnalysisIssues, "jobUrl")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts["job-analysis"] &&
-                    getJobIssueForField(jobAnalysisIssues, "jobUrl")
+                  getJobIssueForField(jobAnalysisIssues, "jobUrl")
                 )}
                 type="url"
                 value={jobAnalysisDraft.jobUrl}
@@ -821,14 +889,14 @@ function SidePanelApp() {
               Location/country
               {saveAttempts["job-analysis"] &&
                 getJobIssueForField(jobAnalysisIssues, "location") && (
-                <span className="field-alert">
-                  {getJobIssueForField(jobAnalysisIssues, "location")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getJobIssueForField(jobAnalysisIssues, "location")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts["job-analysis"] &&
-                    getJobIssueForField(jobAnalysisIssues, "location")
+                  getJobIssueForField(jobAnalysisIssues, "location")
                 )}
                 value={jobAnalysisDraft.location}
                 onChange={(event) =>
@@ -841,14 +909,14 @@ function SidePanelApp() {
               Work mode
               {saveAttempts["job-analysis"] &&
                 getJobIssueForField(jobAnalysisIssues, "workMode") && (
-                <span className="field-alert">
-                  {getJobIssueForField(jobAnalysisIssues, "workMode")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getJobIssueForField(jobAnalysisIssues, "workMode")}
+                  </span>
+                )}
               <select
                 aria-invalid={Boolean(
                   saveAttempts["job-analysis"] &&
-                    getJobIssueForField(jobAnalysisIssues, "workMode")
+                  getJobIssueForField(jobAnalysisIssues, "workMode")
                 )}
                 value={jobAnalysisDraft.workMode}
                 onChange={(event) =>
@@ -950,17 +1018,17 @@ function SidePanelApp() {
           <div className="form-grid">
             {saveAttempts["application-content"] &&
               applicationContentIssues.length > 0 && (
-              <div className="alert-panel" role="alert">
-                <strong>Application Content needs attention</strong>
-                <ul>
-                  {applicationContentIssues.map((issue) => (
-                    <li key={`${issue.field}-${issue.message}`}>
-                      {issue.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                <div className="alert-panel" role="alert">
+                  <strong>Application Content needs attention</strong>
+                  <ul>
+                    {applicationContentIssues.map((issue) => (
+                      <li key={`${issue.field}-${issue.message}`}>
+                        {issue.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
             <label>
               Cover letter
@@ -969,17 +1037,17 @@ function SidePanelApp() {
                   applicationContentIssues,
                   "coverLetter"
                 ) && (
-                <span className="field-alert">
-                  {getApplicationContentIssueForField(
-                    applicationContentIssues,
-                    "coverLetter"
-                  )}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getApplicationContentIssueForField(
+                      applicationContentIssues,
+                      "coverLetter"
+                    )}
+                  </span>
+                )}
               <textarea
                 aria-invalid={Boolean(
                   saveAttempts["application-content"] &&
-                    getApplicationContentIssueForField(
+                  getApplicationContentIssueForField(
                     applicationContentIssues,
                     "coverLetter"
                   )
@@ -1001,17 +1069,17 @@ function SidePanelApp() {
                   applicationContentIssues,
                   "profileSummary"
                 ) && (
-                <span className="field-alert">
-                  {getApplicationContentIssueForField(
-                    applicationContentIssues,
-                    "profileSummary"
-                  )}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getApplicationContentIssueForField(
+                      applicationContentIssues,
+                      "profileSummary"
+                    )}
+                  </span>
+                )}
               <textarea
                 aria-invalid={Boolean(
                   saveAttempts["application-content"] &&
-                    getApplicationContentIssueForField(
+                  getApplicationContentIssueForField(
                     applicationContentIssues,
                     "profileSummary"
                   )
@@ -1033,17 +1101,17 @@ function SidePanelApp() {
                   applicationContentIssues,
                   "motivationAnswer"
                 ) && (
-                <span className="field-alert">
-                  {getApplicationContentIssueForField(
-                    applicationContentIssues,
-                    "motivationAnswer"
-                  )}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getApplicationContentIssueForField(
+                      applicationContentIssues,
+                      "motivationAnswer"
+                    )}
+                  </span>
+                )}
               <textarea
                 aria-invalid={Boolean(
                   saveAttempts["application-content"] &&
-                    getApplicationContentIssueForField(
+                  getApplicationContentIssueForField(
                     applicationContentIssues,
                     "motivationAnswer"
                   )
@@ -1170,14 +1238,14 @@ function SidePanelApp() {
               Role title
               {saveAttempts.tracker &&
                 getTrackerIssueForField(trackerIssues, "roleTitle") && (
-                <span className="field-alert">
-                  {getTrackerIssueForField(trackerIssues, "roleTitle")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getTrackerIssueForField(trackerIssues, "roleTitle")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts.tracker &&
-                    getTrackerIssueForField(trackerIssues, "roleTitle")
+                  getTrackerIssueForField(trackerIssues, "roleTitle")
                 )}
                 value={trackerDraft.roleTitle}
                 onChange={(event) =>
@@ -1190,14 +1258,14 @@ function SidePanelApp() {
               Company
               {saveAttempts.tracker &&
                 getTrackerIssueForField(trackerIssues, "company") && (
-                <span className="field-alert">
-                  {getTrackerIssueForField(trackerIssues, "company")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getTrackerIssueForField(trackerIssues, "company")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts.tracker &&
-                    getTrackerIssueForField(trackerIssues, "company")
+                  getTrackerIssueForField(trackerIssues, "company")
                 )}
                 value={trackerDraft.company}
                 onChange={(event) =>
@@ -1210,14 +1278,14 @@ function SidePanelApp() {
               Application URL
               {saveAttempts.tracker &&
                 getTrackerIssueForField(trackerIssues, "applicationUrl") && (
-                <span className="field-alert">
-                  {getTrackerIssueForField(trackerIssues, "applicationUrl")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getTrackerIssueForField(trackerIssues, "applicationUrl")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts.tracker &&
-                    getTrackerIssueForField(trackerIssues, "applicationUrl")
+                  getTrackerIssueForField(trackerIssues, "applicationUrl")
                 )}
                 type="url"
                 value={trackerDraft.applicationUrl}
@@ -1250,14 +1318,14 @@ function SidePanelApp() {
               Next action
               {saveAttempts.tracker &&
                 getTrackerIssueForField(trackerIssues, "nextAction") && (
-                <span className="field-alert">
-                  {getTrackerIssueForField(trackerIssues, "nextAction")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getTrackerIssueForField(trackerIssues, "nextAction")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts.tracker &&
-                    getTrackerIssueForField(trackerIssues, "nextAction")
+                  getTrackerIssueForField(trackerIssues, "nextAction")
                 )}
                 value={trackerDraft.nextAction}
                 onChange={(event) =>
@@ -1270,14 +1338,14 @@ function SidePanelApp() {
               Next action date
               {saveAttempts.tracker &&
                 getTrackerIssueForField(trackerIssues, "nextActionDate") && (
-                <span className="field-alert">
-                  {getTrackerIssueForField(trackerIssues, "nextActionDate")}
-                </span>
-              )}
+                  <span className="field-alert">
+                    {getTrackerIssueForField(trackerIssues, "nextActionDate")}
+                  </span>
+                )}
               <input
                 aria-invalid={Boolean(
                   saveAttempts.tracker &&
-                    getTrackerIssueForField(trackerIssues, "nextActionDate")
+                  getTrackerIssueForField(trackerIssues, "nextActionDate")
                 )}
                 type="date"
                 value={trackerDraft.nextActionDate}

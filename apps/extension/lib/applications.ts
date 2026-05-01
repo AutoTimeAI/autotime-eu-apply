@@ -38,11 +38,13 @@ export function filterApplications(
       application.company,
       application.source,
       application.url,
+      application.nextAction,
+      application.nextActionDate,
       application.notes
     ]
       .filter((value): value is string => Boolean(value))
-        .some((value) => value.toLowerCase().includes(normalizedQuery))
-    })
+      .some((value) => value.toLowerCase().includes(normalizedQuery))
+  })
 }
 
 export function hasApplicationWithUrl(
@@ -69,6 +71,8 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
     "Source",
     "Created At",
     "Status",
+    "Next Action",
+    "Next Action Date",
     "Notes"
   ]
 
@@ -80,6 +84,8 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
     application.source,
     application.createdAt,
     application.status,
+    application.nextAction,
+    application.nextActionDate,
     application.notes
   ])
 
