@@ -4,6 +4,7 @@ import type {
   JobAnalysisDraft,
   TrackerDraft
 } from "./storage"
+import { getCountryCallingCode } from "./countries.ts"
 
 export type ProfileIssue = {
   field: keyof CandidateProfile
@@ -85,11 +86,28 @@ export function validateProfile(profile: CandidateProfile): ProfileIssue[] {
     issues.push({ field: "email", message: "Email format does not match." })
   }
 
+  const trimmedPhone = profile.phone.trim()
+  const normalizedPhone = trimmedPhone.replace(/[^\d+]/g, "")
+
+  if (trimmedPhone !== "" && !/^\+\d{7,15}$/.test(normalizedPhone)) {
+    issues.push({
+      field: "phone",
+      message: "Phone must use international format, for example +441234567890."
+    })
+  }
+
+  const callingCode = getCountryCallingCode(profile.currentCountry)
+
   if (
-    profile.phone.trim() !== "" &&
-    !/^[+\d][\d\s().-]{6,}$/.test(profile.phone.trim())
+    trimmedPhone !== "" &&
+    callingCode &&
+    /^\+\d{7,15}$/.test(normalizedPhone) &&
+    !normalizedPhone.startsWith(callingCode)
   ) {
-    issues.push({ field: "phone", message: "Phone format does not match." })
+    issues.push({
+      field: "phone",
+      message: `Phone must start with ${profile.currentCountry}'s calling code (${callingCode}).`
+    })
   }
 
   return issues

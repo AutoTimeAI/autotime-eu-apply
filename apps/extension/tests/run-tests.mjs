@@ -290,6 +290,28 @@ test("validates missing and mismatched profile fields", () => {
   )
 })
 
+test("validates profile phone against selected country calling code", () => {
+  const issues = validateProfile({
+    fullName: "Rajan Kumar",
+    email: "rajan@example.com",
+    phone: "+1 202 555 0199",
+    currentCountry: "United Kingdom",
+    currentCity: "London",
+    sponsorshipNeeded: false,
+    relocationWillingness: "depends",
+    noticePeriod: "1 month"
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    ["phone"]
+  )
+  assert.equal(
+    issues[0]?.message,
+    "Phone must start with United Kingdom's calling code (+44)."
+  )
+})
+
 test("validates job analysis draft fields", () => {
   const issues = validateJobAnalysisDraft({
     jobTitle: "",

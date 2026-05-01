@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
+import { countryOptions } from "../lib/countries"
 import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
@@ -88,6 +89,17 @@ const applicationStatuses: ApplicationStatus[] = [
   "offer"
 ]
 
+const noticePeriodOptions = [
+  "Immediately available",
+  "1 week",
+  "2 weeks",
+  "1 month",
+  "2 months",
+  "3 months",
+  "More than 3 months",
+  "Negotiable"
+]
+
 const sections: Array<{ id: Section; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "profile-view", label: "View Profile" },
@@ -111,11 +123,11 @@ function SidePanelApp() {
     profile: false,
     "profile-view": false,
     "job-analysis": false,
-      "job-analysis-view": false,
-      "application-content": false,
-      "application-content-view": false,
-      tracker: false,
-      "tracker-view": false
+    "job-analysis-view": false,
+    "application-content": false,
+    "application-content-view": false,
+    tracker: false,
+    "tracker-view": false
   })
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
   const [savedProfile, setSavedProfile] = useState<CandidateProfile | null>(
@@ -142,15 +154,26 @@ function SidePanelApp() {
   const contentStatusRef = useRef<HTMLParagraphElement | null>(null)
   const trackerStatusRef = useRef<HTMLParagraphElement | null>(null)
 
-  const profileIssues = validateProfile(profile)
-  const jobAnalysisIssues = validateJobAnalysisDraft(jobAnalysisDraft)
-  const applicationContentIssues = validateApplicationContentDraft(
-    applicationContentDraft
+  const profileIssues = useMemo(() => validateProfile(profile), [profile])
+  const jobAnalysisIssues = useMemo(
+    () => validateJobAnalysisDraft(jobAnalysisDraft),
+    [jobAnalysisDraft]
   )
-  const trackerIssues = validateTrackerDraft(trackerDraft)
+  const applicationContentIssues = useMemo(
+    () => validateApplicationContentDraft(applicationContentDraft),
+    [applicationContentDraft]
+  )
+  const trackerIssues = useMemo(
+    () => validateTrackerDraft(trackerDraft),
+    [trackerDraft]
+  )
 
   const markSaveAttempted = (section: Section) => {
     setSaveAttempts((current) => ({ ...current, [section]: true }))
+  }
+
+  const clearSaveAttempt = (section: Section) => {
+    setSaveAttempts((current) => ({ ...current, [section]: false }))
   }
 
   const goToSection = (section: Section) => {
@@ -271,6 +294,7 @@ function SidePanelApp() {
     await saveProfile(profile)
     setSavedProfile(profile)
     setProfile(emptyProfile)
+    clearSaveAttempt("profile")
     setStatus("Profile saved")
     setTimeout(() => setStatus(""), 3500)
   }
@@ -286,6 +310,7 @@ function SidePanelApp() {
     await saveJobAnalysisDraft(jobAnalysisDraft)
     setSavedJobAnalysisDraft(jobAnalysisDraft)
     setJobAnalysisDraft(emptyJobAnalysisDraft)
+    clearSaveAttempt("job-analysis")
     setJobStatus("Job analysis draft saved")
     setTimeout(() => setJobStatus(""), 3500)
   }
@@ -303,6 +328,7 @@ function SidePanelApp() {
     await saveApplicationContentDraft(applicationContentDraft)
     setSavedApplicationContentDraft(applicationContentDraft)
     setApplicationContentDraft(emptyApplicationContentDraft)
+    clearSaveAttempt("application-content")
     setContentStatus("Application content draft saved")
     setTimeout(() => setContentStatus(""), 3500)
   }
@@ -318,6 +344,7 @@ function SidePanelApp() {
     await saveTrackerDraft(trackerDraft)
     setSavedTrackerDraft(trackerDraft)
     setTrackerDraft(emptyTrackerDraft)
+    clearSaveAttempt("tracker")
     setTrackerStatus("Tracker draft saved")
     setTimeout(() => setTrackerStatus(""), 3500)
   }
@@ -481,7 +508,7 @@ function SidePanelApp() {
                   {getIssueForField(profileIssues, "currentCountry")}
                 </span>
               )}
-              <input
+              <select
                 aria-invalid={Boolean(
                   saveAttempts.profile &&
                     getIssueForField(profileIssues, "currentCountry")
@@ -490,7 +517,14 @@ function SidePanelApp() {
                 onChange={(event) =>
                   updateField("currentCountry", event.target.value)
                 }
-              />
+              >
+                <option value="">Select country</option>
+                {countryOptions.map((country) => (
+                  <option key={country.code} value={country.name}>
+                    {country.name} ({country.callingCode})
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label>
@@ -521,7 +555,7 @@ function SidePanelApp() {
                   {getIssueForField(profileIssues, "noticePeriod")}
                 </span>
               )}
-              <input
+              <select
                 aria-invalid={Boolean(
                   saveAttempts.profile &&
                     getIssueForField(profileIssues, "noticePeriod")
@@ -530,7 +564,14 @@ function SidePanelApp() {
                 onChange={(event) =>
                   updateField("noticePeriod", event.target.value)
                 }
-              />
+              >
+                <option value="">Select notice period</option>
+                {noticePeriodOptions.map((noticePeriod) => (
+                  <option key={noticePeriod} value={noticePeriod}>
+                    {noticePeriod}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="checkbox-row">
