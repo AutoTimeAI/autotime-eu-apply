@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
-import { countryOptions } from "../lib/countries"
 import {
   formatJobPageNotes,
   inferJobPageDetails
@@ -33,7 +32,6 @@ import {
   saveReusableAnswers,
   saveTrackerDraft,
   updateApplication,
-  type ApplicationStatus,
   type ApplicationRecord,
   type ApplicationContentDraft,
   type CandidateProfile,
@@ -42,16 +40,18 @@ import {
   type TrackerDraft
 } from "../lib/storage"
 import {
-  applicationStatuses,
   emptyApplicationContentDraft,
   emptyJobAnalysisDraft,
   emptyProfile,
   emptyReusableAnswers,
   emptyTrackerDraft,
-  noticePeriodOptions,
   type Section
 } from "./constants"
 import { ApplicationsSection } from "./ApplicationsSection"
+import { ApplicationContentSection } from "./ApplicationContentSection"
+import { JobAnalysisSection } from "./JobAnalysisSection"
+import { ProfileSection } from "./ProfileSection"
+import { ReusableAnswersSection } from "./ReusableAnswersSection"
 import { SectionNav } from "./SectionNav"
 import {
   ApplicationContentView,
@@ -60,18 +60,10 @@ import {
   ReusableAnswersView,
   TrackerView
 } from "./SavedViews"
+import { TrackerSection } from "./TrackerSection"
 import type { AutofillResponse, JobPageResponse, SaveAttempts } from "./types"
+import { getHostname, normalizeApplicationUrl } from "./utils"
 import {
-  getHostname,
-  getStatusClassName,
-  normalizeApplicationUrl
-} from "./utils"
-import {
-  getApplicationContentIssueForField,
-  getIssueForField,
-  getJobIssueForField,
-  getReusableAnswerIssueForField,
-  getTrackerIssueForField,
   validateApplicationContentDraft,
   validateJobAnalysisDraft,
   validateProfile,
@@ -662,853 +654,74 @@ function SidePanelApp() {
       />
 
       {activeSection === "profile" ? (
-        <section className="panel-section">
-          <h2>Profile</h2>
-
-          <div className="form-grid">
-            {saveAttempts.profile && profileIssues.length > 0 && (
-              <div className="alert-panel" role="alert">
-                <strong>Profile needs attention</strong>
-                <ul>
-                  {profileIssues.map((issue) => (
-                    <li key={`${issue.field}-${issue.message}`}>
-                      {issue.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <label>
-              Full name
-              {saveAttempts.profile &&
-                getIssueForField(profileIssues, "fullName") && (
-                  <span className="field-alert">
-                    {getIssueForField(profileIssues, "fullName")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.profile &&
-                  getIssueForField(profileIssues, "fullName")
-                )}
-                value={profile.fullName}
-                onChange={(event) =>
-                  updateField("fullName", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Email
-              {saveAttempts.profile &&
-                getIssueForField(profileIssues, "email") && (
-                  <span className="field-alert">
-                    {getIssueForField(profileIssues, "email")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.profile &&
-                  getIssueForField(profileIssues, "email")
-                )}
-                type="email"
-                value={profile.email}
-                onChange={(event) => updateField("email", event.target.value)}
-              />
-            </label>
-
-            <label>
-              Phone
-              {saveAttempts.profile &&
-                getIssueForField(profileIssues, "phone") && (
-                  <span className="field-alert">
-                    {getIssueForField(profileIssues, "phone")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.profile &&
-                  getIssueForField(profileIssues, "phone")
-                )}
-                value={profile.phone}
-                onChange={(event) => updateField("phone", event.target.value)}
-              />
-            </label>
-
-            <label>
-              Current country
-              {saveAttempts.profile &&
-                getIssueForField(profileIssues, "currentCountry") && (
-                  <span className="field-alert">
-                    {getIssueForField(profileIssues, "currentCountry")}
-                  </span>
-                )}
-              <select
-                aria-invalid={Boolean(
-                  saveAttempts.profile &&
-                  getIssueForField(profileIssues, "currentCountry")
-                )}
-                value={profile.currentCountry}
-                onChange={(event) =>
-                  updateField("currentCountry", event.target.value)
-                }
-              >
-                <option value="">Select country</option>
-                {countryOptions.map((country) => (
-                  <option key={country.code} value={country.name}>
-                    {country.name} ({country.callingCode})
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Current city
-              {saveAttempts.profile &&
-                getIssueForField(profileIssues, "currentCity") && (
-                  <span className="field-alert">
-                    {getIssueForField(profileIssues, "currentCity")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.profile &&
-                  getIssueForField(profileIssues, "currentCity")
-                )}
-                value={profile.currentCity}
-                onChange={(event) =>
-                  updateField("currentCity", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Notice period
-              {saveAttempts.profile &&
-                getIssueForField(profileIssues, "noticePeriod") && (
-                  <span className="field-alert">
-                    {getIssueForField(profileIssues, "noticePeriod")}
-                  </span>
-                )}
-              <select
-                aria-invalid={Boolean(
-                  saveAttempts.profile &&
-                  getIssueForField(profileIssues, "noticePeriod")
-                )}
-                value={profile.noticePeriod}
-                onChange={(event) =>
-                  updateField("noticePeriod", event.target.value)
-                }
-              >
-                <option value="">Select notice period</option>
-                {noticePeriodOptions.map((noticePeriod) => (
-                  <option key={noticePeriod} value={noticePeriod}>
-                    {noticePeriod}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="checkbox-row">
-              <input
-                checked={profile.sponsorshipNeeded}
-                type="checkbox"
-                onChange={(event) =>
-                  updateField("sponsorshipNeeded", event.target.checked)
-                }
-              />
-              Sponsorship needed
-            </label>
-
-            <label>
-              Relocation willingness
-              <select
-                value={profile.relocationWillingness}
-                onChange={(event) =>
-                  updateField(
-                    "relocationWillingness",
-                    event.target
-                      .value as CandidateProfile["relocationWillingness"]
-                  )
-                }
-              >
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-                <option value="depends">Depends</option>
-              </select>
-            </label>
-
-            <button type="button" onClick={handleSaveProfile}>
-              Save Profile
-            </button>
-
-            <button type="button" onClick={handleAutofillCurrentPage}>
-              Autofill Current Page
-            </button>
-
-            {status && (
-              <p
-                className={getStatusClassName(status)}
-                ref={profileStatusRef}
-                role="status"
-                tabIndex={-1}
-              >
-                {status}
-              </p>
-            )}
-          </div>
-        </section>
+        <ProfileSection
+          issues={profileIssues}
+          onAutofillCurrentPage={handleAutofillCurrentPage}
+          onFieldChange={updateField}
+          onSave={handleSaveProfile}
+          profile={profile}
+          saveAttempted={saveAttempts.profile}
+          status={status}
+          statusRef={profileStatusRef}
+        />
       ) : activeSection === "profile-view" ? (
         <ProfileView draft={savedProfile} onClear={handleClearProfile} />
       ) : activeSection === "reusable-answers" ? (
-        <section className="panel-section">
-          <h2>Reusable Answers</h2>
-
-          <div className="form-grid">
-            {saveAttempts["reusable-answers"] &&
-              reusableAnswerIssues.length > 0 && (
-                <div className="alert-panel" role="alert">
-                  <strong>Reusable Answers need attention</strong>
-                  <ul>
-                    {reusableAnswerIssues.map((issue) => (
-                      <li key={`${issue.field}-${issue.message}`}>
-                        {issue.message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-            <label>
-              Sponsorship answer
-              {saveAttempts["reusable-answers"] &&
-                getReusableAnswerIssueForField(
-                  reusableAnswerIssues,
-                  "sponsorshipAnswer"
-                ) && (
-                  <span className="field-alert">
-                    {getReusableAnswerIssueForField(
-                      reusableAnswerIssues,
-                      "sponsorshipAnswer"
-                    )}
-                  </span>
-                )}
-              <textarea
-                aria-invalid={Boolean(
-                  saveAttempts["reusable-answers"] &&
-                  getReusableAnswerIssueForField(
-                    reusableAnswerIssues,
-                    "sponsorshipAnswer"
-                  )
-                )}
-                value={reusableAnswers.sponsorshipAnswer}
-                onChange={(event) =>
-                  updateReusableAnswer("sponsorshipAnswer", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Relocation answer
-              {saveAttempts["reusable-answers"] &&
-                getReusableAnswerIssueForField(
-                  reusableAnswerIssues,
-                  "relocationAnswer"
-                ) && (
-                  <span className="field-alert">
-                    {getReusableAnswerIssueForField(
-                      reusableAnswerIssues,
-                      "relocationAnswer"
-                    )}
-                  </span>
-                )}
-              <textarea
-                aria-invalid={Boolean(
-                  saveAttempts["reusable-answers"] &&
-                  getReusableAnswerIssueForField(
-                    reusableAnswerIssues,
-                    "relocationAnswer"
-                  )
-                )}
-                value={reusableAnswers.relocationAnswer}
-                onChange={(event) =>
-                  updateReusableAnswer("relocationAnswer", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Work authorisation answer
-              {saveAttempts["reusable-answers"] &&
-                getReusableAnswerIssueForField(
-                  reusableAnswerIssues,
-                  "workAuthorisationAnswer"
-                ) && (
-                  <span className="field-alert">
-                    {getReusableAnswerIssueForField(
-                      reusableAnswerIssues,
-                      "workAuthorisationAnswer"
-                    )}
-                  </span>
-                )}
-              <textarea
-                aria-invalid={Boolean(
-                  saveAttempts["reusable-answers"] &&
-                  getReusableAnswerIssueForField(
-                    reusableAnswerIssues,
-                    "workAuthorisationAnswer"
-                  )
-                )}
-                value={reusableAnswers.workAuthorisationAnswer}
-                onChange={(event) =>
-                  updateReusableAnswer(
-                    "workAuthorisationAnswer",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Notice period answer
-              {saveAttempts["reusable-answers"] &&
-                getReusableAnswerIssueForField(
-                  reusableAnswerIssues,
-                  "noticePeriodAnswer"
-                ) && (
-                  <span className="field-alert">
-                    {getReusableAnswerIssueForField(
-                      reusableAnswerIssues,
-                      "noticePeriodAnswer"
-                    )}
-                  </span>
-                )}
-              <textarea
-                aria-invalid={Boolean(
-                  saveAttempts["reusable-answers"] &&
-                  getReusableAnswerIssueForField(
-                    reusableAnswerIssues,
-                    "noticePeriodAnswer"
-                  )
-                )}
-                value={reusableAnswers.noticePeriodAnswer}
-                onChange={(event) =>
-                  updateReusableAnswer("noticePeriodAnswer", event.target.value)
-                }
-              />
-            </label>
-
-            <button type="button" onClick={handleSaveReusableAnswers}>
-              Save Reusable Answers
-            </button>
-
-            {reusableStatus && (
-              <p
-                className={getStatusClassName(reusableStatus)}
-                ref={reusableStatusRef}
-                role="status"
-                tabIndex={-1}
-              >
-                {reusableStatus}
-              </p>
-            )}
-          </div>
-        </section>
+        <ReusableAnswersSection
+          answers={reusableAnswers}
+          issues={reusableAnswerIssues}
+          onFieldChange={updateReusableAnswer}
+          onSave={handleSaveReusableAnswers}
+          saveAttempted={saveAttempts["reusable-answers"]}
+          status={reusableStatus}
+          statusRef={reusableStatusRef}
+        />
       ) : activeSection === "reusable-answers-view" ? (
         <ReusableAnswersView
           draft={savedReusableAnswers}
           onClear={handleClearReusableAnswers}
         />
       ) : activeSection === "job-analysis" ? (
-        <section className="panel-section">
-          <h2>Job Analysis</h2>
-
-          <div className="form-grid">
-            {saveAttempts["job-analysis"] && jobAnalysisIssues.length > 0 && (
-              <div className="alert-panel" role="alert">
-                <strong>Job Analysis needs attention</strong>
-                <ul>
-                  {jobAnalysisIssues.map((issue) => (
-                    <li key={`${issue.field}-${issue.message}`}>
-                      {issue.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <label>
-              Job title
-              {saveAttempts["job-analysis"] &&
-                getJobIssueForField(jobAnalysisIssues, "jobTitle") && (
-                  <span className="field-alert">
-                    {getJobIssueForField(jobAnalysisIssues, "jobTitle")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts["job-analysis"] &&
-                  getJobIssueForField(jobAnalysisIssues, "jobTitle")
-                )}
-                value={jobAnalysisDraft.jobTitle}
-                onChange={(event) =>
-                  updateJobAnalysisField("jobTitle", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Company
-              {saveAttempts["job-analysis"] &&
-                getJobIssueForField(jobAnalysisIssues, "company") && (
-                  <span className="field-alert">
-                    {getJobIssueForField(jobAnalysisIssues, "company")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts["job-analysis"] &&
-                  getJobIssueForField(jobAnalysisIssues, "company")
-                )}
-                value={jobAnalysisDraft.company}
-                onChange={(event) =>
-                  updateJobAnalysisField("company", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Job URL
-              {saveAttempts["job-analysis"] &&
-                getJobIssueForField(jobAnalysisIssues, "jobUrl") && (
-                  <span className="field-alert">
-                    {getJobIssueForField(jobAnalysisIssues, "jobUrl")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts["job-analysis"] &&
-                  getJobIssueForField(jobAnalysisIssues, "jobUrl")
-                )}
-                type="url"
-                value={jobAnalysisDraft.jobUrl}
-                onChange={(event) =>
-                  updateJobAnalysisField("jobUrl", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Location/country
-              {saveAttempts["job-analysis"] &&
-                getJobIssueForField(jobAnalysisIssues, "location") && (
-                  <span className="field-alert">
-                    {getJobIssueForField(jobAnalysisIssues, "location")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts["job-analysis"] &&
-                  getJobIssueForField(jobAnalysisIssues, "location")
-                )}
-                value={jobAnalysisDraft.location}
-                onChange={(event) =>
-                  updateJobAnalysisField("location", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Work mode
-              {saveAttempts["job-analysis"] &&
-                getJobIssueForField(jobAnalysisIssues, "workMode") && (
-                  <span className="field-alert">
-                    {getJobIssueForField(jobAnalysisIssues, "workMode")}
-                  </span>
-                )}
-              <select
-                aria-invalid={Boolean(
-                  saveAttempts["job-analysis"] &&
-                  getJobIssueForField(jobAnalysisIssues, "workMode")
-                )}
-                value={jobAnalysisDraft.workMode}
-                onChange={(event) =>
-                  updateJobAnalysisField(
-                    "workMode",
-                    event.target.value as JobAnalysisDraft["workMode"]
-                  )
-                }
-              >
-                <option value="unknown">Select work mode</option>
-                <option value="onsite">On-site</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="remote">Remote</option>
-              </select>
-            </label>
-
-            <label>
-              Notes
-              <textarea
-                value={jobAnalysisDraft.notes}
-                onChange={(event) =>
-                  updateJobAnalysisField("notes", event.target.value)
-                }
-              />
-            </label>
-
-            <button type="button" onClick={handleSaveJobAnalysis}>
-              Save Job Analysis
-            </button>
-
-            {jobStatus && (
-              <p
-                className={getStatusClassName(jobStatus)}
-                ref={jobStatusRef}
-                role="status"
-                tabIndex={-1}
-              >
-                {jobStatus}
-              </p>
-            )}
-          </div>
-        </section>
+        <JobAnalysisSection
+          draft={jobAnalysisDraft}
+          issues={jobAnalysisIssues}
+          onFieldChange={updateJobAnalysisField}
+          onSave={handleSaveJobAnalysis}
+          saveAttempted={saveAttempts["job-analysis"]}
+          status={jobStatus}
+          statusRef={jobStatusRef}
+        />
       ) : activeSection === "job-analysis-view" ? (
         <JobAnalysisView
           draft={savedJobAnalysisDraft}
           onClear={handleClearJobAnalysis}
         />
       ) : activeSection === "application-content" ? (
-        <section className="panel-section">
-          <h2>Application Content</h2>
-
-          <div className="form-grid">
-            {saveAttempts["application-content"] &&
-              applicationContentIssues.length > 0 && (
-                <div className="alert-panel" role="alert">
-                  <strong>Application Content needs attention</strong>
-                  <ul>
-                    {applicationContentIssues.map((issue) => (
-                      <li key={`${issue.field}-${issue.message}`}>
-                        {issue.message}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-            <label>
-              Cover letter
-              {saveAttempts["application-content"] &&
-                getApplicationContentIssueForField(
-                  applicationContentIssues,
-                  "coverLetter"
-                ) && (
-                  <span className="field-alert">
-                    {getApplicationContentIssueForField(
-                      applicationContentIssues,
-                      "coverLetter"
-                    )}
-                  </span>
-                )}
-              <textarea
-                aria-invalid={Boolean(
-                  saveAttempts["application-content"] &&
-                  getApplicationContentIssueForField(
-                    applicationContentIssues,
-                    "coverLetter"
-                  )
-                )}
-                value={applicationContentDraft.coverLetter}
-                onChange={(event) =>
-                  updateApplicationContentField(
-                    "coverLetter",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Profile summary
-              {saveAttempts["application-content"] &&
-                getApplicationContentIssueForField(
-                  applicationContentIssues,
-                  "profileSummary"
-                ) && (
-                  <span className="field-alert">
-                    {getApplicationContentIssueForField(
-                      applicationContentIssues,
-                      "profileSummary"
-                    )}
-                  </span>
-                )}
-              <textarea
-                aria-invalid={Boolean(
-                  saveAttempts["application-content"] &&
-                  getApplicationContentIssueForField(
-                    applicationContentIssues,
-                    "profileSummary"
-                  )
-                )}
-                value={applicationContentDraft.profileSummary}
-                onChange={(event) =>
-                  updateApplicationContentField(
-                    "profileSummary",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Motivation answer
-              {saveAttempts["application-content"] &&
-                getApplicationContentIssueForField(
-                  applicationContentIssues,
-                  "motivationAnswer"
-                ) && (
-                  <span className="field-alert">
-                    {getApplicationContentIssueForField(
-                      applicationContentIssues,
-                      "motivationAnswer"
-                    )}
-                  </span>
-                )}
-              <textarea
-                aria-invalid={Boolean(
-                  saveAttempts["application-content"] &&
-                  getApplicationContentIssueForField(
-                    applicationContentIssues,
-                    "motivationAnswer"
-                  )
-                )}
-                value={applicationContentDraft.motivationAnswer}
-                onChange={(event) =>
-                  updateApplicationContentField(
-                    "motivationAnswer",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Strengths answer
-              <textarea
-                value={applicationContentDraft.strengthsAnswer}
-                onChange={(event) =>
-                  updateApplicationContentField(
-                    "strengthsAnswer",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <label>
-              Availability answer
-              <textarea
-                value={applicationContentDraft.availabilityAnswer}
-                onChange={(event) =>
-                  updateApplicationContentField(
-                    "availabilityAnswer",
-                    event.target.value
-                  )
-                }
-              />
-            </label>
-
-            <button type="button" onClick={handleSaveApplicationContent}>
-              Save Application Content
-            </button>
-
-            {contentStatus && (
-              <p
-                className={getStatusClassName(contentStatus)}
-                ref={contentStatusRef}
-                role="status"
-                tabIndex={-1}
-              >
-                {contentStatus}
-              </p>
-            )}
-          </div>
-        </section>
+        <ApplicationContentSection
+          draft={applicationContentDraft}
+          issues={applicationContentIssues}
+          onFieldChange={updateApplicationContentField}
+          onSave={handleSaveApplicationContent}
+          saveAttempted={saveAttempts["application-content"]}
+          status={contentStatus}
+          statusRef={contentStatusRef}
+        />
       ) : activeSection === "application-content-view" ? (
         <ApplicationContentView
           draft={savedApplicationContentDraft}
           onClear={handleClearApplicationContent}
         />
       ) : activeSection === "tracker" ? (
-        <section className="panel-section">
-          <h2>Tracker</h2>
-
-          <div className="form-grid">
-            <button type="button" onClick={handleImportCurrentJobPage}>
-              Import Current Job Page
-            </button>
-
-            {saveAttempts.tracker && trackerIssues.length > 0 && (
-              <div className="alert-panel" role="alert">
-                <strong>Tracker needs attention</strong>
-                <ul>
-                  {trackerIssues.map((issue) => (
-                    <li key={`${issue.field}-${issue.message}`}>
-                      {issue.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <label>
-              Role title
-              {saveAttempts.tracker &&
-                getTrackerIssueForField(trackerIssues, "roleTitle") && (
-                  <span className="field-alert">
-                    {getTrackerIssueForField(trackerIssues, "roleTitle")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.tracker &&
-                  getTrackerIssueForField(trackerIssues, "roleTitle")
-                )}
-                value={trackerDraft.roleTitle}
-                onChange={(event) =>
-                  updateTrackerField("roleTitle", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Company
-              {saveAttempts.tracker &&
-                getTrackerIssueForField(trackerIssues, "company") && (
-                  <span className="field-alert">
-                    {getTrackerIssueForField(trackerIssues, "company")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.tracker &&
-                  getTrackerIssueForField(trackerIssues, "company")
-                )}
-                value={trackerDraft.company}
-                onChange={(event) =>
-                  updateTrackerField("company", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Application URL
-              {saveAttempts.tracker &&
-                getTrackerIssueForField(trackerIssues, "applicationUrl") && (
-                  <span className="field-alert">
-                    {getTrackerIssueForField(trackerIssues, "applicationUrl")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.tracker &&
-                  getTrackerIssueForField(trackerIssues, "applicationUrl")
-                )}
-                type="url"
-                value={trackerDraft.applicationUrl}
-                onChange={(event) =>
-                  updateTrackerField("applicationUrl", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Status
-              <select
-                value={trackerDraft.status}
-                onChange={(event) =>
-                  updateTrackerField(
-                    "status",
-                    event.target.value as ApplicationStatus
-                  )
-                }
-              >
-                {applicationStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Next action
-              {saveAttempts.tracker &&
-                getTrackerIssueForField(trackerIssues, "nextAction") && (
-                  <span className="field-alert">
-                    {getTrackerIssueForField(trackerIssues, "nextAction")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.tracker &&
-                  getTrackerIssueForField(trackerIssues, "nextAction")
-                )}
-                value={trackerDraft.nextAction}
-                onChange={(event) =>
-                  updateTrackerField("nextAction", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Next action date
-              {saveAttempts.tracker &&
-                getTrackerIssueForField(trackerIssues, "nextActionDate") && (
-                  <span className="field-alert">
-                    {getTrackerIssueForField(trackerIssues, "nextActionDate")}
-                  </span>
-                )}
-              <input
-                aria-invalid={Boolean(
-                  saveAttempts.tracker &&
-                  getTrackerIssueForField(trackerIssues, "nextActionDate")
-                )}
-                type="date"
-                value={trackerDraft.nextActionDate}
-                onChange={(event) =>
-                  updateTrackerField("nextActionDate", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              Notes
-              <textarea
-                value={trackerDraft.notes}
-                onChange={(event) =>
-                  updateTrackerField("notes", event.target.value)
-                }
-              />
-            </label>
-
-            <button type="button" onClick={handleSaveTracker}>
-              Save Tracker
-            </button>
-
-            {trackerStatus && (
-              <p
-                className={getStatusClassName(trackerStatus)}
-                ref={trackerStatusRef}
-                role="status"
-                tabIndex={-1}
-              >
-                {trackerStatus}
-              </p>
-            )}
-          </div>
-        </section>
+        <TrackerSection
+          draft={trackerDraft}
+          issues={trackerIssues}
+          onFieldChange={updateTrackerField}
+          onImportCurrentJobPage={handleImportCurrentJobPage}
+          onSave={handleSaveTracker}
+          saveAttempted={saveAttempts.tracker}
+          status={trackerStatus}
+          statusRef={trackerStatusRef}
+        />
       ) : activeSection === "tracker-view" ? (
         <TrackerView draft={savedTrackerDraft} onClear={handleClearTracker} />
       ) : activeSection === "applications" ? (
