@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import { countryOptions } from "../lib/countries"
-import { inferJobPageDetails, type JobPageDetails } from "../lib/job-page"
+import {
+  formatJobPageNotes,
+  inferJobPageDetails,
+  type JobPageDetails
+} from "../lib/job-page"
 import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
@@ -383,11 +387,7 @@ function SidePanelApp() {
         company: current.company || details.company,
         applicationUrl: current.applicationUrl || details.url,
         nextAction: current.nextAction || "Tailor application",
-        notes:
-          current.notes ||
-          [details.location && `Location: ${details.location}`]
-            .filter(Boolean)
-            .join("\n")
+        notes: current.notes || formatJobPageNotes(details)
       }))
       clearSaveAttempt("tracker")
       setTrackerStatus("Current job page imported")
@@ -407,7 +407,8 @@ function SidePanelApp() {
         ...current,
         roleTitle: current.roleTitle || details.roleTitle,
         applicationUrl: current.applicationUrl || details.url,
-        nextAction: current.nextAction || "Tailor application"
+        nextAction: current.nextAction || "Tailor application",
+        notes: current.notes || formatJobPageNotes(details)
       }))
       clearSaveAttempt("tracker")
       setTrackerStatus("Current tab imported")

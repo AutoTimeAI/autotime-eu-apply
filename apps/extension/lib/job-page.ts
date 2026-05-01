@@ -96,3 +96,13 @@ export function inferJobPageDetails(
     pageTitle: cleanText(input.title)
   }
 }
+
+export function formatJobPageNotes(details: JobPageDetails) {
+  return [
+    details.location && `Location: ${details.location}`,
+    details.source && `Source: ${details.source}`,
+    details.pageTitle && `Page title: ${details.pageTitle}`
+  ]
+    .filter(Boolean)
+    .join("\n")
+}

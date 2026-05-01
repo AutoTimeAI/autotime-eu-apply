@@ -12,7 +12,7 @@ import {
   getNameParts,
   getReusableAnswerValues
 } from "../lib/autofill.ts"
-import { inferJobPageDetails } from "../lib/job-page.ts"
+import { formatJobPageNotes, inferJobPageDetails } from "../lib/job-page.ts"
 import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
@@ -197,6 +197,39 @@ test("infers job page details from common page text", () => {
       source: "jobs.example.co",
       pageTitle: "Backend Engineer | Example Jobs"
     }
+  )
+})
+
+test("formats imported job page notes from detected metadata", () => {
+  assert.equal(
+    formatJobPageNotes({
+      roleTitle: "Staff Backend Engineer",
+      company: "Example Co",
+      location: "London, United Kingdom",
+      url: "https://jobs.example.co/backend",
+      source: "jobs.example.co",
+      pageTitle: "Backend Engineer | Example Jobs"
+    }),
+    [
+      "Location: London, United Kingdom",
+      "Source: jobs.example.co",
+      "Page title: Backend Engineer | Example Jobs"
+    ].join("\n")
+  )
+
+  assert.equal(
+    formatJobPageNotes({
+      roleTitle: "Senior Frontend Engineer",
+      company: "Example Co",
+      location: "",
+      url: "https://example.com/jobs/frontend",
+      source: "example.com",
+      pageTitle: "Senior Frontend Engineer at Example Co - Careers"
+    }),
+    [
+      "Source: example.com",
+      "Page title: Senior Frontend Engineer at Example Co - Careers"
+    ].join("\n")
   )
 })
 
