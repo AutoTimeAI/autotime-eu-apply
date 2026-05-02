@@ -19,6 +19,15 @@ extension with testers.
 
 ## Release Checks
 
+Run the semi-automated release check first:
+
+```bash
+pnpm release:check
+```
+
+This writes a timestamped report to `docs/release-runs/` and leaves manual
+Chrome/live-job checks as explicit pending items.
+
 1. Run `pnpm --filter extension test`.
 2. Run `pnpm --filter extension typecheck`.
 3. Run `pnpm -r typecheck`.

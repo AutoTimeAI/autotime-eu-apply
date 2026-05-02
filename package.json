@@ -9,6 +9,7 @@
     "build:web": "pnpm --filter web build",
     "build:extension": "pnpm --filter extension build",
     "lint": "pnpm -r lint",
+    "release:check": "node scripts/release-check.mjs",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
