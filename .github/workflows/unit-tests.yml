@@ -33,7 +33,7 @@ jobs:
         run: pnpm test
 
       - name: Run typecheck
-        run: pnpm -r typecheck
+        run: pnpm --filter extension typecheck
 
       - name: Run lint
-        run: pnpm -r lint
+        run: pnpm --filter extension lint

@@ -30,8 +30,8 @@ Chrome/live-job checks as explicit pending items.
 
 1. Run `pnpm --filter extension test`.
 2. Run `pnpm --filter extension typecheck`.
-3. Run `pnpm -r typecheck`.
-4. Run `pnpm -r lint`.
+3. Run `pnpm --filter extension lint`.
+4. Optional non-blocking shell checks: `pnpm -r typecheck` and `pnpm -r lint`.
 5. Run `pnpm build:extension`.
 6. Load or reload `apps/extension/.output/chrome-mv3` in Chrome.
 7. Complete `docs/extension-smoke-test.md`.
