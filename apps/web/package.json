@@ -5,8 +5,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "echo lint-pending",
-    "typecheck": "echo typecheck-pending"
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "clsx": "^2.1.1",

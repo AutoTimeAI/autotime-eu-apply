@@ -2,8 +2,8 @@
   "name": "shared",
   "private": true,
   "scripts": {
-    "lint": "echo lint-pending",
-    "typecheck": "echo typecheck-pending"
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "zod": "^4.3.6"

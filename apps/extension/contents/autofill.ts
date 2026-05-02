@@ -220,10 +220,9 @@ async function autofillProfile(): Promise<AutofillResponse> {
       return
     }
 
-    setControlValue(input, profileValues[field])
-    filledFields.push(field)
-    console.log(`[AutoTime EU Apply] Filled ${field}`, input)
-  })
+      setControlValue(input, profileValues[field])
+      filledFields.push(field)
+    })
 
   document
     .querySelectorAll<HTMLTextAreaElement>("textarea")
@@ -239,10 +238,7 @@ async function autofillProfile(): Promise<AutofillResponse> {
 
       setControlValue(textarea, answerValues[field])
       filledFields.push(field)
-      console.log(`[AutoTime EU Apply] Filled ${field}`, textarea)
     })
-
-  console.log("[AutoTime EU Apply] Autofill complete", filledFields)
 
   return { filledFields }
 }
@@ -274,7 +270,6 @@ async function insertApplicationContent(): Promise<AutofillResponse> {
 
       setControlValue(textarea, contentValues[field])
       filledFields.push(field)
-      console.log(`[AutoTime EU Apply] Inserted ${field}`, textarea)
     })
 
   return { filledFields }

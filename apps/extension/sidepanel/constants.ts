@@ -103,19 +103,19 @@ export const noticePeriodOptions = [
   "Negotiable"
 ]
 
-export const sections: Array<{ id: Section; label: string }> = [
-  { id: "profile", label: "Profile" },
-  { id: "profile-view", label: "View Profile" },
-  { id: "reusable-answers", label: "Reusable Answers" },
-  { id: "reusable-answers-view", label: "View Answers" },
-  { id: "job-analysis", label: "Job Analysis" },
-  { id: "job-analysis-view", label: "View Job Analysis" },
-  { id: "application-content", label: "Application Content" },
-  { id: "application-content-view", label: "View Content" },
-  { id: "tracker", label: "Tracker" },
-  { id: "tracker-view", label: "View Tracker" },
-  { id: "applications", label: "Applications" },
-  { id: "usage-log", label: "Usage Log" },
-  { id: "validation-metrics", label: "Validation Metrics" },
-  { id: "ai-settings", label: "AI Settings" }
+export const sections: Array<{ group: string; id: Section; label: string }> = [
+  { group: "Memory", id: "profile", label: "Profile" },
+  { group: "Memory", id: "profile-view", label: "View Profile" },
+  { group: "Memory", id: "reusable-answers", label: "Reusable Answers" },
+  { group: "Memory", id: "reusable-answers-view", label: "View Answers" },
+  { group: "Apply", id: "job-analysis", label: "Job Analysis" },
+  { group: "Apply", id: "job-analysis-view", label: "View Job Analysis" },
+  { group: "Apply", id: "application-content", label: "Application Content" },
+  { group: "Apply", id: "application-content-view", label: "View Content" },
+  { group: "Track", id: "tracker", label: "Tracker" },
+  { group: "Track", id: "tracker-view", label: "View Tracker" },
+  { group: "Track", id: "applications", label: "Applications" },
+  { group: "Review", id: "usage-log", label: "Usage Log" },
+  { group: "Review", id: "validation-metrics", label: "Validation Metrics" },
+  { group: "Review", id: "ai-settings", label: "AI Settings" }
 ]
