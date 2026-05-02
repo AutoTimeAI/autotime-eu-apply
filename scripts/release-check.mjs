@@ -9,14 +9,14 @@ const checks = [
     args: ["--filter", "extension", "test"]
   },
   {
-    name: "Extension typecheck",
+    name: "Repo typecheck",
     command: getCommandName("pnpm"),
-    args: ["--filter", "extension", "typecheck"]
+    args: ["-r", "typecheck"]
   },
   {
-    name: "Extension lint",
+    name: "Repo lint",
     command: getCommandName("pnpm"),
-    args: ["--filter", "extension", "lint"]
+    args: ["-r", "lint"]
   },
   {
     name: "Extension production build",

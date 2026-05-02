@@ -1,4 +1,5 @@
 import "./globals.css"
+import type { ReactNode } from "react"
 
 export const metadata = {
   title: "AutoTime EU Apply",
@@ -8,7 +9,7 @@ export const metadata = {
 export default function RootLayout({
   children
 }: {
-  children: any
+  children: ReactNode
 }) {
   return (
     <html lang="en">
