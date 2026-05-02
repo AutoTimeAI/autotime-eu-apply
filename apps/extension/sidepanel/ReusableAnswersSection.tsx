@@ -26,6 +26,23 @@ export function ReusableAnswersSection({
   status,
   statusRef
 }: ReusableAnswersSectionProps) {
+  const salaryIssue = getReusableAnswerIssueForField(
+    issues,
+    "salaryExpectationAnswer"
+  )
+  const motivationIssue = getReusableAnswerIssueForField(
+    issues,
+    "motivationAnswer"
+  )
+  const strengthsIssue = getReusableAnswerIssueForField(
+    issues,
+    "strengthsAnswer"
+  )
+  const availabilityIssue = getReusableAnswerIssueForField(
+    issues,
+    "availabilityAnswer"
+  )
+
   return (
     <section className="panel-section">
       <h2>Reusable Answers</h2>
@@ -135,7 +152,11 @@ export function ReusableAnswersSection({
 
         <label>
           Salary expectation answer
+          {saveAttempted && salaryIssue && (
+            <span className="field-alert">{salaryIssue}</span>
+          )}
           <textarea
+            aria-invalid={Boolean(saveAttempted && salaryIssue)}
             value={answers.salaryExpectationAnswer}
             onChange={(event) =>
               onFieldChange("salaryExpectationAnswer", event.target.value)
@@ -145,7 +166,11 @@ export function ReusableAnswersSection({
 
         <label>
           Motivation answer
+          {saveAttempted && motivationIssue && (
+            <span className="field-alert">{motivationIssue}</span>
+          )}
           <textarea
+            aria-invalid={Boolean(saveAttempted && motivationIssue)}
             value={answers.motivationAnswer}
             onChange={(event) =>
               onFieldChange("motivationAnswer", event.target.value)
@@ -155,7 +180,11 @@ export function ReusableAnswersSection({
 
         <label>
           Strengths answer
+          {saveAttempted && strengthsIssue && (
+            <span className="field-alert">{strengthsIssue}</span>
+          )}
           <textarea
+            aria-invalid={Boolean(saveAttempted && strengthsIssue)}
             value={answers.strengthsAnswer}
             onChange={(event) =>
               onFieldChange("strengthsAnswer", event.target.value)
@@ -165,7 +194,11 @@ export function ReusableAnswersSection({
 
         <label>
           Availability answer
+          {saveAttempted && availabilityIssue && (
+            <span className="field-alert">{availabilityIssue}</span>
+          )}
           <textarea
+            aria-invalid={Boolean(saveAttempted && availabilityIssue)}
             value={answers.availabilityAnswer}
             onChange={(event) =>
               onFieldChange("availabilityAnswer", event.target.value)

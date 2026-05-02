@@ -63,6 +63,18 @@ const requiredApplicationContentFields: Array<{
   { field: "motivationAnswer", label: "Motivation answer" }
 ]
 
+const applicationContentWordRules: Array<{
+  field: keyof ApplicationContentDraft
+  label: string
+  minWords: number
+}> = [
+  { field: "coverLetter", label: "Cover letter", minWords: 80 },
+  { field: "profileSummary", label: "Profile summary", minWords: 25 },
+  { field: "motivationAnswer", label: "Motivation answer", minWords: 20 },
+  { field: "strengthsAnswer", label: "Strengths answer", minWords: 12 },
+  { field: "availabilityAnswer", label: "Availability answer", minWords: 5 }
+]
+
 const requiredReusableAnswerFields: Array<{
   field: keyof ReusableAnswers
   label: string
@@ -71,6 +83,29 @@ const requiredReusableAnswerFields: Array<{
   { field: "relocationAnswer", label: "Relocation answer" },
   { field: "workAuthorisationAnswer", label: "Work authorisation answer" },
   { field: "noticePeriodAnswer", label: "Notice period answer" }
+]
+
+const reusableAnswerWordRules: Array<{
+  field: keyof ReusableAnswers
+  label: string
+  minWords: number
+}> = [
+  { field: "sponsorshipAnswer", label: "Sponsorship answer", minWords: 4 },
+  { field: "relocationAnswer", label: "Relocation answer", minWords: 4 },
+  {
+    field: "workAuthorisationAnswer",
+    label: "Work authorisation answer",
+    minWords: 5
+  },
+  { field: "noticePeriodAnswer", label: "Notice period answer", minWords: 4 },
+  {
+    field: "salaryExpectationAnswer",
+    label: "Salary expectation answer",
+    minWords: 4
+  },
+  { field: "motivationAnswer", label: "Motivation answer", minWords: 12 },
+  { field: "strengthsAnswer", label: "Strengths answer", minWords: 8 },
+  { field: "availabilityAnswer", label: "Availability answer", minWords: 5 }
 ]
 
 const requiredTrackerFields: Array<{
@@ -83,6 +118,14 @@ const requiredTrackerFields: Array<{
   { field: "nextAction", label: "Next action" },
   { field: "nextActionDate", label: "Next action date" }
 ]
+
+export function countWords(value: string) {
+  return value.trim().match(/\S+/g)?.length ?? 0
+}
+
+function getMinimumWordMessage(label: string, minWords: number) {
+  return `${label} must be at least ${minWords} words.`
+}
 
 export function validateProfile(profile: CandidateProfile): ProfileIssue[] {
   const issues: ProfileIssue[] = []
@@ -172,26 +215,20 @@ export function validateApplicationContentDraft(
   const issues: ApplicationContentIssue[] = []
 
   for (const { field, label } of requiredApplicationContentFields) {
-    if (draft[field].trim() === "") {
+    if ((draft[field] ?? "").trim() === "") {
       issues.push({ field, message: `${label} is required.` })
     }
   }
 
-  if (draft.coverLetter.trim() !== "" && draft.coverLetter.trim().length < 80) {
-    issues.push({
-      field: "coverLetter",
-      message: "Cover letter looks too short."
-    })
-  }
+  for (const { field, label, minWords } of applicationContentWordRules) {
+    const value = draft[field] ?? ""
 
-  if (
-    draft.profileSummary.trim() !== "" &&
-    draft.profileSummary.trim().length < 40
-  ) {
-    issues.push({
-      field: "profileSummary",
-      message: "Profile summary looks too short."
-    })
+    if (value.trim() !== "" && countWords(value) < minWords) {
+      issues.push({
+        field,
+        message: getMinimumWordMessage(label, minWords)
+      })
+    }
   }
 
   return issues
@@ -203,8 +240,19 @@ export function validateReusableAnswers(
   const issues: ReusableAnswerIssue[] = []
 
   for (const { field, label } of requiredReusableAnswerFields) {
-    if (answers[field].trim() === "") {
+    if ((answers[field] ?? "").trim() === "") {
       issues.push({ field, message: `${label} is required.` })
+    }
+  }
+
+  for (const { field, label, minWords } of reusableAnswerWordRules) {
+    const value = answers[field] ?? ""
+
+    if (value.trim() !== "" && countWords(value) < minWords) {
+      issues.push({
+        field,
+        message: getMinimumWordMessage(label, minWords)
+      })
     }
   }
 

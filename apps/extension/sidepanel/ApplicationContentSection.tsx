@@ -30,6 +30,15 @@ export function ApplicationContentSection({
   status,
   statusRef
 }: ApplicationContentSectionProps) {
+  const strengthsIssue = getApplicationContentIssueForField(
+    issues,
+    "strengthsAnswer"
+  )
+  const availabilityIssue = getApplicationContentIssueForField(
+    issues,
+    "availabilityAnswer"
+  )
+
   return (
     <section className="panel-section">
       <h2>Application Content</h2>
@@ -110,7 +119,11 @@ export function ApplicationContentSection({
 
         <label>
           Strengths answer
+          {saveAttempted && strengthsIssue && (
+            <span className="field-alert">{strengthsIssue}</span>
+          )}
           <textarea
+            aria-invalid={Boolean(saveAttempted && strengthsIssue)}
             value={draft.strengthsAnswer}
             onChange={(event) =>
               onFieldChange("strengthsAnswer", event.target.value)
@@ -120,7 +133,11 @@ export function ApplicationContentSection({
 
         <label>
           Availability answer
+          {saveAttempted && availabilityIssue && (
+            <span className="field-alert">{availabilityIssue}</span>
+          )}
           <textarea
+            aria-invalid={Boolean(saveAttempted && availabilityIssue)}
             value={draft.availabilityAnswer}
             onChange={(event) =>
               onFieldChange("availabilityAnswer", event.target.value)

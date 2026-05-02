@@ -55,6 +55,7 @@ import {
   updateApplication
 } from "../lib/storage.ts"
 import {
+  countWords,
   validateApplicationContentDraft,
   validateJobAnalysisDraft,
   validateProfile,
@@ -1014,6 +1015,35 @@ test("validates application content draft fields", () => {
   )
 })
 
+test("validates application content minimum word counts", () => {
+  assert.equal(countWords("  three clear words  "), 3)
+
+  const issues = validateApplicationContentDraft({
+    coverLetter:
+      "This cover letter has more detail but still not nearly enough words for a credible saved application draft.",
+    profileSummary:
+      "Analyst with payments experience, stakeholder management, UAT, and delivery.",
+    motivationAnswer:
+      "This role matches my product analysis background and interest in delivery.",
+    strengthsAnswer: "Stakeholder management and requirements analysis.",
+    availabilityAnswer: "Next week."
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    [
+      "coverLetter",
+      "profileSummary",
+      "motivationAnswer",
+      "strengthsAnswer",
+      "availabilityAnswer"
+    ]
+  )
+  assert.ok(
+    issues.every((issue) => issue.message.includes("must be at least"))
+  )
+})
+
 test("validates reusable answer fields", () => {
   const issues = validateReusableAnswers({
     sponsorshipAnswer: "",
@@ -1029,6 +1059,33 @@ test("validates reusable answer fields", () => {
       "relocationAnswer",
       "workAuthorisationAnswer",
       "noticePeriodAnswer"
+    ]
+  )
+})
+
+test("validates reusable answer minimum word counts when provided", () => {
+  const issues = validateReusableAnswers({
+    sponsorshipAnswer: "No sponsorship needed.",
+    relocationAnswer: "Open to relocate.",
+    workAuthorisationAnswer: "I can work.",
+    noticePeriodAnswer: "One month.",
+    salaryExpectationAnswer: "GBP 45k",
+    motivationAnswer: "Strong match.",
+    strengthsAnswer: "Requirements and UAT.",
+    availabilityAnswer: "Next week."
+  })
+
+  assert.deepEqual(
+    issues.map((issue) => issue.field),
+    [
+      "sponsorshipAnswer",
+      "relocationAnswer",
+      "workAuthorisationAnswer",
+      "noticePeriodAnswer",
+      "salaryExpectationAnswer",
+      "motivationAnswer",
+      "strengthsAnswer",
+      "availabilityAnswer"
     ]
   )
 })
