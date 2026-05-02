@@ -1,6 +1,11 @@
-import type { CandidateProfile, ReusableAnswers } from "./storage"
+import type {
+  ApplicationContentDraft,
+  CandidateProfile,
+  ReusableAnswers
+} from "./storage"
 
 export type ProfileField = "firstName" | "lastName" | "email" | "phone"
+export type ApplicationContentField = keyof ApplicationContentDraft
 export type ReusableAnswerField =
   | "sponsorshipAnswer"
   | "relocationAnswer"
@@ -62,6 +67,18 @@ export function getReusableAnswerValues(
     motivationAnswer: answers.motivationAnswer,
     strengthsAnswer: answers.strengthsAnswer,
     availabilityAnswer: answers.availabilityAnswer
+  }
+}
+
+export function getApplicationContentValues(
+  content: ApplicationContentDraft
+): Record<ApplicationContentField, string> {
+  return {
+    coverLetter: content.coverLetter,
+    profileSummary: content.profileSummary,
+    motivationAnswer: content.motivationAnswer,
+    strengthsAnswer: content.strengthsAnswer,
+    availabilityAnswer: content.availabilityAnswer
   }
 }
 
@@ -161,6 +178,65 @@ export function detectReusableAnswerFromText(
     ])
   ) {
     return "salaryExpectationAnswer"
+  }
+
+  if (
+    includesAny(text, [
+      "why are you interested",
+      "why do you want",
+      "why this role",
+      "motivation",
+      "why join"
+    ])
+  ) {
+    return "motivationAnswer"
+  }
+
+  if (
+    includesAny(text, [
+      "strength",
+      "strengths",
+      "what can you bring",
+      "why are you a good fit",
+      "relevant experience"
+    ])
+  ) {
+    return "strengthsAnswer"
+  }
+
+  if (includesAny(text, ["availability", "available for interview"])) {
+    return "availabilityAnswer"
+  }
+
+  return null
+}
+
+export function detectApplicationContentFromText(
+  fieldText: string
+): ApplicationContentField | null {
+  const text = fieldText.toLowerCase()
+
+  if (
+    includesAny(text, [
+      "cover letter",
+      "covering letter",
+      "supporting statement",
+      "personal statement"
+    ])
+  ) {
+    return "coverLetter"
+  }
+
+  if (
+    includesAny(text, [
+      "profile summary",
+      "professional summary",
+      "brief summary",
+      "about you",
+      "tell us about yourself"
+    ])
+  ) {
+    return "profileSummary"
   }
 
   if (

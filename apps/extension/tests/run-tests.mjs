@@ -2,12 +2,15 @@ import assert from "node:assert/strict"
 import {
   applicationsToCsv,
   filterApplications,
+  getApplicationValidationMetrics,
   hasApplicationWithUrl
 } from "../lib/applications.ts"
 import {
   canFillInput,
+  detectApplicationContentFromText,
   detectFieldFromText,
   detectReusableAnswerFromText,
+  getApplicationContentValues,
   getFieldValues,
   getNameParts,
   getReusableAnswerValues
@@ -19,22 +22,29 @@ import {
 } from "../lib/job-page.ts"
 import { inferJobFitAnalysis } from "../lib/job-analysis.ts"
 import { generateApplicationContentDraft } from "../lib/content-generation.ts"
+import { estimateOpenAICostUsd } from "../lib/openai.ts"
 import {
+  clearAIUsageLog,
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
+  clearOpenAISettings,
   clearProfile,
   clearReusableAnswers,
   clearTrackerDraft,
   deleteApplication,
+  getAIUsageLog,
   getApplicationContentDraft,
   getApplications,
   getJobAnalysisDraft,
+  getOpenAISettings,
   getProfile,
   getReusableAnswers,
   getTrackerDraft,
+  logAIUsage,
   saveApplicationContentDraft,
   saveApplication,
   saveJobAnalysisDraft,
+  saveOpenAISettings,
   saveProfile,
   saveReusableAnswers,
   saveTrackerDraft,
@@ -139,6 +149,25 @@ test("maps reusable answers to autofill fields", () => {
   )
 })
 
+test("maps application content to insertable fields", () => {
+  assert.deepEqual(
+    getApplicationContentValues({
+      coverLetter: "Tailored cover letter.",
+      profileSummary: "Profile summary.",
+      motivationAnswer: "Motivation answer.",
+      strengthsAnswer: "Strengths answer.",
+      availabilityAnswer: "Availability answer."
+    }),
+    {
+      coverLetter: "Tailored cover letter.",
+      profileSummary: "Profile summary.",
+      motivationAnswer: "Motivation answer.",
+      strengthsAnswer: "Strengths answer.",
+      availabilityAnswer: "Availability answer."
+    }
+  )
+})
+
 test("detects obvious reusable answer questions", () => {
   assert.equal(
     detectReusableAnswerFromText("Do you require visa sponsorship?"),
@@ -174,10 +203,34 @@ test("detects obvious reusable answer questions", () => {
   )
 })
 
+test("detects obvious application content fields", () => {
+  assert.equal(
+    detectApplicationContentFromText("Upload or paste your cover letter"),
+    "coverLetter"
+  )
+  assert.equal(
+    detectApplicationContentFromText("Tell us about yourself"),
+    "profileSummary"
+  )
+  assert.equal(
+    detectApplicationContentFromText("Why are you interested in this role?"),
+    "motivationAnswer"
+  )
+  assert.equal(
+    detectApplicationContentFromText("What strengths can you bring?"),
+    "strengthsAnswer"
+  )
+  assert.equal(
+    detectApplicationContentFromText("What is your availability for interview?"),
+    "availabilityAnswer"
+  )
+})
+
 test("ignores unclear fields", () => {
   assert.equal(detectFieldFromText("text", "search jobs"), null)
   assert.equal(detectFieldFromText("url", "portfolio"), null)
   assert.equal(detectReusableAnswerFromText("Tell us about yourself"), null)
+  assert.equal(detectApplicationContentFromText("Internal referral code"), null)
 })
 
 test("fills only empty visible enabled supported inputs", () => {
@@ -465,6 +518,110 @@ test("saves and loads reusable answers", async () => {
   await clearReusableAnswers()
 
   assert.equal(await getReusableAnswers(), null)
+})
+
+test("logs and clears AI usage entries", async () => {
+  resetStorage()
+
+  const entry = await logAIUsage({
+    featureName: "Application content generation",
+    model: "local-template",
+    approximateCostUsd: 0,
+    createdAt: "2026-05-02T12:00:00.000Z"
+  })
+
+  assert.equal(entry.featureName, "Application content generation")
+  assert.equal(entry.model, "local-template")
+  assert.equal(entry.approximateCostUsd, 0)
+  assert.equal(entry.createdAt, "2026-05-02T12:00:00.000Z")
+
+  await logAIUsage({
+    featureName: "Job analysis",
+    model: "controlled-cost-model",
+    approximateCostUsd: 0.004,
+    createdAt: "2026-05-02T12:01:00.000Z"
+  })
+
+  assert.deepEqual(
+    (await getAIUsageLog()).map((usageEntry) => ({
+      featureName: usageEntry.featureName,
+      model: usageEntry.model,
+      approximateCostUsd: usageEntry.approximateCostUsd,
+      createdAt: usageEntry.createdAt
+    })),
+    [
+      {
+        featureName: "Job analysis",
+        model: "controlled-cost-model",
+        approximateCostUsd: 0.004,
+        createdAt: "2026-05-02T12:01:00.000Z"
+      },
+      {
+        featureName: "Application content generation",
+        model: "local-template",
+        approximateCostUsd: 0,
+        createdAt: "2026-05-02T12:00:00.000Z"
+      }
+    ]
+  )
+
+  await clearAIUsageLog()
+
+  assert.deepEqual(await getAIUsageLog(), [])
+})
+
+test("saves and clears OpenAI settings", async () => {
+  resetStorage()
+
+  await saveOpenAISettings({
+    apiKey: "sk-test",
+    model: "gpt-4.1-nano",
+    monthlyBudgetUsd: 1.5
+  })
+
+  assert.deepEqual(await getOpenAISettings(), {
+    apiKey: "sk-test",
+    model: "gpt-4.1-nano",
+    monthlyBudgetUsd: 1.5
+  })
+
+  await clearOpenAISettings()
+
+  assert.deepEqual(await getOpenAISettings(), {
+    apiKey: "",
+    model: "gpt-4.1-mini",
+    monthlyBudgetUsd: 2
+  })
+})
+
+test("estimates OpenAI usage cost from token counts", () => {
+  assert.equal(
+    estimateOpenAICostUsd("gpt-4.1-mini", {
+      input_tokens: 1000,
+      output_tokens: 500
+    }),
+    0.0012
+  )
+})
+
+test("normalizes legacy AI usage log entries", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "ai-usage-log": [
+      {
+        featureName: "Legacy feature"
+      }
+    ]
+  })
+
+  const [entry] = await getAIUsageLog()
+
+  assert.equal(entry.featureName, "Legacy feature")
+  assert.equal(entry.model, "unknown")
+  assert.equal(entry.approximateCostUsd, 0)
+  assert.equal(typeof entry.id, "string")
+  assert.equal(typeof entry.createdAt, "string")
 })
 
 test("loads legacy reusable answers with snippet defaults", async () => {
@@ -1052,6 +1209,56 @@ test("exports applications to csv", () => {
       '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","Applied","Follow up","2026-04-10","Remote, EU role","2026-04-01T12:00:00.000Z","Tailored cover letter.","Analyst profile summary.","Motivation answer.","Strengths answer.","Available in one month."'
     ].join("\n")
   )
+})
+
+test("summarizes founder validation metrics from applications", () => {
+  const metrics = getApplicationValidationMetrics([
+    {
+      id: "saved",
+      title: "Saved role",
+      url: "https://example.com/saved",
+      source: "example.com",
+      createdAt: "2026-05-01T00:00:00.000Z",
+      status: "Saved"
+    },
+    {
+      id: "applied",
+      title: "Applied role",
+      url: "https://jobs.example.com/applied",
+      source: "jobs.example.com",
+      nextAction: "Follow up",
+      createdAt: "2026-05-02T00:00:00.000Z",
+      status: "Applied",
+      contentSnapshot: {
+        coverLetter: "Cover letter.",
+        profileSummary: "Profile summary.",
+        motivationAnswer: "Motivation.",
+        strengthsAnswer: "Strengths.",
+        availabilityAnswer: "Available.",
+        savedAt: "2026-05-02T12:00:00.000Z"
+      }
+    },
+    {
+      id: "interview",
+      title: "Interview role",
+      url: "https://jobs.example.com/interview",
+      source: "jobs.example.com",
+      nextActionDate: "2026-05-10",
+      createdAt: "2026-05-03T00:00:00.000Z",
+      status: "Interview"
+    }
+  ])
+
+  assert.equal(metrics.totalApplications, 3)
+  assert.equal(metrics.applicationsWithContentSnapshots, 1)
+  assert.equal(metrics.applicationsWithNextActions, 2)
+  assert.equal(metrics.statusCounts.Saved, 1)
+  assert.equal(metrics.statusCounts.Applied, 1)
+  assert.equal(metrics.statusCounts.Interview, 1)
+  assert.deepEqual(metrics.sourceCounts, [
+    { source: "jobs.example.com", count: 2 },
+    { source: "example.com", count: 1 }
+  ])
 })
 
 let failed = 0

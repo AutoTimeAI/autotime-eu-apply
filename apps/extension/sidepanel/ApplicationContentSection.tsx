@@ -12,6 +12,7 @@ type ApplicationContentSectionProps = {
     value: ApplicationContentDraft[K]
   ) => void
   onGenerate: () => void
+  onInsertCurrentPage: () => void
   onSave: () => void
   saveAttempted: boolean
   status: string
@@ -23,6 +24,7 @@ export function ApplicationContentSection({
   issues,
   onFieldChange,
   onGenerate,
+  onInsertCurrentPage,
   onSave,
   saveAttempted,
   status,
@@ -132,6 +134,10 @@ export function ApplicationContentSection({
 
         <button type="button" onClick={onGenerate}>
           Generate from Saved Data
+        </button>
+
+        <button type="button" onClick={onInsertCurrentPage}>
+          Insert Saved Content
         </button>
 
         {status && (

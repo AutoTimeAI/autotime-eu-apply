@@ -1,0 +1,40 @@
+# Release Readiness
+
+Use this checklist before tagging an MVP build or sharing the unpacked Chrome
+extension with testers.
+
+## Privacy Basics
+
+- Data stays local-first in `chrome.storage.local`.
+- The extension does not auto-submit forms.
+- Autofill and saved-content insertion only run after a user clicks a side-panel
+  button.
+- Saved application content is inserted only into empty matching textareas.
+- No Firebase, backend, or external job API is used in the current extension
+  flow.
+- AI usage logging records feature name, timestamp, model, and estimated cost,
+  but does not send data anywhere by itself.
+- Clear saved-data controls are available for profile, reusable answers, job
+  analysis, application content, tracker draft, and usage log.
+
+## Release Checks
+
+1. Run `pnpm --filter extension test`.
+2. Run `pnpm --filter extension typecheck`.
+3. Run `pnpm build:extension`.
+4. Load or reload `apps/extension/.output/chrome-mv3` in Chrome.
+5. Complete `docs/extension-smoke-test.md`.
+6. Confirm no extension flow submits an application form.
+7. Confirm generated or saved content requires an explicit user click before
+   insertion.
+8. Confirm CSV export contains only the user's locally saved applications.
+9. Record the build date, commit SHA, and smoke-test result in founder
+   validation notes.
+
+## Known MVP Risks
+
+- AI-backed generation needs live API-key testing before any wider release.
+- Priority job-site extraction is selector-based and should be tested on live
+  LinkedIn, Greenhouse, Lever, and Workday pages before a wider release.
+- Local storage is browser-local; users need to export CSV if they want a backup
+  of saved applications.

@@ -1,11 +1,18 @@
-import { getProfile, getReusableAnswers } from "../lib/storage"
+import {
+  getApplicationContentDraft,
+  getProfile,
+  getReusableAnswers
+} from "../lib/storage"
 import { inferJobPageDetails, type JobPageDetails } from "../lib/job-page"
 import {
   canFillInput,
+  detectApplicationContentFromText,
   detectFieldFromText,
   detectReusableAnswerFromText,
+  getApplicationContentValues,
   getFieldValues,
   getReusableAnswerValues,
+  type ApplicationContentField,
   type ReusableAnswerField,
   type ProfileField
 } from "../lib/autofill"
@@ -49,6 +56,12 @@ function detectReusableField(
   textarea: HTMLTextAreaElement
 ): ReusableAnswerField | null {
   return detectReusableAnswerFromText(getControlText(textarea))
+}
+
+function detectApplicationContentField(
+  textarea: HTMLTextAreaElement
+): ApplicationContentField | null {
+  return detectApplicationContentFromText(getControlText(textarea))
 }
 
 function canFill(input: HTMLInputElement) {
@@ -234,10 +247,48 @@ async function autofillProfile(): Promise<AutofillResponse> {
   return { filledFields }
 }
 
+async function insertApplicationContent(): Promise<AutofillResponse> {
+  const content = await getApplicationContentDraft()
+
+  if (!content) {
+    return {
+      filledFields: [],
+      message: "No saved application content found"
+    }
+  }
+
+  const contentValues = getApplicationContentValues(content)
+  const filledFields: string[] = []
+
+  document
+    .querySelectorAll<HTMLTextAreaElement>("textarea")
+    .forEach((textarea) => {
+      if (!canFillTextarea(textarea)) {
+        return
+      }
+
+      const field = detectApplicationContentField(textarea)
+      if (!field || !contentValues[field]) {
+        return
+      }
+
+      setControlValue(textarea, contentValues[field])
+      filledFields.push(field)
+      console.log(`[AutoTime EU Apply] Inserted ${field}`, textarea)
+    })
+
+  return { filledFields }
+}
+
 export function registerAutotimeContentScript() {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "AUTOTIME_AUTOFILL_PROFILE") {
       autofillProfile().then(sendResponse)
+      return true
+    }
+
+    if (message?.type === "AUTOTIME_INSERT_APPLICATION_CONTENT") {
+      insertApplicationContent().then(sendResponse)
       return true
     }
 

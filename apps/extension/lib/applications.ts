@@ -2,6 +2,14 @@ import type { ApplicationRecord, ApplicationStatus } from "./storage"
 
 export type ApplicationStatusFilter = "all" | ApplicationStatus
 
+export type ApplicationValidationMetrics = {
+  totalApplications: number
+  applicationsWithContentSnapshots: number
+  applicationsWithNextActions: number
+  statusCounts: Record<ApplicationStatus, number>
+  sourceCounts: Array<{ source: string; count: number }>
+}
+
 function normalizeApplicationUrl(url: string) {
   try {
     const parsed = new URL(url)
@@ -104,4 +112,45 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
   return [headers, ...rows]
     .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
     .join("\n")
+}
+
+export function getApplicationValidationMetrics(
+  applications: ApplicationRecord[]
+): ApplicationValidationMetrics {
+  const statusCounts: Record<ApplicationStatus, number> = {
+    Saved: 0,
+    Applying: 0,
+    Applied: 0,
+    Interview: 0,
+    Rejected: 0,
+    Closed: 0
+  }
+  const sourceCounts = new Map<string, number>()
+  let applicationsWithContentSnapshots = 0
+  let applicationsWithNextActions = 0
+
+  for (const application of applications) {
+    statusCounts[application.status] += 1
+
+    if (application.contentSnapshot) {
+      applicationsWithContentSnapshots += 1
+    }
+
+    if (application.nextAction || application.nextActionDate) {
+      applicationsWithNextActions += 1
+    }
+
+    const source = application.source || "Unknown"
+    sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1)
+  }
+
+  return {
+    totalApplications: applications.length,
+    applicationsWithContentSnapshots,
+    applicationsWithNextActions,
+    statusCounts,
+    sourceCounts: Array.from(sourceCounts.entries())
+      .map(([source, count]) => ({ source, count }))
+      .sort((first, second) => second.count - first.count)
+  }
 }

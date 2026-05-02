@@ -10,28 +10,37 @@ import { generateApplicationContentDraft } from "../lib/content-generation"
 import {
   applicationsToCsv,
   filterApplications,
+  getApplicationValidationMetrics,
   hasApplicationWithUrl,
   type ApplicationStatusFilter
 } from "../lib/applications"
 import {
+  clearAIUsageLog,
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
+  clearOpenAISettings,
   clearProfile,
   clearReusableAnswers,
   clearTrackerDraft,
   deleteApplication,
+  getAIUsageLog,
   getApplications,
   getApplicationContentDraft,
   getJobAnalysisDraft,
+  getOpenAISettings,
   getProfile,
   getReusableAnswers,
   getTrackerDraft,
   saveApplication,
   saveApplicationContentDraft,
   saveJobAnalysisDraft,
+  saveOpenAISettings,
   saveProfile,
   saveReusableAnswers,
   saveTrackerDraft,
+  logAIUsage,
+  type AIUsageLogEntry,
+  type OpenAISettings,
   updateApplication,
   type ApplicationRecord,
   type ApplicationContentSnapshot,
@@ -42,6 +51,10 @@ import {
   type TrackerDraft
 } from "../lib/storage"
 import {
+  generateAIApplicationContentDraft,
+  generateAIJobAnalysis
+} from "../lib/openai"
+import {
   emptyApplicationContentDraft,
   emptyJobAnalysisDraft,
   emptyProfile,
@@ -51,6 +64,7 @@ import {
 } from "./constants"
 import { ApplicationsSection } from "./ApplicationsSection"
 import { ApplicationContentSection } from "./ApplicationContentSection"
+import { AISettingsSection } from "./AISettingsSection"
 import { JobAnalysisSection } from "./JobAnalysisSection"
 import { ProfileSection } from "./ProfileSection"
 import { ReusableAnswersSection } from "./ReusableAnswersSection"
@@ -63,6 +77,8 @@ import {
   TrackerView
 } from "./SavedViews"
 import { TrackerSection } from "./TrackerSection"
+import { UsageLogSection } from "./UsageLogSection"
+import { ValidationMetricsSection } from "./ValidationMetricsSection"
 import type { AutofillResponse, JobPageResponse, SaveAttempts } from "./types"
 import { getHostname, normalizeApplicationUrl } from "./utils"
 import {
@@ -86,7 +102,10 @@ function SidePanelApp() {
     "application-content-view": false,
     tracker: false,
     "tracker-view": false,
-    applications: false
+    applications: false,
+    "usage-log": false,
+    "validation-metrics": false,
+    "ai-settings": false
   })
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
   const [savedProfile, setSavedProfile] = useState<CandidateProfile | null>(
@@ -110,6 +129,12 @@ function SidePanelApp() {
   const [savedTrackerDraft, setSavedTrackerDraft] =
     useState<TrackerDraft | null>(null)
   const [applications, setApplications] = useState<ApplicationRecord[]>([])
+  const [aiUsageLog, setAIUsageLog] = useState<AIUsageLogEntry[]>([])
+  const [openAISettings, setOpenAISettings] = useState<OpenAISettings>({
+    apiKey: "",
+    model: "gpt-4.1-mini",
+    monthlyBudgetUsd: 2
+  })
   const [applicationSearchQuery, setApplicationSearchQuery] = useState("")
   const [applicationStatusFilter, setApplicationStatusFilter] =
     useState<ApplicationStatusFilter>("all")
@@ -119,12 +144,16 @@ function SidePanelApp() {
   const [contentStatus, setContentStatus] = useState("")
   const [trackerStatus, setTrackerStatus] = useState("")
   const [applicationsStatus, setApplicationsStatus] = useState("")
+  const [usageLogStatus, setUsageLogStatus] = useState("")
+  const [aiSettingsStatus, setAISettingsStatus] = useState("")
   const profileStatusRef = useRef<HTMLParagraphElement | null>(null)
   const reusableStatusRef = useRef<HTMLParagraphElement | null>(null)
   const jobStatusRef = useRef<HTMLParagraphElement | null>(null)
   const contentStatusRef = useRef<HTMLParagraphElement | null>(null)
   const trackerStatusRef = useRef<HTMLParagraphElement | null>(null)
   const applicationsStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const usageLogStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const aiSettingsStatusRef = useRef<HTMLParagraphElement | null>(null)
 
   const profileIssues = useMemo(() => validateProfile(profile), [profile])
   const jobAnalysisIssues = useMemo(
@@ -152,6 +181,10 @@ function SidePanelApp() {
       ),
     [applications, applicationSearchQuery, applicationStatusFilter]
   )
+  const validationMetrics = useMemo(
+    () => getApplicationValidationMetrics(applications),
+    [applications]
+  )
 
   const markSaveAttempted = (section: Section) => {
     setSaveAttempts((current) => ({ ...current, [section]: true }))
@@ -174,7 +207,10 @@ function SidePanelApp() {
       "application-content-view": false,
       tracker: false,
       "tracker-view": false,
-      applications: false
+      applications: false,
+      "usage-log": false,
+      "validation-metrics": false,
+      "ai-settings": false
     })
     setStatus("")
     setReusableStatus("")
@@ -182,11 +218,23 @@ function SidePanelApp() {
     setContentStatus("")
     setTrackerStatus("")
     setApplicationsStatus("")
+    setUsageLogStatus("")
+    setAISettingsStatus("")
   }
 
   const loadApplications = async () => {
     const savedApplications = await getApplications()
     setApplications(savedApplications)
+  }
+
+  const loadAIUsageLog = async () => {
+    const savedUsageLog = await getAIUsageLog()
+    setAIUsageLog(savedUsageLog)
+  }
+
+  const loadOpenAISettings = async () => {
+    const savedOpenAISettings = await getOpenAISettings()
+    setOpenAISettings(savedOpenAISettings)
   }
 
   useEffect(() => {
@@ -217,6 +265,8 @@ function SidePanelApp() {
       }
 
       await loadApplications()
+      await loadAIUsageLog()
+      await loadOpenAISettings()
     }
 
     loadProfile()
@@ -234,7 +284,10 @@ function SidePanelApp() {
       "application-content-view": null,
       tracker: trackerStatusRef.current,
       "tracker-view": null,
-      applications: applicationsStatusRef.current
+      applications: applicationsStatusRef.current,
+      "usage-log": usageLogStatusRef.current,
+      "validation-metrics": null,
+      "ai-settings": aiSettingsStatusRef.current
     }
 
     const activeStatus = {
@@ -248,7 +301,10 @@ function SidePanelApp() {
       "application-content-view": "",
       tracker: trackerStatus,
       "tracker-view": "",
-      applications: applicationsStatus
+      applications: applicationsStatus,
+      "usage-log": usageLogStatus,
+      "validation-metrics": "",
+      "ai-settings": aiSettingsStatus
     }[activeSection]
 
     const statusElement = statusRefs[activeSection]
@@ -266,7 +322,9 @@ function SidePanelApp() {
     jobStatus,
     contentStatus,
     trackerStatus,
-    applicationsStatus
+    applicationsStatus,
+    usageLogStatus,
+    aiSettingsStatus
   ])
 
   const updateField = <K extends keyof CandidateProfile>(
@@ -305,6 +363,24 @@ function SidePanelApp() {
   ) => {
     setTrackerDraft((current) => ({ ...current, [key]: value }))
   }
+
+  const updateOpenAISetting = <K extends keyof OpenAISettings>(
+    key: K,
+    value: OpenAISettings[K]
+  ) => {
+    setOpenAISettings((current) => ({ ...current, [key]: value }))
+  }
+
+  const getCurrentMonthAIUsageCost = () => {
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    return aiUsageLog
+      .filter((entry) => entry.createdAt.slice(0, 7) === currentMonth)
+      .reduce((sum, entry) => sum + entry.approximateCostUsd, 0)
+  }
+
+  const canUseOpenAI = () =>
+    openAISettings.apiKey.trim() !== "" &&
+    getCurrentMonthAIUsageCost() < openAISettings.monthlyBudgetUsd
 
   const updateSavedApplication = async (
     id: string,
@@ -469,14 +545,36 @@ function SidePanelApp() {
       return
     }
 
-    const analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
+    let analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
+    let usedAI = false
+
+    if (canUseOpenAI()) {
+      try {
+        const aiAnalysis = await generateAIJobAnalysis({
+          settings: openAISettings,
+          draft: jobAnalysisDraft,
+          profile: savedProfile
+        })
+        analysis = aiAnalysis.value
+        const usageLogEntry = await logAIUsage({
+          featureName: "Job analysis",
+          model: openAISettings.model,
+          approximateCostUsd: aiAnalysis.approximateCostUsd
+        })
+        setAIUsageLog((current) => [usageLogEntry, ...current])
+        usedAI = true
+      } catch {
+        analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
+      }
+    }
+
     const analysedDraft = { ...jobAnalysisDraft, ...analysis }
 
     await saveJobAnalysisDraft(analysedDraft)
     setSavedJobAnalysisDraft(analysedDraft)
     setJobAnalysisDraft(emptyJobAnalysisDraft)
     clearSaveAttempt("job-analysis")
-    setJobStatus("Job analysis draft saved")
+    setJobStatus(usedAI ? "AI job analysis draft saved" : "Job analysis draft saved")
     setTimeout(() => setJobStatus(""), 3500)
   }
 
@@ -498,23 +596,93 @@ function SidePanelApp() {
     setTimeout(() => setContentStatus(""), 3500)
   }
 
-  const handleGenerateApplicationContent = () => {
+  const handleGenerateApplicationContent = async () => {
     if (!savedProfile || !savedJobAnalysisDraft) {
       setContentStatus("Save a profile and job analysis before generating.")
       setTimeout(() => setContentStatus(""), 3500)
       return
     }
 
-    const generatedDraft = generateApplicationContentDraft(
+    let generatedDraft = generateApplicationContentDraft(
       savedProfile,
       savedJobAnalysisDraft,
       savedReusableAnswers
     )
+    let usedAI = false
+
+    if (canUseOpenAI()) {
+      try {
+        const aiContent = await generateAIApplicationContentDraft({
+          settings: openAISettings,
+          profile: savedProfile,
+          job: savedJobAnalysisDraft,
+          reusableAnswers: savedReusableAnswers
+        })
+        generatedDraft = aiContent.value
+        const usageLogEntry = await logAIUsage({
+          featureName: "Application content generation",
+          model: openAISettings.model,
+          approximateCostUsd: aiContent.approximateCostUsd
+        })
+        setAIUsageLog((current) => [usageLogEntry, ...current])
+        usedAI = true
+      } catch {
+        generatedDraft = generateApplicationContentDraft(
+          savedProfile,
+          savedJobAnalysisDraft,
+          savedReusableAnswers
+        )
+      }
+    }
 
     setApplicationContentDraft(generatedDraft)
+    if (!usedAI) {
+      const usageLogEntry = await logAIUsage({
+        featureName: "Application content generation",
+        model: "local-template",
+        approximateCostUsd: 0
+      })
+      setAIUsageLog((current) => [usageLogEntry, ...current])
+    }
     clearSaveAttempt("application-content")
-    setContentStatus("Editable application content generated")
+    setContentStatus(
+      usedAI
+        ? "Editable AI application content generated"
+        : "Editable application content generated"
+    )
     setTimeout(() => setContentStatus(""), 3500)
+  }
+
+  const handleInsertApplicationContent = async () => {
+    const tabs = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+    const activeTab = tabs[0]
+
+    if (!activeTab?.id) {
+      setContentStatus("Could not access current tab")
+      setTimeout(() => setContentStatus(""), 2500)
+      return
+    }
+
+    try {
+      const response = (await chrome.tabs.sendMessage(activeTab.id, {
+        type: "AUTOTIME_INSERT_APPLICATION_CONTENT"
+      })) as AutofillResponse
+
+      if (response.message) {
+        setContentStatus(response.message)
+      } else if (response.filledFields.length === 0) {
+        setContentStatus("No obvious empty content fields found")
+      } else {
+        setContentStatus(`Inserted ${response.filledFields.length} fields`)
+      }
+    } catch {
+      setContentStatus("Content insertion is not available on this page")
+    }
+
+    setTimeout(() => setContentStatus(""), 2500)
   }
 
   const saveTrackerApplication = async (draft: TrackerDraft) => {
@@ -676,6 +844,27 @@ function SidePanelApp() {
     setTrackerDraft(emptyTrackerDraft)
   }
 
+  const handleClearAIUsageLog = async () => {
+    await clearAIUsageLog()
+    setAIUsageLog([])
+    setUsageLogStatus("Usage log cleared")
+    setTimeout(() => setUsageLogStatus(""), 2500)
+  }
+
+  const handleSaveOpenAISettings = async () => {
+    await saveOpenAISettings(openAISettings)
+    setAISettingsStatus("AI settings saved")
+    setTimeout(() => setAISettingsStatus(""), 2500)
+  }
+
+  const handleClearOpenAISettings = async () => {
+    await clearOpenAISettings()
+    const clearedSettings = await getOpenAISettings()
+    setOpenAISettings(clearedSettings)
+    setAISettingsStatus("AI settings cleared")
+    setTimeout(() => setAISettingsStatus(""), 2500)
+  }
+
   return (
     <main className="side-panel-shell">
       <header>
@@ -742,6 +931,7 @@ function SidePanelApp() {
           issues={applicationContentIssues}
           onFieldChange={updateApplicationContentField}
           onGenerate={handleGenerateApplicationContent}
+          onInsertCurrentPage={handleInsertApplicationContent}
           onSave={handleSaveApplicationContent}
           saveAttempted={saveAttempts["application-content"]}
           status={contentStatus}
@@ -779,6 +969,24 @@ function SidePanelApp() {
           onSearchQueryChange={setApplicationSearchQuery}
           onStatusFilterChange={setApplicationStatusFilter}
           onUpdateApplication={updateSavedApplication}
+        />
+      ) : activeSection === "usage-log" ? (
+        <UsageLogSection
+          entries={aiUsageLog}
+          onClear={handleClearAIUsageLog}
+          status={usageLogStatus}
+          statusRef={usageLogStatusRef}
+        />
+      ) : activeSection === "validation-metrics" ? (
+        <ValidationMetricsSection metrics={validationMetrics} />
+      ) : activeSection === "ai-settings" ? (
+        <AISettingsSection
+          settings={openAISettings}
+          status={aiSettingsStatus}
+          statusRef={aiSettingsStatusRef}
+          onClear={handleClearOpenAISettings}
+          onFieldChange={updateOpenAISetting}
+          onSave={handleSaveOpenAISettings}
         />
       ) : (
         <section className="panel-section">

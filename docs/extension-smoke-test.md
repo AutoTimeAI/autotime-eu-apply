@@ -29,6 +29,9 @@ apps/extension/.output/chrome-mv3
    - Tracker
    - View Tracker
    - Applications
+   - Usage Log
+   - Validation Metrics
+   - AI Settings
 
 ## Validation
 
@@ -65,6 +68,16 @@ apps/extension/.output/chrome-mv3
 5. Click Autofill Current Page.
 6. Confirm matching empty fields are filled or a clear no-fields message appears.
 
+## Application Content Insertion
+
+1. Save application content.
+2. Open a page with obvious empty cover letter, profile summary, motivation,
+   strengths, or availability textareas.
+3. Open the Application Content tab in the side panel.
+4. Click Insert Saved Content.
+5. Confirm matching empty content fields are filled or a clear no-fields
+   message appears.
+
 ## Current Job Page Import
 
 1. Open a job posting page in the active tab.
@@ -88,6 +101,38 @@ apps/extension/.output/chrome-mv3
 9. Search for the edited next action.
 10. Export CSV and confirm the file includes the tracker fields.
 11. Delete the application and confirm it is removed from the list.
+
+## Usage Log
+
+1. Open the Application Content tab.
+2. Click Generate from Saved Data after saving the required profile and job
+   analysis.
+3. Open Usage Log.
+4. Confirm an `Application content generation` entry appears with model
+   `local-template` and `$0.0000` estimated cost.
+5. Click Clear Usage Log.
+6. Confirm the empty-state message appears and stays cleared after reopening the
+   side panel.
+
+## AI Settings
+
+1. Open AI Settings.
+2. Save a test model and monthly budget.
+3. Confirm the success message appears.
+4. Clear AI Settings.
+5. Confirm defaults return.
+6. If using a real API key for release validation, save it, generate job
+   analysis or application content, and confirm Usage Log records the selected
+   model and a non-negative estimated cost.
+
+## Validation Metrics
+
+1. Save at least one current tab or tracker entry to Applications.
+2. Set one application to `Applied` and one to `Interview` if sample data is
+   available.
+3. Open Validation Metrics.
+4. Confirm total applications, status outcomes, source counts, content snapshot
+   count, and next-action count match the Applications list.
 
 ## Clear Saved Data
 

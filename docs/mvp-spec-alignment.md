@@ -15,7 +15,7 @@ Primary source docs reviewed:
 
 The repo has a strong local-first Chrome extension foundation, but it is not
 yet complete against the full uploaded MVP spec. Current completion is roughly
-75-80% of the full spec.
+85-90% of the full spec.
 
 ## Implemented
 
@@ -40,27 +40,31 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
   and saved job analysis.
 - Reusable answer snippets for sponsorship, relocation, work authorisation,
   notice period, salary expectation, motivation, strengths, and availability.
+- AI usage/cost logging storage and side-panel view by feature name, timestamp,
+  model, and approximate cost.
+- Optional controlled-cost OpenAI Responses API integration for AI-assisted job
+  analysis and editable application content generation, with local fallback.
+- Generated or saved application content snapshots attached to tracker records.
 - Editable application tracker with search, status filtering, notes, next
   action, next action date, delete, duplicate URL detection, and CSV export.
 - Spec-aligned tracker statuses: `Saved`, `Applying`, `Applied`, `Interview`,
   `Rejected`, and `Closed`, with legacy lowercase status normalization.
 - Basic form autofill for obvious name, email, phone, and reusable answer
   textarea prompts.
+- User-approved insertion of saved application content into obvious empty
+  content textareas.
+- Privacy basics and release-readiness checklist covering local storage,
+  explicit user actions, no auto-submit behavior, and manual release checks.
+- Founder validation metrics view for tracked applications, status outcomes,
+  content snapshots, next actions, and sources.
 - Unit tests for autofill, storage, validation, job page inference, scoring,
   application filtering, duplicate detection, update/delete, and CSV export.
 - Side-panel component split so `main.tsx` now mostly acts as orchestration.
 
 ## Full-Spec Gaps
 
-- AI-backed analysis, positioning, and content generation using the approved
-  controlled-cost API model.
-- AI usage/cost logging by feature name, timestamp, model, and approximate cost.
-- Generated tailored content snapshots attached to tracker records.
-- User-approved insertion of generated content, not only profile/reusable answer
-  autofill.
-- Privacy basics and release-readiness notes from the UAT pack.
-- Founder validation loop: real UK/EU jobs analysed, applications sent, outcomes
-  tracked, and validation metrics recorded.
+- Founder validation loop still needs real UK/EU jobs analysed and outcome notes
+  recorded against live applications.
 
 ## Explicitly Out Of Scope For V1
 
@@ -75,8 +79,7 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 ## Recommended Next Build Order
 
 1. Add generated content snapshot fields to tracker/application records.
-2. Add controlled-cost AI integration for analysis, positioning, and editable
-   content generation.
-3. Add usage/cost logging for AI calls.
-4. Improve platform extraction for LinkedIn, Greenhouse, Lever, and Workday.
-5. Run the manual Chrome smoke test and record founder validation metrics.
+2. Run the manual Chrome smoke test and record founder validation metrics.
+3. Validate live priority-platform extraction on LinkedIn, Greenhouse, Lever,
+   and Workday.
+4. Tune prompts and budget defaults after real application use.

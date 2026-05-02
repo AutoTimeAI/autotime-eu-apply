@@ -21,7 +21,7 @@ Current status:
 
 - Repo implementation slice: usable local-first extension workflow is in place.
 - Full uploaded MVP spec: not complete yet.
-- Approximate spec completion: 75-80%.
+- Approximate spec completion: 85-90%.
 - Next milestone: close the full-spec MVP gaps listed in
   `docs/mvp-spec-alignment.md`, then run the manual Chrome smoke test.
 
@@ -38,7 +38,8 @@ The extension currently supports:
   highlights.
 - Country and notice-period profile inputs with required-field validation.
 - International phone validation against the selected country calling code.
-- Reusable answers for sponsorship, relocation, work authorisation, and notice period.
+- Reusable answers for sponsorship, relocation, work authorisation, notice
+  period, salary expectation, motivation, strengths, and availability.
 - Creating, viewing, and clearing reusable answers from the side panel.
 - Saving the current tab as a saved application from the side panel.
 - Importing the active job page into the side-panel tracker.
@@ -52,9 +53,18 @@ The extension currently supports:
 - Preventing duplicate saved applications for the same URL.
 - Basic autofill for obvious first name, last name, email, and phone fields.
 - Basic textarea autofill for obvious sponsorship, relocation, work authorisation,
-  and notice period questions.
+  notice period, salary expectation, motivation, strengths, and availability
+  questions.
 - Triggering profile and reusable-answer autofill from the side panel.
+- Generating editable application content from saved profile, reusable answers,
+  and saved job analysis.
+- User-approved insertion of saved application content into obvious empty
+  application textareas.
+- Usage/cost logging for local and future AI-assisted actions.
+- Optional OpenAI Responses API settings with a monthly local budget cap for
+  controlled-cost AI-assisted job analysis and application content generation.
 - Side-panel drafts for profile, job analysis, application content, and tracker.
+- Generated or saved application content snapshots attached to tracker records.
 - Application notes and editable spec-aligned status tracking: `Saved`,
   `Applying`, `Applied`, `Interview`, `Rejected`, and `Closed`.
 - Next-action and next-action-date tracking for saved applications.
@@ -62,9 +72,8 @@ The extension currently supports:
 The extension does not submit forms and does not use Firebase or a backend yet.
 The web app does not depend on Firebase until backend work starts.
 
-Known full-spec gaps include AI-backed analysis and content generation,
-generated content snapshots, AI usage/cost logging, profile-to-content reuse,
-and deeper extraction for priority job platforms.
+Known full-spec gaps include live privacy/release validation and founder
+validation metrics from real UK/EU applications.
 
 ## Local Setup
 
@@ -165,6 +174,12 @@ The full MVP spec alignment checklist lives at:
 
 ```text
 docs/mvp-spec-alignment.md
+```
+
+The release-readiness checklist lives at:
+
+```text
+docs/release-readiness.md
 ```
 
 ## Repository Notes

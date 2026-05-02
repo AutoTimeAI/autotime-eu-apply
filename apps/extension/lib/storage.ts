@@ -42,6 +42,20 @@ export type ApplicationContentSnapshot = ApplicationContentDraft & {
   savedAt: string
 }
 
+export type AIUsageLogEntry = {
+  id: string
+  featureName: string
+  model: string
+  approximateCostUsd: number
+  createdAt: string
+}
+
+export type OpenAISettings = {
+  apiKey: string
+  model: string
+  monthlyBudgetUsd: number
+}
+
 type LegacyApplicationStatus =
   | ApplicationStatus
   | "draft"
@@ -129,6 +143,8 @@ const APPLICATIONS_KEY = "saved-applications"
 const JOB_ANALYSIS_KEY = "job-analysis-draft"
 const APPLICATION_CONTENT_KEY = "application-content-draft"
 const TRACKER_DRAFT_KEY = "tracker-draft"
+const AI_USAGE_LOG_KEY = "ai-usage-log"
+const OPENAI_SETTINGS_KEY = "openai-settings"
 
 function normalizeProfile(profile: Partial<CandidateProfile>): CandidateProfile {
   return {
@@ -316,6 +332,31 @@ function normalizeApplicationContentSnapshot(
   }
 }
 
+function normalizeAIUsageLogEntry(
+  entry: Partial<AIUsageLogEntry>
+): AIUsageLogEntry {
+  return {
+    id:
+      entry.id ??
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    featureName: entry.featureName ?? "Unknown feature",
+    model: entry.model ?? "unknown",
+    approximateCostUsd: entry.approximateCostUsd ?? 0,
+    createdAt: entry.createdAt ?? new Date().toISOString()
+  }
+}
+
+function normalizeOpenAISettings(
+  settings: Partial<OpenAISettings>
+): OpenAISettings {
+  return {
+    apiKey: settings.apiKey ?? "",
+    model: settings.model ?? "gpt-4.1-mini",
+    monthlyBudgetUsd: settings.monthlyBudgetUsd ?? 2
+  }
+}
+
 export async function saveProfile(profile: CandidateProfile) {
   await chrome.storage.local.set({ [PROFILE_KEY]: profile })
 }
@@ -391,6 +432,47 @@ export async function getTrackerDraft(): Promise<TrackerDraft | null> {
 
 export async function clearTrackerDraft() {
   await chrome.storage.local.remove(TRACKER_DRAFT_KEY)
+}
+
+export async function getAIUsageLog(): Promise<AIUsageLogEntry[]> {
+  const result = await chrome.storage.local.get(AI_USAGE_LOG_KEY)
+  const entries =
+    (result[AI_USAGE_LOG_KEY] as Partial<AIUsageLogEntry>[] | undefined) ?? []
+  return entries.map(normalizeAIUsageLogEntry)
+}
+
+export async function logAIUsage(
+  entry: Omit<AIUsageLogEntry, "id" | "createdAt"> &
+    Partial<Pick<AIUsageLogEntry, "id" | "createdAt">>
+) {
+  const existing = await getAIUsageLog()
+  const normalizedEntry = normalizeAIUsageLogEntry(entry)
+  await chrome.storage.local.set({
+    [AI_USAGE_LOG_KEY]: [normalizedEntry, ...existing]
+  })
+  return normalizedEntry
+}
+
+export async function clearAIUsageLog() {
+  await chrome.storage.local.remove(AI_USAGE_LOG_KEY)
+}
+
+export async function saveOpenAISettings(settings: OpenAISettings) {
+  await chrome.storage.local.set({
+    [OPENAI_SETTINGS_KEY]: normalizeOpenAISettings(settings)
+  })
+}
+
+export async function getOpenAISettings(): Promise<OpenAISettings> {
+  const result = await chrome.storage.local.get(OPENAI_SETTINGS_KEY)
+  const settings = result[OPENAI_SETTINGS_KEY] as
+    | Partial<OpenAISettings>
+    | undefined
+  return normalizeOpenAISettings(settings ?? {})
+}
+
+export async function clearOpenAISettings() {
+  await chrome.storage.local.remove(OPENAI_SETTINGS_KEY)
 }
 
 export async function getApplications(): Promise<ApplicationRecord[]> {

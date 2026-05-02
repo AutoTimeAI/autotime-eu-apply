@@ -19,6 +19,9 @@ export type Section =
   | "tracker"
   | "tracker-view"
   | "applications"
+  | "usage-log"
+  | "validation-metrics"
+  | "ai-settings"
 
 export const emptyProfile: CandidateProfile = {
   fullName: "",
@@ -111,5 +114,8 @@ export const sections: Array<{ id: Section; label: string }> = [
   { id: "application-content-view", label: "View Content" },
   { id: "tracker", label: "Tracker" },
   { id: "tracker-view", label: "View Tracker" },
-  { id: "applications", label: "Applications" }
+  { id: "applications", label: "Applications" },
+  { id: "usage-log", label: "Usage Log" },
+  { id: "validation-metrics", label: "Validation Metrics" },
+  { id: "ai-settings", label: "AI Settings" }
 ]
