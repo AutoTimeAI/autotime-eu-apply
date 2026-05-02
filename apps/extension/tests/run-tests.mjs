@@ -22,7 +22,11 @@ import {
 } from "../lib/job-page.ts"
 import { inferJobFitAnalysis } from "../lib/job-analysis.ts"
 import { generateApplicationContentDraft } from "../lib/content-generation.ts"
-import { estimateOpenAICostUsd } from "../lib/openai.ts"
+import {
+  estimateOpenAICostUsd,
+  normalizeAIApplicationContent,
+  normalizeAIJobAnalysis
+} from "../lib/openai.ts"
 import {
   clearAIUsageLog,
   clearApplicationContentDraft,
@@ -601,6 +605,44 @@ test("estimates OpenAI usage cost from token counts", () => {
       output_tokens: 500
     }),
     0.0012
+  )
+})
+
+test("normalizes partial AI application content", () => {
+  assert.deepEqual(
+    normalizeAIApplicationContent({
+      coverLetter: "Cover letter.",
+      motivationAnswer: "Motivation."
+    }),
+    {
+      coverLetter: "Cover letter.",
+      profileSummary: "",
+      motivationAnswer: "Motivation.",
+      strengthsAnswer: "",
+      availabilityAnswer: ""
+    }
+  )
+})
+
+test("normalizes partial AI job analysis", () => {
+  assert.deepEqual(
+    normalizeAIJobAnalysis({
+      fitScore: 150,
+      recommendation: "Invalid label",
+      scoreFactors: ["Clear fit", 1],
+      skills: ["Payments", null],
+      gaps: ["Check sponsorship"]
+    }),
+    {
+      fitScore: 100,
+      recommendation: "Stretch",
+      positioningAngle: "",
+      scoreFactors: ["Clear fit"],
+      skills: ["Payments"],
+      seniority: "",
+      summary: "",
+      gaps: ["Check sponsorship"]
+    }
   )
 })
 

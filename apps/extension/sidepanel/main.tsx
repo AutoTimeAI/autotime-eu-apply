@@ -51,6 +51,7 @@ import {
   type TrackerDraft
 } from "../lib/storage"
 import {
+  fallbackOpenAICallBudgetUsd,
   generateAIApplicationContentDraft,
   generateAIJobAnalysis
 } from "../lib/openai"
@@ -380,7 +381,8 @@ function SidePanelApp() {
 
   const canUseOpenAI = () =>
     openAISettings.apiKey.trim() !== "" &&
-    getCurrentMonthAIUsageCost() < openAISettings.monthlyBudgetUsd
+    getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd <=
+      openAISettings.monthlyBudgetUsd
 
   const updateSavedApplication = async (
     id: string,

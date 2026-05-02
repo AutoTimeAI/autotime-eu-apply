@@ -32,6 +32,8 @@ export type OpenAIResult<T> = {
   approximateCostUsd: number
 }
 
+export const fallbackOpenAICallBudgetUsd = 0.01
+
 const modelPricesPerMillionTokens: Record<
   string,
   { input: number; output: number }
@@ -59,6 +61,67 @@ function parseJsonObject<T>(text: string): T {
   const trimmed = text.trim()
   const json = trimmed.match(/\{[\s\S]*\}/)?.[0] ?? trimmed
   return JSON.parse(json) as T
+}
+
+function toStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : []
+}
+
+function toStringValue(value: unknown) {
+  return typeof value === "string" ? value : ""
+}
+
+function toRecommendation(value: unknown): JobAnalysisDraft["recommendation"] {
+  return value === "High Priority" ||
+    value === "Worth Applying" ||
+    value === "Stretch" ||
+    value === "Skip"
+    ? value
+    : "Stretch"
+}
+
+export function normalizeAIApplicationContent(
+  value: Partial<ApplicationContentDraft>
+): ApplicationContentDraft {
+  return {
+    coverLetter: toStringValue(value.coverLetter),
+    profileSummary: toStringValue(value.profileSummary),
+    motivationAnswer: toStringValue(value.motivationAnswer),
+    strengthsAnswer: toStringValue(value.strengthsAnswer),
+    availabilityAnswer: toStringValue(value.availabilityAnswer)
+  }
+}
+
+export function normalizeAIJobAnalysis(
+  value: Partial<JobAnalysisDraft>
+): Pick<
+  JobAnalysisDraft,
+  | "fitScore"
+  | "recommendation"
+  | "positioningAngle"
+  | "scoreFactors"
+  | "skills"
+  | "seniority"
+  | "summary"
+  | "gaps"
+> {
+  const fitScore =
+    typeof value.fitScore === "number"
+      ? Math.max(0, Math.min(100, value.fitScore))
+      : 50
+
+  return {
+    fitScore,
+    recommendation: toRecommendation(value.recommendation),
+    positioningAngle: toStringValue(value.positioningAngle),
+    scoreFactors: toStringArray(value.scoreFactors),
+    skills: toStringArray(value.skills),
+    seniority: toStringValue(value.seniority),
+    summary: toStringValue(value.summary),
+    gaps: toStringArray(value.gaps)
+  }
 }
 
 export function estimateOpenAICostUsd(model: string, usage?: OpenAIUsage) {
@@ -116,7 +179,7 @@ export async function generateAIApplicationContentDraft({
   job: JobAnalysisDraft
   reusableAnswers: ReusableAnswers | null
 }) {
-  return createResponse<ApplicationContentDraft>(
+  const result = await createResponse<Partial<ApplicationContentDraft>>(
     settings,
     [
       "You write concise, truthful UK/EU job application content.",
@@ -126,6 +189,11 @@ export async function generateAIApplicationContentDraft({
     ].join(" "),
     { profile, job, reusableAnswers }
   )
+
+  return {
+    ...result,
+    value: normalizeAIApplicationContent(result.value)
+  }
 }
 
 export async function generateAIJobAnalysis({
@@ -137,19 +205,7 @@ export async function generateAIJobAnalysis({
   draft: JobAnalysisDraft
   profile: CandidateProfile | null
 }) {
-  return createResponse<
-    Pick<
-      JobAnalysisDraft,
-      | "fitScore"
-      | "recommendation"
-      | "positioningAngle"
-      | "scoreFactors"
-      | "skills"
-      | "seniority"
-      | "summary"
-      | "gaps"
-    >
-  >(
+  const result = await createResponse<Partial<JobAnalysisDraft>>(
     settings,
     [
       "You analyse UK/EU job fit for a tech candidate.",
@@ -158,4 +214,9 @@ export async function generateAIJobAnalysis({
     ].join(" "),
     { draft, profile }
   )
+
+  return {
+    ...result,
+    value: normalizeAIJobAnalysis(result.value)
+  }
 }
