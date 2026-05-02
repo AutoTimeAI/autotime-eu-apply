@@ -29,6 +29,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify React type alignment
+        run: |
+          git rev-parse HEAD
+          pnpm list react @types/react --recursive --depth 0
+          ! grep -q "@types/react@19" pnpm-lock.yaml
+
       - name: Run unit tests
         run: pnpm test
 
