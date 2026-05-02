@@ -8,14 +8,18 @@ function includesAny(text: string, terms: string[]) {
 
 function getRecommendation(score: number): JobFitRecommendation {
   if (score >= 75) {
-    return "strong-fit"
+    return "High Priority"
   }
 
-  if (score >= 50) {
-    return "possible-fit"
+  if (score >= 55) {
+    return "Worth Applying"
   }
 
-  return "low-fit"
+  if (score >= 35) {
+    return "Stretch"
+  }
+
+  return "Skip"
 }
 
 function getPositioningAngle(
@@ -34,7 +38,7 @@ function getPositioningAngle(
     return "Position around application analysis, systems thinking, and operational problem solving."
   }
 
-  if (recommendation === "strong-fit") {
+  if (recommendation === "High Priority") {
     return "Position around direct role fit, relevant delivery experience, and readiness to contribute quickly."
   }
 

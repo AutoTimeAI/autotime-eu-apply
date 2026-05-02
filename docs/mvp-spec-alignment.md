@@ -28,8 +28,14 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
   target roles, work-right details, salary expectation, base CV text, project
   summaries, and experience highlights.
 - Basic active-tab job page import and fallback from tab title/URL.
+- Priority-platform job extraction selectors for LinkedIn, Greenhouse, Lever,
+  and Workday, with platform labels in imported tracker notes.
 - Manual pasted job description fallback in Job Analysis.
 - Local transparent fit scoring with visible factors and positioning angle.
+- Spec-aligned job recommendation labels: `High Priority`, `Worth Applying`,
+  `Stretch`, and `Skip`, with legacy label normalization.
+- Editable application content generation from saved profile, reusable answers,
+  and saved job analysis.
 - Editable application tracker with search, status filtering, notes, next
   action, next action date, delete, duplicate URL detection, and CSV export.
 - Spec-aligned tracker statuses: `Saved`, `Applying`, `Applied`, `Interview`,
@@ -42,19 +48,13 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 
 ## Full-Spec Gaps
 
-- Deeper use of saved profile memory in generated content and application
-  answers.
 - Reusable answer snippets beyond the current small set.
 - AI-backed analysis, positioning, and content generation using the approved
   controlled-cost API model.
 - AI usage/cost logging by feature name, timestamp, model, and approximate cost.
 - Generated tailored content snapshots attached to tracker records.
-- More complete job extraction for priority platforms: LinkedIn, Greenhouse,
-  Lever, and Workday.
 - Structured job insights: title, company, location, skills, seniority, summary,
   fit factors, and gaps.
-- Spec recommendation labels: `High Priority`, `Worth Applying`, `Stretch`,
-  `Skip`, or a deliberate documented mapping from current labels.
 - User-approved insertion of generated content, not only profile/reusable answer
   autofill.
 - Privacy basics and release-readiness notes from the UAT pack.

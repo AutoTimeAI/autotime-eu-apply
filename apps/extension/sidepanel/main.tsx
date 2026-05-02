@@ -6,6 +6,7 @@ import {
   inferJobPageDetails
 } from "../lib/job-page"
 import { inferJobFitAnalysis } from "../lib/job-analysis"
+import { generateApplicationContentDraft } from "../lib/content-generation"
 import {
   applicationsToCsv,
   filterApplications,
@@ -497,6 +498,25 @@ function SidePanelApp() {
     setTimeout(() => setContentStatus(""), 3500)
   }
 
+  const handleGenerateApplicationContent = () => {
+    if (!savedProfile || !savedJobAnalysisDraft) {
+      setContentStatus("Save a profile and job analysis before generating.")
+      setTimeout(() => setContentStatus(""), 3500)
+      return
+    }
+
+    const generatedDraft = generateApplicationContentDraft(
+      savedProfile,
+      savedJobAnalysisDraft,
+      savedReusableAnswers
+    )
+
+    setApplicationContentDraft(generatedDraft)
+    clearSaveAttempt("application-content")
+    setContentStatus("Editable application content generated")
+    setTimeout(() => setContentStatus(""), 3500)
+  }
+
   const saveTrackerApplication = async (draft: TrackerDraft) => {
     const existingApplications = await getApplications()
     const normalizedUrl = normalizeApplicationUrl(draft.applicationUrl)
@@ -721,6 +741,7 @@ function SidePanelApp() {
           draft={applicationContentDraft}
           issues={applicationContentIssues}
           onFieldChange={updateApplicationContentField}
+          onGenerate={handleGenerateApplicationContent}
           onSave={handleSaveApplicationContent}
           saveAttempted={saveAttempts["application-content"]}
           status={contentStatus}

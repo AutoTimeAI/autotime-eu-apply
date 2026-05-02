@@ -12,8 +12,13 @@ import {
   getNameParts,
   getReusableAnswerValues
 } from "../lib/autofill.ts"
-import { formatJobPageNotes, inferJobPageDetails } from "../lib/job-page.ts"
+import {
+  formatJobPageNotes,
+  getJobPlatform,
+  inferJobPageDetails
+} from "../lib/job-page.ts"
 import { inferJobFitAnalysis } from "../lib/job-analysis.ts"
+import { generateApplicationContentDraft } from "../lib/content-generation.ts"
 import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
@@ -180,6 +185,7 @@ test("infers job page details from common page text", () => {
       location: "",
       url: "https://example.com/jobs/frontend",
       source: "example.com",
+      platform: "Generic",
       pageTitle: "Senior Frontend Engineer at Example Co - Careers"
     }
   )
@@ -198,9 +204,18 @@ test("infers job page details from common page text", () => {
       location: "London, United Kingdom",
       url: "https://jobs.example.co/backend",
       source: "jobs.example.co",
+      platform: "Generic",
       pageTitle: "Backend Engineer | Example Jobs"
     }
   )
+})
+
+test("detects priority job platforms from urls", () => {
+  assert.equal(getJobPlatform("https://www.linkedin.com/jobs/view/123"), "LinkedIn")
+  assert.equal(getJobPlatform("https://boards.greenhouse.io/acme/jobs/123"), "Greenhouse")
+  assert.equal(getJobPlatform("https://jobs.lever.co/acme/123"), "Lever")
+  assert.equal(getJobPlatform("https://acme.wd3.myworkdayjobs.com/jobs/job/123"), "Workday")
+  assert.equal(getJobPlatform("https://example.com/jobs/123"), "Generic")
 })
 
 test("formats imported job page notes from detected metadata", () => {
@@ -211,6 +226,7 @@ test("formats imported job page notes from detected metadata", () => {
       location: "London, United Kingdom",
       url: "https://jobs.example.co/backend",
       source: "jobs.example.co",
+      platform: "Generic",
       pageTitle: "Backend Engineer | Example Jobs"
     }),
     [
@@ -227,11 +243,32 @@ test("formats imported job page notes from detected metadata", () => {
       location: "",
       url: "https://example.com/jobs/frontend",
       source: "example.com",
+      platform: "Generic",
       pageTitle: "Senior Frontend Engineer at Example Co - Careers"
     }),
     [
       "Source: example.com",
       "Page title: Senior Frontend Engineer at Example Co - Careers"
+    ].join("\n")
+  )
+})
+
+test("formats priority platform in job page notes", () => {
+  assert.equal(
+    formatJobPageNotes({
+      roleTitle: "Product Analyst",
+      company: "Example Co",
+      location: "London",
+      url: "https://www.linkedin.com/jobs/view/123",
+      source: "linkedin.com",
+      platform: "LinkedIn",
+      pageTitle: "Product Analyst | Example Co | LinkedIn"
+    }),
+    [
+      "Location: London",
+      "Platform: LinkedIn",
+      "Source: linkedin.com",
+      "Page title: Product Analyst | Example Co | LinkedIn"
     ].join("\n")
   )
 })
@@ -259,7 +296,7 @@ test("infers transparent job fit analysis", () => {
     }
   )
 
-  assert.equal(analysis.recommendation, "strong-fit")
+  assert.equal(analysis.recommendation, "High Priority")
   assert.equal(analysis.fitScore, 100)
   assert.equal(
     analysis.positioningAngle,
@@ -287,7 +324,7 @@ test("uses pasted job description text in job fit analysis", () => {
     null
   )
 
-  assert.equal(analysis.recommendation, "strong-fit")
+  assert.equal(analysis.recommendation, "High Priority")
   assert.equal(
     analysis.positioningAngle,
     "Position around FinTech systems, application support, and cross-functional delivery."
@@ -436,6 +473,36 @@ test("loads legacy job analysis draft without pasted description", async () => {
   })
 })
 
+test("loads legacy job analysis recommendation as spec label", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "job-analysis-draft": {
+      jobTitle: "Legacy Analyst",
+      company: "Example Co",
+      jobUrl: "https://example.com/jobs/legacy",
+      location: "United Kingdom",
+      workMode: "hybrid",
+      jobDescription: "",
+      notes: "",
+      fitScore: 76,
+      recommendation: "strong-fit"
+    }
+  })
+
+  assert.deepEqual(await getJobAnalysisDraft(), {
+    jobTitle: "Legacy Analyst",
+    company: "Example Co",
+    jobUrl: "https://example.com/jobs/legacy",
+    location: "United Kingdom",
+    workMode: "hybrid",
+    jobDescription: "",
+    notes: "",
+    fitScore: 76,
+    recommendation: "High Priority"
+  })
+})
+
 test("saves and loads application content draft", async () => {
   resetStorage()
 
@@ -454,6 +521,59 @@ test("saves and loads application content draft", async () => {
   await clearApplicationContentDraft()
 
   assert.equal(await getApplicationContentDraft(), null)
+})
+
+test("generates application content from saved profile and job analysis", () => {
+  const draft = generateApplicationContentDraft(
+    {
+      fullName: "Rajan Kumar",
+      email: "rajan@example.com",
+      phone: "+44 1234 567890",
+      linkedInUrl: "https://www.linkedin.com/in/rajan",
+      githubUrl: "",
+      portfolioUrl: "",
+      currentCountry: "United Kingdom",
+      currentCity: "London",
+      targetCountries: "United Kingdom, Netherlands",
+      targetRoles: "Business Analyst, Application Analyst",
+      workRightDetails: "Graduate visa with UK work authorisation.",
+      sponsorshipNeeded: false,
+      relocationWillingness: "depends",
+      salaryExpectation: "GBP 45,000+",
+      noticePeriod: "1 month",
+      baseCvText: "Business analyst with payments and systems delivery experience.",
+      projectSummaries: "Payments migration and operations dashboard delivery.",
+      experienceHighlights: "Requirements analysis, UAT, stakeholder management."
+    },
+    {
+      jobTitle: "FinTech Business Analyst",
+      company: "Example Bank",
+      jobUrl: "https://example.com/jobs/business-analyst",
+      location: "United Kingdom",
+      workMode: "hybrid",
+      jobDescription: "Payments requirements and stakeholder delivery.",
+      notes: "",
+      positioningAngle:
+        "Position around FinTech systems, application support, and cross-functional delivery.",
+      scoreFactors: [
+        "Role title aligns with the target analyst/systems role family.",
+        "Job location matches the saved current country."
+      ]
+    },
+    {
+      sponsorshipAnswer: "I do not require sponsorship.",
+      relocationAnswer: "I am open to relocation.",
+      workAuthorisationAnswer: "I am authorised to work in the UK.",
+      noticePeriodAnswer: "My notice period is one month."
+    }
+  )
+
+  assert.match(draft.coverLetter, /FinTech Business Analyst/)
+  assert.match(draft.coverLetter, /Example Bank/)
+  assert.match(draft.profileSummary, /Rajan Kumar/)
+  assert.match(draft.motivationAnswer, /Role title aligns/)
+  assert.match(draft.strengthsAnswer, /Requirements analysis/)
+  assert.equal(draft.availabilityAnswer, "My notice period is one month.")
 })
 
 test("saves and loads tracker draft", async () => {

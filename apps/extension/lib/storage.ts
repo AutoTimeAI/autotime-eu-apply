@@ -47,6 +47,18 @@ type LegacyApplicationStatus =
   | "offer"
   | "closed"
 
+type JobRecommendation =
+  | "High Priority"
+  | "Worth Applying"
+  | "Stretch"
+  | "Skip"
+
+type LegacyJobRecommendation =
+  | JobRecommendation
+  | "strong-fit"
+  | "possible-fit"
+  | "low-fit"
+
 export type ApplicationRecord = {
   id: string
   title: string
@@ -71,7 +83,7 @@ export type JobAnalysisDraft = {
   jobDescription: string
   notes: string
   fitScore?: number
-  recommendation?: "strong-fit" | "possible-fit" | "low-fit"
+  recommendation?: JobRecommendation
   positioningAngle?: string
   scoreFactors?: string[]
 }
@@ -159,8 +171,30 @@ function normalizeApplicationStatus(
   }
 }
 
+function normalizeJobRecommendation(
+  recommendation: LegacyJobRecommendation | undefined
+): JobRecommendation | undefined {
+  switch (recommendation) {
+    case "High Priority":
+    case "Worth Applying":
+    case "Stretch":
+    case "Skip":
+      return recommendation
+    case "strong-fit":
+      return "High Priority"
+    case "possible-fit":
+      return "Worth Applying"
+    case "low-fit":
+      return "Stretch"
+    default:
+      return undefined
+  }
+}
+
 function normalizeJobAnalysisDraft(
-  draft: Partial<JobAnalysisDraft>
+  draft: Partial<Omit<JobAnalysisDraft, "recommendation">> & {
+    recommendation?: LegacyJobRecommendation
+  }
 ): JobAnalysisDraft {
   const normalized: JobAnalysisDraft = {
     jobTitle: draft.jobTitle ?? "",
@@ -176,8 +210,10 @@ function normalizeJobAnalysisDraft(
     normalized.fitScore = draft.fitScore
   }
 
-  if (draft.recommendation !== undefined) {
-    normalized.recommendation = draft.recommendation
+  const recommendation = normalizeJobRecommendation(draft.recommendation)
+
+  if (recommendation !== undefined) {
+    normalized.recommendation = recommendation
   }
 
   if (draft.positioningAngle !== undefined) {

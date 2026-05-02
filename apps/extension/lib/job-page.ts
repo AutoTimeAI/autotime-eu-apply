@@ -4,8 +4,16 @@ export type JobPageDetails = {
   location: string
   url: string
   source: string
+  platform: JobPlatform
   pageTitle: string
 }
+
+export type JobPlatform =
+  | "LinkedIn"
+  | "Greenhouse"
+  | "Lever"
+  | "Workday"
+  | "Generic"
 
 type JobPageTextInput = {
   title?: string
@@ -40,6 +48,28 @@ function getHostname(url = "") {
   } catch {
     return ""
   }
+}
+
+export function getJobPlatform(url = ""): JobPlatform {
+  const hostname = getHostname(url)
+
+  if (hostname.includes("linkedin.com")) {
+    return "LinkedIn"
+  }
+
+  if (hostname.includes("greenhouse.io")) {
+    return "Greenhouse"
+  }
+
+  if (hostname.includes("lever.co")) {
+    return "Lever"
+  }
+
+  if (hostname.includes("myworkdayjobs.com") || hostname.includes("workday")) {
+    return "Workday"
+  }
+
+  return "Generic"
 }
 
 function isUsefulTitlePart(value: string) {
@@ -86,6 +116,7 @@ export function inferJobPageDetails(
   const roleTitle = cleanText(input.heading) || parsedTitle.roleTitle
   const company = cleanText(input.company) || parsedTitle.company
   const url = cleanText(input.url)
+  const platform = getJobPlatform(url)
 
   return {
     roleTitle,
@@ -93,6 +124,7 @@ export function inferJobPageDetails(
     location: cleanText(input.location),
     url,
     source: cleanText(input.source) || getHostname(url),
+    platform,
     pageTitle: cleanText(input.title)
   }
 }
@@ -100,6 +132,7 @@ export function inferJobPageDetails(
 export function formatJobPageNotes(details: JobPageDetails) {
   return [
     details.location && `Location: ${details.location}`,
+    details.platform !== "Generic" && `Platform: ${details.platform}`,
     details.source && `Source: ${details.source}`,
     details.pageTitle && `Page title: ${details.pageTitle}`
   ]

@@ -115,6 +115,16 @@ function getFirstText(selectors: string[]) {
   return ""
 }
 
+function getLocationFromLinkedInDescription() {
+  const description = getFirstText([
+    ".jobs-unified-top-card__primary-description-container",
+    ".topcard__flavor-row"
+  ])
+  const parts = description.split(/\s+·\s+/).map((part) => part.trim())
+
+  return parts.length > 1 ? parts[1] : ""
+}
+
 function detectJobPage(): JobPageResponse {
   // These selectors cover common job-board conventions while title parsing
   // provides a fallback for pages without structured job metadata.
@@ -122,20 +132,35 @@ function detectJobPage(): JobPageResponse {
     getMetaContent(["og:title", "twitter:title"]) || document.title
   const company =
     getFirstText([
+      ".jobs-unified-top-card__company-name",
+      ".topcard__org-name-link",
+      ".posting-headline .company",
+      ".company-name",
       "[data-testid='company-name']",
       "[data-testid='job-company-name']",
       "[class*='company']",
+      "[data-automation-id='jobPostingCompany']",
       "[data-automation-id='company']"
     ]) || getMetaContent(["og:site_name", "application-name"])
-  const location = getFirstText([
-    "[data-testid='job-location']",
-    "[class*='location']",
-    "[data-automation-id='locations']"
-  ])
+  const location =
+    getFirstText([
+      ".jobs-unified-top-card__bullet",
+      ".topcard__flavor--bullet",
+      ".posting-categories .location",
+      ".location",
+      "[data-testid='job-location']",
+      "[class*='location']",
+      "[data-automation-id='locations']",
+      "[data-automation-id='job-details-location']"
+    ]) || getLocationFromLinkedInDescription()
 
   const details = inferJobPageDetails({
     title: pageTitle,
     heading: getFirstText([
+      ".jobs-unified-top-card__job-title",
+      ".topcard__title",
+      ".posting-headline h2",
+      ".app-title",
       "h1",
       "[data-testid='job-title']",
       "[data-automation-id='jobPostingHeader']"
