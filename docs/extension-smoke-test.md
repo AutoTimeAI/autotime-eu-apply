@@ -132,7 +132,10 @@ apps/extension/.output/chrome-mv3
    available.
 3. Open Validation Metrics.
 4. Confirm total applications, status outcomes, source counts, content snapshot
-   count, and next-action count match the Applications list.
+   coverage, next-action coverage, and outcome-note coverage match the
+   Applications list.
+5. Export the validation CSV and confirm it includes metric, status, and source
+   sections.
 
 ## Clear Saved Data
 

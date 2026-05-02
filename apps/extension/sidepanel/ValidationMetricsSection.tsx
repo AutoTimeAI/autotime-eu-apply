@@ -3,14 +3,22 @@ import { applicationStatuses } from "./constants"
 
 type ValidationMetricsSectionProps = {
   metrics: ApplicationValidationMetrics
+  onExport: () => void
 }
 
 export function ValidationMetricsSection({
-  metrics
+  metrics,
+  onExport
 }: ValidationMetricsSectionProps) {
   return (
     <section className="panel-section">
       <h2>Validation Metrics</h2>
+
+      <div className="application-actions">
+        <button type="button" onClick={onExport}>
+          Export Validation CSV
+        </button>
+      </div>
 
       <dl className="profile-summary">
         <div>
@@ -19,11 +27,24 @@ export function ValidationMetricsSection({
         </div>
         <div>
           <dt>Applications with content snapshots</dt>
-          <dd>{metrics.applicationsWithContentSnapshots}</dd>
+          <dd>
+            {metrics.applicationsWithContentSnapshots} (
+            {metrics.contentSnapshotCoveragePercent}%)
+          </dd>
         </div>
         <div>
           <dt>Applications with next actions</dt>
-          <dd>{metrics.applicationsWithNextActions}</dd>
+          <dd>
+            {metrics.applicationsWithNextActions} (
+            {metrics.nextActionCoveragePercent}%)
+          </dd>
+        </div>
+        <div>
+          <dt>Applied/interview/closed applications with notes</dt>
+          <dd>
+            {metrics.applicationsWithOutcomeNotes} (
+            {metrics.outcomeNoteCoveragePercent}%)
+          </dd>
         </div>
       </dl>
 

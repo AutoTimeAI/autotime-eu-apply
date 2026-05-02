@@ -56,7 +56,8 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 - Privacy basics and release-readiness checklist covering local storage,
   explicit user actions, no auto-submit behavior, and manual release checks.
 - Founder validation metrics view for tracked applications, status outcomes,
-  content snapshots, next actions, and sources.
+  content snapshot coverage, next-action coverage, outcome-note coverage, and
+  sources, with CSV export.
 - Unit tests for autofill, storage, validation, job page inference, scoring,
   application filtering, duplicate detection, update/delete, and CSV export.
 - Side-panel component split so `main.tsx` now mostly acts as orchestration.

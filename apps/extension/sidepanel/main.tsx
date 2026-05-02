@@ -12,6 +12,7 @@ import {
   filterApplications,
   getApplicationValidationMetrics,
   hasApplicationWithUrl,
+  validationMetricsToCsv,
   type ApplicationStatusFilter
 } from "../lib/applications"
 import {
@@ -469,6 +470,17 @@ function SidePanelApp() {
 
     setApplicationsStatus("Applications exported")
     setTimeout(() => setApplicationsStatus(""), 2500)
+  }
+
+  const exportValidationMetrics = () => {
+    const csv = validationMetricsToCsv(validationMetrics)
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "autotime-validation-metrics.csv"
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleSaveProfile = async () => {
@@ -980,7 +992,10 @@ function SidePanelApp() {
           statusRef={usageLogStatusRef}
         />
       ) : activeSection === "validation-metrics" ? (
-        <ValidationMetricsSection metrics={validationMetrics} />
+        <ValidationMetricsSection
+          metrics={validationMetrics}
+          onExport={exportValidationMetrics}
+        />
       ) : activeSection === "ai-settings" ? (
         <AISettingsSection
           settings={openAISettings}

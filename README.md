@@ -68,6 +68,9 @@ The extension currently supports:
 - Application notes and editable spec-aligned status tracking: `Saved`,
   `Applying`, `Applied`, `Interview`, `Rejected`, and `Closed`.
 - Next-action and next-action-date tracking for saved applications.
+- Founder validation metrics for content snapshot coverage, next-action
+  coverage, outcome-note coverage, statuses, and sources.
+- CSV export for founder validation metrics.
 
 The extension does not submit forms and does not use Firebase or a backend yet.
 The web app does not depend on Firebase until backend work starts.

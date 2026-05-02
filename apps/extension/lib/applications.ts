@@ -6,6 +6,10 @@ export type ApplicationValidationMetrics = {
   totalApplications: number
   applicationsWithContentSnapshots: number
   applicationsWithNextActions: number
+  applicationsWithOutcomeNotes: number
+  contentSnapshotCoveragePercent: number
+  nextActionCoveragePercent: number
+  outcomeNoteCoveragePercent: number
   statusCounts: Record<ApplicationStatus, number>
   sourceCounts: Array<{ source: string; count: number }>
 }
@@ -114,6 +118,52 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
     .join("\n")
 }
 
+export function validationMetricsToCsv(metrics: ApplicationValidationMetrics) {
+  const summaryRows = [
+    ["Metric", "Value"],
+    ["Total applications tracked", String(metrics.totalApplications)],
+    [
+      "Applications with content snapshots",
+      String(metrics.applicationsWithContentSnapshots)
+    ],
+    [
+      "Content snapshot coverage percent",
+      String(metrics.contentSnapshotCoveragePercent)
+    ],
+    ["Applications with next actions", String(metrics.applicationsWithNextActions)],
+    ["Next action coverage percent", String(metrics.nextActionCoveragePercent)],
+    [
+      "Applied/interview/closed applications with notes",
+      String(metrics.applicationsWithOutcomeNotes)
+    ],
+    ["Outcome note coverage percent", String(metrics.outcomeNoteCoveragePercent)]
+  ]
+
+  const statusRows = [
+    ["Status", "Count"],
+    ...Object.entries(metrics.statusCounts).map(([status, count]) => [
+      status,
+      String(count)
+    ])
+  ]
+
+  const sourceRows = [
+    ["Source", "Count"],
+    ...metrics.sourceCounts.map((sourceCount) => [
+      sourceCount.source,
+      String(sourceCount.count)
+    ])
+  ]
+
+  return [summaryRows, statusRows, sourceRows]
+    .map((sectionRows) =>
+      sectionRows
+        .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
+        .join("\n")
+    )
+    .join("\n\n")
+}
+
 export function getApplicationValidationMetrics(
   applications: ApplicationRecord[]
 ): ApplicationValidationMetrics {
@@ -128,6 +178,7 @@ export function getApplicationValidationMetrics(
   const sourceCounts = new Map<string, number>()
   let applicationsWithContentSnapshots = 0
   let applicationsWithNextActions = 0
+  let applicationsWithOutcomeNotes = 0
 
   for (const application of applications) {
     statusCounts[application.status] += 1
@@ -140,14 +191,34 @@ export function getApplicationValidationMetrics(
       applicationsWithNextActions += 1
     }
 
+    if (
+      ["Applied", "Interview", "Rejected", "Closed"].includes(
+        application.status
+      ) &&
+      application.notes?.trim()
+    ) {
+      applicationsWithOutcomeNotes += 1
+    }
+
     const source = application.source || "Unknown"
     sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1)
   }
+
+  const getCoveragePercent = (count: number) =>
+    applications.length === 0
+      ? 0
+      : Math.round((count / applications.length) * 100)
 
   return {
     totalApplications: applications.length,
     applicationsWithContentSnapshots,
     applicationsWithNextActions,
+    applicationsWithOutcomeNotes,
+    contentSnapshotCoveragePercent: getCoveragePercent(
+      applicationsWithContentSnapshots
+    ),
+    nextActionCoveragePercent: getCoveragePercent(applicationsWithNextActions),
+    outcomeNoteCoveragePercent: getCoveragePercent(applicationsWithOutcomeNotes),
     statusCounts,
     sourceCounts: Array.from(sourceCounts.entries())
       .map(([source, count]) => ({ source, count }))

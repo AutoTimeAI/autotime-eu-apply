@@ -3,7 +3,8 @@ import {
   applicationsToCsv,
   filterApplications,
   getApplicationValidationMetrics,
-  hasApplicationWithUrl
+  hasApplicationWithUrl,
+  validationMetricsToCsv
 } from "../lib/applications.ts"
 import {
   canFillInput,
@@ -1343,6 +1344,7 @@ test("summarizes founder validation metrics from applications", () => {
       url: "https://jobs.example.com/interview",
       source: "jobs.example.com",
       nextActionDate: "2026-05-10",
+      notes: "Recruiter screen booked after tailored application.",
       createdAt: "2026-05-03T00:00:00.000Z",
       status: "Interview"
     }
@@ -1351,6 +1353,10 @@ test("summarizes founder validation metrics from applications", () => {
   assert.equal(metrics.totalApplications, 3)
   assert.equal(metrics.applicationsWithContentSnapshots, 1)
   assert.equal(metrics.applicationsWithNextActions, 2)
+  assert.equal(metrics.applicationsWithOutcomeNotes, 1)
+  assert.equal(metrics.contentSnapshotCoveragePercent, 33)
+  assert.equal(metrics.nextActionCoveragePercent, 67)
+  assert.equal(metrics.outcomeNoteCoveragePercent, 33)
   assert.equal(metrics.statusCounts.Saved, 1)
   assert.equal(metrics.statusCounts.Applied, 1)
   assert.equal(metrics.statusCounts.Interview, 1)
@@ -1358,6 +1364,52 @@ test("summarizes founder validation metrics from applications", () => {
     { source: "jobs.example.com", count: 2 },
     { source: "example.com", count: 1 }
   ])
+})
+
+test("exports founder validation metrics to csv", () => {
+  const csv = validationMetricsToCsv({
+    totalApplications: 2,
+    applicationsWithContentSnapshots: 1,
+    applicationsWithNextActions: 2,
+    applicationsWithOutcomeNotes: 1,
+    contentSnapshotCoveragePercent: 50,
+    nextActionCoveragePercent: 100,
+    outcomeNoteCoveragePercent: 50,
+    statusCounts: {
+      Saved: 0,
+      Applying: 0,
+      Applied: 1,
+      Interview: 1,
+      Rejected: 0,
+      Closed: 0
+    },
+    sourceCounts: [{ source: "jobs.example.com", count: 2 }]
+  })
+
+  assert.equal(
+    csv,
+    [
+      '"Metric","Value"',
+      '"Total applications tracked","2"',
+      '"Applications with content snapshots","1"',
+      '"Content snapshot coverage percent","50"',
+      '"Applications with next actions","2"',
+      '"Next action coverage percent","100"',
+      '"Applied/interview/closed applications with notes","1"',
+      '"Outcome note coverage percent","50"',
+      "",
+      '"Status","Count"',
+      '"Saved","0"',
+      '"Applying","0"',
+      '"Applied","1"',
+      '"Interview","1"',
+      '"Rejected","0"',
+      '"Closed","0"',
+      "",
+      '"Source","Count"',
+      '"jobs.example.com","2"'
+    ].join("\n")
+  )
 })
 
 let failed = 0
