@@ -21,7 +21,10 @@ import {
   getJobPlatform,
   inferJobPageDetails
 } from "../lib/job-page.ts"
-import { inferJobFitAnalysis } from "../lib/job-analysis.ts"
+import {
+  inferJobFitAnalysis,
+  inferLocationFromJobDescription
+} from "../lib/job-analysis.ts"
 import { generateApplicationContentDraft } from "../lib/content-generation.ts"
 import {
   estimateOpenAICostUsd,
@@ -301,6 +304,57 @@ test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://example.com/jobs/123"), "Generic")
 })
 
+test("cleans priority platform job page titles", () => {
+  assert.deepEqual(
+    inferJobPageDetails({
+      title: "Job Application for Product Analyst at Example Co",
+      url: "https://boards.greenhouse.io/example/jobs/123"
+    }),
+    {
+      roleTitle: "Product Analyst",
+      company: "Example Co",
+      location: "",
+      url: "https://boards.greenhouse.io/example/jobs/123",
+      source: "boards.greenhouse.io",
+      platform: "Greenhouse",
+      pageTitle: "Job Application for Product Analyst at Example Co"
+    }
+  )
+
+  assert.deepEqual(
+    inferJobPageDetails({
+      title: "Example Co - Senior Product Analyst - Lever",
+      url: "https://jobs.lever.co/example/123"
+    }),
+    {
+      roleTitle: "Senior Product Analyst",
+      company: "Example Co",
+      location: "",
+      url: "https://jobs.lever.co/example/123",
+      source: "jobs.lever.co",
+      platform: "Lever",
+      pageTitle: "Example Co - Senior Product Analyst - Lever"
+    }
+  )
+
+  assert.deepEqual(
+    inferJobPageDetails({
+      title: "Job Description - Business Systems Analyst",
+      company: "Example Co",
+      url: "https://example.wd3.myworkdayjobs.com/jobs/job/123"
+    }),
+    {
+      roleTitle: "Business Systems Analyst",
+      company: "Example Co",
+      location: "",
+      url: "https://example.wd3.myworkdayjobs.com/jobs/job/123",
+      source: "example.wd3.myworkdayjobs.com",
+      platform: "Workday",
+      pageTitle: "Job Description - Business Systems Analyst"
+    }
+  )
+})
+
 test("formats imported job page notes from detected metadata", () => {
   assert.equal(
     formatJobPageNotes({
@@ -429,6 +483,31 @@ test("uses pasted job description text in job fit analysis", () => {
     analysis.scoreFactors?.includes(
       "Role title aligns with the target analyst/systems role family."
     )
+  )
+})
+
+test("infers location from pasted job descriptions", () => {
+  assert.equal(
+    inferLocationFromJobDescription(
+      "Role: Business Analyst\nLocation: London, United Kingdom\nWe work hybrid."
+    ),
+    "London, United Kingdom"
+  )
+  assert.equal(
+    inferLocationFromJobDescription(
+      "This is a hybrid role based in Manchester, United Kingdom."
+    ),
+    "Manchester, United Kingdom"
+  )
+  assert.equal(
+    inferLocationFromJobDescription(
+      "Remote role open to candidates across the UK."
+    ),
+    "United Kingdom"
+  )
+  assert.equal(
+    inferLocationFromJobDescription("No location is listed in this posting."),
+    ""
   )
 })
 

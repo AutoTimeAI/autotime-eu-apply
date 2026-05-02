@@ -13,9 +13,10 @@ Primary source docs reviewed:
 
 ## Current Position
 
-The repo has a strong local-first Chrome extension foundation, but it is not
-yet complete against the full uploaded MVP spec. Current completion is roughly
-85-90% of the full spec.
+The repo has a strong local-first Chrome extension foundation and the V1 local
+implementation is complete against the uploaded MVP spec. Current completion is
+roughly 95-100%, pending manual Chrome smoke testing and live UK/EU job
+validation evidence.
 
 ## Implemented
 
@@ -27,7 +28,8 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 - Expanded profile memory for LinkedIn, GitHub, portfolio, target countries,
   target roles, work-right details, salary expectation, base CV text, project
   summaries, and experience highlights.
-- Basic active-tab job page import and fallback from tab title/URL.
+- Basic active-tab job page import into Job Analysis and Tracker, with fallback
+  from tab title/URL.
 - Priority-platform job extraction selectors for LinkedIn, Greenhouse, Lever,
   and Workday, with platform labels in imported tracker notes.
 - Manual pasted job description fallback in Job Analysis.
@@ -58,14 +60,20 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 - Founder validation metrics view for tracked applications, status outcomes,
   content snapshot coverage, next-action coverage, outcome-note coverage, and
   sources, with CSV export.
+- Founder validation report template for recording smoke-test evidence, live
+  UK/EU job checks, metrics snapshots, and release decisions.
 - Unit tests for autofill, storage, validation, job page inference, scoring,
   application filtering, duplicate detection, update/delete, and CSV export.
 - Side-panel component split so `main.tsx` now mostly acts as orchestration.
 
-## Full-Spec Gaps
+## Remaining Validation
 
-- Founder validation loop still needs real UK/EU jobs analysed and outcome notes
-  recorded against live applications.
+- Manual Chrome smoke test needs to be completed from
+  `docs/extension-smoke-test.md`.
+- Founder validation loop still needs real UK/EU jobs analysed and outcome
+  notes recorded against live applications.
+- Priority-platform extraction still needs live checks on LinkedIn, Greenhouse,
+  Lever, and Workday pages.
 
 ## Explicitly Out Of Scope For V1
 
@@ -77,10 +85,10 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 - Mobile, Safari, and Firefox support.
 - Supabase sync until the local-first flow is stable.
 
-## Recommended Next Build Order
+## Recommended Next Validation Order
 
-1. Add generated content snapshot fields to tracker/application records.
-2. Run the manual Chrome smoke test and record founder validation metrics.
-3. Validate live priority-platform extraction on LinkedIn, Greenhouse, Lever,
+1. Run the manual Chrome smoke test and complete a copied founder validation
+   report.
+2. Validate live priority-platform extraction on LinkedIn, Greenhouse, Lever,
    and Workday.
-4. Tune prompts and budget defaults after real application use.
+3. Tune prompts and budget defaults after real application use.

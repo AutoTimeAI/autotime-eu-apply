@@ -11,6 +11,7 @@ type JobAnalysisSectionProps = {
     key: K,
     value: JobAnalysisDraft[K]
   ) => void
+  onImportCurrentJobPage: () => void
   onSave: () => void
   saveAttempted: boolean
   status: string
@@ -21,6 +22,7 @@ export function JobAnalysisSection({
   draft,
   issues,
   onFieldChange,
+  onImportCurrentJobPage,
   onSave,
   saveAttempted,
   status,
@@ -155,6 +157,10 @@ export function JobAnalysisSection({
 
         <button type="button" onClick={onSave}>
           Save Job Analysis
+        </button>
+
+        <button type="button" onClick={onImportCurrentJobPage}>
+          Import Current Job Page
         </button>
 
         {status && (

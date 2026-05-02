@@ -28,7 +28,9 @@ const fillerTitleParts = [
   "apply",
   "careers",
   "job",
+  "job application",
   "jobs",
+  "job description",
   "job details",
   "job opening",
   "job openings",
@@ -78,13 +80,22 @@ function isUsefulTitlePart(value: string) {
   return text !== "" && !fillerTitleParts.includes(text)
 }
 
-function parseTitle(title = "") {
-  const cleanTitle = cleanText(title)
+function cleanRoleTitle(value = "") {
+  return cleanText(value)
+    .replace(/^job application for\s+/i, "")
+    .replace(/^job description\s*[:|-]\s*/i, "")
+    .replace(/^job opening\s*[:|-]\s*/i, "")
+    .replace(/^apply for\s+/i, "")
+    .trim()
+}
+
+function parseTitle(title = "", platform: JobPlatform = "Generic") {
+  const cleanTitle = cleanRoleTitle(title)
   const atMatch = cleanTitle.match(/^(.+?)\s+at\s+(.+?)(?:\s*[|-]\s*.+)?$/i)
 
   if (atMatch) {
     return {
-      roleTitle: cleanText(atMatch[1]),
+      roleTitle: cleanRoleTitle(atMatch[1]),
       company: cleanText(atMatch[2])
     }
   }
@@ -94,15 +105,22 @@ function parseTitle(title = "") {
     .map(cleanText)
     .filter(isUsefulTitlePart)
 
+  if (platform === "Lever" && parts.length >= 2) {
+    return {
+      roleTitle: cleanRoleTitle(parts[1]),
+      company: parts[0]
+    }
+  }
+
   if (parts.length >= 2) {
     return {
-      roleTitle: parts[0],
+      roleTitle: cleanRoleTitle(parts[0]),
       company: parts[1]
     }
   }
 
   return {
-    roleTitle: cleanTitle,
+    roleTitle: cleanRoleTitle(cleanTitle),
     company: ""
   }
 }
@@ -112,11 +130,11 @@ export function inferJobPageDetails(
 ): JobPageDetails {
   // Prefer explicit page text over title parsing because job-board titles often
   // include branding, location, or generic words such as "Careers".
-  const parsedTitle = parseTitle(input.title)
-  const roleTitle = cleanText(input.heading) || parsedTitle.roleTitle
-  const company = cleanText(input.company) || parsedTitle.company
   const url = cleanText(input.url)
   const platform = getJobPlatform(url)
+  const parsedTitle = parseTitle(input.title, platform)
+  const roleTitle = cleanText(input.heading) || parsedTitle.roleTitle
+  const company = cleanText(input.company) || parsedTitle.company
 
   return {
     roleTitle,

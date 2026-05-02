@@ -5,7 +5,10 @@ import {
   formatJobPageNotes,
   inferJobPageDetails
 } from "../lib/job-page"
-import { inferJobFitAnalysis } from "../lib/job-analysis"
+import {
+  inferJobFitAnalysis,
+  inferLocationFromJobDescription
+} from "../lib/job-analysis"
 import { generateApplicationContentDraft } from "../lib/content-generation"
 import {
   applicationsToCsv,
@@ -347,7 +350,23 @@ function SidePanelApp() {
     key: K,
     value: JobAnalysisDraft[K]
   ) => {
-    setJobAnalysisDraft((current) => ({ ...current, [key]: value }))
+    setJobAnalysisDraft((current) => {
+      const updated = { ...current, [key]: value }
+
+      if (
+        key === "jobDescription" &&
+        typeof value === "string" &&
+        !current.location.trim()
+      ) {
+        const inferredLocation = inferLocationFromJobDescription(value)
+
+        if (inferredLocation) {
+          return { ...updated, location: inferredLocation }
+        }
+      }
+
+      return updated
+    })
   }
 
   const updateApplicationContentField = <
@@ -590,6 +609,64 @@ function SidePanelApp() {
     clearSaveAttempt("job-analysis")
     setJobStatus(usedAI ? "AI job analysis draft saved" : "Job analysis draft saved")
     setTimeout(() => setJobStatus(""), 3500)
+  }
+
+  const handleImportCurrentJobPageForAnalysis = async () => {
+    setJobStatus("Detecting current job page...")
+
+    const tabs = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    })
+    const activeTab = tabs[0]
+
+    if (!activeTab?.id) {
+      setJobStatus("Could not access current tab.")
+      return
+    }
+
+    try {
+      const details = (await chrome.tabs.sendMessage(activeTab.id, {
+        type: "AUTOTIME_DETECT_JOB_PAGE"
+      })) as JobPageResponse
+
+      if (details.message && !details.roleTitle && !details.company) {
+        setJobStatus(details.message)
+        return
+      }
+
+      setJobAnalysisDraft((current) => ({
+        ...current,
+        jobTitle: current.jobTitle || details.roleTitle,
+        company: current.company || details.company,
+        jobUrl: current.jobUrl || details.url,
+        location: current.location || details.location,
+        notes: current.notes || formatJobPageNotes(details)
+      }))
+      clearSaveAttempt("job-analysis")
+      setJobStatus("Current job page imported")
+      setTimeout(() => setJobStatus(""), 3500)
+    } catch {
+      const details = inferJobPageDetails({
+        title: activeTab.title,
+        url: activeTab.url
+      })
+
+      if (!details.roleTitle && !details.url) {
+        setJobStatus("Could not detect job details on this page.")
+        return
+      }
+
+      setJobAnalysisDraft((current) => ({
+        ...current,
+        jobTitle: current.jobTitle || details.roleTitle,
+        jobUrl: current.jobUrl || details.url,
+        notes: current.notes || formatJobPageNotes(details)
+      }))
+      clearSaveAttempt("job-analysis")
+      setJobStatus("Current tab imported")
+      setTimeout(() => setJobStatus(""), 3500)
+    }
   }
 
   const handleSaveApplicationContent = async () => {
@@ -929,6 +1006,7 @@ function SidePanelApp() {
           draft={jobAnalysisDraft}
           issues={jobAnalysisIssues}
           onFieldChange={updateJobAnalysisField}
+          onImportCurrentJobPage={handleImportCurrentJobPageForAnalysis}
           onSave={handleSaveJobAnalysis}
           saveAttempted={saveAttempts["job-analysis"]}
           status={jobStatus}

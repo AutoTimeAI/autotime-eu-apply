@@ -21,15 +21,17 @@ extension with testers.
 
 1. Run `pnpm --filter extension test`.
 2. Run `pnpm --filter extension typecheck`.
-3. Run `pnpm build:extension`.
-4. Load or reload `apps/extension/.output/chrome-mv3` in Chrome.
-5. Complete `docs/extension-smoke-test.md`.
-6. Confirm no extension flow submits an application form.
-7. Confirm generated or saved content requires an explicit user click before
+3. Run `pnpm -r typecheck`.
+4. Run `pnpm -r lint`.
+5. Run `pnpm build:extension`.
+6. Load or reload `apps/extension/.output/chrome-mv3` in Chrome.
+7. Complete `docs/extension-smoke-test.md`.
+8. Confirm no extension flow submits an application form.
+9. Confirm generated or saved content requires an explicit user click before
    insertion.
-8. Confirm CSV export contains only the user's locally saved applications.
-9. Record the build date, commit SHA, and smoke-test result in founder
-   validation notes.
+10. Confirm CSV export contains only the user's locally saved applications.
+11. Copy `docs/founder-validation-report.md`, then record the build date, commit
+   SHA, smoke-test result, live job checks, and exported validation metrics.
 
 ## Known MVP Risks
 
@@ -38,3 +40,8 @@ extension with testers.
   LinkedIn, Greenhouse, Lever, and Workday pages before a wider release.
 - Local storage is browser-local; users need to export CSV if they want a backup
   of saved applications.
+
+## Validation Report
+
+Use `docs/founder-validation-report.md` as the report template for each manual
+Chrome smoke test or live UK/EU job validation pass.

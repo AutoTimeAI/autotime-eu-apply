@@ -20,10 +20,12 @@ validation can remain local until backend/web integration begins.
 Current status:
 
 - Repo implementation slice: usable local-first extension workflow is in place.
-- Full uploaded MVP spec: not complete yet.
-- Approximate spec completion: 85-90%.
-- Next milestone: close the full-spec MVP gaps listed in
-  `docs/mvp-spec-alignment.md`, then run the manual Chrome smoke test.
+- Full uploaded MVP spec: local extension implementation is complete for the
+  V1 scope.
+- Approximate spec completion: 95-100% pending manual Chrome smoke testing and
+  live UK/EU job validation evidence.
+- Next milestone: run the manual Chrome smoke test, complete a founder
+  validation report, and validate live priority-platform extraction.
 
 This status is based on the uploaded `EU Apply.7z` product spec pack,
 especially `AutoTime_MVP_Consolidated_Summary.docx`,
@@ -42,7 +44,7 @@ The extension currently supports:
   period, salary expectation, motivation, strengths, and availability.
 - Creating, viewing, and clearing reusable answers from the side panel.
 - Saving the current tab as a saved application from the side panel.
-- Importing the active job page into the side-panel tracker.
+- Importing the active job page into Job Analysis and the side-panel tracker.
 - Pasting a manual job description into Job Analysis when page extraction is
   incomplete or unavailable.
 - Transparent local job-fit scoring with visible factors, recommendation, and
@@ -75,8 +77,8 @@ The extension currently supports:
 The extension does not submit forms and does not use Firebase or a backend yet.
 The web app does not depend on Firebase until backend work starts.
 
-Known full-spec gaps include live privacy/release validation and founder
-validation metrics from real UK/EU applications.
+Remaining release work is manual validation: complete the Chrome smoke test,
+record live UK/EU application outcomes, and export founder validation metrics.
 
 ## Local Setup
 
@@ -183,6 +185,12 @@ The release-readiness checklist lives at:
 
 ```text
 docs/release-readiness.md
+```
+
+The founder validation report template lives at:
+
+```text
+docs/founder-validation-report.md
 ```
 
 ## Repository Notes

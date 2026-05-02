@@ -10,6 +10,43 @@ function unique(values: string[]) {
   return Array.from(new Set(values))
 }
 
+function cleanDetectedLocation(value = "") {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/[.;,:\-\s]+$/, "")
+    .trim()
+}
+
+export function inferLocationFromJobDescription(description: string) {
+  const text = description.replace(/\r\n/g, "\n")
+  const patterns = [
+    /\bLocation\s*[:|-]\s*([^\n]+)/i,
+    /\bJob location\s*[:|-]\s*([^\n]+)/i,
+    /\bOffice\s*[:|-]\s*([^\n]+)/i,
+    /\bBased in\s+([A-Z][A-Za-z .'-]+(?:,\s*[A-Z][A-Za-z .'-]+)?)/i,
+    /\b(?:Hybrid|Remote|On-site|Onsite)\s*(?:role|working)?\s*(?:in|from|-\s*)\s*([A-Z][A-Za-z .'-]+(?:,\s*[A-Z][A-Za-z .'-]+)?)/i
+  ]
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    const location = cleanDetectedLocation(match?.[1])
+
+    if (location) {
+      return location
+    }
+  }
+
+  if (/\bremote\b/i.test(text) && /\b(?:uk|united kingdom)\b/i.test(text)) {
+    return "United Kingdom"
+  }
+
+  if (/\bremote\b/i.test(text) && /\b(?:eu|europe|european union)\b/i.test(text)) {
+    return "Europe"
+  }
+
+  return ""
+}
+
 function getRecommendation(score: number): JobFitRecommendation {
   if (score >= 75) {
     return "High Priority"

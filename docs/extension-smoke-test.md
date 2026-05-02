@@ -58,6 +58,12 @@ apps/extension/.output/chrome-mv3
 9. In Job Analysis, paste a job description that includes analyst, payments, or
    systems language and confirm the saved analysis uses that text in the score
    and positioning output.
+10. In Job Analysis, paste a job description with a `Location:` or `based in`
+    line while the Location/country field is empty and confirm Location/country
+    is inferred.
+11. In Job Analysis, click Import Current Job Page from a job posting and
+    confirm title, company, URL, location when visible, and source/platform notes
+    are filled without overwriting existing typed fields.
 
 ## Autofill
 
