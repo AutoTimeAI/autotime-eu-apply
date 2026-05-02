@@ -120,7 +120,9 @@ function getLocationFromLinkedInDescription() {
     ".jobs-unified-top-card__primary-description-container",
     ".topcard__flavor-row"
   ])
-  const parts = description.split(/\s+·\s+/).map((part) => part.trim())
+  const parts = description
+    .split(/(?:\s+\u00b7\s+|\s+\u00c2\u00b7\s+)/)
+    .map((part) => part.trim())
 
   return parts.length > 1 ? parts[1] : ""
 }

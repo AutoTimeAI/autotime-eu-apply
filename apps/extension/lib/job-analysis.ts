@@ -6,6 +6,10 @@ function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term))
 }
 
+function unique(values: string[]) {
+  return Array.from(new Set(values))
+}
+
 function getRecommendation(score: number): JobFitRecommendation {
   if (score >= 75) {
     return "High Priority"
@@ -20,6 +24,42 @@ function getRecommendation(score: number): JobFitRecommendation {
   }
 
   return "Skip"
+}
+
+function getDetectedSkills(text: string) {
+  const skillTerms = [
+    ["Requirements analysis", ["requirements", "requirement gathering"]],
+    ["Stakeholder management", ["stakeholder", "stakeholders"]],
+    ["UAT", ["uat", "user acceptance testing"]],
+    ["Payments", ["payment", "payments"]],
+    ["FinTech", ["fintech", "bank", "finance", "financial services"]],
+    ["Application support", ["application support", "support analyst"]],
+    ["Systems analysis", ["systems analyst", "systems analysis"]],
+    ["SQL", ["sql"]],
+    ["Data analysis", ["data analysis", "reporting", "dashboard"]],
+    ["Agile delivery", ["agile", "scrum", "kanban"]],
+    ["API integration", ["api", "apis", "integration"]]
+  ] as const
+
+  return skillTerms
+    .filter(([, terms]) => includesAny(text, [...terms]))
+    .map(([skill]) => skill)
+}
+
+function getSeniority(text: string) {
+  if (includesAny(text, ["head of", "director", "principal"])) {
+    return "Leadership"
+  }
+
+  if (includesAny(text, ["senior", "lead", "manager"])) {
+    return "Senior"
+  }
+
+  if (includesAny(text, ["junior", "graduate", "entry level", "associate"])) {
+    return "Junior"
+  }
+
+  return "Mid-level"
 }
 
 function getPositioningAngle(
@@ -45,12 +85,66 @@ function getPositioningAngle(
   return "Position carefully around transferable experience and be explicit about any gaps."
 }
 
+function getSummary(draft: JobAnalysisDraft, skills: string[], seniority: string) {
+  const role = draft.jobTitle || "This role"
+  const company = draft.company ? ` at ${draft.company}` : ""
+  const location = draft.location ? ` in ${draft.location}` : ""
+  const skillText = skills.length
+    ? ` Key signals include ${skills.slice(0, 4).join(", ")}.`
+    : ""
+
+  return `${role}${company}${location} appears to be a ${seniority.toLowerCase()} ${draft.workMode} opportunity.${skillText}`
+}
+
+function getGaps(
+  draft: JobAnalysisDraft,
+  profile: CandidateProfile | null,
+  text: string,
+  skills: string[]
+) {
+  const gaps: string[] = []
+
+  if (skills.length === 0) {
+    gaps.push("No clear skills were detected from the saved job text.")
+  }
+
+  if (!draft.jobDescription.trim()) {
+    gaps.push("Pasted job description is missing, so requirements may be incomplete.")
+  }
+
+  if (includesAny(text, ["senior", "lead", "principal", "head of"])) {
+    gaps.push("Seniority may need stronger evidence in the application.")
+  }
+
+  if (profile?.sponsorshipNeeded) {
+    gaps.push("Sponsorship requirement should be checked before investing heavily.")
+  }
+
+  if (profile && profile.relocationWillingness === "no") {
+    const profileCountry = profile.currentCountry.toLowerCase()
+    const jobLocation = draft.location.toLowerCase()
+
+    if (jobLocation && !jobLocation.includes(profileCountry)) {
+      gaps.push("Location may conflict with saved relocation preference.")
+    }
+  }
+
+  return gaps.length ? gaps : ["No obvious gaps detected from saved data."]
+}
+
 export function inferJobFitAnalysis(
   draft: JobAnalysisDraft,
   profile: CandidateProfile | null
 ): Pick<
   JobAnalysisDraft,
-  "fitScore" | "recommendation" | "positioningAngle" | "scoreFactors"
+  | "fitScore"
+  | "recommendation"
+  | "positioningAngle"
+  | "scoreFactors"
+  | "skills"
+  | "seniority"
+  | "summary"
+  | "gaps"
 > {
   const text = [
     draft.jobTitle,
@@ -63,6 +157,8 @@ export function inferJobFitAnalysis(
     .join(" ")
     .toLowerCase()
   const factors: string[] = []
+  const skills = unique(getDetectedSkills(text))
+  const seniority = getSeniority(text)
   let score = 45
 
   if (
@@ -144,6 +240,10 @@ export function inferJobFitAnalysis(
     fitScore,
     recommendation,
     positioningAngle: getPositioningAngle(text, recommendation),
-    scoreFactors: factors
+    scoreFactors: factors,
+    skills,
+    seniority,
+    summary: getSummary(draft, skills, seniority),
+    gaps: getGaps(draft, profile, text, skills)
   }
 }

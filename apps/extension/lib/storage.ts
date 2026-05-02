@@ -24,6 +24,10 @@ export type ReusableAnswers = {
   relocationAnswer: string
   workAuthorisationAnswer: string
   noticePeriodAnswer: string
+  salaryExpectationAnswer: string
+  motivationAnswer: string
+  strengthsAnswer: string
+  availabilityAnswer: string
 }
 
 export type ApplicationStatus =
@@ -82,6 +86,10 @@ export type JobAnalysisDraft = {
   workMode: "onsite" | "hybrid" | "remote" | "unknown"
   jobDescription: string
   notes: string
+  skills?: string[]
+  seniority?: string
+  summary?: string
+  gaps?: string[]
   fitScore?: number
   recommendation?: JobRecommendation
   positioningAngle?: string
@@ -142,6 +150,21 @@ function normalizeProfile(profile: Partial<CandidateProfile>): CandidateProfile 
     baseCvText: profile.baseCvText ?? "",
     projectSummaries: profile.projectSummaries ?? "",
     experienceHighlights: profile.experienceHighlights ?? ""
+  }
+}
+
+function normalizeReusableAnswers(
+  answers: Partial<ReusableAnswers>
+): ReusableAnswers {
+  return {
+    sponsorshipAnswer: answers.sponsorshipAnswer ?? "",
+    relocationAnswer: answers.relocationAnswer ?? "",
+    workAuthorisationAnswer: answers.workAuthorisationAnswer ?? "",
+    noticePeriodAnswer: answers.noticePeriodAnswer ?? "",
+    salaryExpectationAnswer: answers.salaryExpectationAnswer ?? "",
+    motivationAnswer: answers.motivationAnswer ?? "",
+    strengthsAnswer: answers.strengthsAnswer ?? "",
+    availabilityAnswer: answers.availabilityAnswer ?? ""
   }
 }
 
@@ -208,6 +231,22 @@ function normalizeJobAnalysisDraft(
 
   if (draft.fitScore !== undefined) {
     normalized.fitScore = draft.fitScore
+  }
+
+  if (draft.skills !== undefined) {
+    normalized.skills = draft.skills
+  }
+
+  if (draft.seniority !== undefined) {
+    normalized.seniority = draft.seniority
+  }
+
+  if (draft.summary !== undefined) {
+    normalized.summary = draft.summary
+  }
+
+  if (draft.gaps !== undefined) {
+    normalized.gaps = draft.gaps
   }
 
   const recommendation = normalizeJobRecommendation(draft.recommendation)
@@ -297,7 +336,10 @@ export async function saveReusableAnswers(answers: ReusableAnswers) {
 
 export async function getReusableAnswers(): Promise<ReusableAnswers | null> {
   const result = await chrome.storage.local.get(REUSABLE_ANSWERS_KEY)
-  return (result[REUSABLE_ANSWERS_KEY] as ReusableAnswers) ?? null
+  const answers = result[REUSABLE_ANSWERS_KEY] as
+    | Partial<ReusableAnswers>
+    | undefined
+  return answers ? normalizeReusableAnswers(answers) : null
 }
 
 export async function clearReusableAnswers() {

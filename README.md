@@ -21,7 +21,7 @@ Current status:
 
 - Repo implementation slice: usable local-first extension workflow is in place.
 - Full uploaded MVP spec: not complete yet.
-- Approximate spec completion: 60-70%.
+- Approximate spec completion: 75-80%.
 - Next milestone: close the full-spec MVP gaps listed in
   `docs/mvp-spec-alignment.md`, then run the manual Chrome smoke test.
 

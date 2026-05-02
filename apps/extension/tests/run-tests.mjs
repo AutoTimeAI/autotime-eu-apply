@@ -120,13 +120,21 @@ test("maps reusable answers to autofill fields", () => {
       sponsorshipAnswer: "I do not require sponsorship.",
       relocationAnswer: "I am open to relocation.",
       workAuthorisationAnswer: "I am authorised to work.",
-      noticePeriodAnswer: "My notice period is one month."
+      noticePeriodAnswer: "My notice period is one month.",
+      salaryExpectationAnswer: "My expected salary is GBP 45,000.",
+      motivationAnswer: "I am motivated by product delivery.",
+      strengthsAnswer: "My strengths are analysis and UAT.",
+      availabilityAnswer: "I am available for interviews next week."
     }),
     {
       sponsorshipAnswer: "I do not require sponsorship.",
       relocationAnswer: "I am open to relocation.",
       workAuthorisationAnswer: "I am authorised to work.",
-      noticePeriodAnswer: "My notice period is one month."
+      noticePeriodAnswer: "My notice period is one month.",
+      salaryExpectationAnswer: "My expected salary is GBP 45,000.",
+      motivationAnswer: "I am motivated by product delivery.",
+      strengthsAnswer: "My strengths are analysis and UAT.",
+      availabilityAnswer: "I am available for interviews next week."
     }
   )
 })
@@ -147,6 +155,22 @@ test("detects obvious reusable answer questions", () => {
   assert.equal(
     detectReusableAnswerFromText("What is your notice period?"),
     "noticePeriodAnswer"
+  )
+  assert.equal(
+    detectReusableAnswerFromText("What are your salary expectations?"),
+    "salaryExpectationAnswer"
+  )
+  assert.equal(
+    detectReusableAnswerFromText("Why are you interested in this role?"),
+    "motivationAnswer"
+  )
+  assert.equal(
+    detectReusableAnswerFromText("What strengths can you bring?"),
+    "strengthsAnswer"
+  )
+  assert.equal(
+    detectReusableAnswerFromText("What is your availability for interview?"),
+    "availabilityAnswer"
   )
 })
 
@@ -307,6 +331,19 @@ test("infers transparent job fit analysis", () => {
       "Role title aligns with the target analyst/systems role family."
     )
   )
+  assert.deepEqual(analysis.skills, [
+    "Requirements analysis",
+    "Stakeholder management",
+    "Payments",
+    "FinTech"
+  ])
+  assert.equal(analysis.seniority, "Mid-level")
+  assert.match(analysis.summary, /FinTech Business Analyst at Example Bank/)
+  assert.ok(
+    analysis.gaps?.includes(
+      "Pasted job description is missing, so requirements may be incomplete."
+    )
+  )
 })
 
 test("uses pasted job description text in job fit analysis", () => {
@@ -414,7 +451,11 @@ test("saves and loads reusable answers", async () => {
     sponsorshipAnswer: "I do not require sponsorship.",
     relocationAnswer: "I am open to relocation.",
     workAuthorisationAnswer: "I am authorised to work.",
-    noticePeriodAnswer: "My notice period is one month."
+    noticePeriodAnswer: "My notice period is one month.",
+    salaryExpectationAnswer: "My expected salary is GBP 45,000.",
+    motivationAnswer: "I am motivated by product delivery.",
+    strengthsAnswer: "My strengths are analysis and UAT.",
+    availabilityAnswer: "I am available for interviews next week."
   }
 
   await saveReusableAnswers(answers)
@@ -424,6 +465,30 @@ test("saves and loads reusable answers", async () => {
   await clearReusableAnswers()
 
   assert.equal(await getReusableAnswers(), null)
+})
+
+test("loads legacy reusable answers with snippet defaults", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "reusable-answers": {
+      sponsorshipAnswer: "I do not require sponsorship.",
+      relocationAnswer: "I am open to relocation.",
+      workAuthorisationAnswer: "I am authorised to work.",
+      noticePeriodAnswer: "My notice period is one month."
+    }
+  })
+
+  assert.deepEqual(await getReusableAnswers(), {
+    sponsorshipAnswer: "I do not require sponsorship.",
+    relocationAnswer: "I am open to relocation.",
+    workAuthorisationAnswer: "I am authorised to work.",
+    noticePeriodAnswer: "My notice period is one month.",
+    salaryExpectationAnswer: "",
+    motivationAnswer: "",
+    strengthsAnswer: "",
+    availabilityAnswer: ""
+  })
 })
 
 test("saves and loads job analysis draft", async () => {
@@ -564,16 +629,29 @@ test("generates application content from saved profile and job analysis", () => 
       sponsorshipAnswer: "I do not require sponsorship.",
       relocationAnswer: "I am open to relocation.",
       workAuthorisationAnswer: "I am authorised to work in the UK.",
-      noticePeriodAnswer: "My notice period is one month."
+      noticePeriodAnswer: "My notice period is one month.",
+      salaryExpectationAnswer: "My expected salary is GBP 45,000.",
+      motivationAnswer: "I want this role because it matches my BA focus.",
+      strengthsAnswer: "Requirements analysis and UAT are my strengths.",
+      availabilityAnswer: "I am available for interviews next week."
     }
   )
 
   assert.match(draft.coverLetter, /FinTech Business Analyst/)
   assert.match(draft.coverLetter, /Example Bank/)
   assert.match(draft.profileSummary, /Rajan Kumar/)
-  assert.match(draft.motivationAnswer, /Role title aligns/)
-  assert.match(draft.strengthsAnswer, /Requirements analysis/)
-  assert.equal(draft.availabilityAnswer, "My notice period is one month.")
+  assert.equal(
+    draft.motivationAnswer,
+    "I want this role because it matches my BA focus."
+  )
+  assert.equal(
+    draft.strengthsAnswer,
+    "Requirements analysis and UAT are my strengths."
+  )
+  assert.equal(
+    draft.availabilityAnswer,
+    "I am available for interviews next week."
+  )
 })
 
 test("saves and loads tracker draft", async () => {

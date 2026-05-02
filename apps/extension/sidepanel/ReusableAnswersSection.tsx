@@ -133,6 +133,46 @@ export function ReusableAnswersSection({
           />
         </label>
 
+        <label>
+          Salary expectation answer
+          <textarea
+            value={answers.salaryExpectationAnswer}
+            onChange={(event) =>
+              onFieldChange("salaryExpectationAnswer", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Motivation answer
+          <textarea
+            value={answers.motivationAnswer}
+            onChange={(event) =>
+              onFieldChange("motivationAnswer", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Strengths answer
+          <textarea
+            value={answers.strengthsAnswer}
+            onChange={(event) =>
+              onFieldChange("strengthsAnswer", event.target.value)
+            }
+          />
+        </label>
+
+        <label>
+          Availability answer
+          <textarea
+            value={answers.availabilityAnswer}
+            onChange={(event) =>
+              onFieldChange("availabilityAnswer", event.target.value)
+            }
+          />
+        </label>
+
         <button type="button" onClick={onSave}>
           Save Reusable Answers
         </button>

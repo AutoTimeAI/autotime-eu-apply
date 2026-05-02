@@ -44,6 +44,7 @@ export function generateApplicationContentDraft(
     profile.workRightDetails
   )
   const availability = firstFilled(
+    reusableAnswers?.availabilityAnswer,
     reusableAnswers?.noticePeriodAnswer,
     profile.noticePeriod
   )
@@ -78,27 +79,31 @@ export function generateApplicationContentDraft(
     " "
   )
 
-  const motivationAnswer = compactJoin(
-    [
-      `I am motivated by the ${job.jobTitle || "role"} because it connects to ${roleFocus}.`,
-      sentence(positioning),
-      job.scoreFactors?.length
-        ? `The strongest fit signals are ${job.scoreFactors
-            .slice(0, 2)
-            .join(" ")}`
-        : ""
-    ],
-    " "
-  )
+  const motivationAnswer =
+    reusableAnswers?.motivationAnswer ||
+    compactJoin(
+      [
+        `I am motivated by the ${job.jobTitle || "role"} because it connects to ${roleFocus}.`,
+        sentence(positioning),
+        job.scoreFactors?.length
+          ? `The strongest fit signals are ${job.scoreFactors
+              .slice(0, 2)
+              .join(" ")}`
+          : ""
+      ],
+      " "
+    )
 
-  const strengthsAnswer = compactJoin(
-    [
-      sentence(profile.experienceHighlights),
-      sentence(profile.projectSummaries),
-      sentence(profile.workRightDetails)
-    ],
-    " "
-  )
+  const strengthsAnswer =
+    reusableAnswers?.strengthsAnswer ||
+    compactJoin(
+      [
+        sentence(profile.experienceHighlights),
+        sentence(profile.projectSummaries),
+        sentence(profile.workRightDetails)
+      ],
+      " "
+    )
 
   return {
     coverLetter,

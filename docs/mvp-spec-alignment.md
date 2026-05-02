@@ -15,7 +15,7 @@ Primary source docs reviewed:
 
 The repo has a strong local-first Chrome extension foundation, but it is not
 yet complete against the full uploaded MVP spec. Current completion is roughly
-60-70% of the full spec.
+75-80% of the full spec.
 
 ## Implemented
 
@@ -32,10 +32,14 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
   and Workday, with platform labels in imported tracker notes.
 - Manual pasted job description fallback in Job Analysis.
 - Local transparent fit scoring with visible factors and positioning angle.
+- Structured local job insights for summary, detected skills, seniority, fit
+  factors, and gaps.
 - Spec-aligned job recommendation labels: `High Priority`, `Worth Applying`,
   `Stretch`, and `Skip`, with legacy label normalization.
 - Editable application content generation from saved profile, reusable answers,
   and saved job analysis.
+- Reusable answer snippets for sponsorship, relocation, work authorisation,
+  notice period, salary expectation, motivation, strengths, and availability.
 - Editable application tracker with search, status filtering, notes, next
   action, next action date, delete, duplicate URL detection, and CSV export.
 - Spec-aligned tracker statuses: `Saved`, `Applying`, `Applied`, `Interview`,
@@ -48,13 +52,10 @@ yet complete against the full uploaded MVP spec. Current completion is roughly
 
 ## Full-Spec Gaps
 
-- Reusable answer snippets beyond the current small set.
 - AI-backed analysis, positioning, and content generation using the approved
   controlled-cost API model.
 - AI usage/cost logging by feature name, timestamp, model, and approximate cost.
 - Generated tailored content snapshots attached to tracker records.
-- Structured job insights: title, company, location, skills, seniority, summary,
-  fit factors, and gaps.
 - User-approved insertion of generated content, not only profile/reusable answer
   autofill.
 - Privacy basics and release-readiness notes from the UAT pack.

@@ -6,6 +6,10 @@ export type ReusableAnswerField =
   | "relocationAnswer"
   | "workAuthorisationAnswer"
   | "noticePeriodAnswer"
+  | "salaryExpectationAnswer"
+  | "motivationAnswer"
+  | "strengthsAnswer"
+  | "availabilityAnswer"
 
 type FillableInputState = {
   disabled: boolean
@@ -53,7 +57,11 @@ export function getReusableAnswerValues(
     sponsorshipAnswer: answers.sponsorshipAnswer,
     relocationAnswer: answers.relocationAnswer,
     workAuthorisationAnswer: answers.workAuthorisationAnswer,
-    noticePeriodAnswer: answers.noticePeriodAnswer
+    noticePeriodAnswer: answers.noticePeriodAnswer,
+    salaryExpectationAnswer: answers.salaryExpectationAnswer,
+    motivationAnswer: answers.motivationAnswer,
+    strengthsAnswer: answers.strengthsAnswer,
+    availabilityAnswer: answers.availabilityAnswer
   }
 }
 
@@ -137,11 +145,50 @@ export function detectReusableAnswerFromText(
     includesAny(text, [
       "notice period",
       "start date",
-      "available to start",
-      "availability"
+      "available to start"
     ])
   ) {
     return "noticePeriodAnswer"
+  }
+
+  if (
+    includesAny(text, [
+      "salary",
+      "compensation",
+      "expected pay",
+      "pay expectation",
+      "desired pay"
+    ])
+  ) {
+    return "salaryExpectationAnswer"
+  }
+
+  if (
+    includesAny(text, [
+      "why are you interested",
+      "why do you want",
+      "why this role",
+      "motivation",
+      "why join"
+    ])
+  ) {
+    return "motivationAnswer"
+  }
+
+  if (
+    includesAny(text, [
+      "strength",
+      "strengths",
+      "what can you bring",
+      "why are you a good fit",
+      "relevant experience"
+    ])
+  ) {
+    return "strengthsAnswer"
+  }
+
+  if (includesAny(text, ["availability", "available for interview"])) {
+    return "availabilityAnswer"
   }
 
   return null

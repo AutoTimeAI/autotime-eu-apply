@@ -45,7 +45,11 @@ export const emptyReusableAnswers: ReusableAnswers = {
   sponsorshipAnswer: "",
   relocationAnswer: "",
   workAuthorisationAnswer: "",
-  noticePeriodAnswer: ""
+  noticePeriodAnswer: "",
+  salaryExpectationAnswer: "",
+  motivationAnswer: "",
+  strengthsAnswer: "",
+  availabilityAnswer: ""
 }
 
 export const emptyJobAnalysisDraft: JobAnalysisDraft = {

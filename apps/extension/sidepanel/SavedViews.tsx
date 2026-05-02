@@ -173,6 +173,22 @@ export function ReusableAnswersView({
               <dt>Notice period answer</dt>
               <dd>{draft.noticePeriodAnswer || "None"}</dd>
             </div>
+            <div>
+              <dt>Salary expectation answer</dt>
+              <dd>{draft.salaryExpectationAnswer || "None"}</dd>
+            </div>
+            <div>
+              <dt>Motivation answer</dt>
+              <dd>{draft.motivationAnswer || "None"}</dd>
+            </div>
+            <div>
+              <dt>Strengths answer</dt>
+              <dd>{draft.strengthsAnswer || "None"}</dd>
+            </div>
+            <div>
+              <dt>Availability answer</dt>
+              <dd>{draft.availabilityAnswer || "None"}</dd>
+            </div>
           </dl>
           <button className="danger-button" type="button" onClick={onClear}>
             Clear Saved Answers
@@ -233,6 +249,28 @@ export function JobAnalysisView({
               <dd>{draft.recommendation || "Not scored"}</dd>
             </div>
             <div>
+              <dt>Summary</dt>
+              <dd>{draft.summary || "None"}</dd>
+            </div>
+            <div>
+              <dt>Seniority</dt>
+              <dd>{draft.seniority || "None"}</dd>
+            </div>
+            <div>
+              <dt>Detected skills</dt>
+              <dd>
+                {draft.skills?.length ? (
+                  <ul className="summary-list">
+                    {draft.skills.map((skill) => (
+                      <li key={skill}>{skill}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  "None"
+                )}
+              </dd>
+            </div>
+            <div>
               <dt>Positioning angle</dt>
               <dd>{draft.positioningAngle || "None"}</dd>
             </div>
@@ -243,6 +281,20 @@ export function JobAnalysisView({
                   <ul className="summary-list">
                     {draft.scoreFactors.map((factor) => (
                       <li key={factor}>{factor}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  "None"
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Gaps</dt>
+              <dd>
+                {draft.gaps?.length ? (
+                  <ul className="summary-list">
+                    {draft.gaps.map((gap) => (
+                      <li key={gap}>{gap}</li>
                     ))}
                   </ul>
                 ) : (
