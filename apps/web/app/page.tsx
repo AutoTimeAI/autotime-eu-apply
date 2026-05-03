@@ -16,6 +16,9 @@ type AlignmentSnapshot = {
   company: string
   createdAt: string
   score: number
+  matches: RequirementMatch[]
+  bullets: string[]
+  gaps: string[]
 }
 
 const sampleCv = [
@@ -137,15 +140,63 @@ function getGapNotes(matches: RequirementMatch[]) {
     )
 }
 
+function getAlignmentMarkdown({
+  bullets,
+  company,
+  createdAt,
+  gaps,
+  matches,
+  roleTitle,
+  score
+}: Omit<AlignmentSnapshot, "id">) {
+  return [
+    `# CV-JD Alignment - ${roleTitle || "Untitled role"}`,
+    "",
+    `Company: ${company || "Unknown company"}`,
+    `Created: ${new Date(createdAt).toLocaleString()}`,
+    `Alignment score: ${score}%`,
+    "",
+    "## Requirement Match",
+    "",
+    ...matches.map(
+      (match) =>
+        `- ${match.status}: ${match.requirement} - ${match.evidence}`
+    ),
+    "",
+    "## Tailored CV Bullets",
+    "",
+    ...(bullets.length
+      ? bullets.map((bullet) => `- ${bullet}`)
+      : ["- Add stronger CV evidence before tailoring bullets."]),
+    "",
+    "## Gap Notes",
+    "",
+    ...(gaps.length
+      ? gaps.map((gap) => `- ${gap}`)
+      : ["- No hard gaps detected from the current requirement signals."])
+  ].join("\n")
+}
+
 function loadSnapshots() {
   if (typeof window === "undefined") {
     return []
   }
 
   try {
-    return JSON.parse(
+    const parsed = JSON.parse(
       window.localStorage.getItem("autotime-dashboard-alignments") ?? "[]"
-    ) as AlignmentSnapshot[]
+    ) as Partial<AlignmentSnapshot>[]
+
+    return parsed.map((snapshot) => ({
+      id: snapshot.id ?? crypto.randomUUID(),
+      roleTitle: snapshot.roleTitle ?? "",
+      company: snapshot.company ?? "",
+      createdAt: snapshot.createdAt ?? new Date().toISOString(),
+      score: snapshot.score ?? 0,
+      matches: snapshot.matches ?? [],
+      bullets: snapshot.bullets ?? [],
+      gaps: snapshot.gaps ?? []
+    }))
   } catch {
     return []
   }
@@ -157,6 +208,8 @@ export default function HomePage() {
   const [cvText, setCvText] = useState(sampleCv)
   const [jobText, setJobText] = useState(sampleJob)
   const [snapshots, setSnapshots] = useState<AlignmentSnapshot[]>([])
+  const [selectedSnapshot, setSelectedSnapshot] =
+    useState<AlignmentSnapshot | null>(null)
   const matches = useMemo(
     () => getRequirementMatches(cvText, jobText),
     [cvText, jobText]
@@ -183,14 +236,44 @@ export default function HomePage() {
       roleTitle,
       company,
       createdAt: new Date().toISOString(),
-      score
+      score,
+      matches,
+      bullets,
+      gaps
     }
     const updated = [snapshot, ...snapshots].slice(0, 8)
     setSnapshots(updated)
+    setSelectedSnapshot(snapshot)
     window.localStorage.setItem(
       "autotime-dashboard-alignments",
       JSON.stringify(updated)
     )
+  }
+
+  const viewSnapshot = (snapshot: AlignmentSnapshot) => {
+    setSelectedSnapshot(snapshot)
+  }
+
+  const exportAlignmentNote = () => {
+    const markdown = getAlignmentMarkdown({
+      roleTitle,
+      company,
+      createdAt: new Date().toISOString(),
+      score,
+      matches,
+      bullets,
+      gaps
+    })
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `${getRoleLabel(roleTitle)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")}-alignment.md`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -261,6 +344,14 @@ export default function HomePage() {
 
           <button type="button" onClick={saveSnapshot}>
             Save alignment snapshot
+          </button>
+
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={exportAlignmentNote}
+          >
+            Export alignment note
           </button>
         </div>
 
@@ -335,15 +426,49 @@ export default function HomePage() {
                 <strong>{snapshot.roleTitle || "Untitled role"}</strong>
                 <span>{snapshot.company || "Unknown company"}</span>
                 <small>
-                  {new Date(snapshot.createdAt).toLocaleString()} ·{" "}
+                  {new Date(snapshot.createdAt).toLocaleString()} -{" "}
                   {snapshot.score}% aligned
                 </small>
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={() => viewSnapshot(snapshot)}
+                >
+                  View snapshot
+                </button>
               </article>
             ))
           ) : (
             <p className="empty-state">No saved dashboard snapshots yet.</p>
           )}
         </div>
+        {selectedSnapshot && (
+          <article className="snapshot-detail">
+            <h3>{selectedSnapshot.roleTitle || "Untitled role"}</h3>
+            <p>
+              {selectedSnapshot.company || "Unknown company"} -{" "}
+              {selectedSnapshot.score}% aligned
+            </p>
+            <h4>Saved Bullets</h4>
+            <ul className="bullets-list">
+              {(selectedSnapshot.bullets.length
+                ? selectedSnapshot.bullets
+                : ["No tailored bullets were saved in this snapshot."]
+              ).map((bullet) => (
+                <li key={bullet}>{bullet}</li>
+              ))}
+            </ul>
+            <h4>Saved Gaps</h4>
+            <ul className="bullets-list">
+              {(selectedSnapshot.gaps.length
+                ? selectedSnapshot.gaps
+                : ["No gap notes were saved in this snapshot."]
+              ).map((gap) => (
+                <li key={gap}>{gap}</li>
+              ))}
+            </ul>
+          </article>
+        )}
       </section>
     </main>
   )

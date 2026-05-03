@@ -51,6 +51,27 @@ button:hover {
   background: #0e6864;
 }
 
+.secondary-button {
+  border: 1px solid var(--teal);
+  background: #ffffff;
+  color: var(--teal);
+}
+
+.secondary-button:hover,
+.text-button:hover {
+  background: #e5f4f2;
+  color: #0e6864;
+}
+
+.text-button {
+  min-height: 0;
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: var(--teal);
+  padding: 0;
+}
+
 input,
 textarea {
   width: 100%;
@@ -262,6 +283,19 @@ h3 {
   grid-template-columns: minmax(240px, 0.4fr) minmax(0, 1fr);
   gap: 16px;
   margin-top: 18px;
+}
+
+.snapshot-detail {
+  grid-column: 1 / -1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 14px;
+}
+
+.snapshot-detail h4 {
+  margin: 14px 0 8px;
+  font-size: 0.92rem;
 }
 
 .snapshot-section p {
