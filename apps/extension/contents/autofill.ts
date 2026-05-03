@@ -3,7 +3,12 @@ import {
   getProfile,
   getReusableAnswers
 } from "../lib/storage"
-import { inferJobPageDetails, type JobPageDetails } from "../lib/job-page"
+import {
+  getLinkedInManualInputMessage,
+  inferJobPageDetails,
+  isLinkedInUrl,
+  type JobPageDetails
+} from "../lib/job-page"
 import {
   canFillInput,
   detectApplicationContentFromText,
@@ -141,6 +146,19 @@ function getLocationFromLinkedInDescription() {
 }
 
 function detectJobPage(): JobPageResponse {
+  if (isLinkedInUrl(window.location.href)) {
+    return {
+      roleTitle: "",
+      company: "",
+      location: "",
+      url: window.location.href,
+      source: "linkedin.com",
+      platform: "LinkedIn",
+      pageTitle: document.title,
+      message: getLinkedInManualInputMessage()
+    }
+  }
+
   // These selectors cover common job-board conventions while title parsing
   // provides a fallback for pages without structured job metadata.
   const pageTitle =
@@ -196,6 +214,13 @@ function detectJobPage(): JobPageResponse {
 }
 
 async function autofillProfile(): Promise<AutofillResponse> {
+  if (isLinkedInUrl(window.location.href)) {
+    return {
+      filledFields: [],
+      message: getLinkedInManualInputMessage()
+    }
+  }
+
   const profile = await getProfile()
   const answers = await getReusableAnswers()
 
@@ -244,6 +269,13 @@ async function autofillProfile(): Promise<AutofillResponse> {
 }
 
 async function insertApplicationContent(): Promise<AutofillResponse> {
+  if (isLinkedInUrl(window.location.href)) {
+    return {
+      filledFields: [],
+      message: getLinkedInManualInputMessage()
+    }
+  }
+
   const content = await getApplicationContentDraft()
 
   if (!content) {

@@ -61,15 +61,18 @@ apps/extension/.output/chrome-mv3
 10. In Job Analysis, paste a job description with a `Location:` or `based in`
     line while the Location/country field is empty and confirm Location/country
     is inferred.
-11. In Job Analysis, click Import Current Job Page from a job posting and
-    confirm title, company, URL, location when visible, and source/platform notes
-    are filled without overwriting existing typed fields.
+11. In Job Analysis, click Import Current Job Page from a non-LinkedIn job
+    posting and confirm title, company, URL, location when visible, and
+    source/platform notes are filled without overwriting existing typed fields.
+12. On a LinkedIn job page, confirm Import Current Job Page shows the manual
+    copy/paste message and does not fill Job Analysis fields.
 
 ## Autofill
 
 1. Save a valid profile.
 2. Save reusable answers.
-3. Open a page with obvious empty name, email, phone, or textarea questions.
+3. Open a non-LinkedIn page with obvious empty name, email, phone, or textarea
+   questions.
 4. Open the Profile tab in the side panel.
 5. Click Autofill Current Page.
 6. Confirm matching empty fields are filled or a clear no-fields message appears.
@@ -77,8 +80,8 @@ apps/extension/.output/chrome-mv3
 ## Application Content Insertion
 
 1. Save application content.
-2. Open a page with obvious empty cover letter, profile summary, motivation,
-   strengths, or availability textareas.
+2. Open a non-LinkedIn page with obvious empty cover letter, profile summary,
+   motivation, strengths, or availability textareas.
 3. Open the Application Content tab in the side panel.
 4. Click Insert Saved Content.
 5. Confirm matching empty content fields are filled or a clear no-fields
@@ -86,12 +89,14 @@ apps/extension/.output/chrome-mv3
 
 ## Current Job Page Import
 
-1. Open a job posting page in the active tab.
+1. Open a non-LinkedIn job posting page in the active tab.
 2. Open the Tracker tab in the side panel.
 3. Click Import Current Job Page.
 4. Confirm role title and application URL are filled.
 5. Confirm company and location notes are filled when the page exposes them.
 6. Confirm existing typed tracker fields are not overwritten.
+7. On a LinkedIn job page, confirm Import Current Job Page shows the manual
+   copy/paste message and does not fill tracker fields.
 
 ## Applications
 
@@ -107,6 +112,8 @@ apps/extension/.output/chrome-mv3
 9. Search for the edited next action.
 10. Export CSV and confirm the file includes the tracker fields.
 11. Delete the application and confirm it is removed from the list.
+12. On a LinkedIn tab, click Save Current Tab and confirm the manual copy/paste
+    message appears and no application is saved from the active tab.
 
 ## Usage Log
 

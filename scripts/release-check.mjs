@@ -106,7 +106,7 @@ const report = [
   "- [ ] Complete `docs/extension-smoke-test.md`.",
   "- [ ] Confirm no flow submits an application form.",
   "- [ ] Confirm saved content insertion requires an explicit click.",
-  "- [ ] Validate LinkedIn import on a live UK/EU job.",
+  "- [ ] Validate LinkedIn manual copy/paste on a live UK/EU job; do not use import, autofill, saved-content insertion, or current-tab capture on LinkedIn.",
   "- [ ] Validate Greenhouse import on a live UK/EU job.",
   "- [ ] Validate Lever import on a live UK/EU job.",
   "- [ ] Validate Workday import on a live UK/EU job.",

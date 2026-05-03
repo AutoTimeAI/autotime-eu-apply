@@ -46,7 +46,8 @@ Chrome/live-job checks as explicit pending items.
 
 - AI-backed generation needs live API-key testing before any wider release.
 - Priority job-site extraction is selector-based and should be tested on live
-  LinkedIn, Greenhouse, Lever, and Workday pages before a wider release.
+  Greenhouse, Lever, and Workday pages before a wider release. LinkedIn remains
+  manual copy/paste only.
 - Local storage is browser-local; users need to export CSV if they want a backup
   of saved applications.
 

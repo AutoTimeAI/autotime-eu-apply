@@ -43,7 +43,7 @@ Record exact live role/company details before tagging a public MVP release.
 
 | # | Platform | Role | Company | Country | Import OK | Content OK | Status | Outcome notes |
 |---|---|---|---|---|---|---|---|---|
-| 1 | LinkedIn | Pending exact role | Pending exact company | UK/EU | Pending evidence | Pending evidence | Saved | Needs recorded live job evidence |
+| 1 | LinkedIn | Pending exact role | Pending exact company | UK/EU | N/A - manual copy/paste only | Pending evidence | Saved | User must copy job details from LinkedIn and paste into AutoTime |
 | 2 | Greenhouse | Pending exact role | Pending exact company | UK/EU | Pending evidence | Pending evidence | Saved | Needs recorded live job evidence |
 | 3 | Lever | Pending exact role | Pending exact company | UK/EU | Pending evidence | Pending evidence | Saved | Needs recorded live job evidence |
 | 4 | Workday | Pending exact role | Pending exact company | UK/EU | Pending evidence | Pending evidence | Saved | Needs recorded live job evidence |
@@ -51,7 +51,9 @@ Record exact live role/company details before tagging a public MVP release.
 
 For `Import OK`, mark `Yes` only if the tracker or job-analysis import captures
 the role title, company when visible, application URL, platform/source, and
-location notes when the page exposes them.
+location notes when the page exposes them. For LinkedIn, keep `Import OK` as
+`N/A - manual copy/paste only`; do not use active-page import, autofill, saved
+content insertion, or current-tab application capture on LinkedIn pages.
 
 ## Validation Metrics Snapshot
 
@@ -68,5 +70,5 @@ record the headline values here.
 
 - MVP validation result: Manual smoke test user-reported passed; live job evidence pending
 - Release decision: Do not tag a public MVP release until live job rows and validation metrics are recorded
-- Highest-risk remaining issue: Live selector behavior on LinkedIn, Greenhouse, Lever, and Workday
+- Highest-risk remaining issue: Live selector behavior on Greenhouse, Lever, and Workday; LinkedIn manual copy/paste evidence still pending
 - Next action: Fill exact live job rows, export validation metrics, then tag MVP release

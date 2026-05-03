@@ -35,7 +35,7 @@ complete.
 
 | # | Platform | Role | Company | Country | Import OK | Content OK | Status | Outcome notes |
 |---|---|---|---|---|---|---|---|---|
-| 1 | LinkedIn |  |  |  | Not run | Not run | Saved |  |
+| 1 | LinkedIn |  |  |  | N/A - manual copy/paste only | Not run | Saved |  |
 | 2 | Greenhouse |  |  |  | Not run | Not run | Saved |  |
 | 3 | Lever |  |  |  | Not run | Not run | Saved |  |
 | 4 | Workday |  |  |  | Not run | Not run | Saved |  |
@@ -43,7 +43,9 @@ complete.
 
 For `Import OK`, mark `Yes` only if the tracker import captures the role title,
 company when visible, application URL, platform/source, and location notes when
-the page exposes them.
+the page exposes them. For LinkedIn, keep `Import OK` as
+`N/A - manual copy/paste only`; copy the job details yourself and paste them
+into AutoTime for analysis.
 
 ## Validation Metrics Snapshot
 

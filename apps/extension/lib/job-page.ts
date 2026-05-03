@@ -52,26 +52,38 @@ function getHostname(url = "") {
   }
 }
 
+function isHostname(hostname: string, domain: string) {
+  return hostname === domain || hostname.endsWith(`.${domain}`)
+}
+
 export function getJobPlatform(url = ""): JobPlatform {
   const hostname = getHostname(url)
 
-  if (hostname.includes("linkedin.com")) {
+  if (isHostname(hostname, "linkedin.com")) {
     return "LinkedIn"
   }
 
-  if (hostname.includes("greenhouse.io")) {
+  if (isHostname(hostname, "greenhouse.io")) {
     return "Greenhouse"
   }
 
-  if (hostname.includes("lever.co")) {
+  if (isHostname(hostname, "lever.co")) {
     return "Lever"
   }
 
-  if (hostname.includes("myworkdayjobs.com") || hostname.includes("workday")) {
+  if (isHostname(hostname, "myworkdayjobs.com")) {
     return "Workday"
   }
 
   return "Generic"
+}
+
+export function isLinkedInUrl(url = "") {
+  return getJobPlatform(url) === "LinkedIn"
+}
+
+export function getLinkedInManualInputMessage() {
+  return "LinkedIn is manual copy/paste only. Copy the job details yourself, then paste them into AutoTime."
 }
 
 function isUsefulTitlePart(value: string) {

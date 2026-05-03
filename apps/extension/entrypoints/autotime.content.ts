@@ -3,6 +3,7 @@ import { registerAutotimeContentScript } from "../contents/autofill"
 
 export default defineContentScript({
   matches: ["<all_urls>"],
+  excludeMatches: ["*://*.linkedin.com/*"],
   main() {
     // Register page-level message handlers used by the side panel.
     registerAutotimeContentScript()

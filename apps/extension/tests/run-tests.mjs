@@ -18,8 +18,10 @@ import {
 } from "../lib/autofill.ts"
 import {
   formatJobPageNotes,
+  getLinkedInManualInputMessage,
   getJobPlatform,
-  inferJobPageDetails
+  inferJobPageDetails,
+  isLinkedInUrl
 } from "../lib/job-page.ts"
 import {
   inferJobFitAnalysis,
@@ -298,10 +300,19 @@ test("infers job page details from common page text", () => {
 
 test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://www.linkedin.com/jobs/view/123"), "LinkedIn")
+  assert.equal(getJobPlatform("https://jobs.linkedin.com/view/123"), "LinkedIn")
   assert.equal(getJobPlatform("https://boards.greenhouse.io/acme/jobs/123"), "Greenhouse")
   assert.equal(getJobPlatform("https://jobs.lever.co/acme/123"), "Lever")
   assert.equal(getJobPlatform("https://acme.wd3.myworkdayjobs.com/jobs/job/123"), "Workday")
   assert.equal(getJobPlatform("https://example.com/jobs/123"), "Generic")
+  assert.equal(getJobPlatform("https://notlinkedin.com/jobs/123"), "Generic")
+})
+
+test("marks LinkedIn as manual input only", () => {
+  assert.equal(isLinkedInUrl("https://www.linkedin.com/jobs/view/123"), true)
+  assert.equal(isLinkedInUrl("https://uk.linkedin.com/jobs/view/123"), true)
+  assert.equal(isLinkedInUrl("https://jobs.lever.co/acme/123"), false)
+  assert.match(getLinkedInManualInputMessage(), /manual copy\/paste only/i)
 })
 
 test("cleans priority platform job page titles", () => {

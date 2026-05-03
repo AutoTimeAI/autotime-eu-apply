@@ -44,7 +44,10 @@ The extension currently supports:
   period, salary expectation, motivation, strengths, and availability.
 - Creating, viewing, and clearing reusable answers from the side panel.
 - Saving the current tab as a saved application from the side panel.
-- Importing the active job page into Job Analysis and the side-panel tracker.
+- Importing the active job page into Job Analysis and the side-panel tracker
+  for non-LinkedIn job pages.
+- LinkedIn is manual copy/paste only: users copy job details themselves and
+  paste them into AutoTime.
 - Pasting a manual job description into Job Analysis when page extraction is
   incomplete or unavailable.
 - Transparent local job-fit scoring with visible factors, recommendation, and

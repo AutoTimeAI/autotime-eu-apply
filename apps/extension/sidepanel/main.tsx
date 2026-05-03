@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import {
   formatJobPageNotes,
-  inferJobPageDetails
+  getLinkedInManualInputMessage,
+  inferJobPageDetails,
+  isLinkedInUrl
 } from "../lib/job-page"
 import {
   inferJobFitAnalysis,
@@ -449,6 +451,12 @@ function SidePanelApp() {
       return
     }
 
+    if (isLinkedInUrl(activeTab.url)) {
+      setApplicationsStatus(getLinkedInManualInputMessage())
+      setTimeout(() => setApplicationsStatus(""), 3500)
+      return
+    }
+
     if (hasApplicationWithUrl(applications, activeTab.url)) {
       setApplicationsStatus("This application is already saved")
       setTimeout(() => setApplicationsStatus(""), 2500)
@@ -528,6 +536,12 @@ function SidePanelApp() {
     if (!activeTab?.id) {
       setStatus("Could not access current tab")
       setTimeout(() => setStatus(""), 2500)
+      return
+    }
+
+    if (isLinkedInUrl(activeTab.url)) {
+      setStatus(getLinkedInManualInputMessage())
+      setTimeout(() => setStatus(""), 3500)
       return
     }
 
@@ -622,6 +636,11 @@ function SidePanelApp() {
 
     if (!activeTab?.id) {
       setJobStatus("Could not access current tab.")
+      return
+    }
+
+    if (isLinkedInUrl(activeTab.url)) {
+      setJobStatus(getLinkedInManualInputMessage())
       return
     }
 
@@ -757,6 +776,12 @@ function SidePanelApp() {
       return
     }
 
+    if (isLinkedInUrl(activeTab.url)) {
+      setContentStatus(getLinkedInManualInputMessage())
+      setTimeout(() => setContentStatus(""), 3500)
+      return
+    }
+
     try {
       const response = (await chrome.tabs.sendMessage(activeTab.id, {
         type: "AUTOTIME_INSERT_APPLICATION_CONTENT"
@@ -857,6 +882,11 @@ function SidePanelApp() {
 
     if (!activeTab?.id) {
       setTrackerStatus("Could not access current tab.")
+      return
+    }
+
+    if (isLinkedInUrl(activeTab.url)) {
+      setTrackerStatus(getLinkedInManualInputMessage())
       return
     }
 

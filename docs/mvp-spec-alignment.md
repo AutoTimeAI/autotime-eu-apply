@@ -15,8 +15,8 @@ Primary source docs reviewed:
 
 The repo has a strong local-first Chrome extension foundation and the V1 local
 implementation is complete against the uploaded MVP spec. Current completion is
-roughly 95-100%, pending manual Chrome smoke testing and live UK/EU job
-validation evidence.
+roughly 95-100%, with a user-reported manual Chrome smoke test passed and live
+UK/EU job validation evidence still pending.
 
 ## Implemented
 
@@ -28,10 +28,12 @@ validation evidence.
 - Expanded profile memory for LinkedIn, GitHub, portfolio, target countries,
   target roles, work-right details, salary expectation, base CV text, project
   summaries, and experience highlights.
-- Basic active-tab job page import into Job Analysis and Tracker, with fallback
-  from tab title/URL.
-- Priority-platform job extraction selectors for LinkedIn, Greenhouse, Lever,
-  and Workday, with platform labels in imported tracker notes.
+- Basic active-tab job page import into Job Analysis and Tracker for
+  non-LinkedIn job pages, with fallback from tab title/URL.
+- LinkedIn manual-input policy: no active-page import, autofill, saved-content
+  insertion, or current-tab application capture on LinkedIn pages.
+- Priority-platform job extraction selectors for Greenhouse, Lever, and
+  Workday, with platform labels in imported tracker notes.
 - Manual pasted job description fallback in Job Analysis.
 - Local transparent fit scoring with visible factors and positioning angle.
 - Structured local job insights for summary, detected skills, seniority, fit
@@ -68,12 +70,13 @@ validation evidence.
 
 ## Remaining Validation
 
-- Manual Chrome smoke test needs to be completed from
-  `docs/extension-smoke-test.md`.
+- Manual Chrome smoke test has been user-reported passed in the current
+  validation run; keep `docs/extension-smoke-test.md` as the repeatable release
+  checklist.
 - Founder validation loop still needs real UK/EU jobs analysed and outcome
   notes recorded against live applications.
-- Priority-platform extraction still needs live checks on LinkedIn, Greenhouse,
-  Lever, and Workday pages.
+- Priority-platform extraction still needs live checks on Greenhouse, Lever, and
+  Workday pages. LinkedIn validation should use manual copy/paste evidence only.
 
 ## Explicitly Out Of Scope For V1
 
@@ -87,8 +90,8 @@ validation evidence.
 
 ## Recommended Next Validation Order
 
-1. Run the manual Chrome smoke test and complete a copied founder validation
-   report.
-2. Validate live priority-platform extraction on LinkedIn, Greenhouse, Lever,
-   and Workday.
-3. Tune prompts and budget defaults after real application use.
+1. Fill the live job evidence rows in the current founder validation report.
+2. Validate live priority-platform extraction on Greenhouse, Lever, and
+   Workday; validate LinkedIn with manual copy/paste only.
+3. Export validation metrics and record the snapshot before tagging an MVP
+   release.
