@@ -454,37 +454,74 @@ function SidePanelApp() {
     setTimeout(() => setApplicationsStatus(""), 2500)
   }
 
+  const getCurrentTabApplicationDetails = async (
+    activeTab: chrome.tabs.Tab
+  ) => {
+    if (activeTab.url && activeTab.title) {
+      return inferJobPageDetails({
+        title: activeTab.title,
+        url: activeTab.url
+      })
+    }
+
+    if (!activeTab.id) {
+      return null
+    }
+
+    try {
+      return (await chrome.tabs.sendMessage(activeTab.id, {
+        type: "AUTOTIME_DETECT_JOB_PAGE"
+      })) as JobPageResponse
+    } catch {
+      if (!activeTab.url && !activeTab.title) {
+        return null
+      }
+
+      return inferJobPageDetails({
+        title: activeTab.title,
+        url: activeTab.url
+      })
+    }
+  }
+
   const saveCurrentTabAsApplication = async () => {
     const tabs = await chrome.tabs.query({
       active: true,
       currentWindow: true
     })
     const activeTab = tabs[0]
+    const details = activeTab
+      ? await getCurrentTabApplicationDetails(activeTab)
+      : null
 
-    if (!activeTab?.url || !activeTab.title) {
-      setApplicationsStatus("Could not read current tab")
-      setTimeout(() => setApplicationsStatus(""), 2500)
+    if (!details?.url) {
+      setApplicationsStatus(
+        "Could not read current tab. Open a normal non-LinkedIn job page, then try again."
+      )
+      setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }
 
-    if (isLinkedInUrl(activeTab.url)) {
+    if (isLinkedInUrl(details.url)) {
       setApplicationsStatus(getLinkedInManualInputMessage())
       setTimeout(() => setApplicationsStatus(""), 3500)
       return
     }
 
-    if (hasApplicationWithUrl(applications, activeTab.url)) {
+    if (hasApplicationWithUrl(applications, details.url)) {
       setApplicationsStatus("This application is already saved")
       setTimeout(() => setApplicationsStatus(""), 2500)
       return
     }
 
+    const title = details.roleTitle || details.pageTitle || details.url
     const record: ApplicationRecord = {
       id: crypto.randomUUID(),
-      title: activeTab.title,
-      roleTitle: activeTab.title,
-      url: activeTab.url,
-      source: getHostname(activeTab.url),
+      title,
+      roleTitle: details.roleTitle || title,
+      company: details.company || undefined,
+      url: details.url,
+      source: details.source || getHostname(details.url),
       createdAt: new Date().toISOString(),
       status: "Saved"
     }
