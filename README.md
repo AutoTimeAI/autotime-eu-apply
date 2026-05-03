@@ -22,10 +22,11 @@ Current status:
 - Repo implementation slice: usable local-first extension workflow is in place.
 - Full uploaded MVP spec: local extension implementation is complete for the
   V1 scope.
-- Approximate spec completion: 95-100% pending manual Chrome smoke testing and
-  live UK/EU job validation evidence.
-- Next milestone: run the manual Chrome smoke test, complete a founder
-  validation report, and validate live priority-platform extraction.
+- MVP validation build tag: `v0.0.1`.
+- Approximate spec completion: 95-100%, with automated release checks passing
+  and manual Chrome smoke testing user-reported passed.
+- Next milestone: complete live UK/EU job evidence, export validation metrics,
+  and finish the founder validation report.
 
 This status is based on the uploaded `EU Apply.7z` product spec pack,
 especially `AutoTime_MVP_Consolidated_Summary.docx`,
@@ -68,6 +69,8 @@ The extension currently supports:
 - Usage/cost logging for local and future AI-assisted actions.
 - Optional OpenAI Responses API settings with a monthly local budget cap for
   controlled-cost AI-assisted job analysis and application content generation.
+- User-visible OpenAI fallback reasons for billing/quota/rate-limit, invalid
+  key, unavailable model, and invalid JSON responses.
 - Side-panel drafts for profile, job analysis, application content, and tracker.
 - Generated or saved application content snapshots attached to tracker records.
 - Application notes and editable spec-aligned status tracking: `Saved`,
@@ -77,11 +80,24 @@ The extension currently supports:
   coverage, outcome-note coverage, statuses, and sources.
 - CSV export for founder validation metrics.
 
-The extension does not submit forms and does not use Firebase or a backend yet.
-The web app does not depend on Firebase until backend work starts.
+The extension does not submit forms, does not automate LinkedIn, and does not
+use Firebase or a backend yet. The web app does not depend on Firebase until
+backend work starts.
 
-Remaining release work is manual validation: complete the Chrome smoke test,
-record live UK/EU application outcomes, and export founder validation metrics.
+Remaining release work is manual validation: record live UK/EU application
+outcomes and export founder validation metrics.
+
+## Current Validation Build
+
+- Tag: `v0.0.1`
+- Commit: `7693a9e`
+- Latest automated release report:
+  `docs/release-runs/2026-05-03T11-57-26-474Z.md`
+- OpenAI API validation: confirmed with `gpt-4.1-mini` usage/cost log entries.
+- LinkedIn policy: manual copy/paste only.
+- Remaining evidence: live job rows for LinkedIn manual input, Greenhouse,
+  Lever, Workday, and one other UK/EU source, plus Applications and Validation
+  Metrics CSV exports.
 
 ## Local Setup
 
@@ -148,10 +164,13 @@ Current unit tests cover:
 - Job analysis, application content, and tracker draft storage.
 - Profile and draft validation.
 - Saved application create/delete behavior.
+- Resilient current-tab application saving with page-detection fallback.
 - Saved application search and status filtering.
 - Legacy tracker and application status normalization.
 - Saved application duplicate URL detection.
 - Saved application CSV export formatting.
+- OpenAI cost estimation, response normalization, and user-visible fallback
+  error formatting.
 
 ## Chrome Extension Notes
 
@@ -161,8 +180,10 @@ The extension uses these Chrome permissions:
 - `activeTab` for reading/importing the current job page and sending autofill messages.
 - `sidePanel` for opening the Chrome side panel.
 
-The WXT content script is configured with `matches: ["<all_urls>"]` so the side
-panel can request autofill and job-page import on normal application pages.
+The WXT content script is configured with `matches: ["<all_urls>"]` and
+`exclude_matches: ["*://*.linkedin.com/*"]` so the side panel can request
+autofill and job-page import on normal application pages while keeping LinkedIn
+manual-input only.
 
 After building, load the generated extension from:
 
@@ -176,7 +197,7 @@ The manual extension smoke-test checklist lives at:
 docs/extension-smoke-test.md
 ```
 
-Run that checklist before tagging or shipping an MVP build.
+Run that checklist before shipping an MVP build to testers.
 
 The full MVP spec alignment checklist lives at:
 
