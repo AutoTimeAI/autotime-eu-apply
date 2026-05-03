@@ -59,7 +59,8 @@ import {
 import {
   fallbackOpenAICallBudgetUsd,
   generateAIApplicationContentDraft,
-  generateAIJobAnalysis
+  generateAIJobAnalysis,
+  getOpenAIErrorMessage
 } from "../lib/openai"
 import {
   emptyApplicationContentDraft,
@@ -406,6 +407,21 @@ function SidePanelApp() {
     getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd <=
       openAISettings.monthlyBudgetUsd
 
+  const getOpenAISkipMessage = () => {
+    if (!openAISettings.apiKey.trim()) {
+      return ""
+    }
+
+    if (
+      getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd >
+      openAISettings.monthlyBudgetUsd
+    ) {
+      return "OpenAI skipped: monthly budget cap reached. Used local fallback."
+    }
+
+    return ""
+  }
+
   const updateSavedApplication = async (
     id: string,
     changes: Partial<
@@ -594,6 +610,7 @@ function SidePanelApp() {
 
     let analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
     let usedAI = false
+    let aiFallbackMessage = getOpenAISkipMessage()
 
     if (canUseOpenAI()) {
       try {
@@ -610,8 +627,12 @@ function SidePanelApp() {
         })
         setAIUsageLog((current) => [usageLogEntry, ...current])
         usedAI = true
-      } catch {
+        aiFallbackMessage = ""
+      } catch (error) {
         analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
+        aiFallbackMessage = `OpenAI failed: ${getOpenAIErrorMessage(
+          error
+        )} Used local fallback.`
       }
     }
 
@@ -621,8 +642,12 @@ function SidePanelApp() {
     setSavedJobAnalysisDraft(analysedDraft)
     setJobAnalysisDraft(emptyJobAnalysisDraft)
     clearSaveAttempt("job-analysis")
-    setJobStatus(usedAI ? "AI job analysis draft saved" : "Job analysis draft saved")
-    setTimeout(() => setJobStatus(""), 3500)
+    setJobStatus(
+      usedAI
+        ? "AI job analysis draft saved"
+        : aiFallbackMessage || "Job analysis draft saved"
+    )
+    setTimeout(() => setJobStatus(""), aiFallbackMessage ? 8000 : 3500)
   }
 
   const handleImportCurrentJobPageForAnalysis = async () => {
@@ -719,6 +744,7 @@ function SidePanelApp() {
       savedReusableAnswers
     )
     let usedAI = false
+    let aiFallbackMessage = getOpenAISkipMessage()
 
     if (canUseOpenAI()) {
       try {
@@ -736,12 +762,16 @@ function SidePanelApp() {
         })
         setAIUsageLog((current) => [usageLogEntry, ...current])
         usedAI = true
-      } catch {
+        aiFallbackMessage = ""
+      } catch (error) {
         generatedDraft = generateApplicationContentDraft(
           savedProfile,
           savedJobAnalysisDraft,
           savedReusableAnswers
         )
+        aiFallbackMessage = `OpenAI failed: ${getOpenAIErrorMessage(
+          error
+        )} Used local fallback.`
       }
     }
 
@@ -758,9 +788,9 @@ function SidePanelApp() {
     setContentStatus(
       usedAI
         ? "Editable AI application content generated"
-        : "Editable application content generated"
+        : aiFallbackMessage || "Editable application content generated"
     )
-    setTimeout(() => setContentStatus(""), 3500)
+    setTimeout(() => setContentStatus(""), aiFallbackMessage ? 8000 : 3500)
   }
 
   const handleInsertApplicationContent = async () => {

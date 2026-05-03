@@ -63,6 +63,42 @@ function parseJsonObject<T>(text: string): T {
   return JSON.parse(json) as T
 }
 
+function getOpenAIStatusHint(status: number) {
+  if (status === 401) {
+    return "check that the saved API key is valid."
+  }
+
+  if (status === 403) {
+    return "check project permissions for the saved API key."
+  }
+
+  if (status === 404) {
+    return "check that the selected model is available."
+  }
+
+  if (status === 429) {
+    return "rate limit, quota, or billing may need attention."
+  }
+
+  if (status >= 500) {
+    return "OpenAI service returned a server error."
+  }
+
+  return "check AI settings and try again."
+}
+
+export function getOpenAIErrorMessage(error: unknown) {
+  if (error instanceof SyntaxError) {
+    return "OpenAI returned a response that was not valid JSON."
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
+  return "OpenAI request failed."
+}
+
 function toStringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
@@ -157,7 +193,11 @@ async function createResponse<T>(
   })
 
   if (!response.ok) {
-    throw new Error(`OpenAI request failed with ${response.status}`)
+    throw new Error(
+      `OpenAI request failed with ${response.status}; ${getOpenAIStatusHint(
+        response.status
+      )}`
+    )
   }
 
   const data = (await response.json()) as OpenAIResponse

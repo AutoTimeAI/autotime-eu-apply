@@ -30,6 +30,7 @@ import {
 import { generateApplicationContentDraft } from "../lib/content-generation.ts"
 import {
   estimateOpenAICostUsd,
+  getOpenAIErrorMessage,
   normalizeAIApplicationContent,
   normalizeAIJobAnalysis
 } from "../lib/openai.ts"
@@ -697,6 +698,17 @@ test("estimates OpenAI usage cost from token counts", () => {
       output_tokens: 500
     }),
     0.0012
+  )
+})
+
+test("formats OpenAI errors for user-visible status", () => {
+  assert.equal(
+    getOpenAIErrorMessage(new Error("OpenAI request failed with 401")),
+    "OpenAI request failed with 401"
+  )
+  assert.equal(
+    getOpenAIErrorMessage(new SyntaxError("Unexpected token")),
+    "OpenAI returned a response that was not valid JSON."
   )
 })
 
