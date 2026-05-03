@@ -73,6 +73,7 @@ button:hover {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--border);
@@ -204,7 +205,8 @@ h3 {
 
 .input-column,
 .panel,
-.snapshot-section {
+.snapshot-section,
+.applications-section {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -278,7 +280,8 @@ h3 {
   color: var(--muted);
 }
 
-.snapshot-section {
+.snapshot-section,
+.applications-section {
   display: grid;
   grid-template-columns: minmax(240px, 0.4fr) minmax(0, 1fr);
   gap: 16px;
@@ -304,8 +307,49 @@ h3 {
   line-height: 1.5;
 }
 
+.applications-section p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .snapshot-grid {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.application-table {
+  display: grid;
+  gap: 10px;
+}
+
+.application-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(130px, 0.5fr) minmax(180px, 0.8fr) minmax(140px, 0.5fr);
+  gap: 10px;
+  align-items: end;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.application-row div,
+.application-row strong,
+.application-row span,
+.application-row small {
+  display: block;
+}
+
+.application-row span {
+  margin-top: 4px;
+  color: #35435a;
+}
+
+.application-row small {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .snapshot-card {
@@ -323,7 +367,8 @@ h3 {
 
 @media (max-width: 820px) {
   .app-header,
-  .snapshot-section {
+  .snapshot-section,
+  .applications-section {
     grid-template-columns: 1fr;
   }
 
@@ -336,7 +381,8 @@ h3 {
   }
 
   .metrics-strip,
-  .workspace-grid {
+  .workspace-grid,
+  .application-row {
     grid-template-columns: 1fr;
   }
 

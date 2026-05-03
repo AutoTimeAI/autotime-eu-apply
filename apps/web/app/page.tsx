@@ -21,6 +21,35 @@ type AlignmentSnapshot = {
   gaps: string[]
 }
 
+type DashboardApplicationStatus =
+  | "Saved"
+  | "Applying"
+  | "Applied"
+  | "Interview"
+  | "Rejected"
+  | "Closed"
+
+type DashboardApplication = {
+  id: string
+  roleTitle: string
+  company: string
+  sourceUrl: string
+  status: DashboardApplicationStatus
+  nextAction: string
+  nextActionDate: string
+  score: number
+  savedAt: string
+}
+
+const applicationStatuses: DashboardApplicationStatus[] = [
+  "Saved",
+  "Applying",
+  "Applied",
+  "Interview",
+  "Rejected",
+  "Closed"
+]
+
 const sampleCv = [
   "Business analyst with payments, application support, UAT and stakeholder management experience.",
   "Delivered requirements analysis, process mapping, dashboard reporting and cross-functional delivery support.",
@@ -202,12 +231,49 @@ function loadSnapshots() {
   }
 }
 
+function loadApplications() {
+  if (typeof window === "undefined") {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem("autotime-dashboard-applications") ?? "[]"
+    ) as Partial<DashboardApplication>[]
+
+    return parsed.map((application) => ({
+      id: application.id ?? crypto.randomUUID(),
+      roleTitle: application.roleTitle ?? "",
+      company: application.company ?? "",
+      sourceUrl: application.sourceUrl ?? "",
+      status: application.status ?? "Saved",
+      nextAction: application.nextAction ?? "",
+      nextActionDate: application.nextActionDate ?? "",
+      score: application.score ?? 0,
+      savedAt: application.savedAt ?? new Date().toISOString()
+    }))
+  } catch {
+    return []
+  }
+}
+
+function saveApplications(applications: DashboardApplication[]) {
+  window.localStorage.setItem(
+    "autotime-dashboard-applications",
+    JSON.stringify(applications)
+  )
+}
+
 export default function HomePage() {
   const [roleTitle, setRoleTitle] = useState("Business Systems Analyst")
   const [company, setCompany] = useState("Example FinTech")
+  const [sourceUrl, setSourceUrl] = useState("https://example.com/jobs/123")
+  const [nextAction, setNextAction] = useState("Tailor CV bullets")
+  const [nextActionDate, setNextActionDate] = useState("")
   const [cvText, setCvText] = useState(sampleCv)
   const [jobText, setJobText] = useState(sampleJob)
   const [snapshots, setSnapshots] = useState<AlignmentSnapshot[]>([])
+  const [applications, setApplications] = useState<DashboardApplication[]>([])
   const [selectedSnapshot, setSelectedSnapshot] =
     useState<AlignmentSnapshot | null>(null)
   const matches = useMemo(
@@ -228,6 +294,7 @@ export default function HomePage() {
 
   useEffect(() => {
     setSnapshots(loadSnapshots())
+    setApplications(loadApplications())
   }, [])
 
   const saveSnapshot = () => {
@@ -274,6 +341,34 @@ export default function HomePage() {
       .replace(/(^-|-$)/g, "")}-alignment.md`
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  const saveApplication = () => {
+    const application: DashboardApplication = {
+      id: crypto.randomUUID(),
+      roleTitle,
+      company,
+      sourceUrl,
+      status: "Saved",
+      nextAction,
+      nextActionDate,
+      score,
+      savedAt: new Date().toISOString()
+    }
+    const updated = [application, ...applications].slice(0, 12)
+    setApplications(updated)
+    saveApplications(updated)
+  }
+
+  const updateApplication = (
+    id: string,
+    changes: Partial<DashboardApplication>
+  ) => {
+    const updated = applications.map((application) =>
+      application.id === id ? { ...application, ...changes } : application
+    )
+    setApplications(updated)
+    saveApplications(updated)
   }
 
   return (
@@ -327,6 +422,31 @@ export default function HomePage() {
           </label>
 
           <label>
+            Source URL
+            <input
+              value={sourceUrl}
+              onChange={(event) => setSourceUrl(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Next action
+            <input
+              value={nextAction}
+              onChange={(event) => setNextAction(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Next action date
+            <input
+              type="date"
+              value={nextActionDate}
+              onChange={(event) => setNextActionDate(event.target.value)}
+            />
+          </label>
+
+          <label>
             Base CV / resume evidence
             <textarea
               value={cvText}
@@ -344,6 +464,10 @@ export default function HomePage() {
 
           <button type="button" onClick={saveSnapshot}>
             Save alignment snapshot
+          </button>
+
+          <button type="button" onClick={saveApplication}>
+            Save to applications
           </button>
 
           <button
@@ -469,6 +593,77 @@ export default function HomePage() {
             </ul>
           </article>
         )}
+      </section>
+
+      <section className="applications-section">
+        <div>
+          <h2>VNext Applications</h2>
+          <p>
+            A local preview of the future dashboard tracker, tied to CV-JD
+            alignment score and next action.
+          </p>
+        </div>
+        <div className="application-table">
+          {applications.length ? (
+            applications.map((application) => (
+              <article className="application-row" key={application.id}>
+                <div>
+                  <strong>{application.roleTitle || "Untitled role"}</strong>
+                  <span>{application.company || "Unknown company"}</span>
+                  <small>
+                    {application.score}% aligned
+                    {application.sourceUrl ? ` - ${application.sourceUrl}` : ""}
+                  </small>
+                </div>
+                <label>
+                  Status
+                  <select
+                    value={application.status}
+                    onChange={(event) =>
+                      updateApplication(application.id, {
+                        status: event.target
+                          .value as DashboardApplicationStatus
+                      })
+                    }
+                  >
+                    {applicationStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Next action
+                  <input
+                    value={application.nextAction}
+                    onChange={(event) =>
+                      updateApplication(application.id, {
+                        nextAction: event.target.value
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Date
+                  <input
+                    type="date"
+                    value={application.nextActionDate}
+                    onChange={(event) =>
+                      updateApplication(application.id, {
+                        nextActionDate: event.target.value
+                      })
+                    }
+                  />
+                </label>
+              </article>
+            ))
+          ) : (
+            <p className="empty-state">
+              No dashboard applications saved yet.
+            </p>
+          )}
+        </div>
       </section>
     </main>
   )
