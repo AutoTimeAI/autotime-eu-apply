@@ -7,14 +7,22 @@ import {
   type ApplicationStatus,
   type CandidateProfile,
   type CompanionDashboardState,
-  type InterviewPrepPack,
   type JobAnalysisDraft,
   type ReusableAnswers
 } from "shared"
+import {
+  canUseWebAI,
+  createLocalInterviewPrepPack,
+  defaultWebAISettings,
+  generateAIInterviewPrepPack,
+  getAIInterviewErrorMessage,
+  type WebAISettings
+} from "../lib/interview-prep"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
 
 const storageKey = "autotime-v2-companion-dashboard"
+const aiSettingsStorageKey = "autotime-v2-ai-settings"
 
 const applicationStatuses: ApplicationStatus[] = [
   "Saved",
@@ -119,6 +127,37 @@ function saveState(state: CompanionDashboardState) {
   window.localStorage.setItem(storageKey, JSON.stringify(state))
 }
 
+function getStoredAISettings() {
+  if (typeof window === "undefined") {
+    return defaultWebAISettings
+  }
+
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(aiSettingsStorageKey) ?? "null"
+    ) as Partial<WebAISettings> | null
+
+    return {
+      ...defaultWebAISettings,
+      ...(parsed ?? {}),
+      monthlyBudgetUsd:
+        typeof parsed?.monthlyBudgetUsd === "number"
+          ? parsed.monthlyBudgetUsd
+          : defaultWebAISettings.monthlyBudgetUsd,
+      usedBudgetUsd:
+        typeof parsed?.usedBudgetUsd === "number"
+          ? parsed.usedBudgetUsd
+          : defaultWebAISettings.usedBudgetUsd
+    }
+  } catch {
+    return defaultWebAISettings
+  }
+}
+
+function saveAISettings(settings: WebAISettings) {
+  window.localStorage.setItem(aiSettingsStorageKey, JSON.stringify(settings))
+}
+
 function getWordSignals(text: string) {
   return Array.from(
     new Set(
@@ -176,71 +215,13 @@ function createApplication(job: JobAnalysisDraft): ApplicationRecord {
   }
 }
 
-function createInterviewPrepPack(
-  application: ApplicationRecord,
-  profile: CandidateProfile,
-  job: JobAnalysisDraft
-): InterviewPrepPack {
-  const now = new Date().toISOString()
-  const role = application.roleTitle || job.jobTitle || "the role"
-  const company = application.company || job.company || "the company"
-  const skills = job.skills?.length
-    ? job.skills
-    : ["requirements analysis", "stakeholder management", "delivery"]
-
-  return {
-    id: crypto.randomUUID(),
-    applicationId: application.id,
-    roleSummary: `${role} at ${company} needs clear analysis, delivery judgement and evidence that maps to the saved job description.`,
-    positioningStatement:
-      job.positioningAngle ||
-      `Position ${profile.fullName || "the candidate"} around systems thinking, truthful experience and practical delivery impact.`,
-    fitAndGapRecap: [
-      job.summary || `${role} is currently scored at ${job.fitScore ?? 0}%.`,
-      ...(job.gaps ?? [])
-    ].join(" "),
-    likelyQuestions: [
-      `Why are you interested in ${role} at ${company}?`,
-      "Walk us through a requirements problem you clarified.",
-      "How do you handle conflicting stakeholder priorities?",
-      "Describe a UAT or delivery issue you helped resolve.",
-      "What would you check first in the first 30 days?"
-    ],
-    starAnswerPrompts: [
-      "Use a real requirements or UAT example: situation, task, action, measurable result.",
-      "Use a stakeholder-management example where you translated ambiguity into a clear next step.",
-      "Use an operational support or incident example only if it is truthful and relevant."
-    ],
-    projectTalkingPoints: [
-      profile.projectSummaries ||
-        "Explain AutoTime as a practical MVP focused on job analysis, content quality and tracking.",
-      "Connect any FinTech project discussion to resilience, risk, SLA visibility and stakeholder communication."
-    ],
-    skillsToRevise: skills.slice(0, 8),
-    questionsToAskEmployer: [
-      "What are the most important outcomes for this role in the first quarter?",
-      "Which systems or teams would this role work with most often?",
-      "Where do requirements currently get stuck or lose clarity?",
-      "How do you measure successful delivery for this team?",
-      "What would make someone excellent in this role?"
-    ],
-    finalPrepChecklist: [
-      "Review the saved job description and positioning angle.",
-      "Prepare two truthful STAR examples.",
-      "Check commute, hybrid expectations and work-right details.",
-      "Prepare questions for the employer.",
-      "Keep salary and notice-period answers consistent with saved profile data."
-    ],
-    createdAt: now,
-    updatedAt: now
-  }
-}
-
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("profile")
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
   const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
+  const [aiSettings, setAISettings] =
+    useState<WebAISettings>(defaultWebAISettings)
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -251,6 +232,7 @@ export default function HomePage() {
 
   useEffect(() => {
     setState(getStoredState())
+    setAISettings(getStoredAISettings())
   }, [])
 
   const persist = (next: CompanionDashboardState, message: string) => {
@@ -278,6 +260,13 @@ export default function HomePage() {
       ...current,
       jobAnalysis: { ...current.jobAnalysis, [key]: value }
     }))
+  }
+
+  const updateAISetting = <K extends keyof WebAISettings>(
+    key: K,
+    value: WebAISettings[K]
+  ) => {
+    setAISettings((current) => ({ ...current, [key]: value }))
   }
 
   const saveDashboard = () => {
@@ -321,25 +310,96 @@ export default function HomePage() {
     )
   }
 
-  const generateInterviewPrep = (application: ApplicationRecord) => {
-    const pack = createInterviewPrepPack(
-      application,
-      state.profile,
-      state.jobAnalysis
-    )
+  const saveWebAISettings = () => {
+    saveAISettings(aiSettings)
+    setStatus("AI settings saved locally")
+    setTimeout(() => setStatus(""), 3000)
+  }
+
+  const clearWebAISettings = () => {
+    setAISettings(defaultWebAISettings)
+    saveAISettings(defaultWebAISettings)
+    setStatus("AI settings cleared")
+    setTimeout(() => setStatus(""), 3000)
+  }
+
+  const saveInterviewPrepPack = (
+    pack: CompanionDashboardState["interviewPrepPacks"][number],
+    message: string,
+    nextAISettings = aiSettings
+  ) => {
     persist(
       {
         ...state,
         interviewPrepPacks: [
           pack,
           ...state.interviewPrepPacks.filter(
-            (current) => current.applicationId !== application.id
+            (current) => current.applicationId !== pack.applicationId
           )
         ]
       },
-      "Interview prep pack generated"
+      message
     )
+    setAISettings(nextAISettings)
+    saveAISettings(nextAISettings)
     setActiveTab("interview")
+  }
+
+  const generateInterviewPrep = (application: ApplicationRecord) => {
+    const pack = createLocalInterviewPrepPack(
+      application,
+      state.profile,
+      state.jobAnalysis
+    )
+    saveInterviewPrepPack(pack, "Interview prep pack generated")
+  }
+
+  const generateAIInterviewPrep = async (application: ApplicationRecord) => {
+    const fallbackPack = createLocalInterviewPrepPack(
+      application,
+      state.profile,
+      state.jobAnalysis
+    )
+
+    if (!canUseWebAI(aiSettings)) {
+      saveInterviewPrepPack(
+        fallbackPack,
+        "AI interview prep skipped: add an API key or raise the local budget. Used local fallback."
+      )
+      return
+    }
+
+    try {
+      const aiPrep = await generateAIInterviewPrepPack({
+        settings: aiSettings,
+        application,
+        profile: state.profile,
+        reusableAnswers: state.reusableAnswers,
+        job: state.jobAnalysis,
+        fallbackPack
+      })
+      const nextAISettings = {
+        ...aiSettings,
+        usedBudgetUsd: Number(
+          (aiSettings.usedBudgetUsd + aiPrep.approximateCostUsd).toFixed(6)
+        )
+      }
+
+      saveInterviewPrepPack(
+        aiPrep.value,
+        `AI interview prep pack generated. Estimated cost: $${aiPrep.approximateCostUsd.toFixed(
+          6
+        )}`,
+        nextAISettings
+      )
+    } catch (error) {
+      saveInterviewPrepPack(
+        fallbackPack,
+        `AI interview prep failed: ${getAIInterviewErrorMessage(
+          error
+        )} Used local fallback.`
+      )
+    }
   }
 
   const exportDashboard = () => {
@@ -663,14 +723,28 @@ export default function HomePage() {
                       }
                     />
                   </label>
-                  <button
-                    className="secondary-button"
-                    disabled={application.status !== "Interview"}
-                    type="button"
-                    onClick={() => generateInterviewPrep(application)}
-                  >
-                    Generate Prep
-                  </button>
+                  <div className="application-actions">
+                    <button
+                      className="secondary-button"
+                      disabled={application.status !== "Interview"}
+                      type="button"
+                      onClick={() => generateInterviewPrep(application)}
+                    >
+                      Generate Prep
+                    </button>
+                    {aiSettings.apiKey.trim() && (
+                      <button
+                        disabled={
+                          application.status !== "Interview" ||
+                          !canUseWebAI(aiSettings)
+                        }
+                        type="button"
+                        onClick={() => void generateAIInterviewPrep(application)}
+                      >
+                        Generate AI Prep
+                      </button>
+                    )}
+                  </div>
                 </article>
               ))
             ) : (
@@ -689,15 +763,90 @@ export default function HomePage() {
               they do not invent experience.
             </p>
           </div>
+          <section className="ai-settings-panel" aria-label="AI interview settings">
+            <div>
+              <h3>AI Interview Settings</h3>
+              <p>
+                Optional browser-local OpenAI settings. Leave the key empty to
+                use local prep only.
+              </p>
+            </div>
+            <label>
+              OpenAI API key
+              <input
+                type="password"
+                value={aiSettings.apiKey}
+                onChange={(event) =>
+                  updateAISetting("apiKey", event.target.value)
+                }
+              />
+            </label>
+            <label>
+              Model
+              <select
+                value={aiSettings.model}
+                onChange={(event) =>
+                  updateAISetting("model", event.target.value)
+                }
+              >
+                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+                <option value="gpt-4o-mini">gpt-4o-mini</option>
+              </select>
+            </label>
+            <label>
+              Monthly budget USD
+              <input
+                min="0"
+                step="0.01"
+                type="number"
+                value={aiSettings.monthlyBudgetUsd}
+                onChange={(event) =>
+                  updateAISetting(
+                    "monthlyBudgetUsd",
+                    Number(event.target.value)
+                  )
+                }
+              />
+            </label>
+            <div className="ai-budget-summary">
+              <span>${aiSettings.usedBudgetUsd.toFixed(6)}</span>
+              <small>estimated used this browser</small>
+            </div>
+            <div className="application-actions">
+              <button type="button" onClick={saveWebAISettings}>
+                Save AI Settings
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={clearWebAISettings}
+              >
+                Clear AI Settings
+              </button>
+            </div>
+          </section>
           <div className="prep-grid">
             {state.interviewPrepPacks.length ? (
               state.interviewPrepPacks.map((pack) => (
                 <article className="prep-card" key={pack.id}>
                   <h3>{pack.roleSummary}</h3>
                   <p>{pack.positioningStatement}</p>
+                  <h4>STAR Prompts</h4>
+                  <ul className="bullets-list">
+                    {pack.starAnswerPrompts.map((prompt) => (
+                      <li key={prompt}>{prompt}</li>
+                    ))}
+                  </ul>
                   <h4>Likely Questions</h4>
                   <ul className="bullets-list">
                     {pack.likelyQuestions.map((question) => (
+                      <li key={question}>{question}</li>
+                    ))}
+                  </ul>
+                  <h4>Employer Questions</h4>
+                  <ul className="bullets-list">
+                    {pack.questionsToAskEmployer.map((question) => (
                       <li key={question}>{question}</li>
                     ))}
                   </ul>

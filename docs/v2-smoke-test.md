@@ -37,7 +37,12 @@ extension-to-web dashboard export.
 3. In Applications, change an application status to `Interview`.
 4. Click `Generate Prep`.
 5. Confirm the Interview Prep tab shows likely questions and a final checklist.
-6. Click `Export JSON` and confirm the exported file imports successfully.
+6. Leave the AI key empty and confirm local prep still works.
+7. Save a controlled-cost OpenAI key in AI Interview Settings.
+8. Click `Generate AI Prep` for an interview-stage application and confirm STAR
+   prompts, employer questions, and checklist items render.
+9. Test an invalid key and confirm a clear failure message plus local fallback.
+10. Click `Export JSON` and confirm the exported file imports successfully.
 
 ## Responsive Check
 

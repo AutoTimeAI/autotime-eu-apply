@@ -429,6 +429,11 @@ h3 {
   display: block;
 }
 
+.application-actions {
+  display: grid;
+  gap: 8px;
+}
+
 .application-row span {
   margin-top: 4px;
   color: #35435a;
@@ -445,6 +450,41 @@ h3 {
   display: grid;
   gap: 16px;
   margin-top: 18px;
+}
+
+.ai-settings-panel {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(190px, 1fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(150px, 0.65fr) minmax(160px, 0.7fr);
+  gap: 12px;
+  align-items: end;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 14px;
+}
+
+.ai-settings-panel p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ai-budget-summary {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px 12px;
+}
+
+.ai-budget-summary span {
+  color: var(--blue);
+  font-weight: 900;
+}
+
+.ai-budget-summary small {
+  color: var(--muted);
 }
 
 .prep-grid {
@@ -512,6 +552,7 @@ h3 {
   .metrics-strip,
   .workspace-grid,
   .application-row,
+  .ai-settings-panel,
   .utility-bar {
     grid-template-columns: 1fr;
   }

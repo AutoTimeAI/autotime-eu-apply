@@ -7,6 +7,8 @@ Chrome extension candidate.
 
 - Web companion dashboard in `apps/web` for profile memory, job review,
   application history, local import/export, and interview prep packs.
+- Optional web-only AI interview prep using a user-provided OpenAI key stored in
+  browser local storage, with deterministic local fallback.
 - Shared schemas and types in `packages/shared` for profile, reusable answers,
   job analysis, application records, content snapshots, and interview prep
   packs.
@@ -20,6 +22,8 @@ Chrome extension candidate.
 - LinkedIn remains manual copy/paste only.
 - V2 dashboard remains local-first until Supabase/account sync credentials and
   data policy are ready.
+- AI interview prep is browser-local and does not introduce backend sync or
+  server-side key storage.
 
 ## Product Boundaries
 
@@ -87,6 +91,7 @@ detection; the web app source remains in `apps/web`.
 
 - Run `pnpm test`.
 - Run `pnpm test:smoke:web`.
+- Run `pnpm test:web:interview`.
 - Run `pnpm -r typecheck`.
 - Run `pnpm build:web`.
 - Run `pnpm smoke:web` against the deployed Vercel URL.
@@ -94,6 +99,8 @@ detection; the web app source remains in `apps/web`.
 - Manually verify the web dashboard can save local state, export JSON, import
   valid JSON, update application statuses, and generate interview prep only from
   saved application/profile/job context.
+- Manually verify AI interview prep with a controlled-cost key, then test an
+  invalid key and confirm local fallback/status messaging.
 - Run `docs/v2-smoke-test.md` after extension-to-web export or web dashboard
   import changes.
 - Manually verify extension import behavior on at least one live page from the

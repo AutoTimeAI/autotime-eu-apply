@@ -20,7 +20,8 @@ The extension remains local-first until backend/web sync is intentionally added.
 Current V2 implementation:
 
 - Web companion dashboard for candidate memory, job review, application history,
-  local JSON import/export, and interview prep pack generation.
+  local JSON import/export, and local or optional AI interview prep pack
+  generation.
 - Extension-to-web bridge through `Export V2 Dashboard JSON` in the extension
   Applications section and schema-validated import in the web dashboard.
 - Shared Zod schemas and TypeScript types for profile, reusable answers, job
@@ -31,6 +32,9 @@ Current V2 implementation:
 - Responsive web surface for light mobile access; no native mobile app yet.
 - Supabase/account sync, notifications, Edge packaging, and production mobile
   wrapper remain future integration work.
+- AI interview prep in the web dashboard is optional and browser-local: users
+  provide their own OpenAI key, local fallback remains available, and no
+  AutoTime backend stores the key.
 
 V2 details live in `docs/v2-product-surface.md`.
 
@@ -191,6 +195,12 @@ Run the mocked unit tests for the smoke automation:
 
 ```bash
 pnpm test:smoke:web
+```
+
+Run the web interview-prep unit tests:
+
+```bash
+pnpm test:web:interview
 ```
 
 To test a different preview or production URL:
