@@ -15,10 +15,11 @@ Primary source docs reviewed:
 
 The repo has a strong local-first Chrome extension foundation and the V1 local
 implementation is complete against the uploaded MVP spec. Current completion is
-roughly 95-100%, with a user-reported manual Chrome smoke test passed and live
-UK/EU job validation evidence still pending. The final local-first MVP
-candidate is commit `ea3ba3e`, with automated release checks passing in
-`docs/release-runs/2026-05-04T09-34-13-369Z.md`.
+100% for V1 implementation and about 93% for release readiness because final
+manual Chrome evidence, live UK/EU job rows, and exported validation metrics
+are still pending. The final local-first MVP candidate is commit
+`3d0cf72`, with automated release checks passing in
+`docs/release-runs/2026-05-04T11-05-34-292Z.md`.
 
 ## Implemented
 

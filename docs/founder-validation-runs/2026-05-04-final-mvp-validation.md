@@ -3,12 +3,12 @@
 ## Build
 
 - Date: 2026-05-04
-- Commit SHA: `ea3ba3e1adabbe109dd233ebe12ca57abac992e8`
+- Commit SHA: `3d0cf72443f5b119b1f85978986a109ad06bc97d`
 - Extension build path: `apps/extension/.output/chrome-mv3`
 - Tester: Rajan
 - Chrome version: Pending manual entry
 - Operating system: Microsoft Windows NT 10.0.26200.0
-- Automated release check: `docs/release-runs/2026-05-04T09-34-13-369Z.md`
+- Automated release check: `docs/release-runs/2026-05-04T11-05-34-292Z.md`
 
 ## Smoke Test
 
@@ -64,7 +64,7 @@ record the headline values here.
 
 ## Decision
 
-- MVP validation result: Automated checks passed; final manual Chrome and live job evidence pending
+- MVP validation result: V1 implementation and automated checks complete; final manual Chrome and live job evidence pending
 - Release decision: Do not tag `v0.0.2` until live job rows and validation metrics are recorded
 - Highest-risk remaining issue: Live selector behavior on Greenhouse, Lever, and Workday; LinkedIn manual copy/paste evidence still pending
 - Next action: Complete the final manual smoke test, fill exact live job rows, export validation metrics, then tag `v0.0.2`

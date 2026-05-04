@@ -51,9 +51,11 @@ Chrome/live-job checks as explicit pending items.
   manual copy/paste only.
 - Local storage is browser-local; users need to export CSV if they want a backup
   of saved applications.
-- Supabase sync, account login, web dashboard, mobile companion, Edge support,
-  Interview Prep Pack, and deeper analytics are V2/V1.1 work, not blockers for
-  the local-first V1 extension.
+- Supabase sync, account login, cloud hosting, Edge support, native mobile, and
+  deeper analytics are V2/post-MVP work, not blockers for the local-first V1
+  extension. The local V2 companion dashboard and Interview Prep Pack
+  foundation are available for smoke testing, but are not required for the V1
+  release tag.
 
 ## Validation Report
 

@@ -42,11 +42,12 @@ Current status:
 - Full uploaded MVP spec: local extension implementation is complete for the
   V1 scope.
 - Latest MVP validation build tag: `v0.0.1`.
-- Approximate spec completion: 95-100%, with automated release checks passing
-  and manual Chrome smoke testing user-reported passed.
-- Final local-first MVP candidate commit: `ea3ba3e`.
+- V1 implementation completion: 100%; release readiness is about 93% until
+  final manual Chrome evidence, live UK/EU job rows, and exported validation
+  metrics are recorded.
+- Final local-first MVP candidate commit: `3d0cf72`.
 - Final automated release report:
-  `docs/release-runs/2026-05-04T09-34-13-369Z.md`.
+  `docs/release-runs/2026-05-04T11-05-34-292Z.md`.
 - Next milestone: complete final manual Chrome validation, record live UK/EU job
   evidence, export validation metrics, and then tag `v0.0.2`.
 
@@ -113,9 +114,9 @@ outcomes, export founder validation metrics, and complete
 ## Current Validation Build
 
 - Tag: `v0.0.1`
-- Commit: `ea3ba3e`
+- Commit: `3d0cf72`
 - Latest automated release report:
-  `docs/release-runs/2026-05-04T09-34-13-369Z.md`
+  `docs/release-runs/2026-05-04T11-05-34-292Z.md`
 - OpenAI API validation: confirmed with `gpt-4.1-mini` usage/cost log entries.
 - LinkedIn policy: manual copy/paste only.
 - Remaining evidence: live job rows for LinkedIn manual input, Greenhouse,
