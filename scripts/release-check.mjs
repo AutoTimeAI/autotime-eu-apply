@@ -25,23 +25,17 @@ const checks = [
   }
 ]
 
-function getExecutable(command, args) {
-  if (command === "pnpm" && process.env.npm_execpath) {
-    return {
-      command: process.execPath,
-      args: [process.env.npm_execpath, ...args]
-    }
-  }
-
-  return { command, args }
-}
-
 function run(command, args) {
-  const executable = getExecutable(command, args)
-  const result = spawnSync(executable.command, executable.args, {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  })
+  const commandLine = [command, ...args].join(" ")
+  const result = spawnSync(
+    process.platform === "win32" ? commandLine : command,
+    process.platform === "win32" ? [] : args,
+    {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+      stdio: ["ignore", "pipe", "pipe"]
+    }
+  )
 
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim()
 
@@ -132,7 +126,7 @@ const report = [
   "- [ ] Validate Workday import on a live UK/EU job.",
   "- [ ] Export Applications CSV.",
   "- [ ] Export Validation Metrics CSV.",
-  "- [ ] Complete a copied `docs/founder-validation-report.md`.",
+  "- [ ] Run `pnpm validation:new` and complete the generated `docs/founder-validation-runs/...` report.",
   "",
   "## Result",
   "",

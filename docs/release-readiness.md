@@ -28,6 +28,17 @@ pnpm release:check
 This writes a timestamped report to `docs/release-runs/` and leaves manual
 Chrome/live-job checks as explicit pending items.
 
+Create a fresh founder validation evidence file before starting manual browser
+checks:
+
+```bash
+pnpm validation:new
+```
+
+This writes a timestamped report to `docs/founder-validation-runs/` with the
+automated gates, Chrome smoke test, V2 dashboard smoke test, live job evidence,
+CSV exports, and release decision sections ready to fill.
+
 Run the broader MVP automation toolkit when validating the V2 dashboard, AI
 interview prep, and deployed web smoke path:
 
@@ -38,19 +49,27 @@ pnpm test:mvp
 This writes a timestamped report to `docs/automation-runs/`. Use
 `SKIP_LIVE_SMOKE=1 pnpm test:mvp` when network access is unavailable.
 
+The 90-95% automated testing target is defined in
+`docs/mvp-testing-automation.md` and enforced by:
+
+```bash
+pnpm test:mvp:coverage
+```
+
 1. Run `pnpm --filter extension test`.
 2. Run `pnpm --filter extension typecheck`.
 3. Run `pnpm -r typecheck`.
 4. Run `pnpm -r lint`.
 5. Run `pnpm build:extension`.
-6. Load or reload `apps/extension/.output/chrome-mv3` in Chrome.
-7. Complete `docs/extension-smoke-test.md`.
-8. Confirm no extension flow submits an application form.
-9. Confirm generated or saved content requires an explicit user click before
-   insertion.
-10. Confirm CSV export contains only the user's locally saved applications.
-11. Copy `docs/founder-validation-report.md`, then record the build date, commit
-   SHA, smoke-test result, live job checks, and exported validation metrics.
+6. Run `pnpm validation:new`.
+7. Load or reload `apps/extension/.output/chrome-mv3` in Chrome.
+8. Complete `docs/extension-smoke-test.md`.
+9. Confirm no extension flow submits an application form.
+10. Confirm generated or saved content requires an explicit user click before
+    insertion.
+11. Confirm CSV export contains only the user's locally saved applications.
+12. Record the smoke-test result, live job checks, exported validation metrics,
+    and release decision in the generated founder validation report.
 
 ## Known MVP Risks
 

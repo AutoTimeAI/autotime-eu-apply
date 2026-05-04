@@ -24,6 +24,18 @@ const checks = [
     area: "Web Automation"
   },
   {
+    name: "Validation run generator tests",
+    command: "pnpm",
+    args: ["test:validation-run"],
+    area: "Validation Evidence"
+  },
+  {
+    name: "MVP automated testing coverage gate",
+    command: "pnpm",
+    args: ["test:mvp:coverage"],
+    area: "Validation Evidence"
+  },
+  {
     name: "Repo typecheck",
     command: "pnpm",
     args: ["-r", "typecheck"],
@@ -59,23 +71,17 @@ const checks = [
       ])
 ]
 
-function getExecutable(command, args) {
-  if (command === "pnpm" && process.env.npm_execpath) {
-    return {
-      command: process.execPath,
-      args: [process.env.npm_execpath, ...args]
-    }
-  }
-
-  return { command, args }
-}
-
 function run(command, args) {
-  const executable = getExecutable(command, args)
-  const result = spawnSync(executable.command, executable.args, {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"]
-  })
+  const commandLine = [command, ...args].join(" ")
+  const result = spawnSync(
+    process.platform === "win32" ? commandLine : command,
+    process.platform === "win32" ? [] : args,
+    {
+      encoding: "utf8",
+      shell: process.platform === "win32",
+      stdio: ["ignore", "pipe", "pipe"]
+    }
+  )
 
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim()
 
@@ -166,6 +172,12 @@ const report = [
   "- Budget/key gating is covered by `pnpm test:web:interview`.",
   "- Live controlled-cost OpenAI key validation remains manual before a wider AI-enabled release.",
   "",
+  "## Validation Evidence Coverage",
+  "",
+  "- Founder validation report generation is covered by `pnpm test:validation-run`.",
+  "- The 90%+ automated MVP testing target is enforced by `pnpm test:mvp:coverage`.",
+  "- Create a fresh evidence file with `pnpm validation:new` before manual Chrome/live-job validation.",
+  "",
   "## Manual Evidence Still Required",
   "",
   "- [ ] Load or reload `apps/extension/.output/chrome-mv3` in Chrome.",
@@ -175,7 +187,7 @@ const report = [
   "- [ ] Validate Greenhouse, Lever, and Workday import on live UK/EU jobs.",
   "- [ ] Export Applications CSV.",
   "- [ ] Export Validation Metrics CSV.",
-  "- [ ] Record final values in `docs/founder-validation-runs/2026-05-04-final-mvp-validation.md`.",
+  "- [ ] Record final values in the current `docs/founder-validation-runs/...` validation report.",
   "",
   "## Result",
   "",

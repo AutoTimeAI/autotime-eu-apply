@@ -215,10 +215,35 @@ To skip the live deployed web smoke check:
 SKIP_LIVE_SMOKE=1 pnpm test:mvp
 ```
 
+Check the 90-95% MVP testing automation target:
+
+```bash
+pnpm test:mvp:coverage
+```
+
+The coverage model is documented in `docs/mvp-testing-automation.md`.
+
 To test a different preview or production URL:
 
 ```bash
 WEB_SMOKE_URL=https://your-vercel-url.vercel.app pnpm smoke:web
+```
+
+Create a fresh manual validation evidence report before Chrome/live-job testing:
+
+```bash
+pnpm validation:new
+```
+
+This writes a timestamped file in `docs/founder-validation-runs/` with the
+automated gates, extension smoke test, V2 dashboard smoke test, LinkedIn manual
+copy/paste check, Greenhouse/Lever/Workday live-job rows, CSV export evidence,
+and release decision sections.
+
+Run the validation report generator tests:
+
+```bash
+pnpm test:validation-run
 ```
 
 Deploy the V2 web dashboard to Vercel from the repo root:
@@ -276,6 +301,7 @@ Current unit tests cover:
 - Saved application CSV export formatting.
 - OpenAI cost estimation, response normalization, and user-visible fallback
   error formatting.
+- Founder validation report generation for manual Chrome/live-job evidence.
 
 ## Chrome Extension Notes
 
