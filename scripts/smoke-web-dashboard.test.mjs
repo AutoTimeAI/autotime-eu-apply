@@ -72,7 +72,7 @@ test("fails when expected dashboard markers are missing", async () => {
     fetchImpl: createFetch(
       createResponse({
         body: expectedMarkers
-          .filter((marker) => marker !== "Import Dashboard")
+          .filter((marker) => marker !== "Export Evidence")
           .join("\n")
       })
     )
@@ -80,7 +80,7 @@ test("fails when expected dashboard markers are missing", async () => {
 
   assert.equal(result.ok, false)
   assert.match(result.message, /missing dashboard markers/)
-  assert.match(result.message, /Import Dashboard/)
+  assert.match(result.message, /Export Evidence/)
 })
 
 test("fails with fetch error message when request throws an Error", async () => {
@@ -105,7 +105,7 @@ test("fails with fallback message when request throws an unknown value", async (
 })
 
 test("reads default and environment override smoke URLs", () => {
-  assert.equal(defaultUrl, "https://autotime-eu-apply-webs.vercel.app/")
+  assert.equal(defaultUrl, "https://autotime-eu-apply.vercel.app")
   assert.equal(getWebSmokeUrl({}), defaultUrl)
   assert.equal(
     getWebSmokeUrl({ WEB_SMOKE_URL: "https://preview.example.test" }),

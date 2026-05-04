@@ -1,14 +1,16 @@
 import { fileURLToPath } from "node:url"
 
-export const defaultUrl = "https://autotime-eu-apply-webs.vercel.app/"
+export const defaultUrl = "https://autotime-eu-apply.vercel.app"
 
 export const expectedMarkers = [
-  "AutoTime EU Apply V2",
-  "Companion Dashboard",
-  "Profile",
-  "Job Review",
-  "Applications",
-  "Interview Prep",
+  "AutoTime EU Apply",
+  "Cross-border application command center",
+  "Candidate OS",
+  "Role Intelligence",
+  "Pipeline",
+  "Interview Desk",
+  "Capture Role",
+  "Export Evidence",
   "Save Dashboard",
   "Export JSON",
   "Import Dashboard"

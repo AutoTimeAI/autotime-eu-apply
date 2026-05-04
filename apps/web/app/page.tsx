@@ -20,6 +20,7 @@ import {
 } from "../lib/interview-prep"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
+type MetricTone = "neutral" | "good" | "warn"
 
 const storageKey = "autotime-v2-companion-dashboard"
 const aiSettingsStorageKey = "autotime-v2-ai-settings"
@@ -31,6 +32,13 @@ const applicationStatuses: ApplicationStatus[] = [
   "Interview",
   "Rejected",
   "Closed"
+]
+
+const tabLabels: Array<[DashboardTab, string]> = [
+  ["profile", "Candidate OS"],
+  ["jobs", "Role Intelligence"],
+  ["applications", "Pipeline"],
+  ["interview", "Interview Desk"]
 ]
 
 const emptyProfile: CandidateProfile = {
@@ -163,8 +171,9 @@ function getWordSignals(text: string) {
     new Set(
       text
         .toLowerCase()
-        .match(/\b(requirements?|stakeholders?|uat|payments?|fintech|sql|api|agile|support|systems?|reporting|delivery|analysis)\b/g) ??
-        []
+        .match(
+          /\b(requirements?|stakeholders?|uat|payments?|fintech|sql|api|agile|support|systems?|reporting|delivery|analysis)\b/g
+        ) ?? []
     )
   )
 }
@@ -215,6 +224,69 @@ function createApplication(job: JobAnalysisDraft): ApplicationRecord {
   }
 }
 
+function getStatusCounts(applications: ApplicationRecord[]) {
+  return applicationStatuses.reduce(
+    (counts, status) => ({
+      ...counts,
+      [status]: applications.filter(
+        (application) => application.status === status
+      ).length
+    }),
+    {} as Record<ApplicationStatus, number>
+  )
+}
+
+function getReadinessScore(state: CompanionDashboardState, fitScore: number) {
+  const signals = [
+    state.profile.baseCvText.trim(),
+    state.profile.targetRoles.trim(),
+    state.profile.targetCountries.trim(),
+    state.reusableAnswers.motivationAnswer.trim(),
+    state.reusableAnswers.strengthsAnswer.trim(),
+    state.jobAnalysis.jobDescription.trim(),
+    state.jobAnalysis.positioningAngle?.trim() ?? "",
+    String(state.applications.length || "")
+  ]
+  const completed = signals.filter(Boolean).length
+  return Math.min(
+    100,
+    Math.round((completed / signals.length) * 70 + fitScore * 0.3)
+  )
+}
+
+function getNextActionCount(applications: ApplicationRecord[]) {
+  return applications.filter(
+    (application) =>
+      application.status !== "Closed" &&
+      application.status !== "Rejected" &&
+      (application.nextAction?.trim() || application.status === "Saved")
+  ).length
+}
+
+function getRiskLabel(state: CompanionDashboardState) {
+  if (!state.profile.workRightDetails.trim()) {
+    return "Work-right evidence missing"
+  }
+
+  if ((state.jobAnalysis.gaps?.length ?? 0) > 0) {
+    return `${state.jobAnalysis.gaps?.length} role risk${state.jobAnalysis.gaps?.length === 1 ? "" : "s"}`
+  }
+
+  return "No critical gaps logged"
+}
+
+function getMetricTone(value: number, goodAt: number): MetricTone {
+  if (value >= goodAt) {
+    return "good"
+  }
+
+  if (value > 0) {
+    return "neutral"
+  }
+
+  return "warn"
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("profile")
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
@@ -226,6 +298,19 @@ export default function HomePage() {
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
   )
+  const readinessScore = useMemo(
+    () => getReadinessScore(state, fitScore),
+    [state, fitScore]
+  )
+  const statusCounts = useMemo(
+    () => getStatusCounts(state.applications),
+    [state.applications]
+  )
+  const activeActionCount = useMemo(
+    () => getNextActionCount(state.applications),
+    [state.applications]
+  )
+  const riskLabel = useMemo(() => getRiskLabel(state), [state])
   const interviewApplications = state.applications.filter(
     (application) => application.status === "Interview"
   )
@@ -301,9 +386,7 @@ export default function HomePage() {
       {
         ...state,
         applications: state.applications.map((application) =>
-          application.id === id
-            ? { ...application, ...changes }
-            : application
+          application.id === id ? { ...application, ...changes } : application
         )
       },
       "Application updated"
@@ -439,23 +522,45 @@ export default function HomePage() {
   return (
     <main className="dashboard-shell">
       <header className="app-header">
-        <div>
-          <p className="eyebrow">AutoTime EU Apply V2</p>
-          <h1>Companion Dashboard</h1>
+        <div className="header-copy">
+          <p className="eyebrow">AutoTime EU Apply</p>
+          <h1>Cross-border application command center</h1>
+          <p>
+            A business-grade workspace for qualifying EU roles, preserving
+            candidate evidence, tracking application movement, and preparing
+            interviews from one local source of truth.
+          </p>
+          <div
+            className="header-actions"
+            aria-label="Primary dashboard actions"
+          >
+            <button type="button" onClick={saveApplicationFromJob}>
+              Capture Role
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={exportDashboard}
+            >
+              Export Evidence
+            </button>
+          </div>
         </div>
-        <div className="score-panel" aria-label="Current fit score">
-          <span>{fitScore}%</span>
-          <small>{state.jobAnalysis.recommendation || "fit score"}</small>
+        <div className="executive-panel" aria-label="Current operating summary">
+          <div>
+            <small>Readiness</small>
+            <strong>{readinessScore}%</strong>
+          </div>
+          <div>
+            <small>Role Fit</small>
+            <strong>{fitScore}%</strong>
+          </div>
+          <p>{state.jobAnalysis.recommendation || "Qualification pending"}</p>
         </div>
       </header>
 
       <nav className="tab-bar" aria-label="Dashboard sections">
-        {[
-          ["profile", "Profile"],
-          ["jobs", "Job Review"],
-          ["applications", "Applications"],
-          ["interview", "Interview Prep"]
-        ].map(([id, label]) => (
+        {tabLabels.map(([id, label]) => (
           <button
             aria-pressed={activeTab === id}
             className={activeTab === id ? "tab-button active" : "tab-button"}
@@ -471,21 +576,37 @@ export default function HomePage() {
       {status && <p className="status-banner">{status}</p>}
 
       <section className="metrics-strip" aria-label="V2 dashboard metrics">
-        <div>
+        <div
+          className={`metric-card ${getMetricTone(state.applications.length, 3)}`}
+        >
           <span>{state.applications.length}</span>
-          <small>applications</small>
+          <small>Total applications</small>
+          <p>
+            {statusCounts.Applied + statusCounts.Interview} progressed beyond
+            saved
+          </p>
         </div>
-        <div>
+        <div
+          className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
+        >
           <span>{interviewApplications.length}</span>
-          <small>interviews</small>
+          <small>Interview pipeline</small>
+          <p>
+            {state.interviewPrepPacks.length} prep pack
+            {state.interviewPrepPacks.length === 1 ? "" : "s"} ready
+          </p>
         </div>
-        <div>
-          <span>{state.interviewPrepPacks.length}</span>
-          <small>prep packs</small>
+        <div
+          className={`metric-card ${activeActionCount > 0 ? "neutral" : "warn"}`}
+        >
+          <span>{activeActionCount}</span>
+          <small>Open actions</small>
+          <p>Next steps tracked across live roles</p>
         </div>
-        <div>
+        <div className="metric-card warn">
           <span>{state.jobAnalysis.skills?.length ?? 0}</span>
-          <small>job skills</small>
+          <small>Role signals</small>
+          <p>{riskLabel}</p>
         </div>
       </section>
 
@@ -541,7 +662,10 @@ export default function HomePage() {
 
           <div className="output-column">
             <section className="panel">
-              <h2>Candidate Memory</h2>
+              <div className="section-heading">
+                <p className="eyebrow">Operating Record</p>
+                <h2>Candidate Memory</h2>
+              </div>
               <dl className="summary-list">
                 <div>
                   <dt>Current location</dt>
@@ -562,7 +686,10 @@ export default function HomePage() {
               </dl>
             </section>
             <section className="panel">
-              <h2>Reusable Answers</h2>
+              <div className="section-heading">
+                <p className="eyebrow">Response Library</p>
+                <h2>Reusable Answers</h2>
+              </div>
               <label>
                 Motivation answer
                 <textarea
@@ -638,7 +765,10 @@ export default function HomePage() {
 
           <div className="output-column">
             <section className="panel">
-              <h2>Opportunity Intelligence</h2>
+              <div className="section-heading">
+                <p className="eyebrow">Qualification Brief</p>
+                <h2>Opportunity Intelligence</h2>
+              </div>
               <p className="large-copy">
                 {state.jobAnalysis.positioningAngle ||
                   "Add job details to create a positioning angle."}
@@ -653,7 +783,10 @@ export default function HomePage() {
               </ul>
             </section>
             <section className="panel">
-              <h2>Skills And Gaps</h2>
+              <div className="section-heading">
+                <p className="eyebrow">Evidence Map</p>
+                <h2>Skills And Gaps</h2>
+              </div>
               <div className="tag-row">
                 {(state.jobAnalysis.skills?.length
                   ? state.jobAnalysis.skills
@@ -679,19 +812,33 @@ export default function HomePage() {
 
       {activeTab === "applications" && (
         <section className="applications-section full-width-section">
-          <div>
+          <div className="section-intro">
+            <p className="eyebrow">Commercial Pipeline</p>
             <h2>Application History</h2>
             <p>
-              Review saved roles, update outcomes, and generate interview prep
-              when a role reaches Interview.
+              Track each role as an opportunity with owner-ready next actions,
+              status movement, evidence export, and interview conversion.
             </p>
+          </div>
+          <div
+            className="pipeline-summary"
+            aria-label="Application status counts"
+          >
+            {applicationStatuses.map((status) => (
+              <div key={status}>
+                <span>{statusCounts[status]}</span>
+                <small>{status}</small>
+              </div>
+            ))}
           </div>
           <div className="application-table">
             {state.applications.length ? (
               state.applications.map((application) => (
                 <article className="application-row" key={application.id}>
                   <div>
-                    <strong>{application.roleTitle || application.title}</strong>
+                    <strong>
+                      {application.roleTitle || application.title}
+                    </strong>
                     <span>{application.company || "Unknown company"}</span>
                     <small>{application.url}</small>
                   </div>
@@ -739,7 +886,9 @@ export default function HomePage() {
                           !canUseWebAI(aiSettings)
                         }
                         type="button"
-                        onClick={() => void generateAIInterviewPrep(application)}
+                        onClick={() =>
+                          void generateAIInterviewPrep(application)
+                        }
                       >
                         Generate AI Prep
                       </button>
@@ -748,7 +897,13 @@ export default function HomePage() {
                 </article>
               ))
             ) : (
-              <p className="empty-state">No saved applications yet.</p>
+              <div className="empty-state rich-empty-state">
+                <strong>No applications captured yet</strong>
+                <p>
+                  Use Role Intelligence to qualify a vacancy, then capture it
+                  into the pipeline with a next action.
+                </p>
+              </div>
             )}
           </div>
         </section>
@@ -756,14 +911,18 @@ export default function HomePage() {
 
       {activeTab === "interview" && (
         <section className="prep-section full-width-section">
-          <div>
+          <div className="section-intro">
+            <p className="eyebrow">Conversion Desk</p>
             <h2>Interview Prep Packs</h2>
             <p>
               Prep packs use saved profile, job analysis and application state;
               they do not invent experience.
             </p>
           </div>
-          <section className="ai-settings-panel" aria-label="AI interview settings">
+          <section
+            className="ai-settings-panel"
+            aria-label="AI interview settings"
+          >
             <div>
               <h3>AI Interview Settings</h3>
               <p>
@@ -871,7 +1030,11 @@ export default function HomePage() {
         <button type="button" onClick={saveDashboard}>
           Save Dashboard
         </button>
-        <button className="secondary-button" type="button" onClick={exportDashboard}>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={exportDashboard}
+        >
           Export JSON
         </button>
         <label className="import-control">
