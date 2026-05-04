@@ -12,6 +12,7 @@
     "build:extension": "pnpm --filter extension build",
     "lint": "pnpm -r lint",
     "release:check": "node scripts/release-check.mjs",
+    "smoke:web": "node scripts/smoke-web-dashboard.mjs",
     "test": "pnpm --filter extension test",
     "typecheck": "pnpm -r typecheck"
   },

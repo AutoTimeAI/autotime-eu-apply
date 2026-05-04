@@ -181,6 +181,18 @@ Build the web app:
 pnpm build:web
 ```
 
+Smoke-test the deployed V2 dashboard:
+
+```bash
+pnpm smoke:web
+```
+
+To test a different preview or production URL:
+
+```bash
+WEB_SMOKE_URL=https://your-vercel-url.vercel.app pnpm smoke:web
+```
+
 Deploy the V2 web dashboard to Vercel from the repo root:
 
 ```bash

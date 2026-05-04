@@ -88,6 +88,7 @@ detection; the web app source remains in `apps/web`.
 - Run `pnpm test`.
 - Run `pnpm -r typecheck`.
 - Run `pnpm build:web`.
+- Run `pnpm smoke:web` against the deployed Vercel URL.
 - Run `pnpm build:extension`.
 - Manually verify the web dashboard can save local state, export JSON, import
   valid JSON, update application statuses, and generate interview prep only from
