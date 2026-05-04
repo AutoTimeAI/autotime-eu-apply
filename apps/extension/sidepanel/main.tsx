@@ -7,10 +7,6 @@ import {
   inferJobPageDetails,
   isLinkedInUrl
 } from "../lib/job-page"
-import {
-  inferJobFitAnalysis,
-  inferLocationFromJobDescription
-} from "../lib/job-analysis"
 import { generateApplicationContentDraft } from "../lib/content-generation"
 import {
   applicationsToCsv,
@@ -39,7 +35,6 @@ import {
   getTrackerDraft,
   saveApplication,
   saveApplicationContentDraft,
-  saveJobAnalysisDraft,
   saveOpenAISettings,
   saveProfile,
   saveReusableAnswers,
@@ -52,14 +47,12 @@ import {
   type ApplicationContentSnapshot,
   type ApplicationContentDraft,
   type CandidateProfile,
-  type JobAnalysisDraft,
   type ReusableAnswers,
   type TrackerDraft
 } from "../lib/storage"
 import {
   fallbackOpenAICallBudgetUsd,
   generateAIApplicationContentDraft,
-  generateAIJobAnalysis,
   getOpenAIErrorMessage
 } from "../lib/openai"
 import {
@@ -88,10 +81,10 @@ import { TrackerSection } from "./TrackerSection"
 import { UsageLogSection } from "./UsageLogSection"
 import { ValidationMetricsSection } from "./ValidationMetricsSection"
 import type { AutofillResponse, JobPageResponse, SaveAttempts } from "./types"
+import { useJobAnalysis } from "./useJobAnalysis"
 import { getHostname, normalizeApplicationUrl } from "./utils"
 import {
   validateApplicationContentDraft,
-  validateJobAnalysisDraft,
   validateProfile,
   validateReusableAnswers,
   validateTrackerDraft
@@ -123,11 +116,6 @@ function SidePanelApp() {
     useState<ReusableAnswers>(emptyReusableAnswers)
   const [savedReusableAnswers, setSavedReusableAnswers] =
     useState<ReusableAnswers | null>(null)
-  const [jobAnalysisDraft, setJobAnalysisDraft] = useState<JobAnalysisDraft>(
-    emptyJobAnalysisDraft
-  )
-  const [savedJobAnalysisDraft, setSavedJobAnalysisDraft] =
-    useState<JobAnalysisDraft | null>(null)
   const [applicationContentDraft, setApplicationContentDraft] =
     useState<ApplicationContentDraft>(emptyApplicationContentDraft)
   const [savedApplicationContentDraft, setSavedApplicationContentDraft] =
@@ -148,7 +136,6 @@ function SidePanelApp() {
     useState<ApplicationStatusFilter>("all")
   const [status, setStatus] = useState("")
   const [reusableStatus, setReusableStatus] = useState("")
-  const [jobStatus, setJobStatus] = useState("")
   const [contentStatus, setContentStatus] = useState("")
   const [trackerStatus, setTrackerStatus] = useState("")
   const [applicationsStatus, setApplicationsStatus] = useState("")
@@ -156,7 +143,6 @@ function SidePanelApp() {
   const [aiSettingsStatus, setAISettingsStatus] = useState("")
   const profileStatusRef = useRef<HTMLParagraphElement | null>(null)
   const reusableStatusRef = useRef<HTMLParagraphElement | null>(null)
-  const jobStatusRef = useRef<HTMLParagraphElement | null>(null)
   const contentStatusRef = useRef<HTMLParagraphElement | null>(null)
   const trackerStatusRef = useRef<HTMLParagraphElement | null>(null)
   const applicationsStatusRef = useRef<HTMLParagraphElement | null>(null)
@@ -164,10 +150,6 @@ function SidePanelApp() {
   const aiSettingsStatusRef = useRef<HTMLParagraphElement | null>(null)
 
   const profileIssues = useMemo(() => validateProfile(profile), [profile])
-  const jobAnalysisIssues = useMemo(
-    () => validateJobAnalysisDraft(jobAnalysisDraft),
-    [jobAnalysisDraft]
-  )
   const applicationContentIssues = useMemo(
     () => validateApplicationContentDraft(applicationContentDraft),
     [applicationContentDraft]
@@ -280,6 +262,92 @@ function SidePanelApp() {
     loadProfile()
   }, [])
 
+  const updateField = <K extends keyof CandidateProfile>(
+    key: K,
+    value: CandidateProfile[K]
+  ) => {
+    setProfile((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateReusableAnswer = <K extends keyof ReusableAnswers>(
+    key: K,
+    value: ReusableAnswers[K]
+  ) => {
+    setReusableAnswers((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateApplicationContentField = <
+    K extends keyof ApplicationContentDraft
+  >(
+    key: K,
+    value: ApplicationContentDraft[K]
+  ) => {
+    setApplicationContentDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateTrackerField = <K extends keyof TrackerDraft>(
+    key: K,
+    value: TrackerDraft[K]
+  ) => {
+    setTrackerDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateOpenAISetting = <K extends keyof OpenAISettings>(
+    key: K,
+    value: OpenAISettings[K]
+  ) => {
+    setOpenAISettings((current) => ({ ...current, [key]: value }))
+  }
+
+  const getCurrentMonthAIUsageCost = () => {
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    return aiUsageLog
+      .filter((entry) => entry.createdAt.slice(0, 7) === currentMonth)
+      .reduce((sum, entry) => sum + entry.approximateCostUsd, 0)
+  }
+
+  const canUseOpenAI = () =>
+    openAISettings.apiKey.trim() !== "" &&
+    getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd <=
+      openAISettings.monthlyBudgetUsd
+
+  const getOpenAISkipMessage = () => {
+    if (!openAISettings.apiKey.trim()) {
+      return ""
+    }
+
+    if (
+      getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd >
+      openAISettings.monthlyBudgetUsd
+    ) {
+      return "OpenAI skipped: monthly budget cap reached. Used local fallback."
+    }
+
+    return ""
+  }
+
+  const {
+    handleImportCurrentJobPageForAnalysis,
+    handleSaveJobAnalysis,
+    jobAnalysisDraft,
+    jobAnalysisIssues,
+    jobStatus,
+    jobStatusRef,
+    savedJobAnalysisDraft,
+    setJobAnalysisDraft,
+    setJobStatus,
+    setSavedJobAnalysisDraft,
+    updateJobAnalysisField
+  } = useJobAnalysis({
+    canUseOpenAI,
+    clearSaveAttempt,
+    getOpenAISkipMessage,
+    markSaveAttempted,
+    openAISettings,
+    savedProfile,
+    setAIUsageLog
+  })
+
   useEffect(() => {
     const statusRefs: Record<Section, HTMLParagraphElement | null> = {
       profile: profileStatusRef.current,
@@ -332,95 +400,9 @@ function SidePanelApp() {
     trackerStatus,
     applicationsStatus,
     usageLogStatus,
-    aiSettingsStatus
+    aiSettingsStatus,
+    jobStatusRef
   ])
-
-  const updateField = <K extends keyof CandidateProfile>(
-    key: K,
-    value: CandidateProfile[K]
-  ) => {
-    setProfile((current) => ({ ...current, [key]: value }))
-  }
-
-  const updateReusableAnswer = <K extends keyof ReusableAnswers>(
-    key: K,
-    value: ReusableAnswers[K]
-  ) => {
-    setReusableAnswers((current) => ({ ...current, [key]: value }))
-  }
-
-  const updateJobAnalysisField = <K extends keyof JobAnalysisDraft>(
-    key: K,
-    value: JobAnalysisDraft[K]
-  ) => {
-    setJobAnalysisDraft((current) => {
-      const updated = { ...current, [key]: value }
-
-      if (
-        key === "jobDescription" &&
-        typeof value === "string" &&
-        !current.location.trim()
-      ) {
-        const inferredLocation = inferLocationFromJobDescription(value)
-
-        if (inferredLocation) {
-          return { ...updated, location: inferredLocation }
-        }
-      }
-
-      return updated
-    })
-  }
-
-  const updateApplicationContentField = <
-    K extends keyof ApplicationContentDraft
-  >(
-    key: K,
-    value: ApplicationContentDraft[K]
-  ) => {
-    setApplicationContentDraft((current) => ({ ...current, [key]: value }))
-  }
-
-  const updateTrackerField = <K extends keyof TrackerDraft>(
-    key: K,
-    value: TrackerDraft[K]
-  ) => {
-    setTrackerDraft((current) => ({ ...current, [key]: value }))
-  }
-
-  const updateOpenAISetting = <K extends keyof OpenAISettings>(
-    key: K,
-    value: OpenAISettings[K]
-  ) => {
-    setOpenAISettings((current) => ({ ...current, [key]: value }))
-  }
-
-  const getCurrentMonthAIUsageCost = () => {
-    const currentMonth = new Date().toISOString().slice(0, 7)
-    return aiUsageLog
-      .filter((entry) => entry.createdAt.slice(0, 7) === currentMonth)
-      .reduce((sum, entry) => sum + entry.approximateCostUsd, 0)
-  }
-
-  const canUseOpenAI = () =>
-    openAISettings.apiKey.trim() !== "" &&
-    getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd <=
-      openAISettings.monthlyBudgetUsd
-
-  const getOpenAISkipMessage = () => {
-    if (!openAISettings.apiKey.trim()) {
-      return ""
-    }
-
-    if (
-      getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd >
-      openAISettings.monthlyBudgetUsd
-    ) {
-      return "OpenAI skipped: monthly budget cap reached. Used local fallback."
-    }
-
-    return ""
-  }
 
   const updateSavedApplication = async (
     id: string,
@@ -633,121 +615,6 @@ function SidePanelApp() {
     clearSaveAttempt("reusable-answers")
     setReusableStatus("Reusable answers saved")
     setTimeout(() => setReusableStatus(""), 3500)
-  }
-
-  const handleSaveJobAnalysis = async () => {
-    markSaveAttempted("job-analysis")
-
-    if (jobAnalysisIssues.length > 0) {
-      setJobStatus(
-        "Complete the highlighted job analysis fields before saving."
-      )
-      return
-    }
-
-    let analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
-    let usedAI = false
-    let aiFallbackMessage = getOpenAISkipMessage()
-
-    if (canUseOpenAI()) {
-      try {
-        const aiAnalysis = await generateAIJobAnalysis({
-          settings: openAISettings,
-          draft: jobAnalysisDraft,
-          profile: savedProfile
-        })
-        analysis = aiAnalysis.value
-        const usageLogEntry = await logAIUsage({
-          featureName: "Job analysis",
-          model: openAISettings.model,
-          approximateCostUsd: aiAnalysis.approximateCostUsd
-        })
-        setAIUsageLog((current) => [usageLogEntry, ...current])
-        usedAI = true
-        aiFallbackMessage = ""
-      } catch (error) {
-        analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
-        aiFallbackMessage = `OpenAI failed: ${getOpenAIErrorMessage(
-          error
-        )} Used local fallback.`
-      }
-    }
-
-    const analysedDraft = { ...jobAnalysisDraft, ...analysis }
-
-    await saveJobAnalysisDraft(analysedDraft)
-    setSavedJobAnalysisDraft(analysedDraft)
-    setJobAnalysisDraft(emptyJobAnalysisDraft)
-    clearSaveAttempt("job-analysis")
-    setJobStatus(
-      usedAI
-        ? "AI job analysis draft saved"
-        : aiFallbackMessage || "Job analysis draft saved"
-    )
-    setTimeout(() => setJobStatus(""), aiFallbackMessage ? 8000 : 3500)
-  }
-
-  const handleImportCurrentJobPageForAnalysis = async () => {
-    setJobStatus("Detecting current job page...")
-
-    const tabs = await chrome.tabs.query({
-      active: true,
-      currentWindow: true
-    })
-    const activeTab = tabs[0]
-
-    if (!activeTab?.id) {
-      setJobStatus("Could not access current tab.")
-      return
-    }
-
-    if (isLinkedInUrl(activeTab.url)) {
-      setJobStatus(getLinkedInManualInputMessage())
-      return
-    }
-
-    try {
-      const details = (await chrome.tabs.sendMessage(activeTab.id, {
-        type: "AUTOTIME_DETECT_JOB_PAGE"
-      })) as JobPageResponse
-
-      if (details.message && !details.roleTitle && !details.company) {
-        setJobStatus(details.message)
-        return
-      }
-
-      setJobAnalysisDraft((current) => ({
-        ...current,
-        jobTitle: current.jobTitle || details.roleTitle,
-        company: current.company || details.company,
-        jobUrl: current.jobUrl || details.url,
-        location: current.location || details.location,
-        notes: current.notes || formatJobPageNotes(details)
-      }))
-      clearSaveAttempt("job-analysis")
-      setJobStatus("Current job page imported")
-      setTimeout(() => setJobStatus(""), 3500)
-    } catch {
-      const details = inferJobPageDetails({
-        title: activeTab.title,
-        url: activeTab.url
-      })
-
-      if (!details.roleTitle && !details.url) {
-        setJobStatus("Could not detect job details on this page.")
-        return
-      }
-
-      setJobAnalysisDraft((current) => ({
-        ...current,
-        jobTitle: current.jobTitle || details.roleTitle,
-        jobUrl: current.jobUrl || details.url,
-        notes: current.notes || formatJobPageNotes(details)
-      }))
-      clearSaveAttempt("job-analysis")
-      setJobStatus("Current tab imported")
-      setTimeout(() => setJobStatus(""), 3500)
-    }
   }
 
   const handleSaveApplicationContent = async () => {

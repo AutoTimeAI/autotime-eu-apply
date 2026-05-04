@@ -1,39 +1,59 @@
-import { execSync } from "node:child_process"
+import { spawnSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 
 const checks = [
   {
     name: "Extension unit tests",
-    command: getCommandName("pnpm"),
+    command: "pnpm",
     args: ["--filter", "extension", "test"]
   },
   {
     name: "Repo typecheck",
-    command: getCommandName("pnpm"),
+    command: "pnpm",
     args: ["-r", "typecheck"]
   },
   {
     name: "Repo lint",
-    command: getCommandName("pnpm"),
+    command: "pnpm",
     args: ["-r", "lint"]
   },
   {
     name: "Extension production build",
-    command: getCommandName("pnpm"),
+    command: "pnpm",
     args: ["--filter", "extension", "build"]
   }
 ]
 
-function getCommandName(command) {
-  return process.platform === "win32" ? `${command}.cmd` : command
+function getExecutable(command, args) {
+  if (command === "pnpm" && process.env.npm_execpath) {
+    return {
+      command: process.execPath,
+      args: [process.env.npm_execpath, ...args]
+    }
+  }
+
+  return { command, args }
 }
 
 function run(command, args) {
-  return execSync([command, ...args].join(" "), {
+  const executable = getExecutable(command, args)
+  const result = spawnSync(executable.command, executable.args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"]
   })
+
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim()
+
+  if (result.error) {
+    throw new Error(`${output}\n${result.error.message}`.trim())
+  }
+
+  if (result.status !== 0) {
+    throw new Error(output)
+  }
+
+  return output
 }
 
 function getGitValue(args, fallback = "unknown") {
