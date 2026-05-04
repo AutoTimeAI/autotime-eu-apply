@@ -1,7 +1,8 @@
-const defaultUrl = "https://autotime-eu-apply-webs.vercel.app/"
-const url = process.env.WEB_SMOKE_URL ?? defaultUrl
+import { fileURLToPath } from "node:url"
 
-const expectedMarkers = [
+export const defaultUrl = "https://autotime-eu-apply-webs.vercel.app/"
+
+export const expectedMarkers = [
   "AutoTime EU Apply V2",
   "Companion Dashboard",
   "Profile",
@@ -13,49 +14,80 @@ const expectedMarkers = [
   "Import Dashboard"
 ]
 
-function fail(message) {
-  console.error(`FAIL - ${message}`)
-  process.exitCode = 1
+export function getWebSmokeUrl(env = process.env) {
+  return env.WEB_SMOKE_URL ?? defaultUrl
 }
 
-async function main() {
-  console.log(`Checking AutoTime web dashboard: ${url}`)
-
+export async function runWebDashboardSmoke({
+  url = defaultUrl,
+  fetchImpl = fetch,
+  markers = expectedMarkers
+} = {}) {
   let response
   try {
-    response = await fetch(url, {
+    response = await fetchImpl(url, {
       headers: {
         "user-agent": "autotime-web-smoke/1.0"
       },
       redirect: "follow"
     })
   } catch (error) {
-    fail(error instanceof Error ? error.message : "request failed")
-    return
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "request failed"
+    }
   }
 
   if (!response.ok) {
-    fail(`expected HTTP 2xx, received ${response.status}`)
-    return
+    return {
+      ok: false,
+      message: `expected HTTP 2xx, received ${response.status}`
+    }
   }
 
   const contentType = response.headers.get("content-type") ?? ""
   if (!contentType.includes("text/html")) {
-    fail(`expected text/html content type, received ${contentType || "none"}`)
-    return
+    return {
+      ok: false,
+      message: `expected text/html content type, received ${contentType || "none"}`
+    }
   }
 
   const body = await response.text()
-  const missing = expectedMarkers.filter((marker) => !body.includes(marker))
+  const missing = markers.filter((marker) => !body.includes(marker))
 
   if (missing.length) {
-    fail(`missing dashboard markers: ${missing.join(", ")}`)
+    return {
+      ok: false,
+      message: `missing dashboard markers: ${missing.join(", ")}`
+    }
+  }
+
+  return { ok: true }
+}
+
+async function main() {
+  const url = getWebSmokeUrl()
+  console.log(`Checking AutoTime web dashboard: ${url}`)
+
+  const result = await runWebDashboardSmoke({ url })
+
+  if (result.ok) {
+    console.log("PASS - deployed web dashboard returned expected V2 HTML")
     return
   }
 
-  console.log("PASS - deployed web dashboard returned expected V2 HTML")
+  console.error(`FAIL - ${result.message}`)
+  process.exitCode = 1
 }
 
-main().catch((error) => {
-  fail(error instanceof Error ? error.message : "unexpected smoke test failure")
-})
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error) => {
+    console.error(
+      `FAIL - ${
+        error instanceof Error ? error.message : "unexpected smoke test failure"
+      }`
+    )
+    process.exitCode = 1
+  })
+}

@@ -187,6 +187,12 @@ Smoke-test the deployed V2 dashboard:
 pnpm smoke:web
 ```
 
+Run the mocked unit tests for the smoke automation:
+
+```bash
+pnpm test:smoke:web
+```
+
 To test a different preview or production URL:
 
 ```bash

@@ -86,6 +86,7 @@ detection; the web app source remains in `apps/web`.
 ## Validation Requirements
 
 - Run `pnpm test`.
+- Run `pnpm test:smoke:web`.
 - Run `pnpm -r typecheck`.
 - Run `pnpm build:web`.
 - Run `pnpm smoke:web` against the deployed Vercel URL.
