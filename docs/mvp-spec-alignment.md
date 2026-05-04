@@ -16,7 +16,9 @@ Primary source docs reviewed:
 The repo has a strong local-first Chrome extension foundation and the V1 local
 implementation is complete against the uploaded MVP spec. Current completion is
 roughly 95-100%, with a user-reported manual Chrome smoke test passed and live
-UK/EU job validation evidence still pending.
+UK/EU job validation evidence still pending. The final local-first MVP
+candidate is commit `ea3ba3e`, with automated release checks passing in
+`docs/release-runs/2026-05-04T09-34-13-369Z.md`.
 
 ## Implemented
 
@@ -70,9 +72,11 @@ UK/EU job validation evidence still pending.
 
 ## Remaining Validation
 
+- The final validation report has been prepared at
+  `docs/founder-validation-runs/2026-05-04-final-mvp-validation.md`.
 - Manual Chrome smoke test has been user-reported passed in the current
-  validation run; keep `docs/extension-smoke-test.md` as the repeatable release
-  checklist.
+  validation run; rerun `docs/extension-smoke-test.md` once more against the
+  final candidate before tagging.
 - Founder validation loop still needs real UK/EU jobs analysed and outcome
   notes recorded against live applications.
 - Priority-platform extraction still needs live checks on Greenhouse, Lever, and
@@ -93,5 +97,5 @@ UK/EU job validation evidence still pending.
 1. Fill the live job evidence rows in the current founder validation report.
 2. Validate live priority-platform extraction on Greenhouse, Lever, and
    Workday; validate LinkedIn with manual copy/paste only.
-3. Export validation metrics and record the snapshot before tagging an MVP
-   release.
+3. Export Applications CSV and Validation Metrics CSV, then record the snapshot
+   before tagging `v0.0.2`.

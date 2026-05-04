@@ -22,11 +22,14 @@ Current status:
 - Repo implementation slice: usable local-first extension workflow is in place.
 - Full uploaded MVP spec: local extension implementation is complete for the
   V1 scope.
-- MVP validation build tag: `v0.0.1`.
+- Latest MVP validation build tag: `v0.0.1`.
 - Approximate spec completion: 95-100%, with automated release checks passing
   and manual Chrome smoke testing user-reported passed.
-- Next milestone: complete live UK/EU job evidence, export validation metrics,
-  and finish the founder validation report.
+- Final local-first MVP candidate commit: `ea3ba3e`.
+- Final automated release report:
+  `docs/release-runs/2026-05-04T09-34-13-369Z.md`.
+- Next milestone: complete final manual Chrome validation, record live UK/EU job
+  evidence, export validation metrics, and then tag `v0.0.2`.
 
 This status is based on the uploaded `EU Apply.7z` product spec pack,
 especially `AutoTime_MVP_Consolidated_Summary.docx`,
@@ -85,14 +88,15 @@ use Firebase or a backend yet. The web app does not depend on Firebase until
 backend work starts.
 
 Remaining release work is manual validation: record live UK/EU application
-outcomes and export founder validation metrics.
+outcomes, export founder validation metrics, and complete
+`docs/founder-validation-runs/2026-05-04-final-mvp-validation.md`.
 
 ## Current Validation Build
 
 - Tag: `v0.0.1`
-- Commit: `7693a9e`
+- Commit: `ea3ba3e`
 - Latest automated release report:
-  `docs/release-runs/2026-05-03T11-57-26-474Z.md`
+  `docs/release-runs/2026-05-04T09-34-13-369Z.md`
 - OpenAI API validation: confirmed with `gpt-4.1-mini` usage/cost log entries.
 - LinkedIn policy: manual copy/paste only.
 - Remaining evidence: live job rows for LinkedIn manual input, Greenhouse,

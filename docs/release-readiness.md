@@ -44,14 +44,20 @@ Chrome/live-job checks as explicit pending items.
 
 ## Known MVP Risks
 
-- AI-backed generation needs live API-key testing before any wider release.
+- Optional AI-backed generation should be checked with a controlled-cost API key
+  before any wider AI-enabled release.
 - Priority job-site extraction is selector-based and should be tested on live
   Greenhouse, Lever, and Workday pages before a wider release. LinkedIn remains
   manual copy/paste only.
 - Local storage is browser-local; users need to export CSV if they want a backup
   of saved applications.
+- Supabase sync, account login, web dashboard, mobile companion, Edge support,
+  Interview Prep Pack, and deeper analytics are V2/V1.1 work, not blockers for
+  the local-first V1 extension.
 
 ## Validation Report
 
 Use `docs/founder-validation-report.md` as the report template for each manual
 Chrome smoke test or live UK/EU job validation pass.
+The current final-candidate report is
+`docs/founder-validation-runs/2026-05-04-final-mvp-validation.md`.
