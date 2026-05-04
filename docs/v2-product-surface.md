@@ -79,6 +79,8 @@ Root Directory: repository root
 The hosted dashboard remains local-first: dashboard state is stored in browser
 local storage, and extension data moves into the dashboard by exported JSON
 import rather than cloud sync.
+The root package includes `next` as a dev dependency for Vercel framework
+detection; the web app source remains in `apps/web`.
 
 ## Validation Requirements
 

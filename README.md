@@ -198,6 +198,8 @@ Root Directory: repository root
 
 Only `apps/web` is intended for Vercel hosting. The Chrome extension remains a
 local-first browser extension and is not hosted on Vercel.
+The root `package.json` keeps `next` as a dev dependency so Vercel can detect
+the framework from the repository root while still building `apps/web`.
 
 ## Tests
 
