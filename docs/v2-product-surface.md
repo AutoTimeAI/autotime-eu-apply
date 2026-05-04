@@ -53,6 +53,13 @@ If a previous Next.js process hangs on port 3000, reset and restart with:
 pnpm dev:web:reset
 ```
 
+For the fastest non-editing preview, use the production server after building:
+
+```bash
+pnpm build:web
+pnpm preview:web
+```
+
 ## Cloud Hosting Readiness
 
 The V2 web dashboard is a static-friendly Next.js app and passes

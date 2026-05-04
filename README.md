@@ -161,6 +161,13 @@ and restart on the fixed local address:
 pnpm dev:web:reset
 ```
 
+For the fastest preview after a build, run the production preview:
+
+```bash
+pnpm build:web
+pnpm preview:web
+```
+
 Open the V2 dashboard at:
 
 ```text

@@ -6,6 +6,7 @@
     "build": "pnpm build:extension",
     "dev:web": "pnpm --filter web dev",
     "dev:web:reset": "powershell -ExecutionPolicy Bypass -File scripts/start-web-preview.ps1",
+    "preview:web": "powershell -ExecutionPolicy Bypass -File scripts/start-web-preview.ps1 -Mode production",
     "dev:extension": "pnpm --filter extension dev",
     "build:web": "pnpm --filter web build",
     "build:extension": "pnpm --filter extension build",
