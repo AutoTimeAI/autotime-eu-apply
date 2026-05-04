@@ -28,6 +28,16 @@ pnpm release:check
 This writes a timestamped report to `docs/release-runs/` and leaves manual
 Chrome/live-job checks as explicit pending items.
 
+Run the broader MVP automation toolkit when validating the V2 dashboard, AI
+interview prep, and deployed web smoke path:
+
+```bash
+pnpm test:mvp
+```
+
+This writes a timestamped report to `docs/automation-runs/`. Use
+`SKIP_LIVE_SMOKE=1 pnpm test:mvp` when network access is unavailable.
+
 1. Run `pnpm --filter extension test`.
 2. Run `pnpm --filter extension typecheck`.
 3. Run `pnpm -r typecheck`.

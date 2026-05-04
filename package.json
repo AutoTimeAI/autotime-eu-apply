@@ -15,6 +15,7 @@
     "smoke:web": "node scripts/smoke-web-dashboard.mjs",
     "test:smoke:web": "node scripts/smoke-web-dashboard.test.mjs",
     "test:web:interview": "node --experimental-strip-types apps/web/tests/interview-prep.test.mjs",
+    "test:mvp": "node scripts/mvp-automation-toolkit.mjs",
     "test": "pnpm --filter extension test",
     "typecheck": "pnpm -r typecheck"
   },

@@ -203,6 +203,18 @@ Run the web interview-prep unit tests:
 pnpm test:web:interview
 ```
 
+Run the MVP automation toolkit and write a timestamped evidence report:
+
+```bash
+pnpm test:mvp
+```
+
+To skip the live deployed web smoke check:
+
+```bash
+SKIP_LIVE_SMOKE=1 pnpm test:mvp
+```
+
 To test a different preview or production URL:
 
 ```bash
