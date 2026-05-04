@@ -8,12 +8,29 @@ web app shell, and a shared package.
 ## Apps
 
 - `apps/extension` - Chrome extension built with WXT.
-- `apps/web` - Basic Next.js web app shell.
-- `packages/shared` - Reserved for v2 shared types and schemas.
+- `apps/web` - V2 web companion dashboard built with Next.js.
+- `packages/shared` - V2 shared types and schemas.
 
 The Chrome extension source of truth is `apps/extension`.
-`packages/shared` is intentionally unused in the MVP so extension storage and
-validation can remain local until backend/web integration begins.
+`packages/shared` now defines the V2 domain contracts used by the web companion.
+The extension remains local-first until backend/web sync is intentionally added.
+
+## Version 2 Foundation
+
+Current V2 implementation:
+
+- Web companion dashboard for candidate memory, job review, application history,
+  local JSON import/export, and interview prep pack generation.
+- Shared Zod schemas and TypeScript types for profile, reusable answers, job
+  analysis, applications, content snapshots, and interview prep packs.
+- Expanded ATS platform detection for Ashby, SmartRecruiters, iCIMS, BambooHR,
+  Teamtailor, Recruitee, Jobvite, and Personio, while preserving LinkedIn
+  manual copy/paste only.
+- Responsive web surface for light mobile access; no native mobile app yet.
+- Supabase/account sync, notifications, Edge packaging, and production mobile
+  wrapper remain future integration work.
+
+V2 details live in `docs/v2-product-surface.md`.
 
 ## Extension MVP
 

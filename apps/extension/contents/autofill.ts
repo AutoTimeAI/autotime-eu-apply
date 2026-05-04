@@ -171,6 +171,8 @@ function detectJobPage(): JobPageResponse {
       ".company-name",
       "[data-testid='company-name']",
       "[data-testid='job-company-name']",
+      "[data-testid='company']",
+      "[data-ui='company-name']",
       "[class*='company']",
       "[data-automation-id='jobPostingCompany']",
       "[data-automation-id='company']"
@@ -182,6 +184,8 @@ function detectJobPage(): JobPageResponse {
       ".posting-categories .location",
       ".location",
       "[data-testid='job-location']",
+      "[data-testid='location']",
+      "[data-ui='job-location']",
       "[class*='location']",
       "[data-automation-id='locations']",
       "[data-automation-id='job-details-location']"
@@ -196,6 +200,8 @@ function detectJobPage(): JobPageResponse {
       ".app-title",
       "h1",
       "[data-testid='job-title']",
+      "[data-testid='jobTitle']",
+      "[data-ui='job-title']",
       "[data-automation-id='jobPostingHeader']"
     ]),
     company,

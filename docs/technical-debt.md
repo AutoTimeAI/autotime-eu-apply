@@ -16,5 +16,6 @@
 
 ## Shared Package
 
-- `packages/shared` is reserved for v2, when the web app/backend and extension
-  need common schemas or API contracts.
+- `packages/shared` now contains V2 domain schemas and types. Keep future
+  backend/web/extension sync work aligned to those contracts instead of
+  creating parallel schema shapes.

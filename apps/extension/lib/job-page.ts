@@ -13,6 +13,14 @@ export type JobPlatform =
   | "Greenhouse"
   | "Lever"
   | "Workday"
+  | "Ashby"
+  | "SmartRecruiters"
+  | "iCIMS"
+  | "BambooHR"
+  | "Teamtailor"
+  | "Recruitee"
+  | "Jobvite"
+  | "Personio"
   | "Generic"
 
 type JobPageTextInput = {
@@ -35,8 +43,13 @@ const fillerTitleParts = [
   "job opening",
   "job openings",
   "greenhouse",
+  "jobvite",
   "lever",
   "linkedin",
+  "personio",
+  "recruitee",
+  "smartrecruiters",
+  "teamtailor",
   "workday"
 ]
 
@@ -73,6 +86,38 @@ export function getJobPlatform(url = ""): JobPlatform {
 
   if (isHostname(hostname, "myworkdayjobs.com")) {
     return "Workday"
+  }
+
+  if (isHostname(hostname, "ashbyhq.com")) {
+    return "Ashby"
+  }
+
+  if (isHostname(hostname, "smartrecruiters.com")) {
+    return "SmartRecruiters"
+  }
+
+  if (isHostname(hostname, "icims.com")) {
+    return "iCIMS"
+  }
+
+  if (isHostname(hostname, "bamboohr.com")) {
+    return "BambooHR"
+  }
+
+  if (isHostname(hostname, "teamtailor.com")) {
+    return "Teamtailor"
+  }
+
+  if (isHostname(hostname, "recruitee.com")) {
+    return "Recruitee"
+  }
+
+  if (isHostname(hostname, "jobvite.com")) {
+    return "Jobvite"
+  }
+
+  if (isHostname(hostname, "personio.de") || isHostname(hostname, "personio.com")) {
+    return "Personio"
   }
 
   return "Generic"
