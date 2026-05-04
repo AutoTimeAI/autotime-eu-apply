@@ -1,4 +1,4 @@
-name: Unit Tests
+name: CI
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    name: Unit tests and static checks
+    name: Tests, static checks, and builds
     runs-on: ubuntu-latest
 
     steps:
@@ -47,3 +47,9 @@ jobs:
 
       - name: Run lint
         run: pnpm -r lint
+
+      - name: Build extension
+        run: pnpm build:extension
+
+      - name: Build web dashboard
+        run: pnpm build:web
