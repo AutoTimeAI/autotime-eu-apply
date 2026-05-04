@@ -26,6 +26,7 @@ type ApplicationsSectionProps = {
   visibleApplications: ApplicationRecord[]
   onDeleteApplication: (id: string) => void
   onExportApplications: () => void
+  onExportV2Dashboard: () => void
   onSaveCurrentTab: () => void
   onSearchQueryChange: (query: string) => void
   onStatusFilterChange: (statusFilter: ApplicationStatusFilter) => void
@@ -41,6 +42,7 @@ export function ApplicationsSection({
   visibleApplications,
   onDeleteApplication,
   onExportApplications,
+  onExportV2Dashboard,
   onSaveCurrentTab,
   onSearchQueryChange,
   onStatusFilterChange,
@@ -56,6 +58,9 @@ export function ApplicationsSection({
         </button>
         <button type="button" onClick={onExportApplications}>
           Export CSV
+        </button>
+        <button type="button" onClick={onExportV2Dashboard}>
+          Export V2 Dashboard JSON
         </button>
       </div>
 

@@ -471,7 +471,7 @@ h3 {
 
 .utility-bar {
   display: grid;
-  grid-template-columns: minmax(140px, 0.2fr) minmax(140px, 0.2fr) minmax(240px, 1fr);
+  grid-template-columns: minmax(140px, 0.18fr) minmax(140px, 0.18fr) minmax(240px, 1fr) minmax(160px, 0.22fr);
   gap: 12px;
   margin-top: 18px;
   align-items: start;

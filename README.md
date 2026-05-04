@@ -21,6 +21,8 @@ Current V2 implementation:
 
 - Web companion dashboard for candidate memory, job review, application history,
   local JSON import/export, and interview prep pack generation.
+- Extension-to-web bridge through `Export V2 Dashboard JSON` in the extension
+  Applications section and schema-validated import in the web dashboard.
 - Shared Zod schemas and TypeScript types for profile, reusable answers, job
   analysis, applications, content snapshots, and interview prep packs.
 - Expanded ATS platform detection for Ashby, SmartRecruiters, iCIMS, BambooHR,

@@ -239,6 +239,7 @@ function createInterviewPrepPack(
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("profile")
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
+  const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
@@ -354,6 +355,11 @@ export default function HomePage() {
   }
 
   const importDashboard = (value: string) => {
+    if (!value.trim()) {
+      setStatus("Paste exported V2 dashboard JSON before importing")
+      return
+    }
+
     try {
       const parsed = JSON.parse(value)
       const result = companionDashboardStateSchema.safeParse(parsed)
@@ -364,6 +370,7 @@ export default function HomePage() {
       }
 
       persist(result.data, "Dashboard imported")
+      setImportJson("")
     } catch {
       setStatus("Import failed: invalid JSON")
     }
@@ -722,14 +729,17 @@ export default function HomePage() {
           Import JSON
           <textarea
             placeholder="Paste exported V2 dashboard JSON"
-            onBlur={(event) => {
-              if (event.target.value.trim()) {
-                importDashboard(event.target.value)
-                event.target.value = ""
-              }
-            }}
+            value={importJson}
+            onChange={(event) => setImportJson(event.target.value)}
           />
         </label>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={() => importDashboard(importJson)}
+        >
+          Import Dashboard
+        </button>
       </section>
     </main>
   )

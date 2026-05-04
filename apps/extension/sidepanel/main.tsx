@@ -56,6 +56,10 @@ import {
   getOpenAIErrorMessage
 } from "../lib/openai"
 import {
+  createV2DashboardState,
+  v2DashboardStateToJson
+} from "../lib/v2-dashboard"
+import {
   emptyApplicationContentDraft,
   emptyJobAnalysisDraft,
   emptyProfile,
@@ -531,6 +535,26 @@ function SidePanelApp() {
     URL.revokeObjectURL(url)
 
     setApplicationsStatus("Applications exported")
+    setTimeout(() => setApplicationsStatus(""), 2500)
+  }
+
+  const exportV2Dashboard = () => {
+    const dashboardState = createV2DashboardState({
+      applications,
+      jobAnalysis: savedJobAnalysisDraft,
+      profile: savedProfile,
+      reusableAnswers: savedReusableAnswers
+    })
+    const json = v2DashboardStateToJson(dashboardState)
+    const blob = new Blob([json], { type: "application/json;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "autotime-v2-dashboard.json"
+    link.click()
+    URL.revokeObjectURL(url)
+
+    setApplicationsStatus("V2 dashboard JSON exported")
     setTimeout(() => setApplicationsStatus(""), 2500)
   }
 
@@ -1021,6 +1045,7 @@ function SidePanelApp() {
           visibleApplications={visibleApplications}
           onDeleteApplication={deleteSavedApplication}
           onExportApplications={exportApplications}
+          onExportV2Dashboard={exportV2Dashboard}
           onSaveCurrentTab={saveCurrentTabAsApplication}
           onSearchQueryChange={setApplicationSearchQuery}
           onStatusFilterChange={setApplicationStatusFilter}

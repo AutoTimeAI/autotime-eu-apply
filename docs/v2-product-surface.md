@@ -13,6 +13,10 @@ Chrome extension candidate.
 - Extension platform detection expanded beyond LinkedIn, Greenhouse, Lever, and
   Workday to the next ATS wave: Ashby, SmartRecruiters, iCIMS, BambooHR,
   Teamtailor, Recruitee, Jobvite, and Personio.
+- Extension Applications can export a `CompanionDashboardState`-compatible JSON
+  file for import into the V2 web dashboard.
+- Web dashboard import uses explicit schema validation and an intentional
+  `Import Dashboard` action.
 - LinkedIn remains manual copy/paste only.
 - V2 dashboard remains local-first until Supabase/account sync credentials and
   data policy are ready.
@@ -22,6 +26,7 @@ Chrome extension candidate.
 - The Chrome extension remains the execution surface for live applications.
 - The web dashboard is the planning, review, application-history, and interview
   prep surface.
+- The extension-to-web bridge is local file export/import, not cloud sync.
 - Mobile companion behavior is represented by the responsive web dashboard, not
   a native mobile app.
 - Supabase sync, account login, notifications, Edge packaging, and production
@@ -64,5 +69,7 @@ For the current repo shape, deploy `apps/web` as the web project and keep
 - Manually verify the web dashboard can save local state, export JSON, import
   valid JSON, update application statuses, and generate interview prep only from
   saved application/profile/job context.
+- Run `docs/v2-smoke-test.md` after extension-to-web export or web dashboard
+  import changes.
 - Manually verify extension import behavior on at least one live page from the
   expanded ATS list before marking native support as production-proven.

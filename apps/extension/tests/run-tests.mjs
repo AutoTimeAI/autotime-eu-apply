@@ -28,6 +28,8 @@ import {
   inferLocationFromJobDescription
 } from "../lib/job-analysis.ts"
 import { generateApplicationContentDraft } from "../lib/content-generation.ts"
+import { createV2DashboardState } from "../lib/v2-dashboard.ts"
+import { companionDashboardStateSchema } from "shared"
 import {
   estimateOpenAICostUsd,
   getOpenAIErrorMessage,
@@ -1520,6 +1522,77 @@ test("exports founder validation metrics to csv", () => {
       '"jobs.example.com","2"'
     ].join("\n")
   )
+})
+
+test("creates V2 dashboard export compatible with shared schema", () => {
+  const dashboardState = createV2DashboardState({
+    profile: {
+      fullName: "Rajan Patel",
+      email: "rajan@example.com",
+      phone: "+447700900000",
+      linkedInUrl: "https://linkedin.com/in/rajan",
+      githubUrl: "https://github.com/rajan",
+      portfolioUrl: "https://example.com",
+      currentCountry: "United Kingdom",
+      currentCity: "London",
+      targetCountries: "United Kingdom, Ireland",
+      targetRoles: "Business Analyst",
+      workRightDetails: "UK work authorisation",
+      sponsorshipNeeded: false,
+      relocationWillingness: "depends",
+      salaryExpectation: "Negotiable",
+      noticePeriod: "1 month",
+      baseCvText: "Business analyst with payments and UAT experience.",
+      projectSummaries: "AutoTime EU Apply project.",
+      experienceHighlights: "Requirements analysis and stakeholder management."
+    },
+    reusableAnswers: {
+      sponsorshipAnswer: "I do not require sponsorship.",
+      relocationAnswer: "I can discuss relocation for the right role.",
+      workAuthorisationAnswer: "I am authorised to work in the UK.",
+      noticePeriodAnswer: "My notice period is one month.",
+      salaryExpectationAnswer: "My salary expectations are negotiable.",
+      motivationAnswer: "I am motivated by useful systems delivery.",
+      strengthsAnswer: "Requirements analysis and UAT are my strengths.",
+      availabilityAnswer: "I am available for interviews next week."
+    },
+    jobAnalysis: {
+      jobTitle: "Business Systems Analyst",
+      company: "Example Bank",
+      jobUrl: "https://example.com/jobs/123",
+      location: "London, United Kingdom",
+      workMode: "hybrid",
+      jobDescription:
+        "Business analyst role supporting payments requirements and UAT.",
+      notes: "Imported from extension",
+      fitScore: 85,
+      recommendation: "High Priority",
+      positioningAngle:
+        "Position around FinTech systems and cross-functional delivery."
+    },
+    applications: [
+      {
+        id: "app-1",
+        title: "Business Systems Analyst",
+        roleTitle: "Business Systems Analyst",
+        company: "Example Bank",
+        url: "https://example.com/jobs/123",
+        source: "example.com",
+        createdAt: "2026-05-04T09:00:00.000Z",
+        status: "Interview",
+        nextAction: "Generate prep pack",
+        nextActionDate: "2026-05-10",
+        notes: "Recruiter screen booked"
+      }
+    ]
+  })
+
+  const parsed = companionDashboardStateSchema.parse(dashboardState)
+
+  assert.equal(parsed.profile.fullName, "Rajan Patel")
+  assert.equal(parsed.jobAnalysis.recommendation, "High Priority")
+  assert.equal(parsed.applications[0].status, "Interview")
+  assert.deepEqual(parsed.interviewPrepPacks, [])
 })
 
 let failed = 0

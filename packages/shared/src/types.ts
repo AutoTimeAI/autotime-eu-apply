@@ -11,7 +11,7 @@ import type {
   jobRecommendationSchema,
   reusableAnswersSchema,
   workModeSchema
-} from "./schemas"
+} from "./schemas.ts"
 
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>
 export type JobRecommendation = z.infer<typeof jobRecommendationSchema>
