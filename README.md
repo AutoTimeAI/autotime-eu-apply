@@ -181,6 +181,24 @@ Build the web app:
 pnpm build:web
 ```
 
+Deploy the V2 web dashboard to Vercel from the repo root:
+
+```bash
+pnpm build:web
+```
+
+Use these Vercel project settings:
+
+```text
+Framework Preset: Next.js
+Install Command: pnpm install --frozen-lockfile
+Build Command: pnpm build:web
+Root Directory: repository root
+```
+
+Only `apps/web` is intended for Vercel hosting. The Chrome extension remains a
+local-first browser extension and is not hosted on Vercel.
+
 ## Tests
 
 Run extension unit tests:

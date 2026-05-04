@@ -67,6 +67,19 @@ The V2 web dashboard is a static-friendly Next.js app and passes
 For the current repo shape, deploy `apps/web` as the web project and keep
 `pnpm install` plus `pnpm build:web` as the build flow.
 
+The repo includes `vercel.json` for the V2 dashboard deployment:
+
+```text
+Framework Preset: Next.js
+Install Command: pnpm install --frozen-lockfile
+Build Command: pnpm build:web
+Root Directory: repository root
+```
+
+The hosted dashboard remains local-first: dashboard state is stored in browser
+local storage, and extension data moves into the dashboard by exported JSON
+import rather than cloud sync.
+
 ## Validation Requirements
 
 - Run `pnpm test`.
