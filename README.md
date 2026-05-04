@@ -152,6 +152,19 @@ Run the web app:
 pnpm dev:web
 ```
 
+If the local preview hangs after a previous run, reset stale preview processes
+and restart on the fixed local address:
+
+```bash
+pnpm dev:web:reset
+```
+
+Open the V2 dashboard at:
+
+```text
+http://127.0.0.1:3000
+```
+
 Build the web app:
 
 ```bash

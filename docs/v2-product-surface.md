@@ -27,6 +27,34 @@ Chrome extension candidate.
 - Supabase sync, account login, notifications, Edge packaging, and production
   mobile wrapper remain future integration work.
 
+## Local Preview
+
+Use the fixed local preview address to avoid slow or hanging localhost
+resolution:
+
+```bash
+pnpm dev:web
+```
+
+Open:
+
+```text
+http://127.0.0.1:3000
+```
+
+If a previous Next.js process hangs on port 3000, reset and restart with:
+
+```bash
+pnpm dev:web:reset
+```
+
+## Cloud Hosting Readiness
+
+The V2 web dashboard is a static-friendly Next.js app and passes
+`pnpm build:web`. It can be deployed once a hosting account/project is provided.
+For the current repo shape, deploy `apps/web` as the web project and keep
+`pnpm install` plus `pnpm build:web` as the build flow.
+
 ## Validation Requirements
 
 - Run `pnpm test`.
