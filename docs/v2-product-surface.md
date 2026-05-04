@@ -73,6 +73,7 @@ The repo includes `vercel.json` for the V2 dashboard deployment:
 Framework Preset: Next.js
 Install Command: pnpm install --frozen-lockfile
 Build Command: pnpm build:web
+Output Directory: apps/web/.next
 Root Directory: repository root
 ```
 

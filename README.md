@@ -193,6 +193,7 @@ Use these Vercel project settings:
 Framework Preset: Next.js
 Install Command: pnpm install --frozen-lockfile
 Build Command: pnpm build:web
+Output Directory: apps/web/.next
 Root Directory: repository root
 ```
 
