@@ -1,6 +1,6 @@
 # AutoTime EU Apply
 
-Cross-border job application copilot for Europe.
+European tech-market guide and job application decision workspace.
 
 This repository is a pnpm monorepo with a WXT Chrome extension, a basic Next.js
 web app shell, and a shared package.
@@ -22,6 +22,17 @@ Current V2 implementation:
 - Web companion dashboard for candidate memory, job review, application history,
   local JSON import/export, and local or optional AI interview prep pack
   generation.
+- Product positioning: a tech guide for the European market, helping candidates
+  understand country fit, work-right risk, role positioning, and apply/skip
+  decisions before spending effort.
+- Market context controls for General Tech vs FinTech, foreign/relocating vs
+  native/local candidates, target country, level, and application urgency.
+- AI guidance clarifies role classification, positioning, effort reduction, and
+  interview prep use cases for European tech candidates.
+- User-approved CV/resume intake can suggest candidate type, role market,
+  seniority, and target roles without applying changes until the user approves.
+- AI Decision Brief explains the apply recommendation, confidence, rationale,
+  risks, and next actions before the user commits effort.
 - Extension-to-web bridge through `Export V2 Dashboard JSON` in the extension
   Applications section and schema-validated import in the web dashboard.
 - Shared Zod schemas and TypeScript types for profile, reusable answers, job
@@ -29,12 +40,15 @@ Current V2 implementation:
 - Expanded ATS platform detection for Ashby, SmartRecruiters, iCIMS, BambooHR,
   Teamtailor, Recruitee, Jobvite, and Personio, while preserving LinkedIn
   manual copy/paste only.
-- Responsive web surface for light mobile access; no native mobile app yet.
+- Responsive production web surface for light mobile access; no native mobile
+  app is required for the V2 MVP completion gate.
 - Supabase/account sync, notifications, Edge packaging, and production mobile
-  wrapper remain future integration work.
+  wrapper remain credentialed integration work rather than local-first V2 MVP
+  blockers.
 - AI interview prep in the web dashboard is optional and browser-local: users
   provide their own OpenAI key, local fallback remains available, and no
   AutoTime backend stores the key.
+- Production web dashboard: <https://autotime-eu-apply.vercel.app>.
 
 V2 details live in `docs/v2-product-surface.md`.
 
@@ -280,6 +294,19 @@ Run extension typecheck:
 ```bash
 pnpm --filter extension typecheck
 ```
+
+Run V2 web and external-evidence checks:
+
+```bash
+pnpm test:smoke:web
+pnpm test:web:interview
+pnpm test:v2:ats-live
+pnpm test:v2:ai-live
+pnpm smoke:web
+```
+
+`pnpm test:v2:ai-live` performs the controlled-cost live OpenAI check only when
+`OPENAI_API_KEY` is set; otherwise it reports a safe skip.
 
 Current unit tests cover:
 

@@ -8,8 +8,13 @@ extension-to-web dashboard export.
 1. Run `pnpm dev:web:reset`.
 2. Open `http://127.0.0.1:3000`.
 3. Confirm the dashboard loads without a runtime error.
-4. Confirm the tabs are visible: Profile, Job Review, Applications, Interview
-   Prep.
+4. Confirm the tabs are visible: Candidate OS, Role Intelligence, Pipeline, and
+   Interview Desk.
+5. Confirm the production dashboard is live:
+
+```bash
+pnpm smoke:web
+```
 
 ## Extension Export
 
@@ -33,16 +38,23 @@ extension-to-web dashboard export.
 ## Dashboard Workflow
 
 1. Update profile memory and click `Save Dashboard`.
-2. In Job Review, edit job details and click `Save to Applications`.
-3. In Applications, change an application status to `Interview`.
+2. In Role Intelligence, edit job details and click `Save to Applications` or
+   `Capture Role`.
+3. In Pipeline, change an application status to `Interview`.
 4. Click `Generate Prep`.
-5. Confirm the Interview Prep tab shows likely questions and a final checklist.
+5. Confirm the Interview Desk tab shows likely questions and a final checklist.
 6. Leave the AI key empty and confirm local prep still works.
 7. Save a controlled-cost OpenAI key in AI Interview Settings.
 8. Click `Generate AI Prep` for an interview-stage application and confirm STAR
    prompts, employer questions, and checklist items render.
 9. Test an invalid key and confirm a clear failure message plus local fallback.
-10. Click `Export JSON` and confirm the exported file imports successfully.
+10. Run the controlled-cost live check when `OPENAI_API_KEY` is available:
+
+```bash
+pnpm test:v2:ai-live
+```
+
+11. Click `Export JSON` and confirm the exported file imports successfully.
 
 ## Responsive Check
 
@@ -56,3 +68,21 @@ extension-to-web dashboard export.
 - LinkedIn remains manual copy/paste only in the extension.
 - No Supabase, auth, cloud sync, or remote writes are expected in this flow.
 - Export/import is local file based.
+
+## Live ATS Evidence
+
+Run the deterministic V2 ATS platform evidence check:
+
+```bash
+pnpm test:v2:ats-live
+```
+
+When network access is available and live page reachability should be checked,
+run:
+
+```bash
+LIVE_ATS_FETCH=1 pnpm test:v2:ats-live
+```
+
+Record any live-site selector regressions as release risks because external ATS
+markup can change without a repo change.

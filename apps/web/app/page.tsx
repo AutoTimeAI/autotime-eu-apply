@@ -21,9 +21,38 @@ import {
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
 type MetricTone = "neutral" | "good" | "warn"
+type RoleMarket = "general-tech" | "fintech"
+type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
+type CandidateUrgency = "urgent" | "active" | "exploring"
+
+type ProductContext = {
+  roleMarket: RoleMarket
+  candidatePosition: CandidateMarketPosition
+  urgency: CandidateUrgency
+  targetCountry: string
+  experienceLevel: string
+}
+
+type ContextSuggestion = ProductContext & {
+  targetRoles: string
+  workRightPrompt: string
+  confidence: "Low" | "Medium" | "High"
+  reasons: string[]
+}
+
+type DecisionBrief = {
+  decision: "Apply now" | "Apply with caution" | "Improve profile first"
+  confidence: "Low" | "Medium" | "High"
+  score: number
+  rationale: string[]
+  risks: string[]
+  nextActions: string[]
+  missingInputs: string[]
+}
 
 const storageKey = "autotime-v2-companion-dashboard"
 const aiSettingsStorageKey = "autotime-v2-ai-settings"
+const productContextStorageKey = "autotime-v2-product-context"
 
 const applicationStatuses: ApplicationStatus[] = [
   "Saved",
@@ -41,8 +70,78 @@ const tabLabels: Array<[DashboardTab, string]> = [
   ["interview", "Interview Desk"]
 ]
 
+const roleMarkets: Array<{
+  id: RoleMarket
+  label: string
+  description: string
+}> = [
+  {
+    id: "general-tech",
+    label: "General tech",
+    description:
+      "Product, SaaS, platform, operations, support, data, analyst and delivery roles."
+  },
+  {
+    id: "fintech",
+    label: "FinTech",
+    description:
+      "Payments, banking, risk, compliance, resilience, operations and regulated systems roles."
+  }
+]
+
+const candidatePositions: Array<{
+  id: CandidateMarketPosition
+  label: string
+  description: string
+}> = [
+  {
+    id: "foreign-candidate",
+    label: "Foreign / relocating",
+    description:
+      "Clarifies work rights, sponsorship, relocation, country fit and practical application risk."
+  },
+  {
+    id: "native-candidate",
+    label: "Native / local",
+    description:
+      "Focuses on role fit, salary range, notice period, local credibility and interview conversion."
+  }
+]
+
+const urgencyOptions: Array<{ id: CandidateUrgency; label: string }> = [
+  { id: "urgent", label: "Urgent" },
+  { id: "active", label: "Active" },
+  { id: "exploring", label: "Exploring" }
+]
+
+const euCountryOptions = [
+  "United Kingdom",
+  "Ireland",
+  "Netherlands",
+  "Germany",
+  "France",
+  "Spain",
+  "Portugal",
+  "Sweden",
+  "Denmark",
+  "Norway",
+  "Finland",
+  "Poland",
+  "Belgium",
+  "Austria",
+  "Switzerland"
+]
+
+const defaultProductContext: ProductContext = {
+  roleMarket: "general-tech",
+  candidatePosition: "foreign-candidate",
+  urgency: "active",
+  targetCountry: "United Kingdom",
+  experienceLevel: "Mid-level"
+}
+
 const emptyProfile: CandidateProfile = {
-  fullName: "Rajan",
+  fullName: "",
   email: "",
   phone: "",
   linkedInUrl: "",
@@ -51,7 +150,8 @@ const emptyProfile: CandidateProfile = {
   currentCountry: "United Kingdom",
   currentCity: "",
   targetCountries: "United Kingdom, Ireland, Netherlands, Germany",
-  targetRoles: "Business Analyst, Systems Analyst, Application Support Analyst",
+  targetRoles:
+    "Business Analyst, Systems Analyst, Product Analyst, Application Support Analyst",
   workRightDetails: "",
   sponsorshipNeeded: false,
   relocationWillingness: "depends",
@@ -60,7 +160,7 @@ const emptyProfile: CandidateProfile = {
   baseCvText:
     "Business analyst with payments, application support, UAT, stakeholder management, SQL reporting and systems delivery experience.",
   projectSummaries:
-    "AutoTime EU Apply: AI-assisted job application workflow. FinTech operations project: incident triage, resilience, SLA and stakeholder reporting.",
+    "Add project evidence that proves delivery, analysis, systems, data, support, product or regulated-domain impact.",
   experienceHighlights:
     "Requirements analysis, UAT coordination, stakeholder translation, operational problem solving and regulated systems documentation."
 }
@@ -164,6 +264,29 @@ function getStoredAISettings() {
 
 function saveAISettings(settings: WebAISettings) {
   window.localStorage.setItem(aiSettingsStorageKey, JSON.stringify(settings))
+}
+
+function getStoredProductContext() {
+  if (typeof window === "undefined") {
+    return defaultProductContext
+  }
+
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(productContextStorageKey) ?? "null"
+    ) as Partial<ProductContext> | null
+
+    return {
+      ...defaultProductContext,
+      ...(parsed ?? {})
+    }
+  } catch {
+    return defaultProductContext
+  }
+}
+
+function saveProductContext(context: ProductContext) {
+  window.localStorage.setItem(productContextStorageKey, JSON.stringify(context))
 }
 
 function getWordSignals(text: string) {
@@ -287,6 +410,227 @@ function getMetricTone(value: number, goodAt: number): MetricTone {
   return "warn"
 }
 
+function getMarketLabel(context: ProductContext) {
+  return roleMarkets.find((market) => market.id === context.roleMarket)?.label
+}
+
+function getCountryGuidance(context: ProductContext) {
+  const country = context.targetCountry || "selected country"
+
+  if (context.candidatePosition === "foreign-candidate") {
+    return `For ${country}, AutoTime should check work-right clarity, sponsorship language, relocation practicality, timezone/location fit, and whether the role is worth applying before spending effort.`
+  }
+
+  return `For ${country}, AutoTime should focus on local credibility, salary/notice-period consistency, role seniority, domain fit, and interview conversion.`
+}
+
+function getMarketPositioning(context: ProductContext) {
+  if (context.roleMarket === "fintech") {
+    return "Position around payments, financial systems, risk, controls, operational resilience, compliance awareness, stakeholder clarity and reliable delivery."
+  }
+
+  return "Position around product/system understanding, requirements clarity, user and stakeholder impact, delivery evidence, tooling fluency and measurable outcomes."
+}
+
+function getUrgencyGuidance(context: ProductContext) {
+  if (context.urgency === "urgent") {
+    return "Prioritise roles with strong fit, clear work-right path and fast application execution. Avoid low-fit speculative applications."
+  }
+
+  if (context.urgency === "exploring") {
+    return "Use the dashboard to compare markets, learn role language and build a stronger evidence bank before applying heavily."
+  }
+
+  return "Balance targeted applications with quality. Track next actions and improve positioning after each outcome."
+}
+
+function getAIUseCases(context: ProductContext) {
+  return [
+    {
+      title: "Classify the role",
+      body: `Decide if this is ${getMarketLabel(context)} aligned, too senior, too junior, or a poor country/work-right fit.`
+    },
+    {
+      title: "Clarify positioning",
+      body: getMarketPositioning(context)
+    },
+    {
+      title: "Reduce wasted effort",
+      body: getUrgencyGuidance(context)
+    },
+    {
+      title: "Prepare interviews",
+      body: "Turn saved role evidence into likely questions, STAR prompts, risk checks and employer questions without inventing experience."
+    }
+  ]
+}
+
+function includesAny(value: string, words: string[]) {
+  const text = value.toLowerCase()
+  return words.some((word) => text.includes(word.toLowerCase()))
+}
+
+function inferContextFromResume(
+  resumeText: string,
+  current: ProductContext
+): ContextSuggestion {
+  const words = resumeText.trim().split(/\s+/).filter(Boolean)
+  const roleMarket = includesAny(resumeText, [
+    "fintech",
+    "payments",
+    "payment",
+    "banking",
+    "risk",
+    "compliance",
+    "kyc",
+    "aml",
+    "settlement",
+    "reconciliation",
+    "operational resilience"
+  ])
+    ? "fintech"
+    : current.roleMarket
+  const candidatePosition = includesAny(resumeText, [
+    "visa",
+    "sponsorship",
+    "relocation",
+    "work permit",
+    "student visa",
+    "graduate visa",
+    "skilled worker"
+  ])
+    ? "foreign-candidate"
+    : current.candidatePosition
+  const experienceLevel = includesAny(resumeText, [
+    "lead",
+    "principal",
+    "manager",
+    "senior"
+  ])
+    ? "Senior"
+    : includesAny(resumeText, ["graduate", "intern", "junior", "entry level"])
+      ? "Junior"
+      : current.experienceLevel
+  const targetRoles = [
+    includesAny(resumeText, ["technical business analyst"]) &&
+      "Technical Business Analyst",
+    includesAny(resumeText, ["business analyst"]) && "Business Analyst",
+    includesAny(resumeText, ["systems analyst"]) && "Systems Analyst",
+    includesAny(resumeText, ["product analyst"]) && "Product Analyst",
+    includesAny(resumeText, ["data analyst"]) && "Data Analyst",
+    includesAny(resumeText, ["application support"]) &&
+      "Application Support Analyst"
+  ]
+    .filter(Boolean)
+    .join(", ")
+
+  return {
+    ...current,
+    roleMarket,
+    candidatePosition,
+    experienceLevel,
+    targetRoles:
+      targetRoles ||
+      (roleMarket === "fintech"
+        ? "Business Analyst, Technical Business Analyst, Payments Analyst, Application Support Analyst"
+        : "Business Analyst, Systems Analyst, Product Analyst, Data Analyst, Application Support Analyst"),
+    workRightPrompt:
+      candidatePosition === "foreign-candidate"
+        ? "Confirm visa/work-right status, sponsorship need, relocation timing and eligible countries before applying."
+        : "Confirm local work-right status, notice period, salary expectations and availability before applying.",
+    confidence:
+      words.length > 120 ? "High" : words.length > 50 ? "Medium" : "Low",
+    reasons: [
+      roleMarket === "fintech"
+        ? "Detected FinTech, payments, banking, risk, compliance or resilience language."
+        : "Detected a broader general-tech profile or no strong FinTech signal.",
+      candidatePosition === "foreign-candidate"
+        ? "Detected visa, sponsorship, work permit or relocation language."
+        : "No strong visa or relocation signal was detected; user approval is still required.",
+      `Suggested experience level: ${experienceLevel}.`
+    ]
+  }
+}
+
+function getDecisionBrief({
+  context,
+  state,
+  fitScore,
+  readinessScore
+}: {
+  context: ProductContext
+  state: CompanionDashboardState
+  fitScore: number
+  readinessScore: number
+}): DecisionBrief {
+  const missingInputs = [
+    !state.profile.fullName.trim() && "candidate name",
+    !state.profile.baseCvText.trim() && "CV evidence",
+    !state.profile.workRightDetails.trim() && "work-right details",
+    !state.profile.targetRoles.trim() && "target roles",
+    !state.jobAnalysis.jobDescription.trim() && "job description",
+    !state.jobAnalysis.jobUrl.trim() && "job URL"
+  ].filter(Boolean) as string[]
+  const risks = [
+    context.candidatePosition === "foreign-candidate" &&
+      !state.profile.workRightDetails.trim() &&
+      "Work-right, visa, sponsorship or relocation details are not confirmed.",
+    !state.profile.baseCvText.trim() &&
+      "CV evidence is missing, so AI positioning will be weaker.",
+    !state.jobAnalysis.jobDescription.trim() &&
+      "Job description is missing, so role classification is incomplete.",
+    (state.jobAnalysis.gaps?.length ?? 0) > 0 &&
+      `${state.jobAnalysis.gaps?.length} saved role gap${
+        state.jobAnalysis.gaps?.length === 1 ? "" : "s"
+      } need review.`
+  ].filter(Boolean) as string[]
+
+  const decision =
+    fitScore >= 80 && readinessScore >= 70 && risks.length <= 1
+      ? "Apply now"
+      : fitScore >= 60 && readinessScore >= 50
+        ? "Apply with caution"
+        : "Improve profile first"
+
+  return {
+    decision,
+    confidence:
+      readinessScore >= 80 ? "High" : readinessScore >= 55 ? "Medium" : "Low",
+    score: Math.round(fitScore * 0.55 + readinessScore * 0.45),
+    rationale: [
+      `${getMarketLabel(context)} mode is active for ${context.targetCountry}.`,
+      `Current fit score is ${fitScore}% and readiness is ${readinessScore}%.`,
+      getMarketPositioning(context),
+      getUrgencyGuidance(context)
+    ],
+    risks:
+      risks.length > 0
+        ? risks
+        : [
+            "No critical risk is visible from the saved profile and job context."
+          ],
+    nextActions:
+      decision === "Apply now"
+        ? [
+            "Capture the role into Pipeline.",
+            "Tailor the application content against the saved job description.",
+            "Track next action and prepare interview prompts if shortlisted."
+          ]
+        : decision === "Apply with caution"
+          ? [
+              "Clarify the highest-risk country or work-right detail.",
+              "Add stronger CV evidence before generating final content.",
+              "Apply only if the role is strategically important."
+            ]
+          : [
+              "Paste CV/resume text and approve the suggested context.",
+              "Add target country, target roles and work-right details.",
+              "Paste a real job description before deciding."
+            ],
+    missingInputs
+  }
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("profile")
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
@@ -294,6 +638,12 @@ export default function HomePage() {
   const [status, setStatus] = useState("")
   const [aiSettings, setAISettings] =
     useState<WebAISettings>(defaultWebAISettings)
+  const [productContext, setProductContext] = useState<ProductContext>(
+    defaultProductContext
+  )
+  const [resumeIntake, setResumeIntake] = useState("")
+  const [contextSuggestion, setContextSuggestion] =
+    useState<ContextSuggestion | null>(null)
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -311,6 +661,16 @@ export default function HomePage() {
     [state.applications]
   )
   const riskLabel = useMemo(() => getRiskLabel(state), [state])
+  const decisionBrief = useMemo(
+    () =>
+      getDecisionBrief({
+        context: productContext,
+        state,
+        fitScore,
+        readinessScore
+      }),
+    [productContext, state, fitScore, readinessScore]
+  )
   const interviewApplications = state.applications.filter(
     (application) => application.status === "Interview"
   )
@@ -318,6 +678,7 @@ export default function HomePage() {
   useEffect(() => {
     setState(getStoredState())
     setAISettings(getStoredAISettings())
+    setProductContext(getStoredProductContext())
   }, [])
 
   const persist = (next: CompanionDashboardState, message: string) => {
@@ -352,6 +713,104 @@ export default function HomePage() {
     value: WebAISettings[K]
   ) => {
     setAISettings((current) => ({ ...current, [key]: value }))
+  }
+
+  const updateProductContext = <K extends keyof ProductContext>(
+    key: K,
+    value: ProductContext[K]
+  ) => {
+    setProductContext((current) => {
+      const next = { ...current, [key]: value }
+      saveProductContext(next)
+      return next
+    })
+  }
+
+  const applyMarketContextToProfile = () => {
+    const targetRoles =
+      productContext.roleMarket === "fintech"
+        ? "Business Analyst, Technical Business Analyst, Application Support Analyst, Payments Analyst, Operational Resilience Analyst"
+        : "Business Analyst, Systems Analyst, Product Analyst, Data Analyst, Application Support Analyst"
+
+    persist(
+      {
+        ...state,
+        profile: {
+          ...state.profile,
+          targetCountries: productContext.targetCountry,
+          targetRoles,
+          relocationWillingness:
+            productContext.candidatePosition === "foreign-candidate"
+              ? "depends"
+              : state.profile.relocationWillingness,
+          workRightDetails:
+            state.profile.workRightDetails ||
+            (productContext.candidatePosition === "foreign-candidate"
+              ? `Add current visa/work-right status for ${productContext.targetCountry}, sponsorship needs, relocation timing and location constraints.`
+              : `Add current work-right status, notice period, salary expectations and local availability for ${productContext.targetCountry}.`)
+        },
+        jobAnalysis: {
+          ...state.jobAnalysis,
+          seniority: productContext.experienceLevel,
+          positioningAngle: getMarketPositioning(productContext),
+          notes: [
+            state.jobAnalysis.notes,
+            `Candidate market context: ${getMarketLabel(productContext)} / ${
+              productContext.candidatePosition === "foreign-candidate"
+                ? "foreign or relocating"
+                : "native or local"
+            } / ${productContext.targetCountry} / ${productContext.urgency}.`
+          ]
+            .filter(Boolean)
+            .join("\n")
+        }
+      },
+      "Market context applied to profile and role intelligence"
+    )
+  }
+
+  const reviewResumeForContext = () => {
+    if (!resumeIntake.trim()) {
+      setStatus("Paste CV or resume text before reviewing candidate context")
+      setTimeout(() => setStatus(""), 3000)
+      return
+    }
+
+    setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
+  }
+
+  const approveContextSuggestion = () => {
+    if (!contextSuggestion) {
+      return
+    }
+
+    saveProductContext({
+      roleMarket: contextSuggestion.roleMarket,
+      candidatePosition: contextSuggestion.candidatePosition,
+      urgency: contextSuggestion.urgency,
+      targetCountry: contextSuggestion.targetCountry,
+      experienceLevel: contextSuggestion.experienceLevel
+    })
+    setProductContext(contextSuggestion)
+    persist(
+      {
+        ...state,
+        profile: {
+          ...state.profile,
+          baseCvText: resumeIntake || state.profile.baseCvText,
+          targetCountries: contextSuggestion.targetCountry,
+          targetRoles: contextSuggestion.targetRoles,
+          workRightDetails:
+            state.profile.workRightDetails || contextSuggestion.workRightPrompt
+        },
+        jobAnalysis: {
+          ...state.jobAnalysis,
+          seniority: contextSuggestion.experienceLevel,
+          positioningAngle: getMarketPositioning(contextSuggestion)
+        }
+      },
+      "Approved CV context applied"
+    )
   }
 
   const saveDashboard = () => {
@@ -524,11 +983,11 @@ export default function HomePage() {
       <header className="app-header">
         <div className="header-copy">
           <p className="eyebrow">AutoTime EU Apply</p>
-          <h1>Cross-border application command center</h1>
+          <h1>European tech market guide for smarter applications</h1>
           <p>
-            A business-grade workspace for qualifying EU roles, preserving
-            candidate evidence, tracking application movement, and preparing
-            interviews from one local source of truth.
+            A decision workspace for tech candidates applying across Europe:
+            understand country fit, work-right risk, role positioning, and
+            whether a job is worth the effort before applying.
           </p>
           <div
             className="header-actions"
@@ -558,6 +1017,256 @@ export default function HomePage() {
           <p>{state.jobAnalysis.recommendation || "Qualification pending"}</p>
         </div>
       </header>
+
+      <section
+        className="market-context-panel"
+        aria-label="Candidate market context"
+      >
+        <div className="section-intro">
+          <p className="eyebrow">European Tech Market Guide</p>
+          <h2>Who is applying, where, and for what kind of tech role?</h2>
+          <p>
+            AutoTime guides tech candidates through the European application
+            market by adapting advice for country, candidate status, role
+            family, urgency and domain. It helps users understand the market
+            before they spend time applying.
+          </p>
+        </div>
+
+        <div className="context-grid">
+          <fieldset className="segmented-field">
+            <legend>Role market</legend>
+            <div className="segmented-options">
+              {roleMarkets.map((market) => (
+                <button
+                  aria-pressed={productContext.roleMarket === market.id}
+                  className={
+                    productContext.roleMarket === market.id
+                      ? "segment-button active"
+                      : "segment-button"
+                  }
+                  key={market.id}
+                  type="button"
+                  onClick={() => updateProductContext("roleMarket", market.id)}
+                >
+                  <strong>{market.label}</strong>
+                  <span>{market.description}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="segmented-field">
+            <legend>Candidate type</legend>
+            <div className="segmented-options">
+              {candidatePositions.map((position) => (
+                <button
+                  aria-pressed={
+                    productContext.candidatePosition === position.id
+                  }
+                  className={
+                    productContext.candidatePosition === position.id
+                      ? "segment-button active"
+                      : "segment-button"
+                  }
+                  key={position.id}
+                  type="button"
+                  onClick={() =>
+                    updateProductContext("candidatePosition", position.id)
+                  }
+                >
+                  <strong>{position.label}</strong>
+                  <span>{position.description}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="context-controls">
+            <label>
+              Target country
+              <select
+                value={productContext.targetCountry}
+                onChange={(event) =>
+                  updateProductContext("targetCountry", event.target.value)
+                }
+              >
+                {euCountryOptions.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Experience level
+              <select
+                value={productContext.experienceLevel}
+                onChange={(event) =>
+                  updateProductContext("experienceLevel", event.target.value)
+                }
+              >
+                <option value="Entry-level">Entry-level</option>
+                <option value="Junior">Junior</option>
+                <option value="Mid-level">Mid-level</option>
+                <option value="Senior">Senior</option>
+                <option value="Lead">Lead</option>
+              </select>
+            </label>
+            <label>
+              Application urgency
+              <select
+                value={productContext.urgency}
+                onChange={(event) =>
+                  updateProductContext(
+                    "urgency",
+                    event.target.value as CandidateUrgency
+                  )
+                }
+              >
+                {urgencyOptions.map((urgency) => (
+                  <option key={urgency.id} value={urgency.id}>
+                    {urgency.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={applyMarketContextToProfile}>
+              Apply Context
+            </button>
+          </div>
+        </div>
+
+        <div className="ai-use-case-grid" aria-label="AI use cases">
+          {getAIUseCases(productContext).map((useCase) => (
+            <article key={useCase.title}>
+              <h3>{useCase.title}</h3>
+              <p>{useCase.body}</p>
+            </article>
+          ))}
+        </div>
+
+        <section className="resume-intake-panel" aria-label="CV context review">
+          <div className="section-heading">
+            <p className="eyebrow">User-Approved AI Intake</p>
+            <h2>Paste CV or resume text to suggest context</h2>
+            <p>
+              AutoTime can infer candidate type, role market, seniority and
+              likely target roles from a CV, but it will not apply those changes
+              until the user reviews and approves them.
+            </p>
+          </div>
+          <label>
+            CV / resume text
+            <textarea
+              placeholder="Paste CV, resume, or profile summary. AutoTime will suggest context only; it will not overwrite your profile without approval."
+              value={resumeIntake}
+              onChange={(event) => setResumeIntake(event.target.value)}
+            />
+          </label>
+          <div className="header-actions">
+            <button type="button" onClick={reviewResumeForContext}>
+              Review CV Context
+            </button>
+            <button
+              className="secondary-button"
+              disabled={!contextSuggestion}
+              type="button"
+              onClick={approveContextSuggestion}
+            >
+              Approve Suggestion
+            </button>
+          </div>
+          {contextSuggestion && (
+            <article className="suggestion-card">
+              <div>
+                <span>{contextSuggestion.confidence}</span>
+                <small>suggestion confidence</small>
+              </div>
+              <dl>
+                <div>
+                  <dt>Candidate type</dt>
+                  <dd>
+                    {contextSuggestion.candidatePosition === "foreign-candidate"
+                      ? "Foreign / relocating"
+                      : "Native / local"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Role market</dt>
+                  <dd>{getMarketLabel(contextSuggestion)}</dd>
+                </div>
+                <div>
+                  <dt>Target roles</dt>
+                  <dd>{contextSuggestion.targetRoles}</dd>
+                </div>
+              </dl>
+              <ul className="bullets-list">
+                {contextSuggestion.reasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            </article>
+          )}
+        </section>
+
+        <p className="context-guidance">{getCountryGuidance(productContext)}</p>
+      </section>
+
+      <section className="decision-brief-panel" aria-label="AI decision brief">
+        <div>
+          <p className="eyebrow">AI Reasoning Layer</p>
+          <h2>Decision Brief</h2>
+          <p>
+            AutoTime turns candidate context, country, CV evidence and role fit
+            into a user-reviewable apply decision. Treat this as guidance, not
+            an automatic submission decision.
+          </p>
+        </div>
+        <div className="decision-score">
+          <strong>{decisionBrief.score}%</strong>
+          <span>{decisionBrief.decision}</span>
+          <small>{decisionBrief.confidence} confidence</small>
+        </div>
+        <div className="decision-columns">
+          <section>
+            <h3>Why</h3>
+            <ul className="bullets-list">
+              {decisionBrief.rationale.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <h3>Risks</h3>
+            <ul className="bullets-list">
+              {decisionBrief.risks.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <h3>Missing inputs</h3>
+            {decisionBrief.missingInputs.length ? (
+              <ul className="bullets-list">
+                {decisionBrief.missingInputs.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="empty-state">Core decision inputs are present.</p>
+            )}
+          </section>
+          <section>
+            <h3>Next actions</h3>
+            <ul className="bullets-list">
+              {decisionBrief.nextActions.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      </section>
 
       <nav className="tab-bar" aria-label="Dashboard sections">
         {tabLabels.map(([id, label]) => (
@@ -610,6 +1319,49 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="readiness-roadmap" aria-label="Readiness roadmap">
+        <div className="section-intro">
+          <p className="eyebrow">Readiness Path</p>
+          <h2>What moves this candidate toward a stronger application?</h2>
+        </div>
+        {[
+          {
+            title: "1. Confirm identity and market",
+            done:
+              Boolean(state.profile.targetRoles.trim()) &&
+              Boolean(productContext.targetCountry),
+            body:
+              productContext.candidatePosition === "foreign-candidate"
+                ? "Candidate type, target country and role family should be approved before applying."
+                : "Local status, role family and country market should be explicit before applying."
+          },
+          {
+            title: "2. Prove fit with evidence",
+            done: Boolean(state.profile.baseCvText.trim()),
+            body: "CV evidence should support the role family, seniority, skills and market positioning."
+          },
+          {
+            title: "3. Check country and work-right risk",
+            done: Boolean(state.profile.workRightDetails.trim()),
+            body: "Work rights, sponsorship, relocation, salary and notice period should be clear enough to avoid wasted effort."
+          },
+          {
+            title: "4. Decide apply or skip",
+            done: Boolean(state.jobAnalysis.jobDescription.trim()),
+            body: "A real job description lets AutoTime classify fit, risks and next actions before the user commits effort."
+          }
+        ].map((step) => (
+          <article
+            className={step.done ? "roadmap-step done" : "roadmap-step"}
+            key={step.title}
+          >
+            <span>{step.done ? "Ready" : "Needed"}</span>
+            <h3>{step.title}</h3>
+            <p>{step.body}</p>
+          </article>
+        ))}
+      </section>
+
       {activeTab === "profile" && (
         <section className="workspace-grid">
           <div className="input-column">
@@ -619,6 +1371,24 @@ export default function HomePage() {
                 value={state.profile.fullName}
                 onChange={(event) =>
                   updateProfile("fullName", event.target.value)
+                }
+              />
+            </label>
+            <label>
+              Current country
+              <input
+                value={state.profile.currentCountry}
+                onChange={(event) =>
+                  updateProfile("currentCountry", event.target.value)
+                }
+              />
+            </label>
+            <label>
+              Current city
+              <input
+                value={state.profile.currentCity}
+                onChange={(event) =>
+                  updateProfile("currentCity", event.target.value)
                 }
               />
             </label>
