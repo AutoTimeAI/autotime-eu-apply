@@ -416,20 +416,44 @@ function getUrgencyGuidance(context: ProductContext) {
 function getAIUseCases(context: ProductContext) {
   return [
     {
-      title: "Classify the role",
-      body: `Decide if this is ${getMarketLabel(context)} aligned, too senior, too junior, or a poor country/work-right fit.`
+      title: "Pick the right country",
+      body: `Focus ${context.targetCountry} roles only when location, salary, seniority and work-right expectations make sense.`
     },
     {
-      title: "Clarify positioning",
+      title: "Check work-right risk",
+      body:
+        context.candidatePosition === "foreign-candidate"
+          ? "Treat sponsorship, relocation timing and local presence as early filters, not afterthoughts."
+          : "Keep notice period, salary range and local availability consistent across every application."
+    },
+    {
+      title: "Match role language",
       body: getMarketPositioning(context)
     },
     {
-      title: "Reduce wasted effort",
-      body: getUrgencyGuidance(context)
+      title: "Follow up deliberately",
+      body: "Track source, next action and interview stage across platforms so promising European roles do not disappear."
+    }
+  ]
+}
+
+function getEuropeanStrategySteps(context: ProductContext) {
+  return [
+    {
+      title: "Country focus",
+      body: `Start with ${context.targetCountry}, then compare nearby markets only when your profile and work-right story are clear.`
     },
     {
-      title: "Prepare interviews",
-      body: "Turn saved job details into likely questions, STAR prompts, risk checks and employer questions without inventing experience."
+      title: "Hiring platform fit",
+      body:
+        "Prioritise roles with clear job descriptions, named locations and realistic seniority. Avoid vague reposts unless the company is strategic."
+    },
+    {
+      title: "Application angle",
+      body:
+        context.roleMarket === "fintech"
+          ? "Lead with payments, controls, resilience, data quality and stakeholder delivery."
+          : "Lead with product understanding, systems thinking, measurable impact and user-facing delivery."
     }
   ]
 }
@@ -629,6 +653,10 @@ export default function HomePage() {
     [state.applications]
   )
   const riskLabel = useMemo(() => getRiskLabel(state), [state])
+  const europeanStrategySteps = useMemo(
+    () => getEuropeanStrategySteps(productContext),
+    [productContext]
+  )
   const decisionBrief = useMemo(
     () =>
       getDecisionBrief({
@@ -979,8 +1007,9 @@ export default function HomePage() {
           <h2>Tell AutoTime what kind of role you want</h2>
           <p>
             Choose your target country, role type and work-right situation.
-            AutoTime uses this to give more useful job-fit advice before you
-            spend time applying.
+            AutoTime uses this to shape advice around the European tech market:
+            location expectations, sponsorship risk, local role language and
+            platform follow-up.
           </p>
         </div>
 
@@ -1090,7 +1119,7 @@ export default function HomePage() {
 
         <div
           className="ai-use-case-grid"
-          aria-label="UK/EU decision checks"
+          aria-label="European tech market strategy"
         >
           {getAIUseCases(productContext).map((useCase) => (
             <article key={useCase.title}>
@@ -1099,6 +1128,26 @@ export default function HomePage() {
             </article>
           ))}
         </div>
+
+        <section className="market-strategy-panel">
+          <div className="section-heading">
+            <p className="eyebrow">European tech strategy</p>
+            <h2>Turn your search into a country-aware plan</h2>
+            <p>
+              European tech hiring is fragmented by country, work-right rules,
+              platform habits and local role language. AutoTime keeps those
+              decisions visible before you apply.
+            </p>
+          </div>
+          <div className="strategy-card-grid">
+            {europeanStrategySteps.map((step) => (
+              <article key={step.title}>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section className="resume-intake-panel" aria-label="CV context review">
           <div className="section-heading">
@@ -1176,7 +1225,8 @@ export default function HomePage() {
           <h2>Should you apply, pause, or improve your profile?</h2>
           <p>
             AutoTime turns your profile and the job details into plain next
-            steps, so you can spend energy on roles that make sense.
+            steps, so you can spend energy on European roles where the country,
+            work-right path and skill match make sense.
           </p>
         </div>
         <div className="decision-score">

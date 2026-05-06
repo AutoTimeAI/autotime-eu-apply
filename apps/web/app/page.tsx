@@ -23,20 +23,27 @@ const workflowSteps = [
 
 const featureBlocks = [
   {
-    title: "Work-right intelligence",
+    title: "Country-by-country focus",
     body:
-      "Sponsorship risk, relocation fit and country-specific application strategy before you spend effort."
+      "Compare UK, Ireland, Netherlands, Germany and wider European targets before spending energy on low-fit roles."
   },
   {
-    title: "AI without the setup",
+    title: "Work-right strategy",
     body:
-      "No API keys. No configuration. AI job analysis and content generation works immediately."
+      "Clarify sponsorship, relocation, notice period and location risk before you write another application."
   },
   {
-    title: "Chrome extension + web dashboard",
+    title: "European tech workflow",
     body:
-      "Save jobs as you browse. Review, track and prep interviews on any device."
+      "Save roles from common tech hiring platforms, tailor applications and track follow-up across countries."
   }
+]
+
+const strategySignals = [
+  "Country fit",
+  "Work-right clarity",
+  "Role-language match",
+  "Follow-up timing"
 ]
 
 const freeFeatures = [
@@ -78,12 +85,12 @@ export default async function LandingPage() {
 
       <section className="landing-hero">
         <div className="landing-hero-copy">
-          <p className="eyebrow">Built for UK/EU tech candidates</p>
-          <h1>Apply smarter to UK and EU tech roles</h1>
+          <p className="eyebrow">Built for European tech candidates</p>
+          <h1>Choose the right European tech roles before you apply</h1>
           <p>
-            AutoTime analyses job fit, checks work-right risk, generates
-            tailored application content and tracks every outcome - so you
-            spend effort only where it converts.
+            AutoTime helps you compare country fit, work-right risk, role
+            language and application effort, so your UK and EU job search is
+            focused instead of scattered.
           </p>
           <div className="landing-actions">
             <Link className="primary-link" href="/login">
@@ -94,15 +101,15 @@ export default async function LandingPage() {
             </Link>
           </div>
           <div className="proof-strip" aria-label="AutoTime capabilities">
-            <span>Work-right risk</span>
-            <span>AI application content</span>
-            <span>Outcome tracking</span>
+            {strategySignals.map((signal) => (
+              <span key={signal}>{signal}</span>
+            ))}
           </div>
         </div>
         <div className="landing-signal-panel" aria-label="AutoTime decision preview">
           <header>
-            <span>Live decision brief</span>
-            <strong>Apply now</strong>
+            <span>European role brief</span>
+            <strong>Worth applying</strong>
           </header>
           <dl>
             <div>
@@ -110,8 +117,8 @@ export default async function LandingPage() {
               <dd>84%</dd>
             </div>
             <div>
-              <dt>Work-right risk</dt>
-              <dd>Low</dd>
+              <dt>Country</dt>
+              <dd>London</dd>
             </div>
             <div>
               <dt>Profile gaps</dt>
@@ -119,9 +126,9 @@ export default async function LandingPage() {
             </div>
           </dl>
           <ol>
-            <li>Tailor cover letter around payments delivery.</li>
-            <li>Confirm hybrid London requirement before applying.</li>
-            <li>Save next action for follow-up in 5 working days.</li>
+            <li>Confirm hybrid location and sponsorship wording.</li>
+            <li>Use payments delivery examples in the application.</li>
+            <li>Track follow-up after 5 working days.</li>
           </ol>
         </div>
       </section>
@@ -129,7 +136,7 @@ export default async function LandingPage() {
       <section className="landing-section">
         <div className="section-heading">
           <p className="eyebrow">How it works</p>
-          <h2>From job page to decision in minutes</h2>
+          <h2>From European job page to clear decision</h2>
         </div>
         <div className="landing-step-grid">
           {workflowSteps.map((step, index) => (

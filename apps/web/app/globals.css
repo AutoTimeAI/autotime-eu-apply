@@ -401,11 +401,40 @@ h4 {
 }
 
 .ai-use-case-grid p,
+.market-strategy-panel p,
+.strategy-card-grid p,
 .context-guidance {
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.5;
+}
+
+.market-strategy-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(216, 224, 235, 0.9);
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(238, 244, 255, 0.86)),
+    var(--surface);
+  box-shadow: var(--shadow-tight);
+  padding: 18px;
+}
+
+.strategy-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.strategy-card-grid article {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 14px;
 }
 
 .context-guidance {
@@ -1743,9 +1772,10 @@ h4 {
     grid-template-columns: 1fr;
   }
 
-  .metrics-strip,
-  .ai-use-case-grid,
-  .decision-columns,
+    .metrics-strip,
+    .ai-use-case-grid,
+    .strategy-card-grid,
+    .decision-columns,
   .readiness-roadmap,
   .pipeline-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1817,6 +1847,7 @@ h4 {
   .segmented-options,
   .context-controls,
   .ai-use-case-grid,
+  .strategy-card-grid,
   .decision-columns,
   .readiness-roadmap,
   .pipeline-summary,
