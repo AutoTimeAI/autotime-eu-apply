@@ -212,3 +212,5 @@ Repo marker:
   by default and does not upload data.
 - `apps/web/lib/cloud-sync.ts` centralises the feature flag and public Supabase
   env readiness check before any auth package or upload path is added.
+- The dashboard account-sync shell is visible but locked until the readiness
+  guard confirms the feature flag and public Supabase env values are present.

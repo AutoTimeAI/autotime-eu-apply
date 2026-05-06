@@ -13,6 +13,7 @@ export const expectedMarkers = [
   "Mandatory MVP Profile Bridge",
   "Production Sync Track",
   "Local mode stays active for founder validation",
+  "Sign-in locked",
   "General tech",
   "FinTech",
   "Foreign / relocating",

@@ -1020,6 +1020,14 @@ export default function HomePage() {
     )
   }
 
+  const explainAccountSync = () => {
+    setStatus(
+      cloudSyncReadiness.configured
+        ? "Account sync shell is ready for Supabase auth wiring. Profile upload is still blocked until the next implementation slice."
+        : "Account sign-in is locked in this MVP build. Complete founder validation and configure Supabase before enabling cloud sync."
+    )
+  }
+
   return (
     <main className="dashboard-shell">
       <header className="app-header">
@@ -1395,6 +1403,10 @@ export default function HomePage() {
             <span>Current mode</span>
           </div>
           <div>
+            <strong>{cloudSyncReadiness.accountLabel}</strong>
+            <span>Account shell</span>
+          </div>
+          <div>
             <strong>{cloudSyncReadiness.firstSliceLabel}</strong>
             <span>First sync slice</span>
           </div>
@@ -1403,13 +1415,22 @@ export default function HomePage() {
             <span>Safety rule</span>
           </div>
         </div>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={explainCloudSyncTrack}
-        >
-          Review Cloud Sync Status
-        </button>
+        <div className="sync-action-stack">
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={explainCloudSyncTrack}
+          >
+            Review Cloud Sync Status
+          </button>
+          <button
+            disabled={!cloudSyncReadiness.configured}
+            type="button"
+            onClick={explainAccountSync}
+          >
+            {cloudSyncReadiness.syncActionLabel}
+          </button>
+        </div>
       </section>
 
       <section

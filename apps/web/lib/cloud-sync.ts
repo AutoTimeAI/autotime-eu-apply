@@ -8,6 +8,8 @@ export type CloudSyncReadiness = {
   enabled: boolean
   configured: boolean
   modeLabel: "Local only" | "Flagged" | "Ready for auth wiring"
+  accountLabel: "Sign-in locked" | "Auth wiring ready"
+  syncActionLabel: "Keep local evidence" | "Connect account next"
   firstSliceLabel: "Profile first"
   safetyLabel: "No secrets"
   issues: string[]
@@ -36,6 +38,8 @@ export function getCloudSyncReadiness(
       : enabled
         ? "Flagged"
         : "Local only",
+    accountLabel: configured ? "Auth wiring ready" : "Sign-in locked",
+    syncActionLabel: configured ? "Connect account next" : "Keep local evidence",
     firstSliceLabel: "Profile first",
     safetyLabel: "No secrets",
     issues

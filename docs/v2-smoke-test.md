@@ -17,7 +17,9 @@ extension-to-web dashboard export.
    are validated.
 7. Click `Review Cloud Sync Status` and confirm it reports missing env/config
    without uploading data.
-8. Confirm the production dashboard is live:
+8. Confirm the account sync action is locked unless cloud sync env readiness is
+   complete.
+9. Confirm the production dashboard is live:
 
 ```bash
 pnpm smoke:web
