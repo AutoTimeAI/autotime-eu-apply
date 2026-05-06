@@ -91,6 +91,7 @@ later if user/account UX needs become more complex.
 Minimum tables:
 
 - `profiles`
+- `profile_revisions`
 - `reusable_answers`
 - `applications`
 - `job_analyses`
@@ -110,6 +111,12 @@ Each table must include:
 
 Application records should include platform, role title, company, country,
 status, next action, outcome notes, and content snapshot references.
+
+Profile records are living candidate memory, not a one-time constant. The
+`profiles` table stores the latest profile for fast dashboard and extension
+reads. The `profile_revisions` table records explicit user-approved changes with
+changed fields, reason, snapshot, source surface, and revision number. AutoTime
+must never silently overwrite profile memory from AI or extension detection.
 
 ## User Consent
 
@@ -208,6 +215,9 @@ Repo marker:
 - `supabase/migrations/20260506171000_cloud_sync_profiles.sql` defines the
   first safe schema slice: one synced profile per user, mandatory profile bridge
   constraints, row-level security, and profile sync audit events.
+- `supabase/migrations/20260506182000_profile_revisions.sql` adds profile
+  revision history so profile details can change over time without treating the
+  candidate profile as a fixed constant.
 - The web dashboard includes a Production Sync Track shell that shows local mode
   by default and does not upload data.
 - `apps/web/lib/cloud-sync.ts` centralises the feature flag and public Supabase
