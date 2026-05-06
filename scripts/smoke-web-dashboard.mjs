@@ -14,6 +14,7 @@ export const expectedMarkers = [
   "Production Sync Track",
   "Local mode stays active for founder validation",
   "Sign-in locked",
+  "Session check blocked",
   "General tech",
   "FinTech",
   "Foreign / relocating",

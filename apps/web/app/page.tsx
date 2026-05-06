@@ -1407,6 +1407,10 @@ export default function HomePage() {
             <span>Account shell</span>
           </div>
           <div>
+            <strong>{cloudSyncReadiness.sessionLabel}</strong>
+            <span>Auth session</span>
+          </div>
+          <div>
             <strong>{cloudSyncReadiness.firstSliceLabel}</strong>
             <span>First sync slice</span>
           </div>

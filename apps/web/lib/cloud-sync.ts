@@ -12,6 +12,7 @@ export type CloudSyncReadiness = {
   modeLabel: "Local only" | "Flagged" | "Ready for auth wiring"
   accountLabel: "Sign-in locked" | "Auth wiring ready"
   syncActionLabel: "Keep local evidence" | "Connect account next"
+  sessionLabel: "Session check blocked" | "Session check ready"
   firstSliceLabel: "Profile first"
   safetyLabel: "No secrets"
   issues: string[]
@@ -28,6 +29,15 @@ export type CloudSyncClientResult =
       client: null
       readiness: CloudSyncReadiness
     }
+
+export type CloudSyncSessionState = {
+  checked: boolean
+  authenticated: boolean
+  userEmail: string | null
+  message: string
+}
+
+type SessionClient = Pick<SupabaseClient, "auth">
 
 function hasValue(value: string | undefined) {
   return typeof value === "string" && value.trim().length > 0
@@ -54,6 +64,7 @@ export function getCloudSyncReadiness(
         : "Local only",
     accountLabel: configured ? "Auth wiring ready" : "Sign-in locked",
     syncActionLabel: configured ? "Connect account next" : "Keep local evidence",
+    sessionLabel: configured ? "Session check ready" : "Session check blocked",
     firstSliceLabel: "Profile first",
     safetyLabel: "No secrets",
     issues
@@ -81,6 +92,39 @@ export function createCloudSyncClient(env: CloudSyncEnv): CloudSyncClientResult 
       }
     }),
     readiness
+  }
+}
+
+export async function getCloudSyncSessionState(
+  clientResult: CloudSyncClientResult | { ready: true; client: SessionClient }
+): Promise<CloudSyncSessionState> {
+  if (!clientResult.ready) {
+    return {
+      checked: false,
+      authenticated: false,
+      userEmail: null,
+      message: "Session check blocked until cloud-sync readiness is complete."
+    }
+  }
+
+  const { data, error } = await clientResult.client.auth.getSession()
+
+  if (error) {
+    return {
+      checked: true,
+      authenticated: false,
+      userEmail: null,
+      message: error.message
+    }
+  }
+
+  return {
+    checked: true,
+    authenticated: Boolean(data.session?.user),
+    userEmail: data.session?.user?.email ?? null,
+    message: data.session?.user
+      ? "Authenticated session detected. Profile sync still requires explicit user action."
+      : "No authenticated session detected."
   }
 }
 

@@ -217,3 +217,5 @@ Repo marker:
 - `@supabase/supabase-js` is installed for the web app, but the client factory
   returns no client until the cloud-sync feature flag and public Supabase env
   values are present. Profile upload remains unimplemented and blocked.
+- The auth session adapter only calls Supabase `auth.getSession()` after the
+  guarded client exists; profile sync still requires a later explicit action.

@@ -19,7 +19,9 @@ extension-to-web dashboard export.
    without uploading data.
 8. Confirm the account sync action is locked unless cloud sync env readiness is
    complete.
-9. Confirm the production dashboard is live:
+9. Confirm the auth session marker remains blocked until Supabase env readiness
+   is complete.
+10. Confirm the production dashboard is live:
 
 ```bash
 pnpm smoke:web

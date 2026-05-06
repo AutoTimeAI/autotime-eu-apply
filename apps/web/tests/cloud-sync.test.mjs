@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import {
   createCloudSyncClient,
+  getCloudSyncSessionState,
   getCloudSyncReadiness
 } from "../lib/cloud-sync.ts"
 
@@ -81,6 +82,69 @@ test("creates a guarded Supabase client when public env is ready", () => {
   assert.equal(result.ready, true)
   assert.ok(result.client)
   assert.equal(result.readiness.modeLabel, "Ready for auth wiring")
+})
+
+test("blocks session checks until cloud sync client is ready", async () => {
+  const result = createCloudSyncClient({
+    enabled: "false",
+    supabaseUrl: "",
+    supabaseAnonKey: ""
+  })
+  const session = await getCloudSyncSessionState(result)
+
+  assert.equal(session.checked, false)
+  assert.equal(session.authenticated, false)
+  assert.equal(
+    session.message,
+    "Session check blocked until cloud-sync readiness is complete."
+  )
+})
+
+test("reads authenticated session from a ready client adapter", async () => {
+  const session = await getCloudSyncSessionState({
+    ready: true,
+    client: {
+      auth: {
+        getSession: async () => ({
+          data: {
+            session: {
+              user: {
+                email: "pilot@example.com"
+              }
+            }
+          },
+          error: null
+        })
+      }
+    }
+  })
+
+  assert.equal(session.checked, true)
+  assert.equal(session.authenticated, true)
+  assert.equal(session.userEmail, "pilot@example.com")
+  assert.equal(
+    session.message,
+    "Authenticated session detected. Profile sync still requires explicit user action."
+  )
+})
+
+test("returns a safe unauthenticated state when no session exists", async () => {
+  const session = await getCloudSyncSessionState({
+    ready: true,
+    client: {
+      auth: {
+        getSession: async () => ({
+          data: { session: null },
+          error: null
+        })
+      }
+    }
+  })
+
+  assert.equal(session.checked, true)
+  assert.equal(session.authenticated, false)
+  assert.equal(session.userEmail, null)
+  assert.equal(session.message, "No authenticated session detected.")
 })
 
 let failed = 0
