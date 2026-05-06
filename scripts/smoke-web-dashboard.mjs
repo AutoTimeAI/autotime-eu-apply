@@ -12,6 +12,7 @@ export const expectedMarkers = [
   "Which country, work-right path and role family should be prioritised?",
   "Mandatory MVP Profile Bridge",
   "Production Sync Track",
+  "Local mode stays active for founder validation",
   "General tech",
   "FinTech",
   "Foreign / relocating",

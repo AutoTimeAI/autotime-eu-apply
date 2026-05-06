@@ -21,6 +21,7 @@
     "test:mvp:coverage": "node scripts/mvp-test-coverage.mjs",
     "smoke:web": "node scripts/smoke-web-dashboard.mjs",
     "test:smoke:web": "node scripts/smoke-web-dashboard.test.mjs",
+    "test:web:cloud-sync": "node --experimental-strip-types apps/web/tests/cloud-sync.test.mjs",
     "test:web:interview": "node --experimental-strip-types apps/web/tests/interview-prep.test.mjs",
     "test:v2:ai-live": "node --experimental-strip-types scripts/v2-live-ai-interview-check.mjs",
     "test:v2:ats-live": "node --experimental-strip-types scripts/v2-live-ats-validation.mjs",

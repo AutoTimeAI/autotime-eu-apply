@@ -15,7 +15,9 @@ extension-to-web dashboard export.
 6. Confirm the Production Sync Track panel shows local mode unless cloud sync is
    explicitly enabled after Supabase auth, RLS, consent, and deletion controls
    are validated.
-7. Confirm the production dashboard is live:
+7. Click `Review Cloud Sync Status` and confirm it reports missing env/config
+   without uploading data.
+8. Confirm the production dashboard is live:
 
 ```bash
 pnpm smoke:web

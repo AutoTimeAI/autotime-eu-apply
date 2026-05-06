@@ -210,3 +210,5 @@ Repo marker:
   constraints, row-level security, and profile sync audit events.
 - The web dashboard includes a Production Sync Track shell that shows local mode
   by default and does not upload data.
+- `apps/web/lib/cloud-sync.ts` centralises the feature flag and public Supabase
+  env readiness check before any auth package or upload path is added.

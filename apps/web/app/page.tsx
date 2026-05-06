@@ -20,6 +20,7 @@ import {
   getAIInterviewErrorMessage,
   type WebAISettings
 } from "../lib/interview-prep"
+import { getBrowserCloudSyncReadiness } from "../lib/cloud-sync"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
 type MetricTone = "neutral" | "good" | "warn"
@@ -55,8 +56,6 @@ type DecisionBrief = {
 const storageKey = "autotime-v2-companion-dashboard"
 const aiSettingsStorageKey = "autotime-v2-ai-settings"
 const productContextStorageKey = "autotime-v2-product-context"
-const cloudSyncEnabled =
-  process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED === "true"
 
 const applicationStatuses: ApplicationStatus[] = [
   "Saved",
@@ -683,6 +682,7 @@ export default function HomePage() {
     () => hasCandidateProfileBridgeEvidence(state.profile),
     [state.profile]
   )
+  const cloudSyncReadiness = useMemo(() => getBrowserCloudSyncReadiness(), [])
   const interviewApplications = state.applications.filter(
     (application) => application.status === "Interview"
   )
@@ -1014,9 +1014,9 @@ export default function HomePage() {
 
   const explainCloudSyncTrack = () => {
     setStatus(
-      cloudSyncEnabled
-        ? "Cloud sync is flagged on, but account sync is gated until Supabase auth, RLS and delete controls are validated."
-        : "Cloud sync is marked for production, but this MVP build stays local-first until founder validation is complete."
+      cloudSyncReadiness.configured
+        ? "Cloud sync env is ready for auth wiring, but profile upload remains blocked until Supabase auth, RLS and delete controls are validated."
+        : `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
     )
   }
 
@@ -1370,7 +1370,7 @@ export default function HomePage() {
 
       <section
         className={
-          cloudSyncEnabled
+          cloudSyncReadiness.configured
             ? "cloud-sync-panel flagged"
             : "cloud-sync-panel local"
         }
@@ -1379,8 +1379,8 @@ export default function HomePage() {
         <div>
           <p className="eyebrow">Production Sync Track</p>
           <h2>
-            {cloudSyncEnabled
-              ? "Cloud sync is gated behind account readiness"
+            {cloudSyncReadiness.configured
+              ? "Cloud sync env is ready for auth wiring"
               : "Local mode stays active for founder validation"}
           </h2>
           <p>
@@ -1391,15 +1391,15 @@ export default function HomePage() {
         </div>
         <div className="sync-status-grid">
           <div>
-            <strong>{cloudSyncEnabled ? "Flagged" : "Local only"}</strong>
+            <strong>{cloudSyncReadiness.modeLabel}</strong>
             <span>Current mode</span>
           </div>
           <div>
-            <strong>Profile first</strong>
+            <strong>{cloudSyncReadiness.firstSliceLabel}</strong>
             <span>First sync slice</span>
           </div>
           <div>
-            <strong>No secrets</strong>
+            <strong>{cloudSyncReadiness.safetyLabel}</strong>
             <span>Safety rule</span>
           </div>
         </div>
