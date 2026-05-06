@@ -59,6 +59,7 @@ import {
   createV2DashboardState,
   v2DashboardStateToJson
 } from "../lib/v2-dashboard"
+import { getCandidateProfileBridgeIssues } from "shared"
 import {
   emptyApplicationContentDraft,
   emptyJobAnalysisDraft,
@@ -539,6 +540,25 @@ function SidePanelApp() {
   }
 
   const exportV2Dashboard = () => {
+    if (!savedProfile) {
+      setApplicationsStatus(
+        "Save candidate profile before exporting V2 dashboard JSON"
+      )
+      setTimeout(() => setApplicationsStatus(""), 3000)
+      return
+    }
+
+    const profileBridgeIssues = getCandidateProfileBridgeIssues(savedProfile)
+    if (profileBridgeIssues.length > 0) {
+      setApplicationsStatus(
+        `Complete profile bridge fields before export: ${profileBridgeIssues.join(
+          ", "
+        )}`
+      )
+      setTimeout(() => setApplicationsStatus(""), 4000)
+      return
+    }
+
     const dashboardState = createV2DashboardState({
       applications,
       jobAnalysis: savedJobAnalysisDraft,

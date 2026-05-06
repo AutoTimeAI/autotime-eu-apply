@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   companionDashboardStateSchema,
+  getCandidateProfileBridgeIssues,
+  hasCandidateProfileBridgeEvidence,
   type ApplicationRecord,
   type ApplicationStatus,
   type CandidateProfile,
@@ -671,6 +673,14 @@ export default function HomePage() {
       }),
     [productContext, state, fitScore, readinessScore]
   )
+  const profileBridgeIssues = useMemo(
+    () => getCandidateProfileBridgeIssues(state.profile),
+    [state.profile]
+  )
+  const profileBridgeReady = useMemo(
+    () => hasCandidateProfileBridgeEvidence(state.profile),
+    [state.profile]
+  )
   const interviewApplications = state.applications.filter(
     (application) => application.status === "Interview"
   )
@@ -945,6 +955,16 @@ export default function HomePage() {
   }
 
   const exportDashboard = () => {
+    if (!profileBridgeReady) {
+      setStatus(
+        `Complete mandatory candidate profile bridge first: ${profileBridgeIssues.join(
+          ", "
+        )}`
+      )
+      setActiveTab("profile")
+      return
+    }
+
     const blob = new Blob([JSON.stringify(state, null, 2)], {
       type: "application/json;charset=utf-8"
     })
@@ -968,6 +988,18 @@ export default function HomePage() {
 
       if (!result.success) {
         setStatus("Import failed: dashboard JSON does not match V2 schema")
+        return
+      }
+
+      const importedProfileIssues = getCandidateProfileBridgeIssues(
+        result.data.profile
+      )
+      if (importedProfileIssues.length > 0) {
+        setStatus(
+          `Import blocked: candidate profile bridge missing ${importedProfileIssues.join(
+            ", "
+          )}`
+        )
         return
       }
 
@@ -1289,6 +1321,42 @@ export default function HomePage() {
       </nav>
 
       {status && <p className="status-banner">{status}</p>}
+
+      <section
+        className={
+          profileBridgeReady
+            ? "profile-bridge-panel ready"
+            : "profile-bridge-panel blocked"
+        }
+        aria-label="Mandatory candidate profile bridge"
+      >
+        <div>
+          <p className="eyebrow">Mandatory MVP Profile Bridge</p>
+          <h2>
+            {profileBridgeReady
+              ? "Candidate profile is connected to targeting"
+              : "Candidate profile must be completed before market-ready use"}
+          </h2>
+          <p>
+            The dashboard decision layer depends on the same candidate profile
+            used by the Chrome extension. Export/import is the mandatory MVP
+            bridge until account sync is added later.
+          </p>
+        </div>
+        {profileBridgeReady ? (
+          <ul className="bullets-list">
+            <li>Profile evidence can drive targeting fit and apply decisions.</li>
+            <li>Work-right and country context can be used in interview prep.</li>
+            <li>Application evidence export is enabled.</li>
+          </ul>
+        ) : (
+          <ul className="bullets-list">
+            {profileBridgeIssues.map((issue) => (
+              <li key={issue}>Add {issue}</li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section
         className="metrics-strip"

@@ -38,6 +38,11 @@ effort.
   file for import into the V2 web dashboard.
 - Web dashboard import uses explicit schema validation and an intentional
   `Import Dashboard` action.
+- Mandatory MVP profile bridge: the V2 dashboard must receive usable candidate
+  profile evidence from the extension export/import flow before it can be
+  treated as market-ready. Required bridge fields are full name, current
+  country, target countries, target roles, work-right details, and CV evidence.
+  Cloud sync remains post-MVP, but profile continuity is not optional.
 - LinkedIn remains manual copy/paste only.
 - V2 dashboard remains local-first until Supabase/account sync credentials and
   data policy are ready.
@@ -57,6 +62,9 @@ effort.
 - The web dashboard is the planning, review, application-history, and interview
   prep surface.
 - The extension-to-web bridge is local file export/import, not cloud sync.
+- Candidate profile continuity through that local bridge is mandatory for MVP
+  validation. A dashboard without imported or completed candidate profile
+  evidence is a demo surface, not a market-ready pilot surface.
 - Light mobile companion behavior is represented by the responsive production
   web dashboard. A native mobile app or app-store wrapper is not part of this
   V2 MVP completion gate.
@@ -135,6 +143,8 @@ detection; the web app source remains in `apps/web`.
 - Manually verify the web dashboard can save local state, export JSON, import
   valid JSON, update application statuses, and generate interview prep only from
   saved application/profile/job context.
+- Manually verify incomplete profile exports/imports are blocked or visibly
+  marked as missing mandatory profile bridge fields.
 - Manually verify AI interview prep with a controlled-cost key, then test an
   invalid key and confirm local fallback/status messaging. The automated live
   key check is `pnpm test:v2:ai-live`.

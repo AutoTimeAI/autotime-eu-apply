@@ -167,6 +167,7 @@ h4 {
 .app-header > *,
 .context-grid > *,
 .decision-brief-panel > *,
+.profile-bridge-panel > *,
 .workspace-grid > *,
 .application-row > *,
 .ai-settings-panel > *,
@@ -588,6 +589,34 @@ h4 {
   line-height: 1.5;
 }
 
+.profile-bridge-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.58fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--amber);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.profile-bridge-panel.ready {
+  border-left-color: var(--green);
+}
+
+.profile-bridge-panel h2 {
+  margin-bottom: 8px;
+}
+
+.profile-bridge-panel p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .metric-card {
   min-height: 132px;
   border: 1px solid var(--border);
@@ -879,6 +908,7 @@ h4 {
   .decision-brief-panel,
   .workspace-grid,
   .ai-settings-panel,
+  .profile-bridge-panel,
   .utility-bar {
     grid-template-columns: 1fr;
   }

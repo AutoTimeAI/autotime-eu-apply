@@ -29,7 +29,11 @@ import {
 } from "../lib/job-analysis.ts"
 import { generateApplicationContentDraft } from "../lib/content-generation.ts"
 import { createV2DashboardState } from "../lib/v2-dashboard.ts"
-import { companionDashboardStateSchema } from "shared"
+import {
+  companionDashboardStateSchema,
+  getCandidateProfileBridgeIssues,
+  hasCandidateProfileBridgeEvidence
+} from "shared"
 import {
   estimateOpenAICostUsd,
   getOpenAIErrorMessage,
@@ -1593,6 +1597,37 @@ test("creates V2 dashboard export compatible with shared schema", () => {
   assert.equal(parsed.jobAnalysis.recommendation, "High Priority")
   assert.equal(parsed.applications[0].status, "Interview")
   assert.deepEqual(parsed.interviewPrepPacks, [])
+})
+
+test("requires mandatory candidate profile bridge evidence", () => {
+  const profile = {
+    fullName: "Rajan Patel",
+    email: "",
+    phone: "",
+    linkedInUrl: "",
+    githubUrl: "",
+    portfolioUrl: "",
+    currentCountry: "United Kingdom",
+    currentCity: "",
+    targetCountries: "United Kingdom, Ireland",
+    targetRoles: "Business Analyst",
+    workRightDetails: "UK work authorisation",
+    sponsorshipNeeded: false,
+    relocationWillingness: "depends",
+    salaryExpectation: "",
+    noticePeriod: "",
+    baseCvText: "Business analyst with payments and UAT experience.",
+    projectSummaries: "",
+    experienceHighlights: ""
+  }
+
+  assert.equal(hasCandidateProfileBridgeEvidence(profile), true)
+  assert.deepEqual(getCandidateProfileBridgeIssues(profile), [])
+
+  assert.deepEqual(
+    getCandidateProfileBridgeIssues({ ...profile, workRightDetails: "" }),
+    ["work-right details"]
+  )
 })
 
 let failed = 0
