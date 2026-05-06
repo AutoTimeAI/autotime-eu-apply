@@ -1,4 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import {
+  getCandidateProfileBridgeIssues,
+  type CandidateProfile
+} from "shared"
 
 export type CloudSyncEnv = {
   enabled: string | undefined
@@ -37,10 +41,51 @@ export type CloudSyncSessionState = {
   message: string
 }
 
+export type ProfileSyncPayload = {
+  user_id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  linkedin_url: string | null
+  github_url: string | null
+  portfolio_url: string | null
+  current_country: string
+  current_city: string | null
+  target_countries: string
+  target_roles: string
+  work_right_details: string
+  sponsorship_needed: boolean
+  relocation_willingness: "yes" | "no" | "depends"
+  salary_expectation: string | null
+  notice_period: string | null
+  base_cv_text: string
+  project_summaries: string | null
+  experience_highlights: string | null
+  source_surface: "web" | "extension"
+  schema_version: 1
+}
+
+export type ProfileSyncPayloadResult =
+  | {
+      ready: true
+      payload: ProfileSyncPayload
+      issues: []
+    }
+  | {
+      ready: false
+      payload: null
+      issues: string[]
+    }
+
 type SessionClient = Pick<SupabaseClient, "auth">
 
 function hasValue(value: string | undefined) {
   return typeof value === "string" && value.trim().length > 0
+}
+
+function trimToNullable(value: string) {
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 export function getCloudSyncReadiness(
@@ -125,6 +170,57 @@ export async function getCloudSyncSessionState(
     message: data.session?.user
       ? "Authenticated session detected. Profile sync still requires explicit user action."
       : "No authenticated session detected."
+  }
+}
+
+export function createProfileSyncPayload({
+  profile,
+  userId,
+  sourceSurface = "web"
+}: {
+  profile: CandidateProfile
+  userId: string
+  sourceSurface?: "web" | "extension"
+}): ProfileSyncPayloadResult {
+  const issues = [
+    ...getCandidateProfileBridgeIssues(profile),
+    !hasValue(userId) && "authenticated user id"
+  ].filter(Boolean) as string[]
+
+  if (issues.length > 0) {
+    return {
+      ready: false,
+      payload: null,
+      issues
+    }
+  }
+
+  return {
+    ready: true,
+    payload: {
+      user_id: userId.trim(),
+      full_name: profile.fullName.trim(),
+      email: trimToNullable(profile.email),
+      phone: trimToNullable(profile.phone),
+      linkedin_url: trimToNullable(profile.linkedInUrl),
+      github_url: trimToNullable(profile.githubUrl),
+      portfolio_url: trimToNullable(profile.portfolioUrl),
+      current_country: profile.currentCountry.trim(),
+      current_city: trimToNullable(profile.currentCity),
+      target_countries: profile.targetCountries.trim(),
+      target_roles: profile.targetRoles.trim(),
+      work_right_details: profile.workRightDetails.trim(),
+      sponsorship_needed: profile.sponsorshipNeeded,
+      relocation_willingness: profile.relocationWillingness,
+      salary_expectation: trimToNullable(profile.salaryExpectation),
+      notice_period: trimToNullable(profile.noticePeriod),
+      base_cv_text: profile.baseCvText.trim(),
+      project_summaries: trimToNullable(profile.projectSummaries),
+      experience_highlights: trimToNullable(profile.experienceHighlights),
+      source_surface: sourceSurface,
+      schema_version: 1
+    },
+    issues: []
   }
 }
 

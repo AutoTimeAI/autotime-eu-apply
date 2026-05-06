@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import {
   createCloudSyncClient,
+  createProfileSyncPayload,
   getCloudSyncSessionState,
   getCloudSyncReadiness
 } from "../lib/cloud-sync.ts"
@@ -9,6 +10,27 @@ const tests = []
 
 function test(name, run) {
   tests.push({ name, run })
+}
+
+const completeProfile = {
+  fullName: " Rajan Patel ",
+  email: "rajan@example.com",
+  phone: "",
+  linkedInUrl: "https://www.linkedin.com/in/rajan",
+  githubUrl: "",
+  portfolioUrl: "",
+  currentCountry: " United Kingdom ",
+  currentCity: "London",
+  targetCountries: "United Kingdom, Ireland",
+  targetRoles: "Business Analyst, Systems Analyst",
+  workRightDetails: "UK work authorisation",
+  sponsorshipNeeded: false,
+  relocationWillingness: "depends",
+  salaryExpectation: "",
+  noticePeriod: "Negotiable",
+  baseCvText: "Business analyst with payments, UAT and SQL evidence.",
+  projectSummaries: "",
+  experienceHighlights: "Requirements, UAT, stakeholder management."
 }
 
 test("keeps cloud sync local when feature flag is off", () => {
@@ -145,6 +167,61 @@ test("returns a safe unauthenticated state when no session exists", async () => 
   assert.equal(session.authenticated, false)
   assert.equal(session.userEmail, null)
   assert.equal(session.message, "No authenticated session detected.")
+})
+
+test("creates a profile sync payload from mandatory bridge evidence", () => {
+  const result = createProfileSyncPayload({
+    profile: completeProfile,
+    userId: " user-123 "
+  })
+
+  assert.equal(result.ready, true)
+  assert.equal(result.payload.user_id, "user-123")
+  assert.equal(result.payload.full_name, "Rajan Patel")
+  assert.equal(result.payload.current_country, "United Kingdom")
+  assert.equal(result.payload.phone, null)
+  assert.equal(result.payload.source_surface, "web")
+  assert.equal(result.payload.schema_version, 1)
+})
+
+test("blocks profile sync payload when mandatory bridge evidence is missing", () => {
+  const result = createProfileSyncPayload({
+    profile: {
+      ...completeProfile,
+      workRightDetails: "",
+      baseCvText: ""
+    },
+    userId: "user-123"
+  })
+
+  assert.equal(result.ready, false)
+  assert.equal(result.payload, null)
+  assert.deepEqual(result.issues, ["work-right details", "CV evidence"])
+})
+
+test("blocks profile sync payload without authenticated user id", () => {
+  const result = createProfileSyncPayload({
+    profile: completeProfile,
+    userId: ""
+  })
+
+  assert.equal(result.ready, false)
+  assert.deepEqual(result.issues, ["authenticated user id"])
+})
+
+test("keeps profile sync payload limited to allowed profile fields", () => {
+  const result = createProfileSyncPayload({
+    profile: {
+      ...completeProfile,
+      apiKey: "secret-key",
+      cookie: "session-cookie"
+    },
+    userId: "user-123"
+  })
+
+  assert.equal(result.ready, true)
+  assert.equal(Object.hasOwn(result.payload, "apiKey"), false)
+  assert.equal(Object.hasOwn(result.payload, "cookie"), false)
 })
 
 let failed = 0

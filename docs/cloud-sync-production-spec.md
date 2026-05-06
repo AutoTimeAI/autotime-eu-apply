@@ -219,3 +219,7 @@ Repo marker:
   values are present. Profile upload remains unimplemented and blocked.
 - The auth session adapter only calls Supabase `auth.getSession()` after the
   guarded client exists; profile sync still requires a later explicit action.
+- The profile sync payload mapper converts a validated `CandidateProfile` into
+  the Supabase `profiles` row shape only when mandatory profile bridge evidence
+  and an authenticated user id are present. It does not include secrets, cookies,
+  or API keys.
