@@ -11,6 +11,7 @@ export const expectedMarkers = [
   "More Interviews",
   "Which country, work-right path and role family should be prioritised?",
   "Mandatory MVP Profile Bridge",
+  "Production Sync Track",
   "General tech",
   "FinTech",
   "Foreign / relocating",

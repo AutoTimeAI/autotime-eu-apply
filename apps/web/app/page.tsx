@@ -55,6 +55,8 @@ type DecisionBrief = {
 const storageKey = "autotime-v2-companion-dashboard"
 const aiSettingsStorageKey = "autotime-v2-ai-settings"
 const productContextStorageKey = "autotime-v2-product-context"
+const cloudSyncEnabled =
+  process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED === "true"
 
 const applicationStatuses: ApplicationStatus[] = [
   "Saved",
@@ -1010,6 +1012,14 @@ export default function HomePage() {
     }
   }
 
+  const explainCloudSyncTrack = () => {
+    setStatus(
+      cloudSyncEnabled
+        ? "Cloud sync is flagged on, but account sync is gated until Supabase auth, RLS and delete controls are validated."
+        : "Cloud sync is marked for production, but this MVP build stays local-first until founder validation is complete."
+    )
+  }
+
   return (
     <main className="dashboard-shell">
       <header className="app-header">
@@ -1356,6 +1366,50 @@ export default function HomePage() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section
+        className={
+          cloudSyncEnabled
+            ? "cloud-sync-panel flagged"
+            : "cloud-sync-panel local"
+        }
+        aria-label="Production cloud sync track"
+      >
+        <div>
+          <p className="eyebrow">Production Sync Track</p>
+          <h2>
+            {cloudSyncEnabled
+              ? "Cloud sync is gated behind account readiness"
+              : "Local mode stays active for founder validation"}
+          </h2>
+          <p>
+            The production track will sync the candidate profile across the
+            extension and dashboard after Supabase auth, row-level security,
+            consent, and data deletion controls are verified.
+          </p>
+        </div>
+        <div className="sync-status-grid">
+          <div>
+            <strong>{cloudSyncEnabled ? "Flagged" : "Local only"}</strong>
+            <span>Current mode</span>
+          </div>
+          <div>
+            <strong>Profile first</strong>
+            <span>First sync slice</span>
+          </div>
+          <div>
+            <strong>No secrets</strong>
+            <span>Safety rule</span>
+          </div>
+        </div>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={explainCloudSyncTrack}
+        >
+          Review Cloud Sync Status
+        </button>
       </section>
 
       <section

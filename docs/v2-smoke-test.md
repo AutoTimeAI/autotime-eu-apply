@@ -12,7 +12,10 @@ extension-to-web dashboard export.
    Outcome Evidence, and More Interviews.
 5. Confirm the Mandatory MVP Profile Bridge panel is visible and marks missing
    candidate profile fields until profile evidence is completed or imported.
-6. Confirm the production dashboard is live:
+6. Confirm the Production Sync Track panel shows local mode unless cloud sync is
+   explicitly enabled after Supabase auth, RLS, consent, and deletion controls
+   are validated.
+7. Confirm the production dashboard is live:
 
 ```bash
 pnpm smoke:web

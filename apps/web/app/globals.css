@@ -168,6 +168,7 @@ h4 {
 .context-grid > *,
 .decision-brief-panel > *,
 .profile-bridge-panel > *,
+.cloud-sync-panel > *,
 .workspace-grid > *,
 .application-row > *,
 .ai-settings-panel > *,
@@ -617,6 +618,65 @@ h4 {
   line-height: 1.55;
 }
 
+.cloud-sync-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.64fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.cloud-sync-panel.flagged {
+  border-left-color: var(--green);
+}
+
+.cloud-sync-panel h2 {
+  margin-bottom: 8px;
+}
+
+.cloud-sync-panel p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.sync-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sync-status-grid div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 10px;
+}
+
+.sync-status-grid strong,
+.sync-status-grid span {
+  display: block;
+}
+
+.sync-status-grid strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.sync-status-grid span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .metric-card {
   min-height: 132px;
   border: 1px solid var(--border);
@@ -909,6 +969,7 @@ h4 {
   .workspace-grid,
   .ai-settings-panel,
   .profile-bridge-panel,
+  .cloud-sync-panel,
   .utility-bar {
     grid-template-columns: 1fr;
   }
