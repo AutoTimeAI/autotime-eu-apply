@@ -50,10 +50,10 @@ export type AIUsageLogEntry = {
   createdAt: string
 }
 
-export type OpenAISettings = {
-  apiKey: string
-  model: string
-  monthlyBudgetUsd: number
+export type AccountSession = {
+  authToken: string
+  email: string
+  plan: "free" | "pro"
 }
 
 type LegacyApplicationStatus =
@@ -144,7 +144,8 @@ const JOB_ANALYSIS_KEY = "job-analysis-draft"
 const APPLICATION_CONTENT_KEY = "application-content-draft"
 const TRACKER_DRAFT_KEY = "tracker-draft"
 const AI_USAGE_LOG_KEY = "ai-usage-log"
-const OPENAI_SETTINGS_KEY = "openai-settings"
+const ACCOUNT_SESSION_KEY = "account-session"
+const LEGACY_OPENAI_SETTINGS_KEY = "openai-settings"
 
 function normalizeProfile(profile: Partial<CandidateProfile>): CandidateProfile {
   return {
@@ -347,13 +348,17 @@ function normalizeAIUsageLogEntry(
   }
 }
 
-function normalizeOpenAISettings(
-  settings: Partial<OpenAISettings>
-): OpenAISettings {
+function normalizeAccountSession(
+  session: Partial<AccountSession>
+): AccountSession | null {
+  if (!session.authToken?.trim() || !session.email?.trim()) {
+    return null
+  }
+
   return {
-    apiKey: settings.apiKey ?? "",
-    model: settings.model ?? "gpt-4.1-mini",
-    monthlyBudgetUsd: settings.monthlyBudgetUsd ?? 2
+    authToken: session.authToken,
+    email: session.email,
+    plan: session.plan === "pro" ? "pro" : "free"
   }
 }
 
@@ -457,22 +462,24 @@ export async function clearAIUsageLog() {
   await chrome.storage.local.remove(AI_USAGE_LOG_KEY)
 }
 
-export async function saveOpenAISettings(settings: OpenAISettings) {
-  await chrome.storage.local.set({
-    [OPENAI_SETTINGS_KEY]: normalizeOpenAISettings(settings)
-  })
+export async function saveAccountSession(session: AccountSession) {
+  await chrome.storage.local.set({ [ACCOUNT_SESSION_KEY]: session })
 }
 
-export async function getOpenAISettings(): Promise<OpenAISettings> {
-  const result = await chrome.storage.local.get(OPENAI_SETTINGS_KEY)
-  const settings = result[OPENAI_SETTINGS_KEY] as
-    | Partial<OpenAISettings>
+export async function getAccountSession(): Promise<AccountSession | null> {
+  const result = await chrome.storage.local.get(ACCOUNT_SESSION_KEY)
+  const session = result[ACCOUNT_SESSION_KEY] as
+    | Partial<AccountSession>
     | undefined
-  return normalizeOpenAISettings(settings ?? {})
+  return session ? normalizeAccountSession(session) : null
 }
 
-export async function clearOpenAISettings() {
-  await chrome.storage.local.remove(OPENAI_SETTINGS_KEY)
+export async function clearAccountSession() {
+  await chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
+}
+
+export async function clearLegacyOpenAISettings() {
+  await chrome.storage.local.remove(LEGACY_OPENAI_SETTINGS_KEY)
 }
 
 export async function getApplications(): Promise<ApplicationRecord[]> {

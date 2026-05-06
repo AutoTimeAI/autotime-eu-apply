@@ -1,5 +1,6 @@
 import "./globals.css"
-import type { ReactNode } from "react"
+import { Suspense, type ReactNode } from "react"
+import PostHogProvider from "../components/PostHogProvider"
 
 export const metadata = {
   title: "AutoTime EU Apply",
@@ -13,7 +14,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}>
+          <PostHogProvider />
+        </Suspense>
+        {children}
+      </body>
     </html>
   )
 }

@@ -2,7 +2,6 @@ import type {
   ApplicationContentDraft,
   CandidateProfile,
   JobAnalysisDraft,
-  OpenAISettings,
   ReusableAnswers
 } from "./storage"
 
@@ -33,6 +32,8 @@ export type OpenAIResult<T> = {
 }
 
 export const fallbackOpenAICallBudgetUsd = 0.01
+export const appUrl = "https://autotime-eu-apply.vercel.app"
+export const BACKEND_AI_URL = `${appUrl}/api/ai`
 
 const modelPricesPerMillionTokens: Record<
   string,
@@ -65,15 +66,15 @@ function parseJsonObject<T>(text: string): T {
 
 function getOpenAIStatusHint(status: number) {
   if (status === 401) {
-    return "check that the saved API key is valid."
+    return "sign in to AutoTime and try again."
   }
 
   if (status === 403) {
-    return "check project permissions for the saved API key."
+    return "check that your AutoTime account has access."
   }
 
   if (status === 404) {
-    return "check that the selected model is available."
+    return "AutoTime AI is temporarily unavailable."
   }
 
   if (status === 429) {
@@ -81,22 +82,22 @@ function getOpenAIStatusHint(status: number) {
   }
 
   if (status >= 500) {
-    return "OpenAI service returned a server error."
+    return "AutoTime AI returned a server error."
   }
 
-  return "check AI settings and try again."
+  return "try again or use the local fallback."
 }
 
 export function getOpenAIErrorMessage(error: unknown) {
   if (error instanceof SyntaxError) {
-    return "OpenAI returned a response that was not valid JSON."
+    return "AutoTime AI returned a response that was not valid JSON."
   }
 
   if (error instanceof Error && error.message.trim()) {
     return error.message
   }
 
-  return "OpenAI request failed."
+  return "AutoTime AI request failed."
 }
 
 function toStringArray(value: unknown) {
@@ -173,62 +174,85 @@ export function estimateOpenAICostUsd(model: string, usage?: OpenAIUsage) {
   return Number(estimatedCost.toFixed(6))
 }
 
-async function createResponse<T>(
-  settings: OpenAISettings,
-  instructions: string,
-  input: unknown
-): Promise<OpenAIResult<T>> {
-  const response = await fetch("https://api.openai.com/v1/responses", {
+type ApiEnvelope<T> = {
+  data: T | null
+  error: string | null
+  status: number
+}
+
+function hasRecordValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function getBackendDataValue<T>(value: unknown, key: string): T {
+  if (!hasRecordValue(value) || !(key in value)) {
+    throw new Error("AutoTime AI returned an unexpected response.")
+  }
+
+  return value[key] as T
+}
+
+async function createBackendResponse<T>({
+  authToken,
+  body,
+  endpoint,
+  responseKey
+}: {
+  authToken: string | null
+  body: unknown
+  endpoint: "analyse" | "content"
+  responseKey: "content" | "result"
+}): Promise<OpenAIResult<T>> {
+  if (!authToken?.trim()) {
+    throw new Error("Sign in to AutoTime to use AI.")
+  }
+
+  const response = await fetch(`${BACKEND_AI_URL}/${endpoint}`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${settings.apiKey}`,
+      Authorization: `Bearer ${authToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      model: settings.model,
-      instructions,
-      input: JSON.stringify(input),
-      max_output_tokens: 1200
-    })
+    body: JSON.stringify(body)
   })
 
   if (!response.ok) {
     throw new Error(
-      `OpenAI request failed with ${response.status}; ${getOpenAIStatusHint(
+      `AutoTime AI request failed with ${response.status}; ${getOpenAIStatusHint(
         response.status
       )}`
     )
   }
 
-  const data = (await response.json()) as OpenAIResponse
+  const data = (await response.json()) as ApiEnvelope<unknown>
+
+  if (data.error) {
+    throw new Error(data.error)
+  }
 
   return {
-    value: parseJsonObject<T>(getOutputText(data)),
-    approximateCostUsd: estimateOpenAICostUsd(settings.model, data.usage)
+    value: getBackendDataValue<T>(data.data, responseKey),
+    approximateCostUsd: 0
   }
 }
 
 export async function generateAIApplicationContentDraft({
-  settings,
+  authToken,
   profile,
   job,
   reusableAnswers
 }: {
-  settings: OpenAISettings
+  authToken: string | null
   profile: CandidateProfile
   job: JobAnalysisDraft
   reusableAnswers: ReusableAnswers | null
 }) {
-  const result = await createResponse<Partial<ApplicationContentDraft>>(
-    settings,
-    [
-      "You write concise, truthful UK/EU job application content.",
-      "Return only valid JSON with keys coverLetter, profileSummary, motivationAnswer, strengthsAnswer, availabilityAnswer.",
-      "Do not invent employers, credentials, degrees, work rights, salary, or relocation facts.",
-      "Use the candidate profile and job analysis. Keep outputs editable and specific."
-    ].join(" "),
-    { profile, job, reusableAnswers }
-  )
+  const result = await createBackendResponse<Partial<ApplicationContentDraft>>({
+    authToken,
+    body: { profile, job, reusableAnswers },
+    endpoint: "content",
+    responseKey: "content"
+  })
 
   return {
     ...result,
@@ -237,23 +261,20 @@ export async function generateAIApplicationContentDraft({
 }
 
 export async function generateAIJobAnalysis({
-  settings,
+  authToken,
   draft,
   profile
 }: {
-  settings: OpenAISettings
+  authToken: string | null
   draft: JobAnalysisDraft
   profile: CandidateProfile | null
 }) {
-  const result = await createResponse<Partial<JobAnalysisDraft>>(
-    settings,
-    [
-      "You analyse UK/EU job fit for a tech candidate.",
-      "Return only valid JSON with fitScore number 0-100, recommendation one of High Priority, Worth Applying, Stretch, Skip, positioningAngle string, scoreFactors string array, skills string array, seniority string, summary string, gaps string array.",
-      "Be conservative. Do not infer facts not present in the profile or job text."
-    ].join(" "),
-    { draft, profile }
-  )
+  const result = await createBackendResponse<Partial<JobAnalysisDraft>>({
+    authToken,
+    body: { jobAnalysis: draft, profile },
+    endpoint: "analyse",
+    responseKey: "result"
+  })
 
   return {
     ...result,

@@ -18,29 +18,28 @@ import {
   saveJobAnalysisDraft,
   type AIUsageLogEntry,
   type CandidateProfile,
-  type JobAnalysisDraft,
-  type OpenAISettings
+  type JobAnalysisDraft
 } from "../lib/storage"
 import { validateJobAnalysisDraft } from "../lib/validation"
 import { emptyJobAnalysisDraft, type Section } from "./constants"
 import type { JobPageResponse } from "./types"
 
 type UseJobAnalysisArgs = {
-  canUseOpenAI: () => boolean
+  authToken: string | null
+  canUseBackendAI: () => boolean
   clearSaveAttempt: (section: Section) => void
-  getOpenAISkipMessage: () => string
+  getBackendAISkipMessage: () => string
   markSaveAttempted: (section: Section) => void
-  openAISettings: OpenAISettings
   savedProfile: CandidateProfile | null
   setAIUsageLog: Dispatch<SetStateAction<AIUsageLogEntry[]>>
 }
 
 export function useJobAnalysis({
-  canUseOpenAI,
+  authToken,
+  canUseBackendAI,
   clearSaveAttempt,
-  getOpenAISkipMessage,
+  getBackendAISkipMessage,
   markSaveAttempted,
-  openAISettings,
   savedProfile,
   setAIUsageLog
 }: UseJobAnalysisArgs) {
@@ -92,19 +91,19 @@ export function useJobAnalysis({
 
     let analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
     let usedAI = false
-    let aiFallbackMessage = getOpenAISkipMessage()
+    let aiFallbackMessage = getBackendAISkipMessage()
 
-    if (canUseOpenAI()) {
+    if (canUseBackendAI()) {
       try {
         const aiAnalysis = await generateAIJobAnalysis({
-          settings: openAISettings,
+          authToken,
           draft: jobAnalysisDraft,
           profile: savedProfile
         })
         analysis = aiAnalysis.value
         const usageLogEntry = await logAIUsage({
           featureName: "Job analysis",
-          model: openAISettings.model,
+          model: "web-backend",
           approximateCostUsd: aiAnalysis.approximateCostUsd
         })
         setAIUsageLog((current) => [usageLogEntry, ...current])
@@ -112,7 +111,7 @@ export function useJobAnalysis({
         aiFallbackMessage = ""
       } catch (error) {
         analysis = inferJobFitAnalysis(jobAnalysisDraft, savedProfile)
-        aiFallbackMessage = `OpenAI failed: ${getOpenAIErrorMessage(
+        aiFallbackMessage = `AutoTime AI failed: ${getOpenAIErrorMessage(
           error
         )} Used local fallback.`
       }

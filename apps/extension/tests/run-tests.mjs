@@ -43,25 +43,26 @@ import {
 import {
   clearAIUsageLog,
   clearApplicationContentDraft,
+  clearAccountSession,
   clearJobAnalysisDraft,
-  clearOpenAISettings,
+  clearLegacyOpenAISettings,
   clearProfile,
   clearReusableAnswers,
   clearTrackerDraft,
+  getAccountSession,
   deleteApplication,
   getAIUsageLog,
   getApplicationContentDraft,
   getApplications,
   getJobAnalysisDraft,
-  getOpenAISettings,
   getProfile,
   getReusableAnswers,
   getTrackerDraft,
   logAIUsage,
+  saveAccountSession,
   saveApplicationContentDraft,
   saveApplication,
   saveJobAnalysisDraft,
-  saveOpenAISettings,
   saveProfile,
   saveReusableAnswers,
   saveTrackerDraft,
@@ -681,27 +682,41 @@ test("logs and clears AI usage entries", async () => {
   assert.deepEqual(await getAIUsageLog(), [])
 })
 
-test("saves and clears OpenAI settings", async () => {
+test("saves and clears account session", async () => {
   resetStorage()
 
-  await saveOpenAISettings({
-    apiKey: "sk-test",
-    model: "gpt-4.1-nano",
-    monthlyBudgetUsd: 1.5
+  await saveAccountSession({
+    authToken: "supabase-token",
+    email: "user@example.com",
+    plan: "pro"
   })
 
-  assert.deepEqual(await getOpenAISettings(), {
-    apiKey: "sk-test",
-    model: "gpt-4.1-nano",
-    monthlyBudgetUsd: 1.5
+  assert.deepEqual(await getAccountSession(), {
+    authToken: "supabase-token",
+    email: "user@example.com",
+    plan: "pro"
   })
 
-  await clearOpenAISettings()
+  await clearAccountSession()
 
-  assert.deepEqual(await getOpenAISettings(), {
-    apiKey: "",
-    model: "gpt-4.1-mini",
-    monthlyBudgetUsd: 2
+  assert.equal(await getAccountSession(), null)
+})
+
+test("clears legacy OpenAI settings", async () => {
+  resetStorage()
+
+  await chrome.storage.local.set({
+    "openai-settings": {
+      apiKey: "sk-test",
+      model: "gpt-4.1-mini",
+      monthlyBudgetUsd: 2
+    }
+  })
+
+  await clearLegacyOpenAISettings()
+
+  assert.deepEqual(await chrome.storage.local.get("openai-settings"), {
+    "openai-settings": undefined
   })
 })
 
@@ -715,14 +730,14 @@ test("estimates OpenAI usage cost from token counts", () => {
   )
 })
 
-test("formats OpenAI errors for user-visible status", () => {
+test("formats AI errors for user-visible status", () => {
   assert.equal(
     getOpenAIErrorMessage(new Error("OpenAI request failed with 401")),
     "OpenAI request failed with 401"
   )
   assert.equal(
     getOpenAIErrorMessage(new SyntaxError("Unexpected token")),
-    "OpenAI returned a response that was not valid JSON."
+    "AutoTime AI returned a response that was not valid JSON."
   )
 })
 

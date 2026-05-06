@@ -3,6 +3,7 @@ import {
   getCandidateProfileBridgeIssues,
   type CandidateProfile
 } from "shared"
+import type { Database } from "./supabase/types"
 
 export type CloudSyncEnv = {
   enabled: string | undefined
@@ -89,6 +90,11 @@ export type ProfileSyncActionState =
       message: string
       blockers: string[]
     }
+
+export type ProfileSyncResult = {
+  success: boolean
+  error: string | null
+}
 
 type SessionClient = Pick<SupabaseClient, "auth">
 
@@ -279,6 +285,80 @@ export function prepareProfileSyncAction({
     payload: payloadResult.payload,
     message:
       "Profile sync payload is ready. Supabase write remains disabled until the explicit upload implementation is added."
+  }
+}
+
+export async function syncProfile(
+  client: SupabaseClient<Database>,
+  userId: string,
+  profile: CandidateProfile
+): Promise<ProfileSyncResult> {
+  try {
+    const payloadResult = createProfileSyncPayload({
+      profile,
+      userId,
+      sourceSurface: "web"
+    })
+
+    if (!payloadResult.ready) {
+      return {
+        success: false,
+        error: `Profile sync blocked: ${payloadResult.issues.join(", ")}.`
+      }
+    }
+
+    const { data: existingProfile, error: existingProfileError } = await client
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    if (existingProfileError) {
+      return {
+        success: false,
+        error: existingProfileError.message
+      }
+    }
+
+    const { data: syncedProfile, error: profileError } = await client
+      .from("profiles")
+      .upsert(payloadResult.payload, { onConflict: "user_id" })
+      .select("id")
+      .single()
+
+    if (profileError) {
+      return {
+        success: false,
+        error: profileError.message
+      }
+    }
+
+    const { error: syncEventError } = await client.from("sync_events").insert({
+      user_id: userId,
+      entity_type: "profile",
+      entity_id: syncedProfile.id,
+      source_surface: "web",
+      action: existingProfile ? "updated" : "created",
+      message: "Profile synced from web dashboard",
+      schema_version: 1
+    })
+
+    if (syncEventError) {
+      return {
+        success: false,
+        error: syncEventError.message
+      }
+    }
+
+    return {
+      success: true,
+      error: null
+    }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Profile sync failed"
+    }
   }
 }
 

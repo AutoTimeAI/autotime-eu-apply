@@ -1,0 +1,97 @@
+import Link from "next/link"
+
+import { PricingCards } from "../../components/PricingCard"
+import { getServerEnv } from "../../lib/env"
+
+const faqs = [
+  {
+    question: "Do I need an OpenAI account?",
+    answer: "No. AutoTime provides AI through the web dashboard when available."
+  },
+  {
+    question: "Is my data private?",
+    answer: "Yes - GDPR compliant, UK-hosted, and designed around explicit user consent."
+  },
+  {
+    question: "Can I cancel?",
+    answer: "Yes, any time from your billing portal."
+  },
+  {
+    question: "Does it work for non-UK candidates?",
+    answer:
+      "Yes - built specifically for EU relocation and work-right scenarios."
+  },
+  {
+    question: "What ATS platforms does it support?",
+    answer:
+      "Greenhouse, Lever, Workday, Ashby, SmartRecruiters, iCIMS, BambooHR, Teamtailor, Recruitee, Jobvite and Personio."
+  }
+]
+
+const freeFeatures = [
+  { label: "Chrome extension with local storage", included: true },
+  { label: "5 AI job analyses per month", included: true },
+  { label: "Application tracking (unlimited)", included: true },
+  { label: "Work-right and country fit scoring", included: true },
+  { label: "LinkedIn manual copy/paste workflow", included: true },
+  { label: "CSV export", included: true },
+  { label: "Cloud sync across devices", included: false },
+  { label: "AI application content generation", included: false },
+  { label: "Interview prep packs", included: false },
+  { label: "Unlimited AI analyses", included: false }
+]
+
+const proFeatures = [
+  { label: "Everything in Free", included: true },
+  { label: "Cloud sync - never lose your data", included: true },
+  { label: "Unlimited AI job analyses", included: true },
+  { label: "AI cover letter and application content", included: true },
+  { label: "Role-specific interview prep packs", included: true },
+  { label: "Priority ATS platform support", included: true },
+  { label: "Cancel any time", included: true }
+]
+
+export default function PricingPage() {
+  const serverEnv = getServerEnv()
+
+  return (
+    <main className="pricing-shell">
+      <header className="pricing-hero">
+        <Link className="dashboard-brand" href="/">
+          AutoTime <span>EU Apply</span>
+        </Link>
+        <div>
+          <p className="eyebrow">Pricing</p>
+          <h1>Choose the search system that matches your ambition</h1>
+          <p>
+            Start with local-first tracking, then upgrade when unlimited AI,
+            cloud sync and interview prep become worth more than the time they
+            save.
+          </p>
+        </div>
+      </header>
+
+      <PricingCards
+        annualPriceId={serverEnv.STRIPE_PRO_ANNUAL_PRICE_ID}
+        freeFeatures={freeFeatures}
+        monthlyPriceId={serverEnv.STRIPE_PRO_MONTHLY_PRICE_ID}
+        proFeatures={proFeatures}
+      />
+
+      <section className="faq-section">
+        <div className="section-heading">
+          <p className="eyebrow">FAQ</p>
+          <h2>Clear answers before you subscribe</h2>
+        </div>
+        <div className="faq-grid">
+          {faqs.map((faq) => (
+            <article className="faq-item" key={faq.question}>
+              <h3>{faq.question}</h3>
+              <p>{faq.answer}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  )
+}

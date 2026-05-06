@@ -20,29 +20,29 @@ import {
   clearAIUsageLog,
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
-  clearOpenAISettings,
+  clearAccountSession,
+  clearLegacyOpenAISettings,
   clearProfile,
   clearReusableAnswers,
   clearTrackerDraft,
   deleteApplication,
+  getAccountSession,
   getAIUsageLog,
   getApplications,
   getApplicationContentDraft,
   getJobAnalysisDraft,
-  getOpenAISettings,
   getProfile,
   getReusableAnswers,
   getTrackerDraft,
   saveApplication,
   saveApplicationContentDraft,
-  saveOpenAISettings,
   saveProfile,
   saveReusableAnswers,
   saveTrackerDraft,
   logAIUsage,
   type AIUsageLogEntry,
-  type OpenAISettings,
   updateApplication,
+  type AccountSession,
   type ApplicationRecord,
   type ApplicationContentSnapshot,
   type ApplicationContentDraft,
@@ -51,7 +51,6 @@ import {
   type TrackerDraft
 } from "../lib/storage"
 import {
-  fallbackOpenAICallBudgetUsd,
   generateAIApplicationContentDraft,
   getOpenAIErrorMessage
 } from "../lib/openai"
@@ -70,7 +69,7 @@ import {
 } from "./constants"
 import { ApplicationsSection } from "./ApplicationsSection"
 import { ApplicationContentSection } from "./ApplicationContentSection"
-import { AISettingsSection } from "./AISettingsSection"
+import { AccountSection } from "./AccountSection"
 import { JobAnalysisSection } from "./JobAnalysisSection"
 import { Onboarding } from "./Onboarding"
 import { ProfileSection } from "./ProfileSection"
@@ -112,7 +111,7 @@ function SidePanelApp() {
     applications: false,
     "usage-log": false,
     "validation-metrics": false,
-    "ai-settings": false
+    account: false
   })
   const [profile, setProfile] = useState<CandidateProfile>(emptyProfile)
   const [savedProfile, setSavedProfile] = useState<CandidateProfile | null>(
@@ -132,11 +131,9 @@ function SidePanelApp() {
     useState<TrackerDraft | null>(null)
   const [applications, setApplications] = useState<ApplicationRecord[]>([])
   const [aiUsageLog, setAIUsageLog] = useState<AIUsageLogEntry[]>([])
-  const [openAISettings, setOpenAISettings] = useState<OpenAISettings>({
-    apiKey: "",
-    model: "gpt-4.1-mini",
-    monthlyBudgetUsd: 2
-  })
+  const [accountSession, setAccountSession] = useState<AccountSession | null>(
+    null
+  )
   const [applicationSearchQuery, setApplicationSearchQuery] = useState("")
   const [applicationStatusFilter, setApplicationStatusFilter] =
     useState<ApplicationStatusFilter>("all")
@@ -146,14 +143,14 @@ function SidePanelApp() {
   const [trackerStatus, setTrackerStatus] = useState("")
   const [applicationsStatus, setApplicationsStatus] = useState("")
   const [usageLogStatus, setUsageLogStatus] = useState("")
-  const [aiSettingsStatus, setAISettingsStatus] = useState("")
+  const [accountStatus, setAccountStatus] = useState("")
   const profileStatusRef = useRef<HTMLParagraphElement | null>(null)
   const reusableStatusRef = useRef<HTMLParagraphElement | null>(null)
   const contentStatusRef = useRef<HTMLParagraphElement | null>(null)
   const trackerStatusRef = useRef<HTMLParagraphElement | null>(null)
   const applicationsStatusRef = useRef<HTMLParagraphElement | null>(null)
   const usageLogStatusRef = useRef<HTMLParagraphElement | null>(null)
-  const aiSettingsStatusRef = useRef<HTMLParagraphElement | null>(null)
+  const accountStatusRef = useRef<HTMLParagraphElement | null>(null)
 
   const profileIssues = useMemo(() => validateProfile(profile), [profile])
   const applicationContentIssues = useMemo(
@@ -206,7 +203,7 @@ function SidePanelApp() {
       applications: false,
       "usage-log": false,
       "validation-metrics": false,
-      "ai-settings": false
+      account: false
     })
     setStatus("")
     setReusableStatus("")
@@ -215,7 +212,7 @@ function SidePanelApp() {
     setTrackerStatus("")
     setApplicationsStatus("")
     setUsageLogStatus("")
-    setAISettingsStatus("")
+    setAccountStatus("")
   }
 
   const loadApplications = async () => {
@@ -228,9 +225,9 @@ function SidePanelApp() {
     setAIUsageLog(savedUsageLog)
   }
 
-  const loadOpenAISettings = async () => {
-    const savedOpenAISettings = await getOpenAISettings()
-    setOpenAISettings(savedOpenAISettings)
+  const loadAccountSession = async () => {
+    await clearLegacyOpenAISettings()
+    setAccountSession(await getAccountSession())
   }
 
   useEffect(() => {
@@ -262,7 +259,7 @@ function SidePanelApp() {
 
       await loadApplications()
       await loadAIUsageLog()
-      await loadOpenAISettings()
+      await loadAccountSession()
     }
 
     loadProfile()
@@ -298,39 +295,12 @@ function SidePanelApp() {
     setTrackerDraft((current) => ({ ...current, [key]: value }))
   }
 
-  const updateOpenAISetting = <K extends keyof OpenAISettings>(
-    key: K,
-    value: OpenAISettings[K]
-  ) => {
-    setOpenAISettings((current) => ({ ...current, [key]: value }))
-  }
-
-  const getCurrentMonthAIUsageCost = () => {
-    const currentMonth = new Date().toISOString().slice(0, 7)
-    return aiUsageLog
-      .filter((entry) => entry.createdAt.slice(0, 7) === currentMonth)
-      .reduce((sum, entry) => sum + entry.approximateCostUsd, 0)
-  }
-
-  const canUseOpenAI = () =>
-    openAISettings.apiKey.trim() !== "" &&
-    getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd <=
-      openAISettings.monthlyBudgetUsd
-
-  const getOpenAISkipMessage = () => {
-    if (!openAISettings.apiKey.trim()) {
-      return ""
-    }
-
-    if (
-      getCurrentMonthAIUsageCost() + fallbackOpenAICallBudgetUsd >
-      openAISettings.monthlyBudgetUsd
-    ) {
-      return "OpenAI skipped: monthly budget cap reached. Used local fallback."
-    }
-
-    return ""
-  }
+  const authToken = accountSession?.authToken ?? null
+  const canUseBackendAI = () => Boolean(authToken?.trim())
+  const getBackendAISkipMessage = () =>
+    canUseBackendAI()
+      ? ""
+      : "Sign in to use AutoTime AI. Used local fallback."
 
   const {
     handleImportCurrentJobPageForAnalysis,
@@ -345,11 +315,11 @@ function SidePanelApp() {
     setSavedJobAnalysisDraft,
     updateJobAnalysisField
   } = useJobAnalysis({
-    canUseOpenAI,
+    authToken,
+    canUseBackendAI,
     clearSaveAttempt,
-    getOpenAISkipMessage,
+    getBackendAISkipMessage,
     markSaveAttempted,
-    openAISettings,
     savedProfile,
     setAIUsageLog
   })
@@ -369,7 +339,7 @@ function SidePanelApp() {
       applications: applicationsStatusRef.current,
       "usage-log": usageLogStatusRef.current,
       "validation-metrics": null,
-      "ai-settings": aiSettingsStatusRef.current
+      account: accountStatusRef.current
     }
 
     const activeStatus = {
@@ -386,7 +356,7 @@ function SidePanelApp() {
       applications: applicationsStatus,
       "usage-log": usageLogStatus,
       "validation-metrics": "",
-      "ai-settings": aiSettingsStatus
+      account: accountStatus
     }[activeSection]
 
     const statusElement = statusRefs[activeSection]
@@ -406,7 +376,7 @@ function SidePanelApp() {
     trackerStatus,
     applicationsStatus,
     usageLogStatus,
-    aiSettingsStatus,
+    accountStatus,
     jobStatusRef
   ])
 
@@ -693,12 +663,12 @@ function SidePanelApp() {
       savedReusableAnswers
     )
     let usedAI = false
-    let aiFallbackMessage = getOpenAISkipMessage()
+    let aiFallbackMessage = getBackendAISkipMessage()
 
-    if (canUseOpenAI()) {
+    if (canUseBackendAI()) {
       try {
         const aiContent = await generateAIApplicationContentDraft({
-          settings: openAISettings,
+          authToken,
           profile: savedProfile,
           job: savedJobAnalysisDraft,
           reusableAnswers: savedReusableAnswers
@@ -706,7 +676,7 @@ function SidePanelApp() {
         generatedDraft = aiContent.value
         const usageLogEntry = await logAIUsage({
           featureName: "Application content generation",
-          model: openAISettings.model,
+          model: "web-backend",
           approximateCostUsd: aiContent.approximateCostUsd
         })
         setAIUsageLog((current) => [usageLogEntry, ...current])
@@ -718,7 +688,7 @@ function SidePanelApp() {
           savedJobAnalysisDraft,
           savedReusableAnswers
         )
-        aiFallbackMessage = `OpenAI failed: ${getOpenAIErrorMessage(
+        aiFallbackMessage = `AutoTime AI failed: ${getOpenAIErrorMessage(
           error
         )} Used local fallback.`
       }
@@ -951,18 +921,11 @@ function SidePanelApp() {
     setTimeout(() => setUsageLogStatus(""), 2500)
   }
 
-  const handleSaveOpenAISettings = async () => {
-    await saveOpenAISettings(openAISettings)
-    setAISettingsStatus("AI settings saved")
-    setTimeout(() => setAISettingsStatus(""), 2500)
-  }
-
-  const handleClearOpenAISettings = async () => {
-    await clearOpenAISettings()
-    const clearedSettings = await getOpenAISettings()
-    setOpenAISettings(clearedSettings)
-    setAISettingsStatus("AI settings cleared")
-    setTimeout(() => setAISettingsStatus(""), 2500)
+  const handleSignOut = async () => {
+    await clearAccountSession()
+    setAccountSession(null)
+    setAccountStatus("Signed out")
+    setTimeout(() => setAccountStatus(""), 2500)
   }
 
   return (
@@ -1086,14 +1049,12 @@ function SidePanelApp() {
           metrics={validationMetrics}
           onExport={exportValidationMetrics}
         />
-      ) : activeSection === "ai-settings" ? (
-        <AISettingsSection
-          settings={openAISettings}
-          status={aiSettingsStatus}
-          statusRef={aiSettingsStatusRef}
-          onClear={handleClearOpenAISettings}
-          onFieldChange={updateOpenAISetting}
-          onSave={handleSaveOpenAISettings}
+      ) : activeSection === "account" ? (
+        <AccountSection
+          session={accountSession}
+          status={accountStatus}
+          statusRef={accountStatusRef}
+          onSignOut={handleSignOut}
         />
       ) : (
         <section className="panel-section">

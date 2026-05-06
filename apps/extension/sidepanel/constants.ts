@@ -21,7 +21,7 @@ export type Section =
   | "applications"
   | "usage-log"
   | "validation-metrics"
-  | "ai-settings"
+  | "account"
 
 export const onboardedStorageKey = "autotime-onboarded"
 
@@ -148,5 +148,5 @@ export const sections: Array<{ group: string; id: Section; label: string }> = [
   { group: "Track", id: "applications", label: "Applications" },
   { group: "Review", id: "usage-log", label: "Usage Log" },
   { group: "Review", id: "validation-metrics", label: "Validation Metrics" },
-  { group: "Review", id: "ai-settings", label: "AI Settings" }
+  { group: "Review", id: "account", label: "Account" }
 ]
