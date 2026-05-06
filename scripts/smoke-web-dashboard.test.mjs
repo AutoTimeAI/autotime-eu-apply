@@ -72,7 +72,7 @@ test("fails when expected dashboard markers are missing", async () => {
     fetchImpl: createFetch(
       createResponse({
         body: expectedMarkers
-          .filter((marker) => marker !== "European Tech Market Guide")
+          .filter((marker) => marker !== "Smarter Targeting")
           .join("\n")
       })
     )
@@ -80,7 +80,7 @@ test("fails when expected dashboard markers are missing", async () => {
 
   assert.equal(result.ok, false)
   assert.match(result.message, /missing dashboard markers/)
-  assert.match(result.message, /European Tech Market Guide/)
+  assert.match(result.message, /Smarter Targeting/)
 })
 
 test("fails with fetch error message when request throws an Error", async () => {

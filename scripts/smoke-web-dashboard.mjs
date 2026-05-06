@@ -4,27 +4,26 @@ export const defaultUrl = "https://autotime-eu-apply.vercel.app"
 
 export const expectedMarkers = [
   "AutoTime EU Apply",
-  "European tech market guide",
-  "Candidate OS",
-  "Role Intelligence",
-  "Pipeline",
-  "Interview Desk",
-  "European Tech Market Guide",
+  "Smarter targeting. Stronger applications. More interviews.",
+  "Smarter Targeting",
+  "Stronger Applications",
+  "Outcome Evidence",
+  "More Interviews",
+  "Which country, work-right path and role family should be prioritised?",
   "General tech",
   "FinTech",
   "Foreign / relocating",
   "Native / local",
-  "User-Approved AI Intake",
-  "Review CV Context",
-  "Approve Suggestion",
-  "AI Reasoning Layer",
-  "Decision Brief",
-  "Readiness Path",
-  "Capture Role",
-  "Export Evidence",
-  "Save Dashboard",
-  "Export JSON",
-  "Import Dashboard"
+  "Stronger Application Wording",
+  "Review Positioning Fit",
+  "Approve Target Lane",
+  "Apply, pause, or improve positioning?",
+  "Apply Smarter Path",
+  "Save Job Decision",
+  "Export Validation Evidence",
+  "Save Local Application Evidence",
+  "Export Application Evidence",
+  "Import Evidence"
 ]
 
 export function getWebSmokeUrl(env = process.env) {
