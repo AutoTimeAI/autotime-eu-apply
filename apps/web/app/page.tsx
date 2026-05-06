@@ -114,7 +114,7 @@ export default async function LandingPage() {
               <dd>Low</dd>
             </div>
             <div>
-              <dt>Missing evidence</dt>
+              <dt>Profile gaps</dt>
               <dd>2 gaps</dd>
             </div>
           </dl>

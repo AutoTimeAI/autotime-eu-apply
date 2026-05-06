@@ -13,12 +13,7 @@ import {
   type ReusableAnswers
 } from "shared"
 import {
-  canUseWebAI,
   createLocalInterviewPrepPack,
-  defaultWebAISettings,
-  generateAIInterviewPrepPack,
-  getAIInterviewErrorMessage,
-  type WebAISettings
 } from "../lib/interview-prep"
 import {
   getBrowserCloudSyncReadiness,
@@ -57,7 +52,6 @@ type DecisionBrief = {
 }
 
 const storageKey = "autotime-v2-companion-dashboard"
-const aiSettingsStorageKey = "autotime-v2-ai-settings"
 const productContextStorageKey = "autotime-v2-product-context"
 
 const applicationStatuses: ApplicationStatus[] = [
@@ -70,10 +64,10 @@ const applicationStatuses: ApplicationStatus[] = [
 ]
 
 const tabLabels: Array<[DashboardTab, string]> = [
-  ["profile", "Smarter Targeting"],
-  ["jobs", "Stronger Applications"],
-  ["applications", "Outcome Evidence"],
-  ["interview", "More Interviews"]
+  ["profile", "My Profile"],
+  ["jobs", "Check a Job"],
+  ["applications", "Applications"],
+  ["interview", "Interview Prep"]
 ]
 
 const roleMarkets: Array<{
@@ -166,7 +160,7 @@ const emptyProfile: CandidateProfile = {
   baseCvText:
     "Business analyst with payments, application support, UAT, stakeholder management, SQL reporting and systems delivery experience.",
   projectSummaries:
-    "Add project evidence that proves delivery, analysis, systems, data, support, product or regulated-domain impact.",
+    "Add a few projects, achievements or examples you want applications to use.",
   experienceHighlights:
     "Requirements analysis, UAT coordination, stakeholder translation, operational problem solving and regulated systems documentation."
 }
@@ -239,37 +233,6 @@ function getStoredState() {
 
 function saveState(state: CompanionDashboardState) {
   window.localStorage.setItem(storageKey, JSON.stringify(state))
-}
-
-function getStoredAISettings() {
-  if (typeof window === "undefined") {
-    return defaultWebAISettings
-  }
-
-  try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem(aiSettingsStorageKey) ?? "null"
-    ) as Partial<WebAISettings> | null
-
-    return {
-      ...defaultWebAISettings,
-      ...(parsed ?? {}),
-      monthlyBudgetUsd:
-        typeof parsed?.monthlyBudgetUsd === "number"
-          ? parsed.monthlyBudgetUsd
-          : defaultWebAISettings.monthlyBudgetUsd,
-      usedBudgetUsd:
-        typeof parsed?.usedBudgetUsd === "number"
-          ? parsed.usedBudgetUsd
-          : defaultWebAISettings.usedBudgetUsd
-    }
-  } catch {
-    return defaultWebAISettings
-  }
-}
-
-function saveAISettings(settings: WebAISettings) {
-  window.localStorage.setItem(aiSettingsStorageKey, JSON.stringify(settings))
 }
 
 function getStoredProductContext() {
@@ -394,7 +357,7 @@ function getNextActionCount(applications: ApplicationRecord[]) {
 
 function getRiskLabel(state: CompanionDashboardState) {
   if (!state.profile.workRightDetails.trim()) {
-    return "Work-right evidence missing"
+    return "Work-right details missing"
   }
 
   if ((state.jobAnalysis.gaps?.length ?? 0) > 0) {
@@ -435,7 +398,7 @@ function getMarketPositioning(context: ProductContext) {
     return "Position around payments, financial systems, risk, controls, operational resilience, compliance awareness, stakeholder clarity and reliable delivery."
   }
 
-  return "Position around product/system understanding, requirements clarity, user and stakeholder impact, delivery evidence, tooling fluency and measurable outcomes."
+  return "Show product/system understanding, clear requirements work, user impact, tooling fluency and measurable outcomes."
 }
 
 function getUrgencyGuidance(context: ProductContext) {
@@ -444,7 +407,7 @@ function getUrgencyGuidance(context: ProductContext) {
   }
 
   if (context.urgency === "exploring") {
-    return "Use the dashboard to compare markets, learn role language and build a stronger evidence bank before applying heavily."
+    return "Compare countries, learn role language and strengthen your profile before applying heavily."
   }
 
   return "Balance targeted applications with quality. Track next actions and improve positioning after each outcome."
@@ -466,7 +429,7 @@ function getAIUseCases(context: ProductContext) {
     },
     {
       title: "Prepare interviews",
-      body: "Turn saved role evidence into likely questions, STAR prompts, risk checks and employer questions without inventing experience."
+      body: "Turn saved job details into likely questions, STAR prompts, risk checks and employer questions without inventing experience."
     }
   ]
 }
@@ -571,7 +534,7 @@ function getDecisionBrief({
 }): DecisionBrief {
   const missingInputs = [
     !state.profile.fullName.trim() && "candidate name",
-    !state.profile.baseCvText.trim() && "CV evidence",
+    !state.profile.baseCvText.trim() && "CV text",
     !state.profile.workRightDetails.trim() && "work-right details",
     !state.profile.targetRoles.trim() && "target roles",
     !state.jobAnalysis.jobDescription.trim() && "job description",
@@ -582,7 +545,7 @@ function getDecisionBrief({
       !state.profile.workRightDetails.trim() &&
       "Work-right, visa, sponsorship or relocation details are not confirmed.",
     !state.profile.baseCvText.trim() &&
-      "CV evidence is missing, so AI positioning will be weaker.",
+      "CV text is missing, so the advice will be weaker.",
     !state.jobAnalysis.jobDescription.trim() &&
       "Job description is missing, so role classification is incomplete.",
     (state.jobAnalysis.gaps?.length ?? 0) > 0 &&
@@ -618,14 +581,14 @@ function getDecisionBrief({
     nextActions:
       decision === "Apply now"
         ? [
-            "Save the role into Outcome Evidence.",
+            "Save the role into Applications.",
             "Tailor the application content against the saved job description.",
             "Track next action and prepare interview prompts if shortlisted."
           ]
         : decision === "Apply with caution"
           ? [
               "Clarify the highest-risk country or work-right detail.",
-              "Add stronger CV evidence before generating final content.",
+              "Add stronger CV text before generating final content.",
               "Apply only if the role is strategically important."
             ]
           : [
@@ -642,8 +605,6 @@ export default function HomePage() {
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
   const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
-  const [aiSettings, setAISettings] =
-    useState<WebAISettings>(defaultWebAISettings)
   const [productContext, setProductContext] = useState<ProductContext>(
     defaultProductContext
   )
@@ -693,7 +654,6 @@ export default function HomePage() {
 
   useEffect(() => {
     setState(getStoredState())
-    setAISettings(getStoredAISettings())
     setProductContext(getStoredProductContext())
   }, [])
 
@@ -722,13 +682,6 @@ export default function HomePage() {
       ...current,
       jobAnalysis: { ...current.jobAnalysis, [key]: value }
     }))
-  }
-
-  const updateAISetting = <K extends keyof WebAISettings>(
-    key: K,
-    value: WebAISettings[K]
-  ) => {
-    setAISettings((current) => ({ ...current, [key]: value }))
   }
 
   const updateProductContext = <K extends keyof ProductContext>(
@@ -868,23 +821,9 @@ export default function HomePage() {
     )
   }
 
-  const saveWebAISettings = () => {
-    saveAISettings(aiSettings)
-    setStatus("AI settings saved locally")
-    setTimeout(() => setStatus(""), 3000)
-  }
-
-  const clearWebAISettings = () => {
-    setAISettings(defaultWebAISettings)
-    saveAISettings(defaultWebAISettings)
-    setStatus("AI settings cleared")
-    setTimeout(() => setStatus(""), 3000)
-  }
-
   const saveInterviewPrepPack = (
     pack: CompanionDashboardState["interviewPrepPacks"][number],
-    message: string,
-    nextAISettings = aiSettings
+    message: string
   ) => {
     persist(
       {
@@ -898,8 +837,6 @@ export default function HomePage() {
       },
       message
     )
-    setAISettings(nextAISettings)
-    saveAISettings(nextAISettings)
     setActiveTab("interview")
   }
 
@@ -910,54 +847,6 @@ export default function HomePage() {
       state.jobAnalysis
     )
     saveInterviewPrepPack(pack, "Interview prep pack generated")
-  }
-
-  const generateAIInterviewPrep = async (application: ApplicationRecord) => {
-    const fallbackPack = createLocalInterviewPrepPack(
-      application,
-      state.profile,
-      state.jobAnalysis
-    )
-
-    if (!canUseWebAI(aiSettings)) {
-      saveInterviewPrepPack(
-        fallbackPack,
-        "AI interview prep skipped: add an API key or raise the local budget. Used local fallback."
-      )
-      return
-    }
-
-    try {
-      const aiPrep = await generateAIInterviewPrepPack({
-        settings: aiSettings,
-        application,
-        profile: state.profile,
-        reusableAnswers: state.reusableAnswers,
-        job: state.jobAnalysis,
-        fallbackPack
-      })
-      const nextAISettings = {
-        ...aiSettings,
-        usedBudgetUsd: Number(
-          (aiSettings.usedBudgetUsd + aiPrep.approximateCostUsd).toFixed(6)
-        )
-      }
-
-      saveInterviewPrepPack(
-        aiPrep.value,
-        `AI interview prep pack generated. Estimated cost: $${aiPrep.approximateCostUsd.toFixed(
-          6
-        )}`,
-        nextAISettings
-      )
-    } catch (error) {
-      saveInterviewPrepPack(
-        fallbackPack,
-        `AI interview prep failed: ${getAIInterviewErrorMessage(
-          error
-        )} Used local fallback.`
-      )
-    }
   }
 
   const exportDashboard = () => {
@@ -1046,36 +935,35 @@ export default function HomePage() {
       <header className="app-header">
         <div className="header-copy">
           <p className="eyebrow">AutoTime EU Apply</p>
-          <h1>Smarter targeting. Stronger applications. More interviews.</h1>
+          <h1>Your job search, organised.</h1>
           <p>
-            A UK/EU tech job application workspace that helps candidates target
-            realistic roles, strengthen positioning, reduce wasted effort, and
-            track which countries, sources and role families create interview
-            signal.
+            Keep your profile, job checks, application writing and interview
+            prep in one place. AutoTime helps you decide where to apply and what
+            to do next without turning your job search into a spreadsheet.
           </p>
           <div
             className="header-actions"
             aria-label="Primary dashboard actions"
           >
             <button type="button" onClick={saveApplicationFromJob}>
-              Save Job Decision
+              Save this job
             </button>
             <button
               className="secondary-button"
               type="button"
               onClick={exportDashboard}
             >
-              Export Validation Evidence
+              Export backup
             </button>
           </div>
         </div>
-        <div className="executive-panel" aria-label="Current operating summary">
+        <div className="executive-panel" aria-label="Your job search summary">
           <div>
-            <small>Application Strength</small>
+            <small>Profile ready</small>
             <strong>{readinessScore}%</strong>
           </div>
           <div>
-            <small>Targeting Fit</small>
+            <small>Job fit</small>
             <strong>{fitScore}%</strong>
           </div>
           <p>{state.jobAnalysis.recommendation || "Qualification pending"}</p>
@@ -1087,18 +975,18 @@ export default function HomePage() {
         aria-label="Candidate market context"
       >
         <div className="section-intro">
-          <p className="eyebrow">Smarter Targeting</p>
-          <h2>Which country, work-right path and role family should be prioritised?</h2>
+          <p className="eyebrow">Start here</p>
+          <h2>Tell AutoTime what kind of role you want</h2>
           <p>
-            AutoTime turns country choice, candidate status, sponsorship risk,
-            domain and role family into a targeting decision before the user
-            spends effort on a UK/EU application.
+            Choose your target country, role type and work-right situation.
+            AutoTime uses this to give more useful job-fit advice before you
+            spend time applying.
           </p>
         </div>
 
         <div className="context-grid">
           <fieldset className="segmented-field">
-            <legend>Target role lane</legend>
+            <legend>Role type</legend>
             <div className="segmented-options">
               {roleMarkets.map((market) => (
                 <button
@@ -1120,7 +1008,7 @@ export default function HomePage() {
           </fieldset>
 
           <fieldset className="segmented-field">
-            <legend>Work-right position</legend>
+            <legend>Work-right situation</legend>
             <div className="segmented-options">
               {candidatePositions.map((position) => (
                 <button
@@ -1177,7 +1065,7 @@ export default function HomePage() {
               </select>
             </label>
             <label>
-              Application pace
+              Search pace
               <select
                 value={productContext.urgency}
                 onChange={(event) =>
@@ -1195,7 +1083,7 @@ export default function HomePage() {
               </select>
             </label>
             <button type="button" onClick={applyMarketContextToProfile}>
-              Apply Targeting Context
+              Use these choices
             </button>
           </div>
         </div>
@@ -1214,25 +1102,25 @@ export default function HomePage() {
 
         <section className="resume-intake-panel" aria-label="CV context review">
           <div className="section-heading">
-            <p className="eyebrow">Stronger Applications</p>
-            <h2>Paste CV evidence to strengthen positioning</h2>
+            <p className="eyebrow">Profile helper</p>
+            <h2>Paste your CV to fill the basics faster</h2>
             <p>
-              AutoTime can suggest work-right position, seniority and target
-              role lanes from a CV, but the user approves every change before it
-              affects role targeting or application wording.
+              AutoTime can suggest your role focus, seniority and work-right
+              wording from a CV. You approve every change before it updates
+              your profile.
             </p>
           </div>
           <label>
-            CV / role evidence text
+            CV or profile text
             <textarea
-              placeholder="Paste CV, resume, or profile summary. AutoTime suggests UK/EU targeting and positioning only; it will not overwrite your profile without approval."
+              placeholder="Paste your CV, resume, or LinkedIn summary. AutoTime suggests profile updates only; it will not overwrite anything without approval."
               value={resumeIntake}
               onChange={(event) => setResumeIntake(event.target.value)}
             />
           </label>
           <div className="header-actions">
             <button type="button" onClick={reviewResumeForContext}>
-              Review Positioning Fit
+              Review my CV
             </button>
             <button
               className="secondary-button"
@@ -1240,7 +1128,7 @@ export default function HomePage() {
               type="button"
               onClick={approveContextSuggestion}
             >
-              Approve Target Lane
+              Apply suggestions
             </button>
           </div>
           {contextSuggestion && (
@@ -1251,7 +1139,7 @@ export default function HomePage() {
               </div>
               <dl>
                 <div>
-                  <dt>Work-right position</dt>
+                  <dt>Work-right situation</dt>
                   <dd>
                     {contextSuggestion.candidatePosition === "foreign-candidate"
                       ? "Foreign / relocating"
@@ -1259,7 +1147,7 @@ export default function HomePage() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Target role lane</dt>
+                  <dt>Role type</dt>
                   <dd>{getMarketLabel(contextSuggestion)}</dd>
                 </div>
                 <div>
@@ -1284,12 +1172,11 @@ export default function HomePage() {
         aria-label="UK/EU apply decision brief"
       >
         <div>
-          <p className="eyebrow">Stronger Applications</p>
-          <h2>Apply, pause, or improve positioning?</h2>
+          <p className="eyebrow">Job decision</p>
+          <h2>Should you apply, pause, or improve your profile?</h2>
           <p>
-            AutoTime turns country context, work-right clarity, CV evidence and
-            role fit into a user-reviewable decision so applications are more
-            targeted, more truthful and better positioned.
+            AutoTime turns your profile and the job details into plain next
+            steps, so you can spend energy on roles that make sense.
           </p>
         </div>
         <div className="decision-score">
@@ -1299,7 +1186,7 @@ export default function HomePage() {
         </div>
         <div className="decision-columns">
           <section>
-            <h3>Targeting reason</h3>
+            <h3>Why this score</h3>
             <ul className="bullets-list">
               {decisionBrief.rationale.map((item) => (
                 <li key={item}>{item}</li>
@@ -1307,7 +1194,7 @@ export default function HomePage() {
             </ul>
           </section>
           <section>
-            <h3>UK/EU risks</h3>
+            <h3>Risks to check</h3>
             <ul className="bullets-list">
               {decisionBrief.risks.map((item) => (
                 <li key={item}>{item}</li>
@@ -1315,7 +1202,7 @@ export default function HomePage() {
             </ul>
           </section>
           <section>
-            <h3>Positioning gaps</h3>
+            <h3>What is missing</h3>
             {decisionBrief.missingInputs.length ? (
               <ul className="bullets-list">
                 {decisionBrief.missingInputs.map((item) => (
@@ -1327,7 +1214,7 @@ export default function HomePage() {
             )}
           </section>
           <section>
-            <h3>Founder next steps</h3>
+            <h3>Next steps</h3>
             <ul className="bullets-list">
               {decisionBrief.nextActions.map((item) => (
                 <li key={item}>{item}</li>
@@ -1359,26 +1246,26 @@ export default function HomePage() {
             ? "profile-bridge-panel ready"
             : "profile-bridge-panel blocked"
         }
-        aria-label="Mandatory candidate profile bridge"
+        aria-label="Profile readiness"
       >
         <div>
-          <p className="eyebrow">Mandatory MVP Profile Bridge</p>
+          <p className="eyebrow">Profile readiness</p>
           <h2>
             {profileBridgeReady
-              ? "Candidate profile is connected to targeting"
-              : "Candidate profile must be completed before market-ready use"}
+              ? "Your profile is ready to use"
+              : "Finish your profile for better job advice"}
           </h2>
           <p>
-            The dashboard decision layer depends on the same candidate profile
-            used by the Chrome extension. Export/import is the mandatory MVP
-            bridge until account sync is added later.
+            AutoTime works best when your target roles, CV text and work-right
+            details are saved. This keeps job checks and interview prep grounded
+            in your real experience.
           </p>
         </div>
         {profileBridgeReady ? (
           <ul className="bullets-list">
-            <li>Profile evidence can drive targeting fit and apply decisions.</li>
-            <li>Work-right and country context can be used in interview prep.</li>
-            <li>Application evidence export is enabled.</li>
+            <li>Your profile can guide job-fit scores and next steps.</li>
+            <li>Work-right and country details can support interview prep.</li>
+            <li>You can export a backup any time.</li>
           </ul>
         ) : (
           <ul className="bullets-list">
@@ -1395,19 +1282,18 @@ export default function HomePage() {
             ? "cloud-sync-panel flagged"
             : "cloud-sync-panel local"
         }
-        aria-label="Production cloud sync track"
+        aria-label="Sync status"
       >
         <div>
-          <p className="eyebrow">Production Sync Track</p>
+          <p className="eyebrow">Sync</p>
           <h2>
             {cloudSyncReadiness.configured
-              ? "Cloud sync env is ready for auth wiring"
-              : "Local mode stays active for founder validation"}
+              ? "Cloud sync is being prepared"
+              : "Your data is saved on this browser"}
           </h2>
           <p>
-            The production track will sync the candidate profile across the
-            extension and dashboard after Supabase auth, row-level security,
-            consent, and data deletion controls are verified.
+            AutoTime is local-first today. Export a backup when you want to move
+            data between browsers, and use account sync when it is fully ready.
           </p>
         </div>
         <div className="sync-status-grid">
@@ -1440,15 +1326,14 @@ export default function HomePage() {
               type="checkbox"
               onChange={(event) => setCloudSyncConsent(event.target.checked)}
             />
-            I consent to sync my candidate profile after account readiness is
-            complete.
+            I consent to sync my candidate profile when account sync is ready.
           </label>
           <button
             className="secondary-button"
             type="button"
             onClick={explainCloudSyncTrack}
           >
-            Review Cloud Sync Status
+            Check sync status
           </button>
           <button
             disabled={!cloudSyncReadiness.configured}
@@ -1462,23 +1347,23 @@ export default function HomePage() {
 
       <section
         className="metrics-strip"
-        aria-label="UK/EU application evidence metrics"
+        aria-label="Job search progress"
       >
         <div
           className={`metric-card ${getMetricTone(state.applications.length, 3)}`}
         >
           <span>{state.applications.length}</span>
-          <small>Targeted roles</small>
+          <small>Saved jobs</small>
           <p>
             {statusCounts.Applied + statusCounts.Interview} progressed beyond
-            saved into evidence
+            saved
           </p>
         </div>
         <div
           className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
         >
           <span>{interviewApplications.length}</span>
-          <small>Interview signal</small>
+          <small>Interviews</small>
           <p>
             {state.interviewPrepPacks.length} prep pack
             {state.interviewPrepPacks.length === 1 ? "" : "s"} ready
@@ -1488,46 +1373,46 @@ export default function HomePage() {
           className={`metric-card ${activeActionCount > 0 ? "neutral" : "warn"}`}
         >
           <span>{activeActionCount}</span>
-          <small>Application actions</small>
-          <p>Next steps tracked across live UK/EU roles</p>
+          <small>Next actions</small>
+          <p>Follow-ups tracked across live roles</p>
         </div>
         <div className="metric-card warn">
           <span>{state.jobAnalysis.skills?.length ?? 0}</span>
-          <small>Positioning evidence</small>
+          <small>Job details</small>
           <p>{riskLabel}</p>
         </div>
       </section>
 
       <section className="readiness-roadmap" aria-label="Readiness roadmap">
         <div className="section-intro">
-          <p className="eyebrow">Apply Smarter Path</p>
-          <h2>What must be true before spending effort on this application?</h2>
+          <p className="eyebrow">Quick checklist</p>
+          <h2>Before you spend time on this job</h2>
         </div>
         {[
           {
-            title: "1. Confirm identity and market",
+            title: "1. Confirm your target",
             done:
               Boolean(state.profile.targetRoles.trim()) &&
               Boolean(productContext.targetCountry),
             body:
               productContext.candidatePosition === "foreign-candidate"
-                ? "Candidate type, target country and role family should be approved before applying."
-                : "Local status, role family and country market should be explicit before applying."
+                ? "Target country, role type and relocation status should be clear."
+                : "Target country, role type and local availability should be clear."
           },
           {
-            title: "2. Prove fit with evidence",
+            title: "2. Add your CV proof",
             done: Boolean(state.profile.baseCvText.trim()),
-            body: "CV evidence should support the role family, seniority, skills and market positioning."
+            body: "Your CV text should include the skills and examples this role needs."
           },
           {
-            title: "3. Check country and work-right risk",
+            title: "3. Check work-right risk",
             done: Boolean(state.profile.workRightDetails.trim()),
-            body: "Work rights, sponsorship, relocation, salary and notice period should be clear enough to avoid wasted effort."
+            body: "Work rights, sponsorship, relocation, salary and notice period should be clear enough."
           },
           {
             title: "4. Decide apply or skip",
             done: Boolean(state.jobAnalysis.jobDescription.trim()),
-            body: "A real job description lets AutoTime classify fit, risks and next actions before the user commits effort."
+            body: "A real job description lets AutoTime score fit, risks and next actions."
           }
         ].map((step) => (
           <article
@@ -1599,7 +1484,7 @@ export default function HomePage() {
               />
             </label>
             <label>
-              Base CV evidence
+              CV text
               <textarea
                 value={state.profile.baseCvText}
                 onChange={(event) =>
@@ -1612,8 +1497,8 @@ export default function HomePage() {
           <div className="output-column">
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Smarter Targeting Record</p>
-                <h2>Candidate Fit For UK/EU Roles</h2>
+                <p className="eyebrow">Profile summary</p>
+                <h2>Your job-search basics</h2>
               </div>
               <dl className="summary-list">
                 <div>
@@ -1636,8 +1521,8 @@ export default function HomePage() {
             </section>
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Stronger Application Wording</p>
-                <h2>Reusable UK/EU Answers</h2>
+                <p className="eyebrow">Reusable answers</p>
+                <h2>Answers you can reuse</h2>
               </div>
               <label>
                 Motivation answer
@@ -1708,19 +1593,19 @@ export default function HomePage() {
               />
             </label>
             <button type="button" onClick={saveApplicationFromJob}>
-              Save Job Decision
+              Save this job
             </button>
           </div>
 
           <div className="output-column">
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Smarter Targeting Brief</p>
-                <h2>Role Fit And Positioning Evidence</h2>
+                <p className="eyebrow">Job fit</p>
+                <h2>What AutoTime thinks about this role</h2>
               </div>
               <p className="large-copy">
                 {state.jobAnalysis.positioningAngle ||
-                  "Add job details to create a UK/EU positioning angle."}
+                  "Add job details to get a useful fit summary."}
               </p>
               <ul className="bullets-list">
                 {(state.jobAnalysis.scoreFactors?.length
@@ -1733,8 +1618,8 @@ export default function HomePage() {
             </section>
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Evidence Map</p>
-                <h2>Skills, Country Fit And Gaps</h2>
+                <p className="eyebrow">What to check</p>
+                <h2>Skills, location and gaps</h2>
               </div>
               <div className="tag-row">
                 {(state.jobAnalysis.skills?.length
@@ -1762,12 +1647,11 @@ export default function HomePage() {
       {activeTab === "applications" && (
         <section className="applications-section full-width-section">
           <div className="section-intro">
-            <p className="eyebrow">More Interviews Evidence</p>
-            <h2>UK/EU Application Outcome Tracker</h2>
+            <p className="eyebrow">Applications</p>
+            <h2>Your job application tracker</h2>
             <p>
-              Track each real role with country, source, next action, outcome
-              notes and interview signal, so the pilot measures whether smarter
-              targeting and stronger applications create more interviews.
+              Keep every role, status and next action in one place, so follow-up
+              never depends on memory.
             </p>
           </div>
           <div
@@ -1829,29 +1713,14 @@ export default function HomePage() {
                     >
                       Generate Prep
                     </button>
-                    {aiSettings.apiKey.trim() && (
-                      <button
-                        disabled={
-                          application.status !== "Interview" ||
-                          !canUseWebAI(aiSettings)
-                        }
-                        type="button"
-                        onClick={() =>
-                          void generateAIInterviewPrep(application)
-                        }
-                      >
-                        Generate AI Prep
-                      </button>
-                    )}
                   </div>
                 </article>
               ))
             ) : (
               <div className="empty-state rich-empty-state">
-                <strong>No UK/EU roles captured yet</strong>
+                <strong>No saved jobs yet</strong>
                 <p>
-                  Use Stronger Applications to qualify a live vacancy, then save it
-                  with a next action and outcome note.
+                  Check a role, then save it with a next action and status.
                 </p>
               </div>
             )}
@@ -1862,81 +1731,13 @@ export default function HomePage() {
       {activeTab === "interview" && (
         <section className="prep-section full-width-section">
           <div className="section-intro">
-            <p className="eyebrow">More Interviews</p>
-            <h2>Role-Specific Interview Conversion Prep</h2>
+            <p className="eyebrow">Interview prep</p>
+            <h2>Prepare for the roles that reach interview</h2>
             <p>
-              Prep packs use the saved country context, role evidence,
-              application state and positioning angle; they do not invent
-              experience.
+              Prep packs use your saved profile, job details and application
+              status. They do not invent experience.
             </p>
           </div>
-          <section
-            className="ai-settings-panel"
-            aria-label="AI interview settings"
-          >
-            <div>
-              <h3>Controlled-Cost Prep Settings</h3>
-              <p>
-                Optional browser-local OpenAI settings for interview prep only.
-                Leave the key empty to use local prep without storing secrets on
-                an AutoTime server.
-              </p>
-            </div>
-            <label>
-              OpenAI API key
-              <input
-                type="password"
-                value={aiSettings.apiKey}
-                onChange={(event) =>
-                  updateAISetting("apiKey", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Model
-              <select
-                value={aiSettings.model}
-                onChange={(event) =>
-                  updateAISetting("model", event.target.value)
-                }
-              >
-                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-                <option value="gpt-4.1-nano">gpt-4.1-nano</option>
-                <option value="gpt-4o-mini">gpt-4o-mini</option>
-              </select>
-            </label>
-            <label>
-              Monthly budget USD
-              <input
-                min="0"
-                step="0.01"
-                type="number"
-                value={aiSettings.monthlyBudgetUsd}
-                onChange={(event) =>
-                  updateAISetting(
-                    "monthlyBudgetUsd",
-                    Number(event.target.value)
-                  )
-                }
-              />
-            </label>
-            <div className="ai-budget-summary">
-              <span>${aiSettings.usedBudgetUsd.toFixed(6)}</span>
-              <small>estimated prep spend in this browser</small>
-            </div>
-            <div className="application-actions">
-              <button type="button" onClick={saveWebAISettings}>
-                Save AI Settings
-              </button>
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={clearWebAISettings}
-              >
-                Clear AI Settings
-              </button>
-            </div>
-          </section>
           <div className="prep-grid">
             {state.interviewPrepPacks.length ? (
               state.interviewPrepPacks.map((pack) => (
@@ -1980,19 +1781,19 @@ export default function HomePage() {
 
       <section className="utility-bar">
         <button type="button" onClick={saveDashboard}>
-          Save Local Application Evidence
+          Save changes
         </button>
         <button
           className="secondary-button"
           type="button"
           onClick={exportDashboard}
         >
-          Export Application Evidence
+          Export backup
         </button>
         <label className="import-control">
-          Import Application Evidence
+          Import backup
           <textarea
-            placeholder="Paste exported AutoTime dashboard evidence JSON"
+            placeholder="Paste exported AutoTime dashboard JSON"
             value={importJson}
             onChange={(event) => setImportJson(event.target.value)}
           />
@@ -2002,7 +1803,7 @@ export default function HomePage() {
           type="button"
           onClick={() => importDashboard(importJson)}
         >
-          Import Evidence
+          Import backup
         </button>
       </section>
     </main>
