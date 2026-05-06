@@ -18,6 +18,11 @@ function openAppPath(path: string) {
   chrome.tabs.create({ url: `${appUrl}${path}` })
 }
 
+function openExtensionConnect() {
+  const extensionId = encodeURIComponent(chrome.runtime.id)
+  openAppPath(`/extension/connect?extensionId=${extensionId}`)
+}
+
 export function AccountSection({
   session,
   status,
@@ -62,7 +67,7 @@ export function AccountSection({
               <h3>Not signed in</h3>
               <p>Sign in for cloud sync and unlimited AI.</p>
             </div>
-            <button type="button" onClick={() => openAppPath("/login")}>
+            <button type="button" onClick={openExtensionConnect}>
               Sign in for cloud sync and unlimited AI
             </button>
             <button

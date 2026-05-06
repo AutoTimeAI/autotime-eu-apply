@@ -7,6 +7,17 @@ function getErrorRedirect(request: NextRequest): NextResponse {
   return NextResponse.redirect(new URL("/auth/error", request.url))
 }
 
+function getSafeRedirectPath(request: NextRequest): string {
+  const requestUrl = new URL(request.url)
+  const redirectTo = requestUrl.searchParams.get("redirectTo")
+
+  if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
+    return "/dashboard"
+  }
+
+  return redirectTo
+}
+
 async function ensureFreeSubscription(userId: string): Promise<boolean> {
   try {
     const supabase = createAdminClient()
@@ -98,7 +109,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+    return NextResponse.redirect(
+      new URL(getSafeRedirectPath(request), request.url)
+    )
   } catch (error: unknown) {
     if (error instanceof Error) {
       return getErrorRedirect(request)

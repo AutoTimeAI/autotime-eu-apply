@@ -1,5 +1,6 @@
 import "./globals.css"
 import { Suspense, type ReactNode } from "react"
+import AnalyticsConsent from "../components/AnalyticsConsent"
 import PostHogProvider from "../components/PostHogProvider"
 
 export const metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body>
         <Suspense fallback={null}>
           <PostHogProvider />
+          <AnalyticsConsent />
         </Suspense>
         {children}
       </body>

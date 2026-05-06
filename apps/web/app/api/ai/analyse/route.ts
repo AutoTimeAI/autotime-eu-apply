@@ -15,7 +15,7 @@ import {
   FeatureGateError,
   trackAiCall
 } from "../../../../lib/feature-gate"
-import { createServerClient } from "../../../../lib/supabase/server"
+import { getRequestUser } from "../../../../lib/api-auth"
 
 type ApiResponse<T> = {
   data: T | null
@@ -46,11 +46,7 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<AnalyseRouteData>>> {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error: userError
-    } = await supabase.auth.getUser()
+    const { user, error: userError } = await getRequestUser(request)
 
     if (userError || !user) {
       return jsonResponse({ data: null, error: "Unauthorised", status: 401 })

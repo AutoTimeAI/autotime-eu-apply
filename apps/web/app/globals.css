@@ -1585,6 +1585,35 @@ h4 {
   padding-left: 20px;
 }
 
+.consent-banner {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 60;
+  display: grid;
+  width: min(420px, calc(100vw - 36px));
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 80px rgba(23, 32, 47, 0.16);
+  backdrop-filter: blur(16px);
+  padding: 14px;
+}
+
+.consent-banner p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.consent-banner div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 @media (max-width: 980px) {
   .app-header,
   .context-grid,
