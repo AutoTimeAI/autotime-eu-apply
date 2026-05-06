@@ -1,5 +1,8 @@
 import assert from "node:assert/strict"
-import { getCloudSyncReadiness } from "../lib/cloud-sync.ts"
+import {
+  createCloudSyncClient,
+  getCloudSyncReadiness
+} from "../lib/cloud-sync.ts"
 
 const tests = []
 
@@ -54,6 +57,30 @@ test("marks cloud sync ready only when public env is present", () => {
   assert.equal(readiness.accountLabel, "Auth wiring ready")
   assert.equal(readiness.syncActionLabel, "Connect account next")
   assert.deepEqual(readiness.issues, [])
+})
+
+test("does not create a Supabase client until readiness is complete", () => {
+  const result = createCloudSyncClient({
+    enabled: "true",
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: ""
+  })
+
+  assert.equal(result.ready, false)
+  assert.equal(result.client, null)
+  assert.equal(result.readiness.modeLabel, "Flagged")
+})
+
+test("creates a guarded Supabase client when public env is ready", () => {
+  const result = createCloudSyncClient({
+    enabled: "true",
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "public-anon-key"
+  })
+
+  assert.equal(result.ready, true)
+  assert.ok(result.client)
+  assert.equal(result.readiness.modeLabel, "Ready for auth wiring")
 })
 
 let failed = 0

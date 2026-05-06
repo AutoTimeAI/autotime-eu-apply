@@ -214,3 +214,6 @@ Repo marker:
   env readiness check before any auth package or upload path is added.
 - The dashboard account-sync shell is visible but locked until the readiness
   guard confirms the feature flag and public Supabase env values are present.
+- `@supabase/supabase-js` is installed for the web app, but the client factory
+  returns no client until the cloud-sync feature flag and public Supabase env
+  values are present. Profile upload remains unimplemented and blocked.
