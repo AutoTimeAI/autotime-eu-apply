@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import {
   createCloudSyncClient,
   createProfileSyncPayload,
+  prepareProfileSyncAction,
   getCloudSyncSessionState,
   getCloudSyncReadiness
 } from "../lib/cloud-sync.ts"
@@ -222,6 +223,59 @@ test("keeps profile sync payload limited to allowed profile fields", () => {
   assert.equal(result.ready, true)
   assert.equal(Object.hasOwn(result.payload, "apiKey"), false)
   assert.equal(Object.hasOwn(result.payload, "cookie"), false)
+})
+
+test("blocks profile sync action without readiness, session and click", () => {
+  const readiness = getCloudSyncReadiness({
+    enabled: "false",
+    supabaseUrl: "",
+    supabaseAnonKey: ""
+  })
+  const result = prepareProfileSyncAction({
+    readiness,
+    session: {
+      checked: false,
+      authenticated: false,
+      userEmail: null,
+      message: "Session not checked"
+    },
+    profile: completeProfile,
+    explicitUserAction: false
+  })
+
+  assert.equal(result.ready, false)
+  assert.deepEqual(result.blockers, [
+    "cloud-sync readiness is incomplete",
+    "authenticated session is missing",
+    "explicit user sync action is required",
+    "authenticated user id"
+  ])
+})
+
+test("prepares profile sync action only after readiness, session and click", () => {
+  const readiness = getCloudSyncReadiness({
+    enabled: "true",
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "public-anon-key"
+  })
+  const result = prepareProfileSyncAction({
+    readiness,
+    session: {
+      checked: true,
+      authenticated: true,
+      userEmail: "pilot@example.com",
+      message: "Authenticated session detected"
+    },
+    profile: completeProfile,
+    explicitUserAction: true
+  })
+
+  assert.equal(result.ready, true)
+  assert.equal(result.payload.user_id, "pilot@example.com")
+  assert.equal(
+    result.message,
+    "Profile sync payload is ready. Supabase write remains disabled until the explicit upload implementation is added."
+  )
 })
 
 let failed = 0

@@ -77,6 +77,19 @@ export type ProfileSyncPayloadResult =
       issues: string[]
     }
 
+export type ProfileSyncActionState =
+  | {
+      ready: true
+      payload: ProfileSyncPayload
+      message: string
+    }
+  | {
+      ready: false
+      payload: null
+      message: string
+      blockers: string[]
+    }
+
 type SessionClient = Pick<SupabaseClient, "auth">
 
 function hasValue(value: string | undefined) {
@@ -221,6 +234,48 @@ export function createProfileSyncPayload({
       schema_version: 1
     },
     issues: []
+  }
+}
+
+export function prepareProfileSyncAction({
+  readiness,
+  session,
+  profile,
+  explicitUserAction
+}: {
+  readiness: CloudSyncReadiness
+  session: CloudSyncSessionState
+  profile: CandidateProfile
+  explicitUserAction: boolean
+}): ProfileSyncActionState {
+  const blockers = [
+    !readiness.configured && "cloud-sync readiness is incomplete",
+    !session.authenticated && "authenticated session is missing",
+    !explicitUserAction && "explicit user sync action is required"
+  ].filter(Boolean) as string[]
+  const payloadResult = createProfileSyncPayload({
+    profile,
+    userId: session.userEmail ?? ""
+  })
+
+  if (!payloadResult.ready || blockers.length > 0) {
+    const allBlockers = payloadResult.ready
+      ? blockers
+      : [...blockers, ...payloadResult.issues]
+
+    return {
+      ready: false,
+      payload: null,
+      message: `Profile sync blocked: ${allBlockers.join(", ")}.`,
+      blockers: allBlockers
+    }
+  }
+
+  return {
+    ready: true,
+    payload: payloadResult.payload,
+    message:
+      "Profile sync payload is ready. Supabase write remains disabled until the explicit upload implementation is added."
   }
 }
 

@@ -20,7 +20,10 @@ import {
   getAIInterviewErrorMessage,
   type WebAISettings
 } from "../lib/interview-prep"
-import { getBrowserCloudSyncReadiness } from "../lib/cloud-sync"
+import {
+  getBrowserCloudSyncReadiness,
+  prepareProfileSyncAction
+} from "../lib/cloud-sync"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
 type MetricTone = "neutral" | "good" | "warn"
@@ -1021,11 +1024,19 @@ export default function HomePage() {
   }
 
   const explainAccountSync = () => {
-    setStatus(
-      cloudSyncReadiness.configured
-        ? "Account sync shell is ready for Supabase auth wiring. Profile upload is still blocked until the next implementation slice."
-        : "Account sign-in is locked in this MVP build. Complete founder validation and configure Supabase before enabling cloud sync."
-    )
+    const action = prepareProfileSyncAction({
+      readiness: cloudSyncReadiness,
+      session: {
+        checked: false,
+        authenticated: false,
+        userEmail: null,
+        message: "Session check is not active in local-first MVP mode."
+      },
+      profile: state.profile,
+      explicitUserAction: true
+    })
+
+    setStatus(action.message)
   }
 
   return (

@@ -233,3 +233,6 @@ Repo marker:
   the Supabase `profiles` row shape only when mandatory profile bridge evidence
   and an authenticated user id are present. It does not include secrets, cookies,
   or API keys.
+- The profile sync action adapter can prepare a payload only after cloud-sync
+  readiness, authenticated session, mandatory profile evidence, and explicit user
+  action are present. It still does not write to Supabase.
