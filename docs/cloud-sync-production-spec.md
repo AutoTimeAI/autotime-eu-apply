@@ -236,3 +236,5 @@ Repo marker:
 - The profile sync action adapter can prepare a payload only after cloud-sync
   readiness, authenticated session, mandatory profile evidence, and explicit user
   action are present. It still does not write to Supabase.
+- Cloud sync consent is an explicit required blocker. Environment readiness,
+  authentication, and a button click are not enough without user consent.

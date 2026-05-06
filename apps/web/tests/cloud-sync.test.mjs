@@ -240,7 +240,8 @@ test("blocks profile sync action without readiness, session and click", () => {
       message: "Session not checked"
     },
     profile: completeProfile,
-    explicitUserAction: false
+    explicitUserAction: false,
+    consentGranted: false
   })
 
   assert.equal(result.ready, false)
@@ -248,11 +249,12 @@ test("blocks profile sync action without readiness, session and click", () => {
     "cloud-sync readiness is incomplete",
     "authenticated session is missing",
     "explicit user sync action is required",
+    "cloud sync consent is required",
     "authenticated user id"
   ])
 })
 
-test("prepares profile sync action only after readiness, session and click", () => {
+test("blocks profile sync action without consent", () => {
   const readiness = getCloudSyncReadiness({
     enabled: "true",
     supabaseUrl: "https://example.supabase.co",
@@ -267,7 +269,31 @@ test("prepares profile sync action only after readiness, session and click", () 
       message: "Authenticated session detected"
     },
     profile: completeProfile,
-    explicitUserAction: true
+    explicitUserAction: true,
+    consentGranted: false
+  })
+
+  assert.equal(result.ready, false)
+  assert.deepEqual(result.blockers, ["cloud sync consent is required"])
+})
+
+test("prepares profile sync action only after readiness, session, consent and click", () => {
+  const readiness = getCloudSyncReadiness({
+    enabled: "true",
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "public-anon-key"
+  })
+  const result = prepareProfileSyncAction({
+    readiness,
+    session: {
+      checked: true,
+      authenticated: true,
+      userEmail: "pilot@example.com",
+      message: "Authenticated session detected"
+    },
+    profile: completeProfile,
+    explicitUserAction: true,
+    consentGranted: true
   })
 
   assert.equal(result.ready, true)

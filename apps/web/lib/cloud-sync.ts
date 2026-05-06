@@ -241,17 +241,20 @@ export function prepareProfileSyncAction({
   readiness,
   session,
   profile,
-  explicitUserAction
+  explicitUserAction,
+  consentGranted
 }: {
   readiness: CloudSyncReadiness
   session: CloudSyncSessionState
   profile: CandidateProfile
   explicitUserAction: boolean
+  consentGranted: boolean
 }): ProfileSyncActionState {
   const blockers = [
     !readiness.configured && "cloud-sync readiness is incomplete",
     !session.authenticated && "authenticated session is missing",
-    !explicitUserAction && "explicit user sync action is required"
+    !explicitUserAction && "explicit user sync action is required",
+    !consentGranted && "cloud sync consent is required"
   ].filter(Boolean) as string[]
   const payloadResult = createProfileSyncPayload({
     profile,

@@ -685,6 +685,21 @@ h4 {
   gap: 8px;
 }
 
+.sync-consent-control {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.sync-consent-control input {
+  width: auto;
+  margin-top: 2px;
+}
+
 .metric-card {
   min-height: 132px;
   border: 1px solid var(--border);

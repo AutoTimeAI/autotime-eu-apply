@@ -21,7 +21,9 @@ extension-to-web dashboard export.
    complete.
 9. Confirm the auth session marker remains blocked until Supabase env readiness
    is complete.
-10. Confirm the production dashboard is live:
+10. Confirm profile sync consent is visible but disabled until cloud sync env
+    readiness is complete.
+11. Confirm the production dashboard is live:
 
 ```bash
 pnpm smoke:web

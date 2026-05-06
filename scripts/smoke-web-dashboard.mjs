@@ -15,6 +15,7 @@ export const expectedMarkers = [
   "Local mode stays active for founder validation",
   "Sign-in locked",
   "Session check blocked",
+  "I consent to sync my candidate profile",
   "General tech",
   "FinTech",
   "Foreign / relocating",

@@ -650,6 +650,7 @@ export default function HomePage() {
   const [resumeIntake, setResumeIntake] = useState("")
   const [contextSuggestion, setContextSuggestion] =
     useState<ContextSuggestion | null>(null)
+  const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -1033,7 +1034,8 @@ export default function HomePage() {
         message: "Session check is not active in local-first MVP mode."
       },
       profile: state.profile,
-      explicitUserAction: true
+      explicitUserAction: true,
+      consentGranted: cloudSyncConsent
     })
 
     setStatus(action.message)
@@ -1431,6 +1433,16 @@ export default function HomePage() {
           </div>
         </div>
         <div className="sync-action-stack">
+          <label className="sync-consent-control">
+            <input
+              checked={cloudSyncConsent}
+              disabled={!cloudSyncReadiness.configured}
+              type="checkbox"
+              onChange={(event) => setCloudSyncConsent(event.target.checked)}
+            />
+            I consent to sync my candidate profile after account readiness is
+            complete.
+          </label>
           <button
             className="secondary-button"
             type="button"
