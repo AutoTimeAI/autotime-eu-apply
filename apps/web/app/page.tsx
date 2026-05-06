@@ -63,6 +63,19 @@ export default async function LandingPage() {
 
   return (
     <main className="landing-shell">
+      <nav className="product-nav" aria-label="Primary">
+        <Link className="dashboard-brand" href="/">
+          AutoTime <span>EU Apply</span>
+        </Link>
+        <div>
+          <Link href="/pricing">Pricing</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link className="nav-cta" href="/login">
+            Sign in
+          </Link>
+        </div>
+      </nav>
+
       <section className="landing-hero">
         <div className="landing-hero-copy">
           <p className="eyebrow">Built for UK/EU tech candidates</p>
@@ -80,20 +93,36 @@ export default async function LandingPage() {
               See pricing
             </Link>
           </div>
-        </div>
-        <div className="landing-signal-panel" aria-label="AutoTime outcomes">
-          <div>
-            <span>Fit score</span>
-            <strong>84%</strong>
-          </div>
-          <div>
+          <div className="proof-strip" aria-label="AutoTime capabilities">
             <span>Work-right risk</span>
-            <strong>Low</strong>
+            <span>AI application content</span>
+            <span>Outcome tracking</span>
           </div>
-          <div>
-            <span>Next action</span>
+        </div>
+        <div className="landing-signal-panel" aria-label="AutoTime decision preview">
+          <header>
+            <span>Live decision brief</span>
             <strong>Apply now</strong>
-          </div>
+          </header>
+          <dl>
+            <div>
+              <dt>Fit score</dt>
+              <dd>84%</dd>
+            </div>
+            <div>
+              <dt>Work-right risk</dt>
+              <dd>Low</dd>
+            </div>
+            <div>
+              <dt>Missing evidence</dt>
+              <dd>2 gaps</dd>
+            </div>
+          </dl>
+          <ol>
+            <li>Tailor cover letter around payments delivery.</li>
+            <li>Confirm hybrid London requirement before applying.</li>
+            <li>Save next action for follow-up in 5 working days.</li>
+          </ol>
         </div>
       </section>
 

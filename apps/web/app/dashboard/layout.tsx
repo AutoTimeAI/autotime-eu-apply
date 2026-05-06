@@ -37,6 +37,11 @@ export default async function DashboardLayout({
               <span>AutoTime</span>
               <strong>EU Apply</strong>
             </a>
+            <nav className="dashboard-topnav" aria-label="Dashboard">
+              <a href="/dashboard">Workspace</a>
+              <a href="/pricing">Pricing</a>
+              <a href="/extension/connect">Extension</a>
+            </nav>
             <UserNav email={email} plan={plan} />
           </header>
           {plan === "free" ? (

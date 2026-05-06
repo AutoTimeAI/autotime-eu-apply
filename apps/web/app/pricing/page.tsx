@@ -56,10 +56,20 @@ export default function PricingPage() {
 
   return (
     <main className="pricing-shell">
-      <header className="pricing-hero">
+      <nav className="product-nav" aria-label="Primary">
         <Link className="dashboard-brand" href="/">
           AutoTime <span>EU Apply</span>
         </Link>
+        <div>
+          <Link href="/">Product</Link>
+          <Link href="/privacy">Privacy</Link>
+          <Link className="nav-cta" href="/login">
+            Sign in
+          </Link>
+        </div>
+      </nav>
+
+      <header className="pricing-hero">
         <div>
           <p className="eyebrow">Pricing</p>
           <h1>Choose the search system that matches your ambition</h1>

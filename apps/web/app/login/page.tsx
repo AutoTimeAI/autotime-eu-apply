@@ -45,8 +45,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="dashboard-shell">
-      <section className="market-context-panel">
+    <main className="auth-shell">
+      <section className="auth-card">
         <div className="section-heading">
           <p className="eyebrow">AutoTime EU Apply</p>
           <h1>Your UK/EU job search, organised and AI-assisted</h1>
