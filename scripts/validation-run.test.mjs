@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import {
   createValidationReport,
+  findLatestReportPath,
   getDateStamp,
   getTimestampStamp
 } from "./validation-run.mjs"
@@ -78,6 +79,13 @@ test("includes export evidence and release decision sections", () => {
   assert.match(report, /V2 Dashboard JSON exported/)
   assert.match(report, /## Decision/)
   assert.match(report, /MVP validation result: Not ready/)
+})
+
+test("finds the latest markdown report in a report directory", () => {
+  const latest = findLatestReportPath("docs/release-runs")
+
+  assert.ok(latest.endsWith(".md"))
+  assert.match(latest, /docs[\\/]release-runs[\\/]/)
 })
 
 let failed = 0

@@ -1,9 +1,21 @@
 import { spawnSync } from "node:child_process"
-import { existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 export const validationRunDir = join("docs", "founder-validation-runs")
+
+export function findLatestReportPath(dir) {
+  if (!existsSync(dir)) {
+    return ""
+  }
+
+  const files = readdirSync(dir)
+    .filter((file) => file.endsWith(".md"))
+    .sort()
+
+  return files.length ? join(dir, files.at(-1)) : ""
+}
 
 export function getDateStamp(date = new Date()) {
   return date.toISOString().slice(0, 10)
@@ -163,12 +175,16 @@ export function createValidationRun({
 
 function main() {
   const metadata = getGitMetadata()
+  const latestAutomationReport = findLatestReportPath(join("docs", "automation-runs"))
+  const latestReleaseReport = findLatestReportPath(join("docs", "release-runs"))
   const reportPath = createValidationRun({
     ...metadata,
-    automatedReportPath:
-      "Run `pnpm test:mvp`, then paste the generated `docs/automation-runs/...` path here",
-    releaseCheckPath:
-      "Run `pnpm release:check`, then paste the generated `docs/release-runs/...` path here"
+    automatedReportPath: latestAutomationReport
+      ? `\`${latestAutomationReport}\``
+      : "Run `pnpm test:mvp`, then paste the generated `docs/automation-runs/...` path here",
+    releaseCheckPath: latestReleaseReport
+      ? `\`${latestReleaseReport}\``
+      : "Run `pnpm release:check`, then paste the generated `docs/release-runs/...` path here"
   })
 
   console.log(`Founder validation report created at ${reportPath}`)

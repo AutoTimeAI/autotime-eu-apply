@@ -64,10 +64,10 @@ const applicationStatuses: ApplicationStatus[] = [
 ]
 
 const tabLabels: Array<[DashboardTab, string]> = [
-  ["profile", "Candidate OS"],
-  ["jobs", "Role Intelligence"],
-  ["applications", "Pipeline"],
-  ["interview", "Interview Desk"]
+  ["profile", "Smarter Targeting"],
+  ["jobs", "Stronger Applications"],
+  ["applications", "Outcome Evidence"],
+  ["interview", "More Interviews"]
 ]
 
 const roleMarkets: Array<{
@@ -612,7 +612,7 @@ function getDecisionBrief({
     nextActions:
       decision === "Apply now"
         ? [
-            "Capture the role into Pipeline.",
+            "Save the role into Outcome Evidence.",
             "Tailor the application content against the saved job description.",
             "Track next action and prepare interview prompts if shortlisted."
           ]
@@ -983,35 +983,36 @@ export default function HomePage() {
       <header className="app-header">
         <div className="header-copy">
           <p className="eyebrow">AutoTime EU Apply</p>
-          <h1>European tech market guide for smarter applications</h1>
+          <h1>Smarter targeting. Stronger applications. More interviews.</h1>
           <p>
-            A decision workspace for tech candidates applying across Europe:
-            understand country fit, work-right risk, role positioning, and
-            whether a job is worth the effort before applying.
+            A UK/EU tech job application workspace that helps candidates target
+            realistic roles, strengthen positioning, reduce wasted effort, and
+            track which countries, sources and role families create interview
+            signal.
           </p>
           <div
             className="header-actions"
             aria-label="Primary dashboard actions"
           >
             <button type="button" onClick={saveApplicationFromJob}>
-              Capture Role
+              Save Job Decision
             </button>
             <button
               className="secondary-button"
               type="button"
               onClick={exportDashboard}
             >
-              Export Evidence
+              Export Validation Evidence
             </button>
           </div>
         </div>
         <div className="executive-panel" aria-label="Current operating summary">
           <div>
-            <small>Readiness</small>
+            <small>Application Strength</small>
             <strong>{readinessScore}%</strong>
           </div>
           <div>
-            <small>Role Fit</small>
+            <small>Targeting Fit</small>
             <strong>{fitScore}%</strong>
           </div>
           <p>{state.jobAnalysis.recommendation || "Qualification pending"}</p>
@@ -1023,19 +1024,18 @@ export default function HomePage() {
         aria-label="Candidate market context"
       >
         <div className="section-intro">
-          <p className="eyebrow">European Tech Market Guide</p>
-          <h2>Who is applying, where, and for what kind of tech role?</h2>
+          <p className="eyebrow">Smarter Targeting</p>
+          <h2>Which country, work-right path and role family should be prioritised?</h2>
           <p>
-            AutoTime guides tech candidates through the European application
-            market by adapting advice for country, candidate status, role
-            family, urgency and domain. It helps users understand the market
-            before they spend time applying.
+            AutoTime turns country choice, candidate status, sponsorship risk,
+            domain and role family into a targeting decision before the user
+            spends effort on a UK/EU application.
           </p>
         </div>
 
         <div className="context-grid">
           <fieldset className="segmented-field">
-            <legend>Role market</legend>
+            <legend>Target role lane</legend>
             <div className="segmented-options">
               {roleMarkets.map((market) => (
                 <button
@@ -1057,7 +1057,7 @@ export default function HomePage() {
           </fieldset>
 
           <fieldset className="segmented-field">
-            <legend>Candidate type</legend>
+            <legend>Work-right position</legend>
             <div className="segmented-options">
               {candidatePositions.map((position) => (
                 <button
@@ -1114,7 +1114,7 @@ export default function HomePage() {
               </select>
             </label>
             <label>
-              Application urgency
+              Application pace
               <select
                 value={productContext.urgency}
                 onChange={(event) =>
@@ -1132,12 +1132,15 @@ export default function HomePage() {
               </select>
             </label>
             <button type="button" onClick={applyMarketContextToProfile}>
-              Apply Context
+              Apply Targeting Context
             </button>
           </div>
         </div>
 
-        <div className="ai-use-case-grid" aria-label="AI use cases">
+        <div
+          className="ai-use-case-grid"
+          aria-label="UK/EU decision checks"
+        >
           {getAIUseCases(productContext).map((useCase) => (
             <article key={useCase.title}>
               <h3>{useCase.title}</h3>
@@ -1148,25 +1151,25 @@ export default function HomePage() {
 
         <section className="resume-intake-panel" aria-label="CV context review">
           <div className="section-heading">
-            <p className="eyebrow">User-Approved AI Intake</p>
-            <h2>Paste CV or resume text to suggest context</h2>
+            <p className="eyebrow">Stronger Applications</p>
+            <h2>Paste CV evidence to strengthen positioning</h2>
             <p>
-              AutoTime can infer candidate type, role market, seniority and
-              likely target roles from a CV, but it will not apply those changes
-              until the user reviews and approves them.
+              AutoTime can suggest work-right position, seniority and target
+              role lanes from a CV, but the user approves every change before it
+              affects role targeting or application wording.
             </p>
           </div>
           <label>
-            CV / resume text
+            CV / role evidence text
             <textarea
-              placeholder="Paste CV, resume, or profile summary. AutoTime will suggest context only; it will not overwrite your profile without approval."
+              placeholder="Paste CV, resume, or profile summary. AutoTime suggests UK/EU targeting and positioning only; it will not overwrite your profile without approval."
               value={resumeIntake}
               onChange={(event) => setResumeIntake(event.target.value)}
             />
           </label>
           <div className="header-actions">
             <button type="button" onClick={reviewResumeForContext}>
-              Review CV Context
+              Review Positioning Fit
             </button>
             <button
               className="secondary-button"
@@ -1174,7 +1177,7 @@ export default function HomePage() {
               type="button"
               onClick={approveContextSuggestion}
             >
-              Approve Suggestion
+              Approve Target Lane
             </button>
           </div>
           {contextSuggestion && (
@@ -1185,7 +1188,7 @@ export default function HomePage() {
               </div>
               <dl>
                 <div>
-                  <dt>Candidate type</dt>
+                  <dt>Work-right position</dt>
                   <dd>
                     {contextSuggestion.candidatePosition === "foreign-candidate"
                       ? "Foreign / relocating"
@@ -1193,7 +1196,7 @@ export default function HomePage() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Role market</dt>
+                  <dt>Target role lane</dt>
                   <dd>{getMarketLabel(contextSuggestion)}</dd>
                 </div>
                 <div>
@@ -1213,14 +1216,17 @@ export default function HomePage() {
         <p className="context-guidance">{getCountryGuidance(productContext)}</p>
       </section>
 
-      <section className="decision-brief-panel" aria-label="AI decision brief">
+      <section
+        className="decision-brief-panel"
+        aria-label="UK/EU apply decision brief"
+      >
         <div>
-          <p className="eyebrow">AI Reasoning Layer</p>
-          <h2>Decision Brief</h2>
+          <p className="eyebrow">Stronger Applications</p>
+          <h2>Apply, pause, or improve positioning?</h2>
           <p>
-            AutoTime turns candidate context, country, CV evidence and role fit
-            into a user-reviewable apply decision. Treat this as guidance, not
-            an automatic submission decision.
+            AutoTime turns country context, work-right clarity, CV evidence and
+            role fit into a user-reviewable decision so applications are more
+            targeted, more truthful and better positioned.
           </p>
         </div>
         <div className="decision-score">
@@ -1230,7 +1236,7 @@ export default function HomePage() {
         </div>
         <div className="decision-columns">
           <section>
-            <h3>Why</h3>
+            <h3>Targeting reason</h3>
             <ul className="bullets-list">
               {decisionBrief.rationale.map((item) => (
                 <li key={item}>{item}</li>
@@ -1238,7 +1244,7 @@ export default function HomePage() {
             </ul>
           </section>
           <section>
-            <h3>Risks</h3>
+            <h3>UK/EU risks</h3>
             <ul className="bullets-list">
               {decisionBrief.risks.map((item) => (
                 <li key={item}>{item}</li>
@@ -1246,7 +1252,7 @@ export default function HomePage() {
             </ul>
           </section>
           <section>
-            <h3>Missing inputs</h3>
+            <h3>Positioning gaps</h3>
             {decisionBrief.missingInputs.length ? (
               <ul className="bullets-list">
                 {decisionBrief.missingInputs.map((item) => (
@@ -1258,7 +1264,7 @@ export default function HomePage() {
             )}
           </section>
           <section>
-            <h3>Next actions</h3>
+            <h3>Founder next steps</h3>
             <ul className="bullets-list">
               {decisionBrief.nextActions.map((item) => (
                 <li key={item}>{item}</li>
@@ -1284,22 +1290,25 @@ export default function HomePage() {
 
       {status && <p className="status-banner">{status}</p>}
 
-      <section className="metrics-strip" aria-label="V2 dashboard metrics">
+      <section
+        className="metrics-strip"
+        aria-label="UK/EU application evidence metrics"
+      >
         <div
           className={`metric-card ${getMetricTone(state.applications.length, 3)}`}
         >
           <span>{state.applications.length}</span>
-          <small>Total applications</small>
+          <small>Targeted roles</small>
           <p>
             {statusCounts.Applied + statusCounts.Interview} progressed beyond
-            saved
+            saved into evidence
           </p>
         </div>
         <div
           className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
         >
           <span>{interviewApplications.length}</span>
-          <small>Interview pipeline</small>
+          <small>Interview signal</small>
           <p>
             {state.interviewPrepPacks.length} prep pack
             {state.interviewPrepPacks.length === 1 ? "" : "s"} ready
@@ -1309,20 +1318,20 @@ export default function HomePage() {
           className={`metric-card ${activeActionCount > 0 ? "neutral" : "warn"}`}
         >
           <span>{activeActionCount}</span>
-          <small>Open actions</small>
-          <p>Next steps tracked across live roles</p>
+          <small>Application actions</small>
+          <p>Next steps tracked across live UK/EU roles</p>
         </div>
         <div className="metric-card warn">
           <span>{state.jobAnalysis.skills?.length ?? 0}</span>
-          <small>Role signals</small>
+          <small>Positioning evidence</small>
           <p>{riskLabel}</p>
         </div>
       </section>
 
       <section className="readiness-roadmap" aria-label="Readiness roadmap">
         <div className="section-intro">
-          <p className="eyebrow">Readiness Path</p>
-          <h2>What moves this candidate toward a stronger application?</h2>
+          <p className="eyebrow">Apply Smarter Path</p>
+          <h2>What must be true before spending effort on this application?</h2>
         </div>
         {[
           {
@@ -1433,8 +1442,8 @@ export default function HomePage() {
           <div className="output-column">
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Operating Record</p>
-                <h2>Candidate Memory</h2>
+                <p className="eyebrow">Smarter Targeting Record</p>
+                <h2>Candidate Fit For UK/EU Roles</h2>
               </div>
               <dl className="summary-list">
                 <div>
@@ -1457,8 +1466,8 @@ export default function HomePage() {
             </section>
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Response Library</p>
-                <h2>Reusable Answers</h2>
+                <p className="eyebrow">Stronger Application Wording</p>
+                <h2>Reusable UK/EU Answers</h2>
               </div>
               <label>
                 Motivation answer
@@ -1529,19 +1538,19 @@ export default function HomePage() {
               />
             </label>
             <button type="button" onClick={saveApplicationFromJob}>
-              Save to Applications
+              Save Job Decision
             </button>
           </div>
 
           <div className="output-column">
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Qualification Brief</p>
-                <h2>Opportunity Intelligence</h2>
+                <p className="eyebrow">Smarter Targeting Brief</p>
+                <h2>Role Fit And Positioning Evidence</h2>
               </div>
               <p className="large-copy">
                 {state.jobAnalysis.positioningAngle ||
-                  "Add job details to create a positioning angle."}
+                  "Add job details to create a UK/EU positioning angle."}
               </p>
               <ul className="bullets-list">
                 {(state.jobAnalysis.scoreFactors?.length
@@ -1555,7 +1564,7 @@ export default function HomePage() {
             <section className="panel">
               <div className="section-heading">
                 <p className="eyebrow">Evidence Map</p>
-                <h2>Skills And Gaps</h2>
+                <h2>Skills, Country Fit And Gaps</h2>
               </div>
               <div className="tag-row">
                 {(state.jobAnalysis.skills?.length
@@ -1583,11 +1592,12 @@ export default function HomePage() {
       {activeTab === "applications" && (
         <section className="applications-section full-width-section">
           <div className="section-intro">
-            <p className="eyebrow">Commercial Pipeline</p>
-            <h2>Application History</h2>
+            <p className="eyebrow">More Interviews Evidence</p>
+            <h2>UK/EU Application Outcome Tracker</h2>
             <p>
-              Track each role as an opportunity with owner-ready next actions,
-              status movement, evidence export, and interview conversion.
+              Track each real role with country, source, next action, outcome
+              notes and interview signal, so the pilot measures whether smarter
+              targeting and stronger applications create more interviews.
             </p>
           </div>
           <div
@@ -1668,10 +1678,10 @@ export default function HomePage() {
               ))
             ) : (
               <div className="empty-state rich-empty-state">
-                <strong>No applications captured yet</strong>
+                <strong>No UK/EU roles captured yet</strong>
                 <p>
-                  Use Role Intelligence to qualify a vacancy, then capture it
-                  into the pipeline with a next action.
+                  Use Stronger Applications to qualify a live vacancy, then save it
+                  with a next action and outcome note.
                 </p>
               </div>
             )}
@@ -1682,11 +1692,12 @@ export default function HomePage() {
       {activeTab === "interview" && (
         <section className="prep-section full-width-section">
           <div className="section-intro">
-            <p className="eyebrow">Conversion Desk</p>
-            <h2>Interview Prep Packs</h2>
+            <p className="eyebrow">More Interviews</p>
+            <h2>Role-Specific Interview Conversion Prep</h2>
             <p>
-              Prep packs use saved profile, job analysis and application state;
-              they do not invent experience.
+              Prep packs use the saved country context, role evidence,
+              application state and positioning angle; they do not invent
+              experience.
             </p>
           </div>
           <section
@@ -1694,10 +1705,11 @@ export default function HomePage() {
             aria-label="AI interview settings"
           >
             <div>
-              <h3>AI Interview Settings</h3>
+              <h3>Controlled-Cost Prep Settings</h3>
               <p>
-                Optional browser-local OpenAI settings. Leave the key empty to
-                use local prep only.
+                Optional browser-local OpenAI settings for interview prep only.
+                Leave the key empty to use local prep without storing secrets on
+                an AutoTime server.
               </p>
             </div>
             <label>
@@ -1740,7 +1752,7 @@ export default function HomePage() {
             </label>
             <div className="ai-budget-summary">
               <span>${aiSettings.usedBudgetUsd.toFixed(6)}</span>
-              <small>estimated used this browser</small>
+              <small>estimated prep spend in this browser</small>
             </div>
             <div className="application-actions">
               <button type="button" onClick={saveWebAISettings}>
@@ -1798,19 +1810,19 @@ export default function HomePage() {
 
       <section className="utility-bar">
         <button type="button" onClick={saveDashboard}>
-          Save Dashboard
+          Save Local Application Evidence
         </button>
         <button
           className="secondary-button"
           type="button"
           onClick={exportDashboard}
         >
-          Export JSON
+          Export Application Evidence
         </button>
         <label className="import-control">
-          Import JSON
+          Import Application Evidence
           <textarea
-            placeholder="Paste exported V2 dashboard JSON"
+            placeholder="Paste exported AutoTime dashboard evidence JSON"
             value={importJson}
             onChange={(event) => setImportJson(event.target.value)}
           />
@@ -1820,7 +1832,7 @@ export default function HomePage() {
           type="button"
           onClick={() => importDashboard(importJson)}
         >
-          Import Dashboard
+          Import Evidence
         </button>
       </section>
     </main>

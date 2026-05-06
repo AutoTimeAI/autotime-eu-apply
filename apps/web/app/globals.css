@@ -127,7 +127,7 @@ h1 {
   max-width: 840px;
   margin-bottom: 12px;
   color: var(--ink);
-  font-size: clamp(2.3rem, 5vw, 5.2rem);
+  font-size: 4.4rem;
   letter-spacing: 0;
   line-height: 0.96;
 }
@@ -162,6 +162,16 @@ h4 {
   gap: 28px;
   align-items: stretch;
   padding: 20px 0 24px;
+}
+
+.app-header > *,
+.context-grid > *,
+.decision-brief-panel > *,
+.workspace-grid > *,
+.application-row > *,
+.ai-settings-panel > *,
+.utility-bar > * {
+  min-width: 0;
 }
 
 .header-copy {
@@ -894,9 +904,28 @@ h4 {
   }
 }
 
+@media (max-width: 1180px) and (min-width: 981px) {
+  h1 {
+    font-size: 3.6rem;
+  }
+
+  .app-header,
+  .decision-brief-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-settings-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .decision-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 620px) {
   .dashboard-shell {
-    width: min(100% - 24px, 1280px);
+    width: calc(100% - 24px);
     padding-top: 16px;
   }
 
