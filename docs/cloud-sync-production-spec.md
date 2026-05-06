@@ -200,3 +200,11 @@ The first implementation slice should be small:
 - keep extension export/import working
 
 This proves real product continuity without risking job-site automation safety.
+
+Repo marker:
+
+- `.env.example` documents the cloud-sync feature flag and Supabase public
+  client settings without storing real credentials.
+- `supabase/migrations/20260506171000_cloud_sync_profiles.sql` defines the
+  first safe schema slice: one synced profile per user, mandatory profile bridge
+  constraints, row-level security, and profile sync audit events.
