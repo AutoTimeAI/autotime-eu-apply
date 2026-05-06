@@ -46,6 +46,8 @@ effort.
 - LinkedIn remains manual copy/paste only.
 - V2 dashboard remains local-first until Supabase/account sync credentials and
   data policy are ready.
+- Production cloud sync is marked as the post-MVP production track in
+  `docs/cloud-sync-production-spec.md`.
 - AI interview prep is browser-local and does not introduce backend sync or
   server-side key storage.
 - Production V2 dashboard alias:
@@ -71,6 +73,8 @@ effort.
 - Supabase sync, account login, notifications, Edge packaging, and production
   mobile wrapper remain integration work that requires credentials, data-policy
   decisions, and a user-account model before implementation.
+- Cloud sync should become mandatory before broad paid production, but it must
+  ship behind explicit consent and safety gates after founder validation.
 
 ## Local Preview
 
