@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { publicEnv } from "../../lib/env"
 import { createBrowserClient } from "../../lib/supabase/client"
 
@@ -13,7 +13,7 @@ function getErrorMessage(error: unknown): string {
     : "Sign-in could not be started. Please try again."
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<string | null>(null)
   const redirectTo = searchParams.get("redirectTo") || "/dashboard"
@@ -70,5 +70,13 @@ export default function LoginPage() {
         {status ? <p className="status-banner">{status}</p> : null}
       </section>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   )
 }

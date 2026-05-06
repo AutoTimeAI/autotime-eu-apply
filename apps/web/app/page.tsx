@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 
 import { createServerClient } from "../lib/supabase/server"
 
+export const dynamic = "force-dynamic"
+
 const workflowSteps = [
   {
     title: "Paste a job description",
