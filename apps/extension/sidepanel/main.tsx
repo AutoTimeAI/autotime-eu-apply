@@ -72,6 +72,7 @@ import { ApplicationsSection } from "./ApplicationsSection"
 import { ApplicationContentSection } from "./ApplicationContentSection"
 import { AISettingsSection } from "./AISettingsSection"
 import { JobAnalysisSection } from "./JobAnalysisSection"
+import { Onboarding } from "./Onboarding"
 import { ProfileSection } from "./ProfileSection"
 import { ReusableAnswersSection } from "./ReusableAnswersSection"
 import { SectionNav } from "./SectionNav"
@@ -969,6 +970,8 @@ function SidePanelApp() {
       <header>
         <h1>AutoTime EU Apply</h1>
       </header>
+
+      <Onboarding onNavigate={goToSection} />
 
       <SectionNav
         activeSection={activeSection}

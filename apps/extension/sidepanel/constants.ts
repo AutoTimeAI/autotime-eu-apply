@@ -23,6 +23,37 @@ export type Section =
   | "validation-metrics"
   | "ai-settings"
 
+export const onboardedStorageKey = "autotime-onboarded"
+
+export const onboardingSteps: Array<{
+  ctaLabel: string
+  description: string
+  section: Section
+  title: string
+}> = [
+  {
+    ctaLabel: "Go to Profile",
+    description:
+      "Start by saving your core candidate details so AutoTime can reuse them.",
+    section: "profile",
+    title: "Save your profile"
+  },
+  {
+    ctaLabel: "Go to Reusable Answers",
+    description:
+      "Add answers for sponsorship, relocation, availability, and common prompts.",
+    section: "reusable-answers",
+    title: "Add reusable answers"
+  },
+  {
+    ctaLabel: "Go to Job Analysis",
+    description:
+      "Import a non-LinkedIn job page or paste a job description before tailoring an application.",
+    section: "job-analysis",
+    title: "Import a job page or paste a description"
+  }
+]
+
 export const emptyProfile: CandidateProfile = {
   fullName: "",
   email: "",
