@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { z } from "zod"
 import {
   companionDashboardStateSchema,
   evaluateCountryFit,
@@ -390,6 +391,28 @@ const defaultProductContext: ProductContext = {
   experienceLevel: "Mid-level"
 }
 
+const productContextSchema = z.object({
+  roleMarket: z
+    .enum(roleMarkets.map((market) => market.id) as [RoleMarket, ...RoleMarket[]])
+    .optional(),
+  candidatePosition: z
+    .enum(
+      candidatePositions.map((position) => position.id) as [
+        CandidateMarketPosition,
+        ...CandidateMarketPosition[]
+      ]
+    )
+    .optional(),
+  urgency: z
+    .enum(urgencyOptions.map((option) => option.id) as [
+      CandidateUrgency,
+      ...CandidateUrgency[]
+    ])
+    .optional(),
+  targetCountry: z.string().trim().min(1).optional(),
+  experienceLevel: z.string().trim().min(1).optional()
+})
+
 const emptyProfile: CandidateProfile = {
   fullName: "",
   email: "",
@@ -491,14 +514,18 @@ function getStoredProductContext() {
   }
 
   try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem(productContextStorageKey) ?? "null"
-    ) as Partial<ProductContext> | null
+    const parsed = productContextSchema.safeParse(
+      JSON.parse(
+        window.localStorage.getItem(productContextStorageKey) ?? "null"
+      )
+    )
 
-    return {
-      ...defaultProductContext,
-      ...(parsed ?? {})
-    }
+    return parsed.success
+      ? {
+          ...defaultProductContext,
+          ...parsed.data
+        }
+      : defaultProductContext
   } catch {
     return defaultProductContext
   }
@@ -1030,20 +1057,28 @@ export default function HomePage() {
     key: K,
     value: CandidateProfile[K]
   ) => {
-    setState((current) => ({
-      ...current,
-      profile: { ...current.profile, [key]: value }
-    }))
+    setState((current) => {
+      const next = {
+        ...current,
+        profile: { ...current.profile, [key]: value }
+      }
+      saveState(next)
+      return next
+    })
   }
 
   const updateJob = <K extends keyof JobAnalysisDraft>(
     key: K,
     value: JobAnalysisDraft[K]
   ) => {
-    setState((current) => ({
-      ...current,
-      jobAnalysis: { ...current.jobAnalysis, [key]: value }
-    }))
+    setState((current) => {
+      const next = {
+        ...current,
+        jobAnalysis: { ...current.jobAnalysis, [key]: value }
+      }
+      saveState(next)
+      return next
+    })
   }
 
   const updateProductContext = <K extends keyof ProductContext>(
@@ -1195,6 +1230,21 @@ export default function HomePage() {
     )
   }
 
+  const deleteApplication = (id: string) => {
+    persist(
+      {
+        ...state,
+        applications: state.applications.filter(
+          (application) => application.id !== id
+        ),
+        interviewPrepPacks: state.interviewPrepPacks.filter(
+          (pack) => pack.applicationId !== id
+        )
+      },
+      "Application removed"
+    )
+  }
+
   const saveInterviewPrepPack = (
     pack: CompanionDashboardState["interviewPrepPacks"][number],
     message: string
@@ -1248,18 +1298,6 @@ export default function HomePage() {
 
       if (!result.success) {
         setStatus("Import failed: dashboard JSON does not match V2 schema")
-        return
-      }
-
-      const importedProfileIssues = getCandidateProfileBridgeIssues(
-        result.data.profile
-      )
-      if (importedProfileIssues.length > 0) {
-        setStatus(
-          `Import blocked: candidate profile bridge missing ${importedProfileIssues.join(
-            ", "
-          )}`
-        )
         return
       }
 
@@ -2226,6 +2264,13 @@ export default function HomePage() {
                       onClick={() => generateInterviewPrep(application)}
                     >
                       Generate Prep
+                    </button>
+                    <button
+                      className="danger-button"
+                      type="button"
+                      onClick={() => deleteApplication(application.id)}
+                    >
+                      Delete
                     </button>
                   </div>
                 </article>

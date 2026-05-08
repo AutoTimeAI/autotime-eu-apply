@@ -12,6 +12,10 @@ export type SubscriptionStatus =
   | "past_due"
   | "cancelled"
   | "trialing"
+  | "incomplete"
+  | "incomplete_expired"
+  | "unpaid"
+  | "paused"
 export type RelocationWillingness = "yes" | "no" | "depends"
 export type SourceSurface = "web" | "extension"
 export type SyncEntityType = "profile" | "profile_revision"
@@ -170,6 +174,27 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_rate_limits: {
+        Row: {
+          rate_limit_key: string
+          request_count: number
+          reset_at: string
+          updated_at: string
+        }
+        Insert: {
+          rate_limit_key: string
+          request_count?: number
+          reset_at: string
+          updated_at?: string
+        }
+        Update: {
+          rate_limit_key?: string
+          request_count?: number
+          reset_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sync_events: {
         Row: {
           id: string
@@ -253,6 +278,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: number
+      }
+      increment_ai_rate_limit: {
+        Args: {
+          p_rate_limit_key: string
+          p_window_seconds: number
+          p_max_requests: number
+        }
+        Returns: boolean
       }
     }
     Enums: Record<string, never>

@@ -2,6 +2,7 @@ import OpenAI from "openai"
 import { z } from "zod"
 import { getServerEnv } from "./env"
 import { createLocalInterviewPrepPack } from "./interview-prep"
+import { createAdminClient } from "./supabase/admin"
 import type {
   ApplicationContentDraft,
   ApplicationRecord,
@@ -47,8 +48,8 @@ const modelPricesPerMillionTokens: Record<
   "gpt-4.1-mini": { input: 0.4, output: 1.6 }
 }
 const rateLimitWindowMs = 60_000
+const rateLimitWindowSeconds = rateLimitWindowMs / 1000
 const rateLimitMaxRequests = 20
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>()
 
 const applicationContentSchema = z.object({
   coverLetter: z.string().optional(),
@@ -97,26 +98,23 @@ function getOpenAIClient(): OpenAI {
   return openAIClient
 }
 
-export function assertAiRouteRateLimit(rateLimitKey: string): void {
-  const now = Date.now()
-  const currentBucket = rateLimitBuckets.get(rateLimitKey)
+export async function assertAiRouteRateLimit(
+  rateLimitKey: string
+): Promise<void> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.rpc("increment_ai_rate_limit", {
+    p_rate_limit_key: rateLimitKey,
+    p_window_seconds: rateLimitWindowSeconds,
+    p_max_requests: rateLimitMaxRequests
+  })
 
-  if (!currentBucket || currentBucket.resetAt <= now) {
-    rateLimitBuckets.set(rateLimitKey, {
-      count: 1,
-      resetAt: now + rateLimitWindowMs
-    })
-    return
+  if (error) {
+    throw new Error(error.message)
   }
 
-  if (currentBucket.count >= rateLimitMaxRequests) {
+  if (!data) {
     throw new RateLimitError("Too many AI requests. Please try again shortly.")
   }
-
-  rateLimitBuckets.set(rateLimitKey, {
-    ...currentBucket,
-    count: currentBucket.count + 1
-  })
 }
 
 function parseJsonObject(text: string): unknown {

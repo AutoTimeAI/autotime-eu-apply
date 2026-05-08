@@ -3,11 +3,6 @@ import type { SubscriptionPlan } from "./supabase/types"
 
 export const FREE_AI_CALLS_PER_MONTH = 5
 
-type CachedPlan = {
-  plan: SubscriptionPlan
-  expiresAt: number
-}
-
 export class FeatureGateError extends Error {
   constructor(
     public readonly code: "LIMIT_REACHED" | "NOT_PRO",
@@ -19,27 +14,6 @@ export class FeatureGateError extends Error {
   }
 }
 
-const planCache = new Map<string, CachedPlan>()
-const planCacheTtlMs = 60_000
-
-function getCachedPlan(userId: string): SubscriptionPlan | null {
-  const cachedPlan = planCache.get(userId)
-
-  if (!cachedPlan || cachedPlan.expiresAt <= Date.now()) {
-    planCache.delete(userId)
-    return null
-  }
-
-  return cachedPlan.plan
-}
-
-function setCachedPlan(userId: string, plan: SubscriptionPlan): void {
-  planCache.set(userId, {
-    plan,
-    expiresAt: Date.now() + planCacheTtlMs
-  })
-}
-
 function normalisePlan(plan: SubscriptionPlan | null | undefined) {
   return plan === "pro" ? "pro" : "free"
 }
@@ -48,12 +22,6 @@ export async function getUserPlan(
   userId: string
 ): Promise<SubscriptionPlan> {
   try {
-    const cachedPlan = getCachedPlan(userId)
-
-    if (cachedPlan) {
-      return cachedPlan
-    }
-
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from("subscriptions")
@@ -66,7 +34,6 @@ export async function getUserPlan(
     }
 
     const plan = normalisePlan(data?.plan)
-    setCachedPlan(userId, plan)
 
     return plan
   } catch (error: unknown) {

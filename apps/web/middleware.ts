@@ -28,6 +28,10 @@ type CookieToSet = {
 }
 
 function isProtectedPath(pathname: string): boolean {
+  if (pathname === "/api/stripe/webhook") {
+    return false
+  }
+
   return protectedRoutePrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )

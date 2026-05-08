@@ -81,9 +81,9 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        <div className="landing-signal-panel" aria-label="AutoTime decision preview">
+        <div className="landing-signal-panel" aria-label="Example decision output">
           <header>
-            <span>Decision</span>
+            <span>Example decision</span>
             <strong>Apply</strong>
           </header>
           <dl>

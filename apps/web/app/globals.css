@@ -90,6 +90,19 @@ button:disabled {
   color: var(--accent-strong);
 }
 
+.danger-button {
+  border-color: #e1b8bd;
+  background: #fff1f2;
+  color: var(--red);
+  box-shadow: none;
+}
+
+.danger-button:hover {
+  border-color: var(--red);
+  background: #fbe4e7;
+  color: var(--red);
+}
+
 input,
 select,
 textarea {
@@ -807,6 +820,10 @@ h4 {
 
 .profile-bridge-panel.ready {
   border-left-color: var(--green);
+}
+
+.profile-bridge-panel.blocked {
+  border-left-color: var(--amber);
 }
 
 .profile-bridge-panel h2 {

@@ -9,7 +9,8 @@ const faqs = [
   },
   {
     question: "Is my data private?",
-    answer: "Yes - GDPR compliant, UK-hosted, and designed around explicit user consent."
+    answer:
+      "Yes - designed around GDPR principles, explicit user consent, and reputable infrastructure providers."
   },
   {
     question: "Can I cancel?",

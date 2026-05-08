@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { isAdminUser } from "../../lib/admin-access"
 import { getEnvReadiness } from "../../lib/diagnostics"
 import { createServerClient } from "../../lib/supabase/server"
 
@@ -46,6 +47,10 @@ export default async function DiagnosticsPage() {
 
   if (error || !user) {
     redirect("/login?redirectTo=/diagnostics")
+  }
+
+  if (!isAdminUser(user)) {
+    redirect("/dashboard")
   }
 
   const envReadiness = getEnvReadiness()

@@ -40,15 +40,18 @@ function isStripeInvoice(value: unknown): value is Stripe.Invoice {
 }
 
 function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
-  if (status === "active" || status === "trialing" || status === "past_due") {
-    return status
+  switch (status) {
+    case "active":
+    case "trialing":
+    case "past_due":
+    case "incomplete":
+    case "incomplete_expired":
+    case "unpaid":
+    case "paused":
+      return status
+    case "canceled":
+      return "cancelled"
   }
-
-  if (status === "canceled") {
-    return "cancelled"
-  }
-
-  return "past_due"
 }
 
 function getCustomerId(customer: Stripe.Subscription["customer"]): string | null {

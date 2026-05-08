@@ -41,7 +41,8 @@ const serverEnvSchema = publicEnvSchema.extend({
   STRIPE_WEBHOOK_SECRET: requiredString("STRIPE_WEBHOOK_SECRET"),
   STRIPE_PRO_MONTHLY_PRICE_ID: requiredString("STRIPE_PRO_MONTHLY_PRICE_ID"),
   STRIPE_PRO_ANNUAL_PRICE_ID: requiredString("STRIPE_PRO_ANNUAL_PRICE_ID"),
-  RESEND_API_KEY: requiredString("RESEND_API_KEY")
+  RESEND_API_KEY: requiredString("RESEND_API_KEY"),
+  AUTOTIME_ADMIN_EMAILS: optionalString()
 })
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>
@@ -86,7 +87,8 @@ function parseServerEnv(): ServerEnv {
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     STRIPE_PRO_MONTHLY_PRICE_ID: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
     STRIPE_PRO_ANNUAL_PRICE_ID: process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
-    RESEND_API_KEY: process.env.RESEND_API_KEY
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    AUTOTIME_ADMIN_EMAILS: process.env.AUTOTIME_ADMIN_EMAILS
   })
 
   if (!result.success) {

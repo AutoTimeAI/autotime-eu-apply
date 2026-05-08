@@ -62,7 +62,7 @@ export async function POST(
       })
     }
 
-    assertAiRouteRateLimit(user.id)
+    await assertAiRouteRateLimit(user.id)
     await assertCanUseAi(user.id)
 
     const body = requestSchema.parse(await request.json())

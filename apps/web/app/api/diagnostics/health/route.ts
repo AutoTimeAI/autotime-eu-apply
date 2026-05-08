@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { isAdminUser } from "../../../../lib/admin-access"
 import { getEnvReadiness } from "../../../../lib/diagnostics"
 import { createServerClient } from "../../../../lib/supabase/server"
 
@@ -82,6 +83,17 @@ export async function GET() {
         status: 401
       },
       { status: 401 }
+    )
+  }
+
+  if (!isAdminUser(user)) {
+    return NextResponse.json(
+      {
+        data: null,
+        error: "Forbidden",
+        status: 403
+      },
+      { status: 403 }
     )
   }
 
