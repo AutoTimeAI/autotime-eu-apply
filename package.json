@@ -17,6 +17,8 @@
     "validation:new": "node scripts/validation-run.mjs",
     "test:validation-run": "node scripts/validation-run.test.mjs",
     "test:market-ready-gate": "node scripts/market-ready-gate.test.mjs",
+    "test:production-hardening": "node scripts/production-hardening.test.mjs",
+    "test:country-fit": "node --experimental-strip-types scripts/country-fit-model.test.mjs",
     "test:mvp:python": "python scripts/autotime_mvp_test_runner.py",
     "test:mvp:coverage": "node scripts/mvp-test-coverage.mjs",
     "smoke:web": "node scripts/smoke-web-dashboard.mjs",

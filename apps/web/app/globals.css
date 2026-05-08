@@ -573,6 +573,94 @@ h4 {
   padding: 12px;
 }
 
+.fit-gate-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  border: 1px solid #c4dcd8;
+  border-radius: 8px;
+  background: #edf7f5;
+  padding: 12px;
+}
+
+.fit-gate-banner strong {
+  color: var(--accent-strong);
+  font-size: 1.8rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.fit-gate-banner span {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.fit-component-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.fit-component {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.fit-component.strong {
+  border-left-color: var(--green);
+}
+
+.fit-component.medium {
+  border-left-color: var(--blue);
+}
+
+.fit-component.weak {
+  border-left-color: var(--amber);
+}
+
+.fit-component.blocker {
+  border-left-color: var(--red);
+}
+
+.fit-component div {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.fit-component strong,
+.fit-component span {
+  color: var(--ink);
+  font-weight: 950;
+}
+
+.fit-component small {
+  display: inline-flex;
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fit-component p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.blocker-list li {
+  color: var(--red);
+  font-weight: 850;
+}
+
 .metrics-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -895,8 +983,8 @@ h4 {
 .application-row {
   display: grid;
   grid-template-columns:
-    minmax(220px, 1.2fr) minmax(130px, 0.5fr) minmax(180px, 0.8fr)
-    minmax(150px, 0.55fr);
+    minmax(220px, 1.15fr) minmax(120px, 0.45fr) minmax(170px, 0.65fr)
+    minmax(220px, 0.85fr) minmax(150px, 0.5fr);
   gap: 10px;
   align-items: end;
   border: 1px solid var(--border);

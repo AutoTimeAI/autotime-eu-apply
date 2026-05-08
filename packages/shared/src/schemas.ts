@@ -23,6 +23,55 @@ export const workModeSchema = z.enum([
   "unknown"
 ])
 
+export const fitComponentStatusSchema = z.enum([
+  "strong",
+  "medium",
+  "weak",
+  "blocker"
+])
+
+export const fitComponentKeySchema = z.enum([
+  "skillMatch",
+  "atsCompatibility",
+  "sponsorshipLikelihood",
+  "rightToWorkCompatibility",
+  "relocationFit",
+  "countryLocationFit"
+])
+
+export const fitComponentSchema = z.object({
+  key: fitComponentKeySchema,
+  label: z.string(),
+  score: z.number(),
+  status: fitComponentStatusSchema,
+  rationale: z.string()
+})
+
+export const countryFitDecisionSchema = z.enum([
+  "Apply now",
+  "Stretch application",
+  "Skip for now",
+  "Improve profile first"
+])
+
+export const contentGenerationGateSchema = z.enum([
+  "ready",
+  "stretch",
+  "blocked"
+])
+
+export const countryFitEvaluationSchema = z.object({
+  overallScore: z.number(),
+  decision: countryFitDecisionSchema,
+  confidence: z.enum(["Low", "Medium", "High"]),
+  contentGate: contentGenerationGateSchema,
+  positioningAngle: z.string(),
+  nextBestAction: z.string(),
+  blockers: z.array(z.string()),
+  components: z.array(fitComponentSchema),
+  learningPrompt: z.string()
+})
+
 export const candidateProfileSchema = z.object({
   fullName: z.string(),
   email: z.string(),
@@ -98,6 +147,9 @@ export const applicationRecordSchema = z.object({
   nextAction: z.string().optional(),
   nextActionDate: z.string().optional(),
   notes: z.string().optional(),
+  fitScore: z.number().optional(),
+  fitDecision: countryFitDecisionSchema.optional(),
+  contentGate: contentGenerationGateSchema.optional(),
   contentSnapshot: applicationContentSnapshotSchema.optional()
 })
 

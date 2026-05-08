@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   companionDashboardStateSchema,
+  evaluateCountryFit,
   getCandidateProfileBridgeIssues,
   hasCandidateProfileBridgeEvidence,
   type ApplicationRecord,
   type ApplicationStatus,
   type CandidateProfile,
   type CompanionDashboardState,
+  type CountryFitEvaluation,
   type JobAnalysisDraft,
   type ReusableAnswers
 } from "shared"
@@ -42,9 +44,10 @@ type ContextSuggestion = ProductContext & {
 }
 
 type DecisionBrief = {
-  decision: "Apply now" | "Apply with caution" | "Improve profile first"
+  decision: CountryFitEvaluation["decision"]
   confidence: "Low" | "Medium" | "High"
   score: number
+  contentGate: CountryFitEvaluation["contentGate"]
   rationale: string[]
   risks: string[]
   nextActions: string[]
@@ -299,7 +302,10 @@ function getHostname(url: string) {
   }
 }
 
-function createApplication(job: JobAnalysisDraft): ApplicationRecord {
+function createApplication(
+  job: JobAnalysisDraft,
+  fitEvaluation: CountryFitEvaluation
+): ApplicationRecord {
   const title = job.jobTitle || "Untitled role"
   return {
     id: crypto.randomUUID(),
@@ -310,9 +316,19 @@ function createApplication(job: JobAnalysisDraft): ApplicationRecord {
     source: getHostname(job.jobUrl),
     createdAt: new Date().toISOString(),
     status: "Saved",
-    nextAction: "Tailor application",
+    nextAction: fitEvaluation.nextBestAction,
     nextActionDate: "",
-    notes: job.positioningAngle || job.notes
+    notes: [
+      fitEvaluation.decision,
+      fitEvaluation.positioningAngle,
+      job.positioningAngle || job.notes,
+      fitEvaluation.learningPrompt
+    ]
+      .filter(Boolean)
+      .join(" "),
+    fitScore: fitEvaluation.overallScore,
+    fitDecision: fitEvaluation.decision,
+    contentGate: fitEvaluation.contentGate
   }
 }
 
@@ -548,12 +564,12 @@ function inferContextFromResume(
 function getDecisionBrief({
   context,
   state,
-  fitScore,
+  fitEvaluation,
   readinessScore
 }: {
   context: ProductContext
   state: CompanionDashboardState
-  fitScore: number
+  fitEvaluation: CountryFitEvaluation
   readinessScore: number
 }): DecisionBrief {
   const missingInputs = [
@@ -564,10 +580,11 @@ function getDecisionBrief({
     !state.jobAnalysis.jobDescription.trim() && "job description",
     !state.jobAnalysis.jobUrl.trim() && "job URL"
   ].filter(Boolean) as string[]
+  const fitRisks = fitEvaluation.components
+    .filter((item) => item.status === "weak" || item.status === "blocker")
+    .map((item) => `${item.label}: ${item.rationale}`)
   const risks = [
-    context.candidatePosition === "foreign-candidate" &&
-      !state.profile.workRightDetails.trim() &&
-      "Work-right, visa, sponsorship or relocation details are not confirmed.",
+    ...fitRisks,
     !state.profile.baseCvText.trim() &&
       "CV text is missing, so the advice will be weaker.",
     !state.jobAnalysis.jobDescription.trim() &&
@@ -578,23 +595,17 @@ function getDecisionBrief({
       } need review.`
   ].filter(Boolean) as string[]
 
-  const decision =
-    fitScore >= 80 && readinessScore >= 70 && risks.length <= 1
-      ? "Apply now"
-      : fitScore >= 60 && readinessScore >= 50
-        ? "Apply with caution"
-        : "Improve profile first"
-
   return {
-    decision,
-    confidence:
-      readinessScore >= 80 ? "High" : readinessScore >= 55 ? "Medium" : "Low",
-    score: Math.round(fitScore * 0.55 + readinessScore * 0.45),
+    decision: fitEvaluation.decision,
+    confidence: fitEvaluation.confidence,
+    score: fitEvaluation.overallScore,
+    contentGate: fitEvaluation.contentGate,
     rationale: [
       `${getMarketLabel(context)} mode is active for ${context.targetCountry}.`,
-      `Current fit score is ${fitScore}% and readiness is ${readinessScore}%.`,
-      getMarketPositioning(context),
-      getUrgencyGuidance(context)
+      `Country-fit score is ${fitEvaluation.overallScore}% and profile readiness is ${readinessScore}%.`,
+      fitEvaluation.positioningAngle,
+      getUrgencyGuidance(context),
+      fitEvaluation.learningPrompt
     ],
     risks:
       risks.length > 0
@@ -603,22 +614,22 @@ function getDecisionBrief({
             "No critical risk is visible from the saved profile and job context."
           ],
     nextActions:
-      decision === "Apply now"
+      fitEvaluation.contentGate === "ready"
         ? [
             "Save the role into Applications.",
-            "Tailor the application content against the saved job description.",
+            "Generate application content from the approved positioning angle.",
             "Track next action and prepare interview prompts if shortlisted."
           ]
-        : decision === "Apply with caution"
+        : fitEvaluation.contentGate === "stretch"
           ? [
-              "Clarify the highest-risk country or work-right detail.",
-              "Add stronger CV text before generating final content.",
+              "Label this as a stretch application before generating content.",
+              "Clarify the weakest country, work-right or sponsorship signal.",
               "Apply only if the role is strategically important."
             ]
           : [
-              "Paste CV/resume text and approve the suggested context.",
-              "Add target country, target roles and work-right details.",
-              "Paste a real job description before deciding."
+              fitEvaluation.nextBestAction,
+              "Add missing target country, target roles and work-right details.",
+              "Re-check the role before writing application content."
             ],
     missingInputs
   }
@@ -639,6 +650,21 @@ export default function HomePage() {
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
+  )
+  const fitEvaluation = useMemo(
+    () =>
+      evaluateCountryFit({
+        profile: state.profile,
+        job: {
+          ...state.jobAnalysis,
+          fitScore
+        },
+        context: {
+          candidatePosition: productContext.candidatePosition,
+          targetCountry: productContext.targetCountry
+        }
+      }),
+    [state.profile, state.jobAnalysis, productContext, fitScore]
   )
   const readinessScore = useMemo(
     () => getReadinessScore(state, fitScore),
@@ -662,10 +688,10 @@ export default function HomePage() {
       getDecisionBrief({
         context: productContext,
         state,
-        fitScore,
+        fitEvaluation,
         readinessScore
       }),
-    [productContext, state, fitScore, readinessScore]
+    [productContext, state, fitEvaluation, readinessScore]
   )
   const profileBridgeIssues = useMemo(
     () => getCandidateProfileBridgeIssues(state.profile),
@@ -820,10 +846,25 @@ export default function HomePage() {
       return
     }
 
-    const application = createApplication({
-      ...state.jobAnalysis,
-      fitScore
-    })
+    const application = createApplication(
+      {
+        ...state.jobAnalysis,
+        fitScore: fitEvaluation.overallScore,
+        recommendation:
+          fitEvaluation.decision === "Apply now"
+            ? "High Priority"
+            : fitEvaluation.decision === "Stretch application"
+              ? "Stretch"
+              : fitEvaluation.decision === "Skip for now"
+                ? "Skip"
+                : "Worth Applying",
+        positioningAngle: fitEvaluation.positioningAngle,
+        scoreFactors: fitEvaluation.components.map(
+          (item) => `${item.label}: ${item.rationale}`
+        )
+      },
+      fitEvaluation
+    )
     persist(
       {
         ...state,
@@ -965,16 +1006,17 @@ export default function HomePage() {
           <p className="eyebrow">AutoTime EU Apply</p>
           <h1>Your job search, organised.</h1>
           <p>
-            Keep your profile, job checks, application writing and interview
-            prep in one place. AutoTime helps you decide where to apply and what
-            to do next without turning your job search into a spreadsheet.
+            Decide whether a UK/EU role is realistic before writing anything.
+            AutoTime checks skill match, country fit, sponsorship, work rights
+            and relocation, then turns viable roles into application and
+            interview next steps.
           </p>
           <div
             className="header-actions"
             aria-label="Primary dashboard actions"
           >
             <button type="button" onClick={saveApplicationFromJob}>
-              Save this job
+              Save checked job
             </button>
             <button
               className="secondary-button"
@@ -992,9 +1034,9 @@ export default function HomePage() {
           </div>
           <div>
             <small>Job fit</small>
-            <strong>{fitScore}%</strong>
+            <strong>{fitEvaluation.overallScore}%</strong>
           </div>
-          <p>{state.jobAnalysis.recommendation || "Qualification pending"}</p>
+          <p>{fitEvaluation.decision}</p>
         </div>
       </header>
 
@@ -1233,6 +1275,13 @@ export default function HomePage() {
           <strong>{decisionBrief.score}%</strong>
           <span>{decisionBrief.decision}</span>
           <small>{decisionBrief.confidence} confidence</small>
+          <small>
+            {decisionBrief.contentGate === "ready"
+              ? "Content ready"
+              : decisionBrief.contentGate === "stretch"
+                ? "Stretch label required"
+                : "Content blocked"}
+          </small>
         </div>
         <div className="decision-columns">
           <section>
@@ -1643,25 +1692,71 @@ export default function HomePage() {
               />
             </label>
             <button type="button" onClick={saveApplicationFromJob}>
-              Save this job
+              {fitEvaluation.contentGate === "ready"
+                ? "Save viable job"
+                : fitEvaluation.contentGate === "stretch"
+                  ? "Save as stretch"
+                  : "Save blocker for review"}
             </button>
           </div>
 
           <div className="output-column">
+            <section className="panel country-fit-panel">
+              <div className="section-heading">
+                <p className="eyebrow">Country-fit model</p>
+                <h2>{fitEvaluation.decision}</h2>
+              </div>
+              <div className="fit-gate-banner">
+                <strong>{fitEvaluation.overallScore}%</strong>
+                <span>
+                  {fitEvaluation.contentGate === "ready"
+                    ? "Generate content after positioning"
+                    : fitEvaluation.contentGate === "stretch"
+                      ? "Stretch application: label the risk"
+                      : "Do not write content yet"}
+                </span>
+              </div>
+              <div className="fit-component-grid">
+                {fitEvaluation.components.map((item) => (
+                  <article className={`fit-component ${item.status}`} key={item.key}>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <span>{item.score}%</span>
+                    </div>
+                    <small>{item.status}</small>
+                    <p>{item.rationale}</p>
+                  </article>
+                ))}
+              </div>
+              {fitEvaluation.blockers.length ? (
+                <ul className="bullets-list blocker-list">
+                  {fitEvaluation.blockers.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="empty-state">
+                  No blocker is visible in the country/work-right model.
+                </p>
+              )}
+            </section>
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Job fit</p>
-                <h2>What AutoTime thinks about this role</h2>
+                <p className="eyebrow">Positioning first</p>
+                <h2>
+                  {fitEvaluation.contentGate === "blocked"
+                    ? "Resolve the blocker before writing"
+                    : "Best angle before application content"}
+                </h2>
               </div>
               <p className="large-copy">
-                {state.jobAnalysis.positioningAngle ||
-                  "Add job details to get a useful fit summary."}
+                {fitEvaluation.positioningAngle}
               </p>
               <ul className="bullets-list">
-                {(state.jobAnalysis.scoreFactors?.length
-                  ? state.jobAnalysis.scoreFactors
-                  : ["No score factors saved yet."]
-                ).map((factor) => (
+                {[
+                  fitEvaluation.nextBestAction,
+                  ...(state.jobAnalysis.scoreFactors ?? [])
+                ].map((factor) => (
                   <li key={factor}>{factor}</li>
                 ))}
               </ul>
@@ -1725,6 +1820,16 @@ export default function HomePage() {
                     </strong>
                     <span>{application.company || "Unknown company"}</span>
                     <small>{application.url}</small>
+                    {application.fitDecision ? (
+                      <small>
+                        {application.fitScore ?? 0}% - {application.fitDecision}
+                        {application.contentGate === "stretch"
+                          ? " - stretch"
+                          : application.contentGate === "blocked"
+                            ? " - blocked"
+                            : ""}
+                      </small>
+                    ) : null}
                   </div>
                   <label>
                     Status
@@ -1750,6 +1855,17 @@ export default function HomePage() {
                       onChange={(event) =>
                         updateApplication(application.id, {
                           nextAction: event.target.value
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Outcome learning
+                    <input
+                      value={application.notes ?? ""}
+                      onChange={(event) =>
+                        updateApplication(application.id, {
+                          notes: event.target.value
                         })
                       }
                     />

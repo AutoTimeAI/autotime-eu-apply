@@ -4,6 +4,20 @@ import { join } from "node:path"
 
 const skipLiveSmoke = process.env.SKIP_LIVE_SMOKE === "1"
 
+const offlineWebBuildEnv = {
+  NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "offline-build-anon-key",
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_offline_build",
+  NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+  SUPABASE_SERVICE_ROLE_KEY: "offline-build-service-role-key",
+  OPENAI_API_KEY: "offline-build-openai-key",
+  STRIPE_SECRET_KEY: "sk_test_offline_build",
+  STRIPE_WEBHOOK_SECRET: "whsec_offline_build",
+  STRIPE_PRO_MONTHLY_PRICE_ID: "price_offline_monthly",
+  STRIPE_PRO_ANNUAL_PRICE_ID: "price_offline_annual",
+  RESEND_API_KEY: "re_offline_build"
+}
+
 const checks = [
   {
     name: "Extension unit tests",
@@ -57,7 +71,8 @@ const checks = [
     name: "Web production build",
     command: "pnpm",
     args: ["build:web"],
-    area: "Build"
+    area: "Build",
+    env: offlineWebBuildEnv
   },
   ...(skipLiveSmoke
     ? []
@@ -71,13 +86,17 @@ const checks = [
       ])
 ]
 
-function run(command, args) {
+function run(command, args, options = {}) {
   const commandLine = [command, ...args].join(" ")
   const result = spawnSync(
     process.platform === "win32" ? commandLine : command,
     process.platform === "win32" ? [] : args,
     {
       encoding: "utf8",
+      env: {
+        ...process.env,
+        ...(options.env ?? {})
+      },
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"]
     }
@@ -112,7 +131,7 @@ for (const check of checks) {
   process.stdout.write(`Running ${check.name}... `)
 
   try {
-    const output = run(check.command, check.args)
+    const output = run(check.command, check.args, { env: check.env })
     results.push({ ...check, status: "PASS", output })
     process.stdout.write("PASS\n")
   } catch (error) {

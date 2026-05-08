@@ -246,7 +246,7 @@ export async function POST(
       getServerEnv().STRIPE_WEBHOOK_SECRET
     )
 
-    void handleStripeEvent(event).catch(() => undefined)
+    await handleStripeEvent(event)
 
     return jsonResponse({
       data: { received: true },

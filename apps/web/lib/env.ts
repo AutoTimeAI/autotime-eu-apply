@@ -9,6 +9,10 @@ const requiredString = (name: string) =>
 const optionalString = () => z.string().trim().optional().default("")
 
 const publicEnvSchema = z.object({
+  NEXT_PUBLIC_AUTOTIME_ENV: z
+    .enum(["development", "preview", "production"])
+    .optional()
+    .default("development"),
   NEXT_PUBLIC_SUPABASE_URL: requiredString("NEXT_PUBLIC_SUPABASE_URL").url(
     "NEXT_PUBLIC_SUPABASE_URL must be a valid URL"
   ),
@@ -51,6 +55,7 @@ function formatEnvError(error: z.ZodError): string {
 
 function parsePublicEnv(): PublicEnv {
   const result = publicEnvSchema.safeParse({
+    NEXT_PUBLIC_AUTOTIME_ENV: process.env.NEXT_PUBLIC_AUTOTIME_ENV,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY:
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

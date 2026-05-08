@@ -48,6 +48,15 @@ jobs:
       - name: Run web smoke unit tests
         run: pnpm test:smoke:web
 
+      - name: Run cloud sync tests
+        run: pnpm test:web:cloud-sync
+
+      - name: Run production hardening tests
+        run: pnpm test:production-hardening
+
+      - name: Run country-fit model tests
+        run: pnpm test:country-fit
+
       - name: Run typecheck
         run: pnpm -r typecheck
 
@@ -59,3 +68,16 @@ jobs:
 
       - name: Build web dashboard
         run: pnpm build:web
+        env:
+          NEXT_PUBLIC_AUTOTIME_ENV: preview
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: offline-ci-anon-key
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_offline_ci
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          SUPABASE_SERVICE_ROLE_KEY: offline-ci-service-role-key
+          OPENAI_API_KEY: offline-ci-openai-key
+          STRIPE_SECRET_KEY: sk_test_offline_ci
+          STRIPE_WEBHOOK_SECRET: whsec_offline_ci
+          STRIPE_PRO_MONTHLY_PRICE_ID: price_offline_ci_monthly
+          STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
+          RESEND_API_KEY: re_offline_ci

@@ -1,0 +1,9 @@
+# Require product-owner review for core product, billing, auth, and deployment changes.
+* @rajan
+
+/apps/web/ @rajan
+/apps/extension/ @rajan
+/packages/shared/ @rajan
+/supabase/ @rajan
+/scripts/ @rajan
+/.github/ @rajan

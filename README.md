@@ -149,6 +149,17 @@ Install dependencies:
 pnpm install
 ```
 
+Create local environment variables from the development template:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Use separate provider resources for each lane: local and preview should use a
+development Supabase project plus Stripe test mode, while production should use
+the production Supabase project plus Stripe live mode. The full policy lives in
+`docs/environment-strategy.md`.
+
 Run the extension in development:
 
 ```bash
