@@ -5,7 +5,13 @@ import { logDiagnostic, createDiagnostic } from "./lib/diagnostics"
 import { publicEnv } from "./lib/env"
 import type { Database } from "./lib/supabase/types"
 
-const protectedRoutePrefixes = ["/dashboard", "/api/ai", "/api/stripe"]
+const protectedRoutePrefixes = [
+  "/dashboard",
+  "/diagnostics",
+  "/api/ai",
+  "/api/diagnostics",
+  "/api/stripe"
+]
 const publicRoutePrefixes = [
   "/",
   "/pricing",

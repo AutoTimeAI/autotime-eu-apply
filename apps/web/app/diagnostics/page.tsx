@@ -1,5 +1,8 @@
-import { PublicNav } from "../../components/PublicNav"
+import { redirect } from "next/navigation"
 import { getEnvReadiness } from "../../lib/diagnostics"
+import { createServerClient } from "../../lib/supabase/server"
+
+export const dynamic = "force-dynamic"
 
 const scenarioChecks = [
   {
@@ -34,12 +37,21 @@ const scenarioChecks = [
   }
 ]
 
-export default function DiagnosticsPage() {
+export default async function DiagnosticsPage() {
+  const supabase = await createServerClient()
+  const {
+    data: { user },
+    error
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    redirect("/login?redirectTo=/diagnostics")
+  }
+
   const envReadiness = getEnvReadiness()
 
   return (
     <main className="legal-shell">
-      <PublicNav />
       <header className="legal-header">
         <div>
           <p className="eyebrow">Diagnostics</p>
