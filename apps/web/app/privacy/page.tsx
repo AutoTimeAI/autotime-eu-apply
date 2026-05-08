@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { PublicNav } from "../../components/PublicNav"
 
 const dataItems = [
   "Email address and OAuth account identifiers used for sign-in.",
@@ -17,10 +17,8 @@ const processors = [
 export default function PrivacyPage() {
   return (
     <main className="legal-shell">
+      <PublicNav />
       <header className="legal-header">
-        <Link className="dashboard-brand" href="/">
-          AutoTime <span>EU Apply</span>
-        </Link>
         <div>
           <p className="eyebrow">Privacy policy</p>
           <h1>How AutoTime handles your data</h1>
@@ -31,9 +29,9 @@ export default function PrivacyPage() {
       <section className="legal-section">
         <h2>Data controller</h2>
         <p>
-          The data controller is [Your name/company], London, UK. ICO
-          registration reference: [PENDING - add after registration]. Contact:
-          [your email].
+          The data controller is AUTOTIME AI LTD, London, UK. ICO registration
+          reference will be added after registration is complete. Contact:
+          support@autotime.ai.
         </p>
       </section>
 

@@ -1353,12 +1353,15 @@ h4 {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  margin-bottom: 12px;
 }
 
 .product-nav > div {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .product-nav .nav-cta {
@@ -1835,7 +1838,7 @@ h4 {
 .legal-shell {
   width: min(860px, calc(100% - 36px));
   margin: 0 auto;
-  padding: 30px 0 58px;
+  padding: 18px 0 58px;
 }
 
 .legal-header {
@@ -2067,11 +2070,16 @@ h4 {
   }
 
   .product-nav > div {
-    justify-content: space-between;
+    justify-content: flex-start;
   }
 
   .landing-actions a {
     display: flex;
+  }
+
+  .product-nav a:not(.dashboard-brand) {
+    flex: 1 1 auto;
+    text-align: center;
   }
 
   .pricing-teaser-grid,

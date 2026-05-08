@@ -1,5 +1,4 @@
-import Link from "next/link"
-
+import { PublicNav } from "../../components/PublicNav"
 import { PricingCards } from "../../components/PricingCard"
 import { getServerEnv } from "../../lib/env"
 
@@ -56,18 +55,7 @@ export default function PricingPage() {
 
   return (
     <main className="pricing-shell">
-      <nav className="product-nav" aria-label="Primary">
-        <Link className="dashboard-brand" href="/">
-          AutoTime <span>EU Apply</span>
-        </Link>
-        <div>
-          <Link href="/">Product</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link className="nav-cta" href="/login">
-            Sign in
-          </Link>
-        </div>
-      </nav>
+      <PublicNav />
 
       <header className="pricing-hero">
         <div>

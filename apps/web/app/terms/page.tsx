@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { PublicNav } from "../../components/PublicNav"
 
 const acceptableUse = [
   "Do not use AutoTime to automate job applications.",
@@ -10,10 +10,8 @@ const acceptableUse = [
 export default function TermsPage() {
   return (
     <main className="legal-shell">
+      <PublicNav />
       <header className="legal-header">
-        <Link className="dashboard-brand" href="/">
-          AutoTime <span>EU Apply</span>
-        </Link>
         <div>
           <p className="eyebrow">Terms of service</p>
           <h1>The rules for using AutoTime</h1>

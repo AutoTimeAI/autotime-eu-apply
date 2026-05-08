@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
+import { PublicNav } from "../components/PublicNav"
 import { createServerClient } from "../lib/supabase/server"
 
 export const dynamic = "force-dynamic"
@@ -72,18 +73,7 @@ export default async function LandingPage() {
 
   return (
     <main className="landing-shell">
-      <nav className="product-nav" aria-label="Primary">
-        <Link className="dashboard-brand" href="/">
-          AutoTime <span>EU Apply</span>
-        </Link>
-        <div>
-          <Link href="/pricing">Pricing</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link className="nav-cta" href="/login">
-            Sign in
-          </Link>
-        </div>
-      </nav>
+      <PublicNav />
 
       <section className="landing-hero">
         <div className="landing-hero-copy">
@@ -199,12 +189,11 @@ export default async function LandingPage() {
 
       <footer className="landing-footer">
         <nav aria-label="Footer">
+          <Link href="/">Product</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
-          <a href="https://github.com" rel="noreferrer" target="_blank">
-            GitHub
-          </a>
+          <Link href="/login">Sign in</Link>
         </nav>
         <p>AutoTime EU Apply - built in London</p>
       </footer>
