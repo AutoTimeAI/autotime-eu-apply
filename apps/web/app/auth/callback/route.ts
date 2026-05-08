@@ -3,8 +3,16 @@ import { sendWelcomeEmail } from "../../../lib/email"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
-function getErrorRedirect(request: NextRequest): NextResponse {
-  return NextResponse.redirect(new URL("/auth/error", request.url))
+function getErrorRedirect(
+  request: NextRequest,
+  stage = "unknown",
+  message = "Sign-in could not be completed"
+): NextResponse {
+  const errorUrl = new URL("/auth/error", request.url)
+  errorUrl.searchParams.set("stage", stage)
+  errorUrl.searchParams.set("message", message.slice(0, 180))
+
+  return NextResponse.redirect(errorUrl)
 }
 
 function getSafeRedirectPath(request: NextRequest): string {
@@ -108,14 +116,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const code = requestUrl.searchParams.get("code")
 
     if (!code) {
-      return getErrorRedirect(request)
+      return getErrorRedirect(request, "missing-code", "OAuth code was missing")
     }
 
     const supabase = await createServerClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
-      return getErrorRedirect(request)
+      logAuthCallbackError("exchange-code", error)
+      return getErrorRedirect(request, "exchange-code", error.message)
     }
 
     const {
@@ -124,7 +133,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return getErrorRedirect(request)
+      const message = userError?.message ?? "User session was not available"
+      logAuthCallbackError("read-user", userError ?? new Error(message))
+      return getErrorRedirect(request, "read-user", message)
     }
 
     await runFirstLoginSetup({
@@ -139,7 +150,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (error: unknown) {
     if (error instanceof Error) {
       logAuthCallbackError("session-exchange", error)
-      return getErrorRedirect(request)
+      return getErrorRedirect(request, "session-exchange", error.message)
     }
 
     logAuthCallbackError("unknown", error)
