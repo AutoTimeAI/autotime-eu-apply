@@ -90,6 +90,10 @@ function sendToExtension(
 export default function ExtensionConnect() {
   const searchParams = useSearchParams()
   const extensionId = searchParams.get("extensionId") ?? ""
+  const signInRedirect = extensionId
+    ? `/extension/connect?extensionId=${encodeURIComponent(extensionId)}`
+    : "/extension/connect"
+  const signInHref = `/login?redirectTo=${encodeURIComponent(signInRedirect)}`
   const [status, setStatus] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
 
@@ -152,7 +156,7 @@ export default function ExtensionConnect() {
         <button disabled={isPending} type="button" onClick={handleConnect}>
           {isPending ? "Connecting" : "Connect extension"}
         </button>
-        <a className="secondary-link" href="/login?redirectTo=/extension/connect">
+        <a className="secondary-link" href={signInHref}>
           Sign in first
         </a>
       </div>

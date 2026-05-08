@@ -11,8 +11,8 @@ export default function AuthErrorPage() {
           and try again.
         </p>
         <div className="header-actions">
-          <Link href="/login">
-            <button type="button">Back to sign in</button>
+          <Link className="primary-link" href="/login">
+            Back to sign in
           </Link>
         </div>
       </section>

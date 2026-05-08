@@ -31,8 +31,8 @@ export function UpgradeBanner({ remainingCalls }: UpgradeBannerProps) {
         month. Upgrade to Pro for unlimited AI, cloud sync and interview prep.
       </p>
       <div className="header-actions">
-        <a href="/pricing">
-          <button type="button">Upgrade - £9/month</button>
+        <a className="primary-link" href="/pricing">
+          Upgrade - GBP 9/month
         </a>
         <button className="secondary-button" type="button" onClick={dismiss}>
           Dismiss

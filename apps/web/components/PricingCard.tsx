@@ -47,6 +47,12 @@ async function startCheckout(priceId: string): Promise<string> {
     method: "POST"
   })
 
+  if (response.status === 401) {
+    const redirectTo = encodeURIComponent("/pricing")
+    window.location.assign(`/login?redirectTo=${redirectTo}`)
+    return ""
+  }
+
   const contentType = response.headers.get("content-type") ?? ""
   if (!contentType.includes("application/json")) {
     throw new Error("Please sign in before starting checkout")
@@ -85,6 +91,11 @@ function PricingCard({
       setError(null)
       setIsPending(true)
       const checkoutUrl = await startCheckout(priceId)
+
+      if (!checkoutUrl) {
+        return
+      }
+
       window.location.assign(checkoutUrl)
     } catch (checkoutError: unknown) {
       const message =
@@ -110,7 +121,7 @@ function PricingCard({
             className={feature.included ? "included" : "excluded"}
             key={feature.label}
           >
-            <span aria-hidden="true">{feature.included ? "✓" : "✗"}</span>
+            <span aria-hidden="true">{feature.included ? "+" : "-"}</span>
             {feature.label}
           </li>
         ))}
@@ -137,7 +148,8 @@ export function PricingCards({
 }: PricingCardsProps) {
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("month")
-  const proPrice = billingInterval === "year" ? "£79/year" : "£9/month"
+  const proPrice =
+    billingInterval === "year" ? "GBP 79/year" : "GBP 9/month"
 
   return (
     <>
@@ -165,7 +177,7 @@ export function PricingCards({
           description="For local-first tracking and light AI usage while you validate your search."
           features={freeFeatures}
           name="Free"
-          price="£0/month"
+          price="GBP 0/month"
         />
         <PricingCard
           annualPriceId={annualPriceId}
