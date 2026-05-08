@@ -24,7 +24,17 @@ import {
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
 type MetricTone = "neutral" | "good" | "warn"
-type RoleMarket = "general-tech" | "fintech"
+type RoleMarket =
+  | "general-tech"
+  | "fintech"
+  | "enterprise-saas"
+  | "data-ai"
+  | "cybersecurity"
+  | "healthtech"
+  | "climate-energy"
+  | "gov-public"
+  | "ecommerce-marketplace"
+  | "devtools-cloud"
 type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 type CandidateUrgency = "urgent" | "active" | "exploring"
 
@@ -77,18 +87,241 @@ const roleMarkets: Array<{
   id: RoleMarket
   label: string
   description: string
+  keywords: string[]
+  targetRoles: string
+  positioning: string
+  detectedReason: string
 }> = [
   {
     id: "general-tech",
     label: "General tech",
     description:
-      "Product, SaaS, platform, operations, support, data, analyst and delivery roles."
+      "Product, platform, operations, support, analyst and delivery roles.",
+    keywords: [
+      "product",
+      "platform",
+      "operations",
+      "support",
+      "delivery",
+      "systems",
+      "business analyst"
+    ],
+    targetRoles:
+      "Business Analyst, Systems Analyst, Product Analyst, Data Analyst, Application Support Analyst",
+    positioning:
+      "Show product understanding, systems thinking, measurable user impact, tooling fluency and reliable delivery.",
+    detectedReason:
+      "Detected broad product, platform, systems, support or delivery language."
   },
   {
     id: "fintech",
     label: "FinTech",
     description:
-      "Payments, banking, risk, compliance, resilience, operations and regulated systems roles."
+      "Payments, banking, risk, compliance, resilience, operations and regulated systems roles.",
+    keywords: [
+      "fintech",
+      "payments",
+      "payment",
+      "banking",
+      "risk",
+      "compliance",
+      "kyc",
+      "aml",
+      "settlement",
+      "reconciliation",
+      "operational resilience"
+    ],
+    targetRoles:
+      "Business Analyst, Technical Business Analyst, Application Support Analyst, Payments Analyst, Operational Resilience Analyst",
+    positioning:
+      "Position around payments, financial systems, risk, controls, operational resilience, compliance awareness, stakeholder clarity and reliable delivery.",
+    detectedReason:
+      "Detected FinTech, payments, banking, risk, compliance or resilience language."
+  },
+  {
+    id: "enterprise-saas",
+    label: "Enterprise SaaS",
+    description:
+      "B2B workflows, CRM, ERP, RevOps, customer success, implementation and platform operations.",
+    keywords: [
+      "saas",
+      "b2b",
+      "crm",
+      "erp",
+      "salesforce",
+      "hubspot",
+      "revops",
+      "implementation",
+      "customer success"
+    ],
+    targetRoles:
+      "Business Analyst, Product Analyst, Implementation Analyst, Revenue Operations Analyst, Customer Success Operations Analyst",
+    positioning:
+      "Lead with workflow clarity, customer-facing systems, adoption, implementation discipline, reporting and cross-functional operating rhythm.",
+    detectedReason:
+      "Detected B2B SaaS, CRM, implementation, RevOps or customer operations language."
+  },
+  {
+    id: "data-ai",
+    label: "Data & AI",
+    description:
+      "Analytics, machine learning products, data platforms, reporting, governance and AI operations.",
+    keywords: [
+      "data",
+      "analytics",
+      "machine learning",
+      "ai",
+      "llm",
+      "model",
+      "bi",
+      "dashboard",
+      "governance",
+      "warehouse"
+    ],
+    targetRoles:
+      "Data Analyst, Product Analyst, AI Operations Analyst, Analytics Engineer, Business Intelligence Analyst",
+    positioning:
+      "Position around data quality, metric definition, analytical storytelling, governance, model limitations and decision support.",
+    detectedReason:
+      "Detected data, analytics, AI, BI, model or governance language."
+  },
+  {
+    id: "cybersecurity",
+    label: "Cybersecurity",
+    description:
+      "Security operations, risk, IAM, compliance, incident response, vulnerability and trust workflows.",
+    keywords: [
+      "security",
+      "cyber",
+      "iam",
+      "identity",
+      "soc",
+      "incident",
+      "vulnerability",
+      "iso 27001",
+      "soc 2",
+      "gdpr"
+    ],
+    targetRoles:
+      "Security Analyst, GRC Analyst, IAM Analyst, Security Operations Analyst, Risk Analyst",
+    positioning:
+      "Lead with risk thinking, evidence handling, controls, incident discipline, stakeholder clarity and privacy-aware delivery.",
+    detectedReason:
+      "Detected security, IAM, compliance, incident, privacy or risk-control language."
+  },
+  {
+    id: "healthtech",
+    label: "HealthTech",
+    description:
+      "Digital health, patient workflows, NHS/EU healthcare systems, clinical operations and regulated data.",
+    keywords: [
+      "health",
+      "healthcare",
+      "clinical",
+      "patient",
+      "nhs",
+      "ehr",
+      "emr",
+      "medical",
+      "care pathway"
+    ],
+    targetRoles:
+      "Healthcare Business Analyst, Product Analyst, Clinical Systems Analyst, Implementation Analyst",
+    positioning:
+      "Position around patient workflow safety, data sensitivity, regulated delivery, stakeholder empathy and operational adoption.",
+    detectedReason:
+      "Detected healthcare, clinical, patient workflow or regulated health-system language."
+  },
+  {
+    id: "climate-energy",
+    label: "Climate & Energy",
+    description:
+      "CleanTech, energy platforms, carbon data, grid, sustainability, climate reporting and infrastructure.",
+    keywords: [
+      "climate",
+      "energy",
+      "cleantech",
+      "carbon",
+      "sustainability",
+      "grid",
+      "renewable",
+      "emissions",
+      "esg"
+    ],
+    targetRoles:
+      "Product Analyst, Sustainability Data Analyst, Energy Systems Analyst, Climate Operations Analyst",
+    positioning:
+      "Lead with systems thinking, data quality, regulatory awareness, stakeholder coordination and mission-aligned delivery.",
+    detectedReason:
+      "Detected climate, energy, carbon, sustainability, grid or ESG language."
+  },
+  {
+    id: "gov-public",
+    label: "GovTech & Public Sector",
+    description:
+      "Public services, procurement, citizen workflows, accessibility, compliance and service transformation.",
+    keywords: [
+      "government",
+      "public sector",
+      "govtech",
+      "citizen",
+      "procurement",
+      "accessibility",
+      "gds",
+      "service design"
+    ],
+    targetRoles:
+      "Business Analyst, Service Designer, Digital Transformation Analyst, Product Analyst",
+    positioning:
+      "Position around user needs, accessibility, policy constraints, procurement reality, evidence and service outcomes.",
+    detectedReason:
+      "Detected government, public-sector, service design, accessibility or procurement language."
+  },
+  {
+    id: "ecommerce-marketplace",
+    label: "Ecommerce & Marketplaces",
+    description:
+      "Retail platforms, marketplace operations, payments, logistics, growth, conversion and customer journeys.",
+    keywords: [
+      "ecommerce",
+      "e-commerce",
+      "marketplace",
+      "retail",
+      "checkout",
+      "logistics",
+      "conversion",
+      "growth",
+      "merchant"
+    ],
+    targetRoles:
+      "Product Analyst, Marketplace Operations Analyst, Ecommerce Business Analyst, Growth Analyst",
+    positioning:
+      "Lead with customer journey, funnel metrics, checkout/payment reliability, marketplace operations and commercial impact.",
+    detectedReason:
+      "Detected ecommerce, marketplace, retail, logistics, conversion or growth language."
+  },
+  {
+    id: "devtools-cloud",
+    label: "DevTools & Cloud",
+    description:
+      "Developer platforms, cloud infrastructure, APIs, observability, platform engineering and technical workflows.",
+    keywords: [
+      "developer",
+      "devtools",
+      "cloud",
+      "api",
+      "infrastructure",
+      "kubernetes",
+      "observability",
+      "platform engineering",
+      "ci/cd"
+    ],
+    targetRoles:
+      "Technical Business Analyst, Platform Analyst, Developer Experience Analyst, API Product Analyst",
+    positioning:
+      "Position around technical fluency, API/platform understanding, documentation, reliability signals and developer workflow empathy.",
+    detectedReason:
+      "Detected developer tooling, cloud, API, infrastructure, observability or platform-engineering language."
   }
 ]
 
@@ -399,6 +632,13 @@ function getMarketLabel(context: ProductContext) {
   return roleMarkets.find((market) => market.id === context.roleMarket)?.label
 }
 
+function getRoleMarket(context: Pick<ProductContext, "roleMarket">) {
+  return (
+    roleMarkets.find((market) => market.id === context.roleMarket) ??
+    roleMarkets[0]
+  )
+}
+
 function getCountryGuidance(context: ProductContext) {
   const country = context.targetCountry || "selected country"
 
@@ -410,11 +650,7 @@ function getCountryGuidance(context: ProductContext) {
 }
 
 function getMarketPositioning(context: ProductContext) {
-  if (context.roleMarket === "fintech") {
-    return "Position around payments, financial systems, risk, controls, operational resilience, compliance awareness, stakeholder clarity and reliable delivery."
-  }
-
-  return "Show product/system understanding, clear requirements work, user impact, tooling fluency and measurable outcomes."
+  return getRoleMarket(context).positioning
 }
 
 function getUrgencyGuidance(context: ProductContext) {
@@ -466,10 +702,7 @@ function getEuropeanStrategySteps(context: ProductContext) {
     },
     {
       title: "Application angle",
-      body:
-        context.roleMarket === "fintech"
-          ? "Lead with payments, controls, resilience, data quality and stakeholder delivery."
-          : "Lead with product understanding, systems thinking, measurable impact and user-facing delivery."
+      body: getRoleMarket(context).positioning
     }
   ]
 }
@@ -479,26 +712,29 @@ function includesAny(value: string, words: string[]) {
   return words.some((word) => text.includes(word.toLowerCase()))
 }
 
+function inferRoleMarketFromText(value: string, fallback: RoleMarket) {
+  const ranked = roleMarkets
+    .map((market) => ({
+      market,
+      score: market.keywords.filter((keyword) =>
+        value.toLowerCase().includes(keyword.toLowerCase())
+      ).length
+    }))
+    .sort((a, b) => b.score - a.score)
+
+  return ranked[0]?.score ? ranked[0].market : getRoleMarket({ roleMarket: fallback })
+}
+
 function inferContextFromResume(
   resumeText: string,
   current: ProductContext
 ): ContextSuggestion {
   const words = resumeText.trim().split(/\s+/).filter(Boolean)
-  const roleMarket = includesAny(resumeText, [
-    "fintech",
-    "payments",
-    "payment",
-    "banking",
-    "risk",
-    "compliance",
-    "kyc",
-    "aml",
-    "settlement",
-    "reconciliation",
-    "operational resilience"
-  ])
-    ? "fintech"
-    : current.roleMarket
+  const inferredMarket = inferRoleMarketFromText(
+    resumeText,
+    current.roleMarket
+  )
+  const roleMarket = inferredMarket.id
   const candidatePosition = includesAny(resumeText, [
     "visa",
     "sponsorship",
@@ -540,9 +776,7 @@ function inferContextFromResume(
     experienceLevel,
     targetRoles:
       targetRoles ||
-      (roleMarket === "fintech"
-        ? "Business Analyst, Technical Business Analyst, Payments Analyst, Application Support Analyst"
-        : "Business Analyst, Systems Analyst, Product Analyst, Data Analyst, Application Support Analyst"),
+      inferredMarket.targetRoles,
     workRightPrompt:
       candidatePosition === "foreign-candidate"
         ? "Confirm visa/work-right status, sponsorship need, relocation timing and eligible countries before applying."
@@ -550,9 +784,7 @@ function inferContextFromResume(
     confidence:
       words.length > 120 ? "High" : words.length > 50 ? "Medium" : "Low",
     reasons: [
-      roleMarket === "fintech"
-        ? "Detected FinTech, payments, banking, risk, compliance or resilience language."
-        : "Detected a broader general-tech profile or no strong FinTech signal.",
+      inferredMarket.detectedReason,
       candidatePosition === "foreign-candidate"
         ? "Detected visa, sponsorship, work permit or relocation language."
         : "No strong visa or relocation signal was detected; user approval is still required.",
@@ -750,10 +982,7 @@ export default function HomePage() {
   }
 
   const applyMarketContextToProfile = () => {
-    const targetRoles =
-      productContext.roleMarket === "fintech"
-        ? "Business Analyst, Technical Business Analyst, Application Support Analyst, Payments Analyst, Operational Resilience Analyst"
-        : "Business Analyst, Systems Analyst, Product Analyst, Data Analyst, Application Support Analyst"
+    const market = getRoleMarket(productContext)
 
     persist(
       {
@@ -761,7 +990,7 @@ export default function HomePage() {
         profile: {
           ...state.profile,
           targetCountries: productContext.targetCountry,
-          targetRoles,
+          targetRoles: market.targetRoles,
           relocationWillingness:
             productContext.candidatePosition === "foreign-candidate"
               ? "depends"
