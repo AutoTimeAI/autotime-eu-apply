@@ -75,6 +75,33 @@ function getFallbackName(email: string | undefined): string {
   return email.split("@")[0] || "there"
 }
 
+function logAuthCallbackError(stage: string, error: unknown): void {
+  console.error("auth_callback_failed", {
+    reason: error instanceof Error ? error.message : "Unknown auth callback error",
+    stage
+  })
+}
+
+async function runFirstLoginSetup({
+  email,
+  name,
+  userId
+}: {
+  email: string | undefined
+  name: string
+  userId: string
+}): Promise<void> {
+  try {
+    const isFirstLogin = await ensureFreeSubscription(userId)
+
+    if (isFirstLogin && email) {
+      await sendWelcomeEmail(email, name)
+    }
+  } catch (error: unknown) {
+    logAuthCallbackError("first-login-setup", error)
+  }
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const requestUrl = new URL(request.url)
@@ -100,23 +127,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return getErrorRedirect(request)
     }
 
-    const isFirstLogin = await ensureFreeSubscription(user.id)
-
-    if (isFirstLogin && user.email) {
-      await sendWelcomeEmail(
-        user.email,
-        getMetadataName(user.user_metadata) ?? getFallbackName(user.email)
-      )
-    }
+    await runFirstLoginSetup({
+      email: user.email,
+      name: getMetadataName(user.user_metadata) ?? getFallbackName(user.email),
+      userId: user.id
+    })
 
     return NextResponse.redirect(
       new URL(getSafeRedirectPath(request), request.url)
     )
   } catch (error: unknown) {
     if (error instanceof Error) {
+      logAuthCallbackError("session-exchange", error)
       return getErrorRedirect(request)
     }
 
+    logAuthCallbackError("unknown", error)
     return getErrorRedirect(request)
   }
 }

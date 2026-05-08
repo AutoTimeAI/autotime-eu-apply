@@ -70,10 +70,11 @@ export async function getUserPlan(
 
     return plan
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Unable to read user plan"
+    console.error("feature_gate_plan_read_failed", {
+      reason: error instanceof Error ? error.message : "Unable to read user plan"
+    })
 
-    throw new Error(message)
+    return "free"
   }
 }
 
@@ -120,12 +121,14 @@ export async function getRemainingAiCalls(userId: string): Promise<number> {
     const monthlyCalls = await getMonthlyAiCallCount(userId)
     return Math.max(0, FREE_AI_CALLS_PER_MONTH - monthlyCalls)
   } catch (error: unknown) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to calculate remaining AI calls"
+    console.error("feature_gate_remaining_calls_failed", {
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Unable to calculate remaining AI calls"
+    })
 
-    throw new Error(message)
+    return 0
   }
 }
 
