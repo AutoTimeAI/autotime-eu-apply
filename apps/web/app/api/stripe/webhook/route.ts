@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import type Stripe from "stripe"
+import { diagnosticJson } from "../../../../lib/diagnostics"
 import { sendUpgradeConfirmed } from "../../../../lib/email"
 import { getServerEnv } from "../../../../lib/env"
 import { createAdminClient } from "../../../../lib/supabase/admin"
@@ -232,9 +233,12 @@ export async function POST(
     const signature = request.headers.get("stripe-signature")
 
     if (!signature) {
-      return jsonResponse({
+      return diagnosticJson({
+        area: "stripe",
+        code: "stripe.webhook.signature.missing",
         data: null,
         error: "Missing Stripe signature",
+        request,
         status: 400
       })
     }
@@ -257,6 +261,14 @@ export async function POST(
     const message =
       error instanceof Error ? error.message : "Stripe webhook failed"
 
-    return jsonResponse({ data: null, error: message, status: 400 })
+    return diagnosticJson({
+      area: "stripe",
+      code: "stripe.webhook.failed",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 400
+    })
   }
 }

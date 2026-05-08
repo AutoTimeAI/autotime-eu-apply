@@ -18,6 +18,7 @@ import {
   trackAiCall
 } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
+import { diagnosticJson } from "../../../../lib/diagnostics"
 
 type ApiResponse<T> = {
   data: T | null
@@ -53,7 +54,14 @@ export async function POST(
     const { user, error: userError } = await getRequestUser(request)
 
     if (userError || !user) {
-      return jsonResponse({ data: null, error: "Unauthorised", status: 401 })
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.interview.auth.missing-user",
+        data: null,
+        error: "Unauthorised",
+        request,
+        status: 401
+      })
     }
 
     assertAiRouteRateLimit(user.id)
@@ -77,24 +85,49 @@ export async function POST(
     })
   } catch (error: unknown) {
     if (error instanceof FeatureGateError) {
-      return jsonResponse({
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.interview.feature-gate",
         data: { upgradeUrl: getUpgradeUrl(request) },
         error: error.message,
+        request,
         status: 402
       })
     }
 
     if (error instanceof RateLimitError) {
-      return jsonResponse({ data: null, error: error.message, status: 429 })
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.interview.rate-limit",
+        data: null,
+        error: error.message,
+        request,
+        status: 429
+      })
     }
 
     if (error instanceof z.ZodError) {
-      return jsonResponse({ data: null, error: "Invalid request body", status: 400 })
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.interview.request.invalid",
+        data: null,
+        error: "Invalid request body",
+        request,
+        status: 400
+      })
     }
 
     const message =
       error instanceof Error ? error.message : "AI interview prep failed"
 
-    return jsonResponse({ data: null, error: message, status: 500 })
+    return diagnosticJson({
+      area: "ai",
+      code: "ai.interview.failed",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 500
+    })
   }
 }

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { diagnosticJson } from "../../../../lib/diagnostics"
 import { publicEnv } from "../../../../lib/env"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createServerClient } from "../../../../lib/supabase/server"
@@ -92,15 +93,25 @@ export async function POST(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return jsonResponse({ data: null, error: "Unauthorised", status: 401 })
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.checkout.auth.missing-user",
+        data: null,
+        error: "Unauthorised",
+        request,
+        status: 401
+      })
     }
 
     const body = requestSchema.parse(await request.json())
 
     if (!isConfiguredStripePrice(body.priceId)) {
-      return jsonResponse({
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.checkout.price.invalid",
         data: null,
         error: "Selected plan is not available",
+        request,
         status: 400
       })
     }
@@ -132,9 +143,13 @@ export async function POST(
     })
 
     if (!session.url) {
-      return jsonResponse({
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.checkout.session.missing-url",
         data: null,
         error: "Stripe checkout session did not return a URL",
+        log: true,
+        request,
         status: 502
       })
     }
@@ -146,12 +161,27 @@ export async function POST(
     })
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      return jsonResponse({ data: null, error: "Invalid request body", status: 400 })
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.checkout.request.invalid",
+        data: null,
+        error: "Invalid request body",
+        request,
+        status: 400
+      })
     }
 
     const message =
       error instanceof Error ? error.message : "Checkout session failed"
 
-    return jsonResponse({ data: null, error: message, status: 500 })
+    return diagnosticJson({
+      area: "billing",
+      code: "billing.checkout.failed",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 500
+    })
   }
 }

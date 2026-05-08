@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getUserPlan } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
+import { diagnosticJson } from "../../../../lib/diagnostics"
 import type { SubscriptionPlan } from "../../../../lib/supabase/types"
 
 type ApiResponse<T> = {
@@ -27,7 +28,14 @@ export async function GET(
     const { user } = await getRequestUser(request)
 
     if (!user?.email) {
-      return jsonResponse({ data: null, error: "Unauthorised", status: 401 })
+      return diagnosticJson({
+        area: "account",
+        code: "account.auth.missing-user",
+        data: null,
+        error: "Unauthorised",
+        request,
+        status: 401
+      })
     }
 
     const plan = await getUserPlan(user.id)
@@ -44,6 +52,14 @@ export async function GET(
     const message =
       error instanceof Error ? error.message : "Unable to read account"
 
-    return jsonResponse({ data: null, error: message, status: 500 })
+    return diagnosticJson({
+      area: "account",
+      code: "account.read.failed",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 500
+    })
   }
 }

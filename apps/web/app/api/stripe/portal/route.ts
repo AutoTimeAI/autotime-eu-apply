@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { diagnosticJson } from "../../../../lib/diagnostics"
 import { publicEnv } from "../../../../lib/env"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createServerClient } from "../../../../lib/supabase/server"
@@ -60,16 +61,26 @@ export async function POST(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return jsonResponse({ data: null, error: "Unauthorised", status: 401 })
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.portal.auth.missing-user",
+        data: null,
+        error: "Unauthorised",
+        request,
+        status: 401
+      })
     }
 
     const body = requestSchema.parse(await request.json())
     const customerId = await getStripeCustomerId(user.id)
 
     if (!customerId) {
-      return jsonResponse({
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.portal.customer.missing",
         data: null,
         error: "No billing customer exists for this account",
+        request,
         status: 400
       })
     }
@@ -86,12 +97,27 @@ export async function POST(
     })
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      return jsonResponse({ data: null, error: "Invalid request body", status: 400 })
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.portal.request.invalid",
+        data: null,
+        error: "Invalid request body",
+        request,
+        status: 400
+      })
     }
 
     const message =
       error instanceof Error ? error.message : "Billing portal failed"
 
-    return jsonResponse({ data: null, error: message, status: 500 })
+    return diagnosticJson({
+      area: "billing",
+      code: "billing.portal.failed",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 500
+    })
   }
 }

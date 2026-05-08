@@ -11,6 +11,7 @@ export function PublicNav() {
         <Link href="/pricing">Pricing</Link>
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
+        <Link href="/diagnostics">Diagnostics</Link>
         <Link className="nav-cta" href="/login">
           Sign in
         </Link>

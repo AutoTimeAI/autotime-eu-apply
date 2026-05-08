@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import type { CookieOptions } from "@supabase/ssr"
 import { type NextRequest, NextResponse } from "next/server"
+import { logDiagnostic, createDiagnostic } from "./lib/diagnostics"
 import { publicEnv } from "./lib/env"
 import type { Database } from "./lib/supabase/types"
 
@@ -95,6 +96,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         `${pathname}${request.nextUrl.search}`
       )
 
+      logDiagnostic(
+        createDiagnostic({
+          area: "auth",
+          code: "auth.middleware.protected-redirect",
+          message: "Protected route requested without a session",
+          request,
+          status: 307
+        })
+      )
+
       return applyAuthCookies({
         cookiesToSet,
         headersToSet,
@@ -111,6 +122,16 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const pathname = request.nextUrl.pathname
 
     if (isProtectedPath(pathname)) {
+      logDiagnostic(
+        createDiagnostic({
+          area: "auth",
+          code: "auth.middleware.failed",
+          message: error instanceof Error ? error.message : "Middleware failed",
+          request,
+          status: 307
+        })
+      )
+
       return NextResponse.redirect(new URL("/login", request.url))
     }
 

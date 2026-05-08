@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { candidateProfileSchema } from "shared"
+import { diagnosticJson } from "../../../../lib/diagnostics"
 import { isProUser } from "../../../../lib/feature-gate"
 import { syncProfile } from "../../../../lib/cloud-sync"
 import { createServerClient } from "../../../../lib/supabase/server"
@@ -32,13 +33,23 @@ export async function POST(
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
-      return jsonResponse({ data: null, error: "Unauthorised", status: 401 })
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.auth.missing-user",
+        data: null,
+        error: "Unauthorised",
+        request,
+        status: 401
+      })
     }
 
     if (!(await isProUser(user.id))) {
-      return jsonResponse({
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.plan.not-pro",
         data: null,
         error: "Cloud sync requires a Pro plan",
+        request,
         status: 403
       })
     }
@@ -47,9 +58,13 @@ export async function POST(
     const result = await syncProfile(supabase, user.id, profile)
 
     if (!result.success) {
-      return jsonResponse({
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.write.failed",
         data: null,
         error: result.error,
+        log: true,
+        request,
         status: 500
       })
     }
@@ -61,12 +76,27 @@ export async function POST(
     })
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      return jsonResponse({ data: null, error: "Invalid request body", status: 400 })
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.request.invalid",
+        data: null,
+        error: "Invalid request body",
+        request,
+        status: 400
+      })
     }
 
     const message =
       error instanceof Error ? error.message : "Profile sync failed"
 
-    return jsonResponse({ data: null, error: message, status: 500 })
+    return diagnosticJson({
+      area: "sync",
+      code: "sync.profile.failed",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 500
+    })
   }
 }

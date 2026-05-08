@@ -1893,6 +1893,48 @@ h4 {
   padding-left: 20px;
 }
 
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.diagnostic-item {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.diagnostic-item.ready {
+  border-left-color: var(--green);
+}
+
+.diagnostic-item.missing {
+  border-left-color: var(--red);
+}
+
+.diagnostic-item strong,
+.diagnostic-item span,
+.diagnostic-item small {
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-item span {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.diagnostic-item small,
+.diagnostic-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .consent-banner {
   position: fixed;
   right: 18px;
@@ -2083,6 +2125,7 @@ h4 {
   }
 
   .pricing-teaser-grid,
+  .diagnostic-grid,
   .landing-footer {
     grid-template-columns: 1fr;
   }
