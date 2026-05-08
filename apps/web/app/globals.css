@@ -38,6 +38,8 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 * {
@@ -52,14 +54,14 @@ textarea {
 }
 
 button {
-  min-height: 40px;
+  min-height: 38px;
   border: 1px solid var(--accent);
   border-radius: 8px;
   background: linear-gradient(180deg, #12847b, var(--accent-strong));
   color: #ffffff;
   cursor: pointer;
-  font-weight: 850;
-  padding: 10px 14px;
+  font-weight: 700;
+  padding: 9px 13px;
   box-shadow: var(--shadow-tight);
 }
 
@@ -117,7 +119,7 @@ label {
   gap: 7px;
   color: #3a4659;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 650;
 }
 
 h1,
@@ -132,15 +134,17 @@ h1 {
   max-width: 840px;
   margin-bottom: 12px;
   color: var(--ink);
-  font-size: 3.7rem;
+  font-size: 2.65rem;
+  font-weight: 700;
   letter-spacing: 0;
-  line-height: 0.96;
+  line-height: 1.06;
 }
 
 h2 {
   margin-bottom: 10px;
   color: var(--ink);
-  font-size: 1.12rem;
+  font-size: 1.05rem;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -148,6 +152,7 @@ h3 {
   margin-bottom: 6px;
   color: var(--ink);
   font-size: 0.98rem;
+  font-weight: 700;
 }
 
 h4 {
@@ -204,7 +209,7 @@ h4 {
   margin: 0 0 8px;
   color: var(--accent);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -235,13 +240,14 @@ h4 {
 .pipeline-summary small {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
 .executive-panel strong {
   color: var(--blue);
-  font-size: 2.1rem;
+  font-size: 1.75rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -250,7 +256,7 @@ h4 {
   margin: 0;
   border-left: 3px solid var(--accent);
   color: var(--text);
-  font-weight: 800;
+  font-weight: 650;
   line-height: 1.45;
   padding-left: 12px;
 }
@@ -291,7 +297,7 @@ h4 {
   border-radius: 8px;
   background: #eaf7f5;
   color: var(--accent-strong);
-  font-weight: 900;
+  font-weight: 650;
   padding: 12px 14px;
 }
 
@@ -326,7 +332,7 @@ h4 {
 .segmented-field legend {
   color: #3a4659;
   font-size: 0.9rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .segmented-options {
@@ -476,13 +482,13 @@ h4 {
 
 .suggestion-card span {
   color: var(--blue);
-  font-size: 1.35rem;
-  font-weight: 950;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .suggestion-card small {
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
@@ -495,14 +501,14 @@ h4 {
 .suggestion-card dt {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
 .suggestion-card dd {
   margin: 2px 0 0;
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .suggestion-card .bullets-list {
@@ -543,20 +549,20 @@ h4 {
 
 .decision-score strong {
   color: var(--blue);
-  font-size: 2rem;
-  font-weight: 950;
+  font-size: 1.75rem;
+  font-weight: 700;
   line-height: 1;
 }
 
 .decision-score span {
   color: var(--ink);
-  font-size: 1.35rem;
-  font-weight: 950;
+  font-size: 1.18rem;
+  font-weight: 700;
 }
 
 .decision-score small {
   color: var(--muted);
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
@@ -587,14 +593,14 @@ h4 {
 
 .fit-gate-banner strong {
   color: var(--accent-strong);
-  font-size: 1.8rem;
-  font-weight: 950;
+  font-size: 1.45rem;
+  font-weight: 700;
   line-height: 1;
 }
 
 .fit-gate-banner span {
   color: var(--ink);
-  font-weight: 900;
+  font-weight: 650;
 }
 
 .fit-component-grid {
@@ -623,7 +629,7 @@ h4 {
 
 .country-rule-strip strong {
   color: var(--ink);
-  font-weight: 950;
+  font-weight: 700;
 }
 
 .country-rule-strip span {
@@ -654,14 +660,14 @@ h4 {
 .country-rule-strip dt {
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
 .country-rule-strip dd {
   margin-top: 4px;
   color: var(--ink);
-  font-weight: 950;
+  font-weight: 700;
   text-transform: capitalize;
 }
 
@@ -698,7 +704,7 @@ h4 {
 .fit-component strong,
 .fit-component span {
   color: var(--ink);
-  font-weight: 950;
+  font-weight: 700;
 }
 
 .fit-component small {
@@ -706,7 +712,7 @@ h4 {
   margin: 8px 0;
   color: var(--muted);
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
@@ -719,7 +725,7 @@ h4 {
 
 .blocker-list li {
   color: var(--red);
-  font-weight: 850;
+  font-weight: 650;
 }
 
 .evidence-list {
@@ -769,7 +775,7 @@ h4 {
   background: #fff2d8;
   color: var(--amber);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 650;
   padding: 5px 8px;
   text-transform: uppercase;
 }
@@ -871,7 +877,7 @@ h4 {
   margin-top: 4px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
@@ -886,7 +892,7 @@ h4 {
   gap: 8px;
   color: var(--text);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 650;
   line-height: 1.35;
 }
 
@@ -916,8 +922,8 @@ h4 {
 .pipeline-summary span {
   display: block;
   color: var(--ink);
-  font-size: 1.7rem;
-  font-weight: 950;
+  font-size: 1.45rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -995,14 +1001,14 @@ h4 {
 .summary-list dt {
   color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
 .summary-list dd {
   margin: 4px 0 0;
   color: var(--ink);
-  font-weight: 850;
+  font-weight: 650;
 }
 
 .bullets-list {
@@ -1028,7 +1034,7 @@ h4 {
   background: #edf7f5;
   color: var(--accent-strong);
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 650;
   padding: 6px 10px;
 }
 
@@ -1116,7 +1122,7 @@ h4 {
 
 .ai-budget-summary span {
   color: var(--blue);
-  font-weight: 950;
+  font-weight: 700;
 }
 
 .ai-budget-summary small {
@@ -1215,7 +1221,7 @@ h4 {
   border-radius: 999px;
   color: var(--muted);
   font-size: 0.88rem;
-  font-weight: 850;
+  font-weight: 650;
   padding: 8px 11px;
   text-decoration: none;
 }
@@ -1231,7 +1237,7 @@ h4 {
   align-items: baseline;
   gap: 6px;
   color: var(--ink);
-  font-weight: 950;
+  font-weight: 700;
   text-decoration: none;
 }
 
@@ -1260,7 +1266,7 @@ h4 {
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--blue));
   color: #ffffff;
-  font-weight: 950;
+  font-weight: 700;
 }
 
 .user-nav-copy {
@@ -1273,7 +1279,7 @@ h4 {
   overflow: hidden;
   color: var(--ink);
   font-size: 0.88rem;
-  font-weight: 850;
+  font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1286,7 +1292,7 @@ h4 {
   background: var(--surface-muted);
   color: var(--muted);
   font-size: 0.72rem;
-  font-weight: 950;
+  font-weight: 650;
   padding: 2px 8px;
   text-transform: uppercase;
 }
@@ -1337,7 +1343,7 @@ h4 {
 
 .upgrade-banner p {
   margin: 0;
-  font-weight: 850;
+  font-weight: 650;
   line-height: 1.45;
 }
 
@@ -1386,15 +1392,17 @@ h4 {
 .landing-hero-copy h1 {
   max-width: 900px;
   margin: 0;
-  font-size: 4.35rem;
+  font-size: 3.25rem;
+  font-weight: 700;
+  line-height: 1.06;
 }
 
 .landing-hero-copy > p:not(.eyebrow) {
   max-width: 760px;
   margin: 0;
   color: var(--muted);
-  font-size: 1.08rem;
-  line-height: 1.75;
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 .landing-actions {
@@ -1415,19 +1423,19 @@ h4 {
   background: rgba(255, 255, 255, 0.78);
   color: var(--muted);
   font-size: 0.82rem;
-  font-weight: 850;
+  font-weight: 650;
   padding: 7px 10px;
 }
 
 .primary-link,
 .secondary-link {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 40px;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  font-weight: 900;
-  padding: 11px 16px;
+  font-weight: 700;
+  padding: 10px 15px;
   text-decoration: none;
 }
 
@@ -1497,15 +1505,15 @@ h4 {
 .landing-signal-panel dt {
   color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 900;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
 .landing-signal-panel strong,
 .landing-signal-panel dd {
   color: var(--accent-strong);
-  font-size: 1.45rem;
-  font-weight: 950;
+  font-size: 1.2rem;
+  font-weight: 700;
   margin: 0;
 }
 
@@ -1532,7 +1540,8 @@ h4 {
 
 .section-heading h2 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.45rem;
+  line-height: 1.18;
 }
 
 .landing-step-grid,
@@ -1563,7 +1572,7 @@ h4 {
   border-radius: 50%;
   background: var(--surface-muted);
   color: var(--accent-strong);
-  font-weight: 950;
+  font-weight: 700;
 }
 
 .landing-step p,
@@ -1597,7 +1606,8 @@ h4 {
 .pricing-teaser strong {
   display: block;
   color: var(--ink);
-  font-size: 1.8rem;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .pricing-teaser ul {
@@ -1625,14 +1635,14 @@ h4 {
 
 .landing-footer a {
   color: var(--accent-strong);
-  font-weight: 850;
+  font-weight: 650;
   text-decoration: none;
 }
 
 .landing-footer p {
   margin: 0;
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .pricing-shell {
@@ -1661,8 +1671,8 @@ h4 {
   max-width: 760px;
   margin: 0;
   color: var(--muted);
-  font-size: 1.08rem;
-  line-height: 1.72;
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 .billing-toggle {
@@ -1696,7 +1706,7 @@ h4 {
 .billing-toggle span {
   color: #bdece5;
   font-size: 0.72rem;
-  font-weight: 950;
+  font-weight: 650;
   text-transform: uppercase;
 }
 
@@ -1733,12 +1743,13 @@ h4 {
 
 .pricing-card-header h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.05rem;
 }
 
 .pricing-card-header strong {
   color: var(--ink);
-  font-size: 2.4rem;
+  font-size: 1.9rem;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -1769,7 +1780,7 @@ h4 {
 }
 
 .pricing-feature-list span {
-  font-weight: 950;
+  font-weight: 700;
 }
 
 .pricing-feature-list .included span {
@@ -1783,7 +1794,7 @@ h4 {
 .pricing-error {
   margin: 0;
   color: var(--red);
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .faq-section {
@@ -1855,13 +1866,14 @@ h4 {
 
 .legal-header h1 {
   margin: 0;
-  font-size: 3rem;
+  font-size: 2.25rem;
+  font-weight: 700;
 }
 
 .legal-header p:not(.eyebrow) {
   margin: 0;
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .legal-section {
@@ -1873,7 +1885,7 @@ h4 {
 
 .legal-section h2 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.15rem;
 }
 
 .legal-section p,
@@ -1925,7 +1937,7 @@ h4 {
 
 .diagnostic-item span {
   color: var(--ink);
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .diagnostic-item small,
@@ -2023,7 +2035,11 @@ h4 {
 
 @media (max-width: 1180px) and (min-width: 981px) {
   h1 {
-    font-size: 3.6rem;
+    font-size: 2.45rem;
+  }
+
+  .landing-hero-copy h1 {
+    font-size: 2.8rem;
   }
 
   .app-header,
@@ -2047,7 +2063,13 @@ h4 {
   }
 
   h1 {
-    font-size: 2.25rem;
+    font-size: 2rem;
+  }
+
+  .landing-hero-copy h1,
+  .pricing-hero h1,
+  .legal-header h1 {
+    font-size: 2rem;
   }
 
   .executive-panel,
