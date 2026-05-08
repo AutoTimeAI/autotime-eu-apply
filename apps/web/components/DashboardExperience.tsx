@@ -6,12 +6,14 @@ import {
   evaluateCountryFit,
   getCandidateProfileBridgeIssues,
   hasCandidateProfileBridgeEvidence,
+  type ApplicationOutcomeReason,
   type ApplicationRecord,
   type ApplicationStatus,
   type CandidateProfile,
   type CompanionDashboardState,
   type CountryFitEvaluation,
   type JobAnalysisDraft,
+  type OutcomeLearningSignals,
   type ReusableAnswers
 } from "shared"
 import {
@@ -74,6 +76,18 @@ const applicationStatuses: ApplicationStatus[] = [
   "Interview",
   "Rejected",
   "Closed"
+]
+
+const applicationOutcomeReasons: ApplicationOutcomeReason[] = [
+  "Unknown",
+  "Interview secured",
+  "Offer or final stage",
+  "No response",
+  "Sponsorship blocker",
+  "Work-right blocker",
+  "Skill mismatch",
+  "Location mismatch",
+  "Role closed"
 ]
 
 const tabLabels: Array<[DashboardTab, string]> = [
@@ -551,6 +565,7 @@ function createApplication(
     status: "Saved",
     nextAction: fitEvaluation.nextBestAction,
     nextActionDate: "",
+    outcomeReason: "Unknown",
     notes: [
       fitEvaluation.decision,
       fitEvaluation.positioningAngle,
@@ -563,6 +578,49 @@ function createApplication(
     fitDecision: fitEvaluation.decision,
     contentGate: fitEvaluation.contentGate
   }
+}
+
+function getOutcomeLearningSignals(
+  applications: ApplicationRecord[]
+): OutcomeLearningSignals {
+  return applications.reduce(
+    (signals, application) => {
+      const reason = application.outcomeReason ?? "Unknown"
+
+      return {
+        totalTracked:
+          reason === "Unknown" ? signals.totalTracked : signals.totalTracked + 1,
+        interviews:
+          application.status === "Interview" || reason === "Interview secured"
+            ? signals.interviews + 1
+            : signals.interviews,
+        sponsorshipBlocks:
+          reason === "Sponsorship blocker"
+            ? signals.sponsorshipBlocks + 1
+            : signals.sponsorshipBlocks,
+        workRightBlocks:
+          reason === "Work-right blocker"
+            ? signals.workRightBlocks + 1
+            : signals.workRightBlocks,
+        noResponses:
+          reason === "No response"
+            ? signals.noResponses + 1
+            : signals.noResponses,
+        positiveOutcomes:
+          reason === "Interview secured" || reason === "Offer or final stage"
+            ? signals.positiveOutcomes + 1
+            : signals.positiveOutcomes
+      }
+    },
+    {
+      totalTracked: 0,
+      interviews: 0,
+      sponsorshipBlocks: 0,
+      workRightBlocks: 0,
+      noResponses: 0,
+      positiveOutcomes: 0
+    }
+  )
 }
 
 function getStatusCounts(applications: ApplicationRecord[]) {
@@ -883,6 +941,10 @@ export default function HomePage() {
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
   )
+  const outcomeLearningSignals = useMemo(
+    () => getOutcomeLearningSignals(state.applications),
+    [state.applications]
+  )
   const fitEvaluation = useMemo(
     () =>
       evaluateCountryFit({
@@ -893,10 +955,17 @@ export default function HomePage() {
         },
         context: {
           candidatePosition: productContext.candidatePosition,
-          targetCountry: productContext.targetCountry
+          targetCountry: productContext.targetCountry,
+          outcomeSignals: outcomeLearningSignals
         }
       }),
-    [state.profile, state.jobAnalysis, productContext, fitScore]
+    [
+      state.profile,
+      state.jobAnalysis,
+      productContext,
+      fitScore,
+      outcomeLearningSignals
+    ]
   )
   const readinessScore = useMemo(
     () => getReadinessScore(state, fitScore),
@@ -1945,6 +2014,26 @@ export default function HomePage() {
                       : "Do not write content yet"}
                 </span>
               </div>
+              <div className="country-rule-strip">
+                <div>
+                  <strong>{fitEvaluation.countryRule.name}</strong>
+                  <span>{fitEvaluation.countryRule.marketNote}</span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Sponsorship</dt>
+                    <dd>{fitEvaluation.countryRule.sponsorshipStrictness}</dd>
+                  </div>
+                  <div>
+                    <dt>Relocation</dt>
+                    <dd>{fitEvaluation.countryRule.relocationFriction}</dd>
+                  </div>
+                  <div>
+                    <dt>Outcomes</dt>
+                    <dd>{outcomeLearningSignals.totalTracked}</dd>
+                  </div>
+                </dl>
+              </div>
               <div className="fit-component-grid">
                 {fitEvaluation.components.map((item) => (
                   <article className={`fit-component ${item.status}`} key={item.key}>
@@ -1968,6 +2057,11 @@ export default function HomePage() {
                   No blocker is visible in the country/work-right model.
                 </p>
               )}
+              <ul className="evidence-list">
+                {fitEvaluation.evidenceChecklist.slice(0, 4).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </section>
             <section className="panel">
               <div className="section-heading">
@@ -2087,6 +2181,24 @@ export default function HomePage() {
                         })
                       }
                     />
+                  </label>
+                  <label>
+                    Outcome
+                    <select
+                      value={application.outcomeReason ?? "Unknown"}
+                      onChange={(event) =>
+                        updateApplication(application.id, {
+                          outcomeReason: event.target
+                            .value as ApplicationOutcomeReason
+                        })
+                      }
+                    >
+                      {applicationOutcomeReasons.map((reason) => (
+                        <option key={reason} value={reason}>
+                          {reason}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                   <label>
                     Outcome learning

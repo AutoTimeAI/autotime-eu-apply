@@ -111,6 +111,83 @@ test("labels uncertain viable roles as stretch applications", () => {
   assert.equal(result.contentGate, "stretch")
 })
 
+test("uses country rule packs for language and relocation evidence", () => {
+  const result = evaluateCountryFit({
+    profile: {
+      ...baseProfile,
+      targetCountries: "Germany",
+      workRightDetails: "I would need visa support and can relocate to Germany.",
+      sponsorshipNeeded: true
+    },
+    job: {
+      ...baseJob,
+      location: "Berlin, Germany",
+      jobDescription:
+        "Business analyst role in Berlin with German B2 required, hybrid delivery and relocation support."
+    },
+    context: {
+      candidatePosition: "foreign-candidate",
+      targetCountry: "Germany"
+    }
+  })
+
+  assert.equal(result.countryRule.code, "DE")
+  assert.ok(result.evidenceChecklist.some((item) => item.includes("German")))
+  assert.ok(
+    result.components.some(
+      (item) =>
+        item.key === "countryLocationFit" &&
+        item.rationale.includes("language expectations")
+    )
+  )
+})
+
+test("uses outcome history to become stricter on repeated blockers", () => {
+  const withoutHistory = evaluateCountryFit({
+    profile: {
+      ...baseProfile,
+      sponsorshipNeeded: true,
+      workRightDetails: "I need Skilled Worker visa sponsorship."
+    },
+    job: {
+      ...baseJob,
+      jobDescription:
+        "Business analyst role in London requiring requirements, stakeholder management and payments experience."
+    },
+    context: {
+      candidatePosition: "foreign-candidate",
+      targetCountry: "United Kingdom"
+    }
+  })
+  const withHistory = evaluateCountryFit({
+    profile: {
+      ...baseProfile,
+      sponsorshipNeeded: true,
+      workRightDetails: "I need Skilled Worker visa sponsorship."
+    },
+    job: {
+      ...baseJob,
+      jobDescription:
+        "Business analyst role in London requiring requirements, stakeholder management and payments experience."
+    },
+    context: {
+      candidatePosition: "foreign-candidate",
+      targetCountry: "United Kingdom",
+      outcomeSignals: {
+        totalTracked: 3,
+        interviews: 0,
+        sponsorshipBlocks: 3,
+        workRightBlocks: 0,
+        noResponses: 0,
+        positiveOutcomes: 0
+      }
+    }
+  })
+
+  assert.ok(withHistory.overallScore < withoutHistory.overallScore)
+  assert.ok(withHistory.learningPrompt.includes("Outcome history"))
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

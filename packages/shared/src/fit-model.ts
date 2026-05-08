@@ -1,4 +1,5 @@
 import type { CandidateProfile, JobAnalysisDraft } from "./types.ts"
+import { getCountryRule, type CountryRule } from "./country-rules.ts"
 
 export type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 
@@ -18,6 +19,7 @@ export type FitComponent = {
   score: number
   status: FitComponentStatus
   rationale: string
+  evidence: string[]
 }
 
 export type CountryFitDecision =
@@ -33,9 +35,17 @@ export type CountryFitEvaluation = {
   decision: CountryFitDecision
   confidence: "Low" | "Medium" | "High"
   contentGate: ContentGenerationGate
+  countryRule: {
+    code: string
+    name: string
+    marketNote: string
+    sponsorshipStrictness: CountryRule["sponsorshipStrictness"]
+    relocationFriction: CountryRule["relocationFriction"]
+  }
   positioningAngle: string
   nextBestAction: string
   blockers: string[]
+  evidenceChecklist: string[]
   components: FitComponent[]
   learningPrompt: string
 }
@@ -43,6 +53,16 @@ export type CountryFitEvaluation = {
 type FitContext = {
   candidatePosition: CandidateMarketPosition
   targetCountry: string
+  outcomeSignals?: OutcomeLearningSignals
+}
+
+export type OutcomeLearningSignals = {
+  totalTracked: number
+  interviews: number
+  sponsorshipBlocks: number
+  workRightBlocks: number
+  noResponses: number
+  positiveOutcomes: number
 }
 
 const componentLabels: Record<FitComponentKey, string> = {
@@ -139,7 +159,8 @@ function getText(profile: CandidateProfile, job: JobAnalysisDraft) {
 function component(
   key: FitComponentKey,
   score: number,
-  rationale: string
+  rationale: string,
+  evidence: string[] = []
 ): FitComponent {
   const safeScore = clampScore(score)
 
@@ -148,7 +169,8 @@ function component(
     label: componentLabels[key],
     score: safeScore,
     status: getStatus(safeScore),
-    rationale
+    rationale,
+    evidence
   }
 }
 
@@ -195,66 +217,90 @@ function getAtsCompatibility(profile: CandidateProfile, job: JobAnalysisDraft) {
 function getSponsorshipLikelihood(
   profile: CandidateProfile,
   jobText: string,
-  context: FitContext
+  context: FitContext,
+  rule: CountryRule
 ) {
   const mentionsSponsorship = includesAny(jobText, [
     "sponsor",
     "sponsorship",
     "visa",
     "skilled worker",
-    "work permit"
+    "work permit",
+    ...rule.positiveSponsorshipSignals
   ])
   const rejectsSponsorship = includesAny(jobText, [
     "no sponsorship",
     "unable to sponsor",
     "must have right to work",
     "existing right to work",
-    "without sponsorship"
+    "without sponsorship",
+    ...rule.negativeSponsorshipSignals
   ])
   const needsSponsorship =
     context.candidatePosition === "foreign-candidate" && profile.sponsorshipNeeded
+  const strictnessPenalty =
+    rule.sponsorshipStrictness === "strict"
+      ? 8
+      : rule.sponsorshipStrictness === "open"
+        ? -6
+        : 0
+  const learnedPenalty = Math.min(
+    10,
+    (context.outcomeSignals?.sponsorshipBlocks ?? 0) * 3
+  )
 
   if (needsSponsorship && rejectsSponsorship) {
     return component(
       "sponsorshipLikelihood",
       15,
-      "The role appears to reject sponsorship while the profile says sponsorship is needed."
+      "The role appears to reject sponsorship while the profile says sponsorship is needed.",
+      ["Negative sponsorship language was detected in the job text."]
     )
   }
 
   if (needsSponsorship && !mentionsSponsorship) {
     return component(
       "sponsorshipLikelihood",
-      42,
-      "Sponsorship is needed, but the job description does not show a positive sponsorship signal."
+      42 - strictnessPenalty - learnedPenalty,
+      `${rule.name} sponsorship is not proven from the role text, so this needs manual confirmation before content generation.`,
+      [
+        rule.marketNote,
+        ...rule.evidencePrompts.filter((item) =>
+          item.toLowerCase().includes("sponsor")
+        )
+      ]
     )
   }
 
   if (needsSponsorship && mentionsSponsorship) {
     return component(
       "sponsorshipLikelihood",
-      72,
-      "The job mentions visa or sponsorship language, so the path is worth checking."
+      72 - Math.max(strictnessPenalty, 0),
+      "The job mentions visa, permit, sponsorship, or relocation-support language, so the path is worth checking.",
+      ["Positive sponsorship or visa-support language was detected."]
     )
   }
 
   return component(
     "sponsorshipLikelihood",
-    82,
-    "No sponsorship dependency is visible from the saved profile."
+    82 + (rule.sponsorshipStrictness === "open" ? 4 : 0),
+    "No sponsorship dependency is visible from the saved profile.",
+    ["Profile says sponsorship is not currently required."]
   )
 }
 
 function getRightToWorkCompatibility(
   profile: CandidateProfile,
   jobText: string,
-  context: FitContext
+  context: FitContext,
+  rule: CountryRule
 ) {
   if (!hasText(profile.workRightDetails)) {
     return component(
       "rightToWorkCompatibility",
       context.candidatePosition === "foreign-candidate" ? 20 : 45,
-      "Work-right details are missing, so AutoTime cannot safely recommend applying."
+      "Work-right details are missing, so AutoTime cannot safely recommend applying.",
+      rule.evidencePrompts
     )
   }
 
@@ -266,84 +312,134 @@ function getRightToWorkCompatibility(
     "work authorisation",
     "work authorization",
     "no sponsorship",
-    "do not require sponsorship"
+    "do not require sponsorship",
+    ...rule.workRightSignals
   ])
   const roleRequiresExistingRight = includesAny(jobText, [
     "must have right to work",
     "existing right to work",
     "without sponsorship",
-    "no sponsorship"
+    "no sponsorship",
+    ...rule.negativeSponsorshipSignals
   ])
+  const learnedPenalty = Math.min(
+    10,
+    (context.outcomeSignals?.workRightBlocks ?? 0) * 4
+  )
 
   if (roleRequiresExistingRight && !profileClaimsRight) {
     return component(
       "rightToWorkCompatibility",
       28,
-      "The role asks for existing work rights, but the profile does not clearly state them."
+      "The role asks for existing work rights, but the profile does not clearly state them.",
+      ["Job text appears to require existing work authorisation."]
     )
   }
 
   return component(
     "rightToWorkCompatibility",
-    profileClaimsRight ? 88 : 66,
+    profileClaimsRight ? 88 - learnedPenalty : 66 - learnedPenalty,
     profileClaimsRight
       ? "The profile states a work-right position clearly enough for applications."
-      : "Work-right details exist, but they should be made more explicit before applying."
+      : "Work-right details exist, but they should be made more explicit before applying.",
+    profileClaimsRight
+      ? [`Profile contains work-right language aligned to ${rule.name}.`]
+      : rule.evidencePrompts
   )
 }
 
-function getRelocationFit(profile: CandidateProfile, jobText: string) {
+function getRelocationFit(
+  profile: CandidateProfile,
+  jobText: string,
+  rule: CountryRule
+) {
   const remoteOrHybrid = includesAny(jobText, ["remote", "hybrid"])
   const onsite = includesAny(jobText, ["onsite", "on-site", "office based"])
+  const frictionPenalty =
+    rule.relocationFriction === "high"
+      ? 8
+      : rule.relocationFriction === "low"
+        ? -5
+        : 0
 
   if (profile.relocationWillingness === "no" && onsite) {
     return component(
       "relocationFit",
       30,
-      "The profile says no relocation while the role appears office-based."
+      "The profile says no relocation while the role appears office-based.",
+      ["Onsite or office-based language was detected."]
     )
   }
 
   if (profile.relocationWillingness === "yes") {
     return component(
       "relocationFit",
-      82,
-      "Relocation willingness supports applying across the selected market."
+      82 - Math.max(frictionPenalty, 0),
+      "Relocation willingness supports applying across the selected market.",
+      [`${rule.name} relocation friction is treated as ${rule.relocationFriction}.`]
     )
   }
 
   return component(
     "relocationFit",
-    remoteOrHybrid ? 74 : 58,
+    remoteOrHybrid ? 74 - Math.max(frictionPenalty, 0) : 58 - frictionPenalty,
     remoteOrHybrid
       ? "Remote or hybrid language reduces relocation friction."
-      : "Relocation is conditional, so location practicality still needs checking."
+      : "Relocation is conditional, so location practicality still needs checking.",
+    remoteOrHybrid
+      ? ["Remote or hybrid signal was detected."]
+      : rule.evidencePrompts
   )
 }
 
 function getCountryLocationFit(
   profile: CandidateProfile,
   job: JobAnalysisDraft,
-  context: FitContext
+  context: FitContext,
+  rule: CountryRule
 ) {
   const targetCountries = profile.targetCountries.toLowerCase()
   const targetCountry = context.targetCountry.toLowerCase()
   const jobLocation = [job.location, job.jobDescription].join(" ").toLowerCase()
   const targetsCountry =
-    targetCountries.includes(targetCountry) || jobLocation.includes(targetCountry)
+    targetCountries.includes(targetCountry) ||
+    jobLocation.includes(targetCountry) ||
+    rule.locationSignals.some((signal) => jobLocation.includes(signal))
+  const languageRisk =
+    rule.languageSignals.length > 0 &&
+    includesAny(jobLocation, rule.languageSignals) &&
+    !includesAny(
+      [
+        profile.baseCvText,
+        profile.experienceHighlights,
+        profile.projectSummaries
+      ].join(" "),
+      rule.languageSignals
+    )
 
   if (!targetsCountry) {
     return component(
       "countryLocationFit",
       38,
-      `The role is not clearly tied to ${context.targetCountry} or the saved target countries.`
+      `The role is not clearly tied to ${context.targetCountry} or the saved target countries.`,
+      [`Expected country evidence for ${rule.name}.`]
+    )
+  }
+
+  if (languageRisk) {
+    return component(
+      "countryLocationFit",
+      52,
+      `${rule.name} language expectations are visible in the role, but matching language evidence is not visible in the profile.`,
+      [`Detected language signal: ${rule.languageSignals.join(", ")}.`]
     )
   }
 
   return component(
     "countryLocationFit",
     84,
-    `The role aligns with ${context.targetCountry} or the saved target-country list.`
+    `The role aligns with ${context.targetCountry} or the saved target-country list.`,
+    [`Role location matches ${rule.name} or the saved target-country list.`]
   )
 }
 
@@ -372,13 +468,14 @@ export function evaluateCountryFit({
   context: FitContext
 }): CountryFitEvaluation {
   const text = getText(profile, job)
+  const rule = getCountryRule(context.targetCountry)
   const components = [
     getSkillMatch(text.profile, text.job),
     getAtsCompatibility(profile, job),
-    getSponsorshipLikelihood(profile, text.job, context),
-    getRightToWorkCompatibility(profile, text.job, context),
-    getRelocationFit(profile, text.job),
-    getCountryLocationFit(profile, job, context)
+    getSponsorshipLikelihood(profile, text.job, context, rule),
+    getRightToWorkCompatibility(profile, text.job, context, rule),
+    getRelocationFit(profile, text.job, rule),
+    getCountryLocationFit(profile, job, context, rule)
   ]
   const blockers = components
     .filter(
@@ -415,17 +512,32 @@ export function evaluateCountryFit({
       : contentGate === "stretch"
         ? "Clarify the weakest fit component, then decide whether the strategic value justifies applying."
         : "Fix the blocker before spending time on resume or cover-letter content."
+  const evidenceChecklist = [
+    rule.marketNote,
+    ...rule.evidencePrompts,
+    ...components.flatMap((item) => item.evidence)
+  ].filter((item, index, list) => item && list.indexOf(item) === index)
 
   return {
     overallScore,
     decision,
     confidence: getConfidence(components),
     contentGate,
+    countryRule: {
+      code: rule.code,
+      name: rule.name,
+      marketNote: rule.marketNote,
+      sponsorshipStrictness: rule.sponsorshipStrictness,
+      relocationFriction: rule.relocationFriction
+    },
     positioningAngle,
     nextBestAction,
     blockers,
+    evidenceChecklist,
     components,
     learningPrompt:
-      "After the outcome is known, record whether the country/work-right assumption was correct so future recommendations can become stricter or more confident."
+      (context.outcomeSignals?.totalTracked ?? 0) > 0
+        ? "Outcome history is now part of this judgment. Record sponsorship, work-right and interview results so future recommendations become stricter where needed."
+        : "After the outcome is known, record whether the country/work-right assumption was correct so future recommendations can become stricter or more confident."
   }
 }

@@ -2,6 +2,7 @@ import type { z } from "zod"
 import type {
   applicationContentDraftSchema,
   applicationContentSnapshotSchema,
+  applicationOutcomeReasonSchema,
   applicationRecordSchema,
   applicationStatusSchema,
   candidateProfileSchema,
@@ -14,6 +15,9 @@ import type {
 } from "./schemas.ts"
 
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>
+export type ApplicationOutcomeReason = z.infer<
+  typeof applicationOutcomeReasonSchema
+>
 export type JobRecommendation = z.infer<typeof jobRecommendationSchema>
 export type WorkMode = z.infer<typeof workModeSchema>
 export type CandidateProfile = z.infer<typeof candidateProfileSchema>

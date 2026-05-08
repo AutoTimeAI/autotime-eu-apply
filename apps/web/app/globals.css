@@ -604,6 +604,67 @@ h4 {
   margin-bottom: 14px;
 }
 
+.country-rule-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.9fr);
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.country-rule-strip strong,
+.country-rule-strip span {
+  display: block;
+}
+
+.country-rule-strip strong {
+  color: var(--ink);
+  font-weight: 950;
+}
+
+.country-rule-strip span {
+  margin-top: 5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.country-rule-strip dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.country-rule-strip dl div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 8px;
+}
+
+.country-rule-strip dt,
+.country-rule-strip dd {
+  margin: 0;
+}
+
+.country-rule-strip dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.country-rule-strip dd {
+  margin-top: 4px;
+  color: var(--ink);
+  font-weight: 950;
+  text-transform: capitalize;
+}
+
 .fit-component {
   border: 1px solid var(--border);
   border-left: 4px solid var(--blue);
@@ -659,6 +720,16 @@ h4 {
 .blocker-list li {
   color: var(--red);
   font-weight: 850;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .metrics-strip {
@@ -984,7 +1055,7 @@ h4 {
   display: grid;
   grid-template-columns:
     minmax(220px, 1.15fr) minmax(120px, 0.45fr) minmax(170px, 0.65fr)
-    minmax(220px, 0.85fr) minmax(150px, 0.5fr);
+    minmax(150px, 0.55fr) minmax(220px, 0.85fr) minmax(150px, 0.5fr);
   gap: 10px;
   align-items: end;
   border: 1px solid var(--border);
@@ -1877,6 +1948,10 @@ h4 {
     grid-template-columns: 1fr 1fr;
   }
 
+  .country-rule-strip {
+    grid-template-columns: 1fr;
+  }
+
   .landing-hero,
   .landing-step-grid,
   .feature-band,
@@ -1940,6 +2015,10 @@ h4 {
   .readiness-roadmap,
   .pipeline-summary,
   .application-row {
+    grid-template-columns: 1fr;
+  }
+
+  .country-rule-strip dl {
     grid-template-columns: 1fr;
   }
 

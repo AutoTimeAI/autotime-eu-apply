@@ -9,6 +9,18 @@ export const applicationStatusSchema = z.enum([
   "Closed"
 ])
 
+export const applicationOutcomeReasonSchema = z.enum([
+  "Unknown",
+  "Interview secured",
+  "Offer or final stage",
+  "No response",
+  "Sponsorship blocker",
+  "Work-right blocker",
+  "Skill mismatch",
+  "Location mismatch",
+  "Role closed"
+])
+
 export const jobRecommendationSchema = z.enum([
   "High Priority",
   "Worth Applying",
@@ -44,7 +56,8 @@ export const fitComponentSchema = z.object({
   label: z.string(),
   score: z.number(),
   status: fitComponentStatusSchema,
-  rationale: z.string()
+  rationale: z.string(),
+  evidence: z.array(z.string())
 })
 
 export const countryFitDecisionSchema = z.enum([
@@ -65,9 +78,17 @@ export const countryFitEvaluationSchema = z.object({
   decision: countryFitDecisionSchema,
   confidence: z.enum(["Low", "Medium", "High"]),
   contentGate: contentGenerationGateSchema,
+  countryRule: z.object({
+    code: z.string(),
+    name: z.string(),
+    marketNote: z.string(),
+    sponsorshipStrictness: z.enum(["open", "mixed", "strict"]),
+    relocationFriction: z.enum(["low", "medium", "high"])
+  }),
   positioningAngle: z.string(),
   nextBestAction: z.string(),
   blockers: z.array(z.string()),
+  evidenceChecklist: z.array(z.string()),
   components: z.array(fitComponentSchema),
   learningPrompt: z.string()
 })
@@ -147,6 +168,7 @@ export const applicationRecordSchema = z.object({
   nextAction: z.string().optional(),
   nextActionDate: z.string().optional(),
   notes: z.string().optional(),
+  outcomeReason: applicationOutcomeReasonSchema.optional(),
   fitScore: z.number().optional(),
   fitDecision: countryFitDecisionSchema.optional(),
   contentGate: contentGenerationGateSchema.optional(),
