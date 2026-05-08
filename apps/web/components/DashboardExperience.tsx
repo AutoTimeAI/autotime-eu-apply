@@ -549,6 +549,13 @@ function getHostname(url: string) {
   }
 }
 
+function hasJobDraft(job: JobAnalysisDraft) {
+  return Boolean(
+    job.jobTitle.trim() || job.company.trim() || job.jobDescription.trim() ||
+      job.jobUrl.trim()
+  )
+}
+
 function createApplication(
   job: JobAnalysisDraft,
   fitEvaluation: CountryFitEvaluation
@@ -559,7 +566,7 @@ function createApplication(
     title,
     roleTitle: title,
     company: job.company || undefined,
-    url: job.jobUrl,
+    url: job.jobUrl || "Manual dashboard entry",
     source: getHostname(job.jobUrl),
     createdAt: new Date().toISOString(),
     status: "Saved",
@@ -1139,8 +1146,8 @@ export default function HomePage() {
   }
 
   const saveApplicationFromJob = () => {
-    if (!state.jobAnalysis.jobUrl.trim()) {
-      setStatus("Add a job URL before saving an application")
+    if (!hasJobDraft(state.jobAnalysis)) {
+      setStatus("Add a job title, company, URL or job description before saving")
       return
     }
 
@@ -1217,16 +1224,6 @@ export default function HomePage() {
   }
 
   const exportDashboard = () => {
-    if (!profileBridgeReady) {
-      setStatus(
-        `Complete mandatory candidate profile bridge first: ${profileBridgeIssues.join(
-          ", "
-        )}`
-      )
-      setActiveTab("profile")
-      return
-    }
-
     const blob = new Blob([JSON.stringify(state, null, 2)], {
       type: "application/json;charset=utf-8"
     })
@@ -1236,6 +1233,7 @@ export default function HomePage() {
     link.download = "autotime-v2-dashboard.json"
     link.click()
     URL.revokeObjectURL(url)
+    setStatus("Dashboard backup exported")
   }
 
   const importDashboard = (value: string) => {
@@ -1296,6 +1294,7 @@ export default function HomePage() {
 
     setStatus(action.message)
   }
+  const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
 
   return (
     <main className="dashboard-shell">
@@ -1313,7 +1312,11 @@ export default function HomePage() {
             className="header-actions"
             aria-label="Primary dashboard actions"
           >
-            <button type="button" onClick={saveApplicationFromJob}>
+            <button
+              disabled={!canSaveCheckedJob}
+              type="button"
+              onClick={saveApplicationFromJob}
+            >
               Save checked job
             </button>
             <button
@@ -1989,7 +1992,11 @@ export default function HomePage() {
                 }
               />
             </label>
-            <button type="button" onClick={saveApplicationFromJob}>
+            <button
+              disabled={!canSaveCheckedJob}
+              type="button"
+              onClick={saveApplicationFromJob}
+            >
               {fitEvaluation.contentGate === "ready"
                 ? "Save viable job"
                 : fitEvaluation.contentGate === "stretch"
