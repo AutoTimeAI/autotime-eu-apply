@@ -8,57 +8,44 @@ export const dynamic = "force-dynamic"
 
 const workflowSteps = [
   {
-    title: "Paste a job description",
-    body:
-      "AutoTime scores fit, flags work-right risk and recommends apply, skip or improve profile first."
+    title: "Import the role",
+    body: "Paste the job description or bring it in from the extension."
   },
   {
-    title: "Generate tailored content",
+    title: "Decide apply or skip",
     body:
-      "AI writes a positioned cover letter and application answers using your real experience - nothing invented."
+      "See skill match, ATS fit, sponsorship likelihood, right-to-work and relocation risk separately."
   },
   {
-    title: "Track every outcome",
+    title: "Prepare the next move",
     body:
-      "Log applications, next actions and interview signal across every source, platform and country."
+      "Generate positioning, save the application, prep interviews and learn from outcomes."
   }
 ]
 
 const featureBlocks = [
   {
-    title: "Country-by-country focus",
-    body:
-      "Compare UK, Ireland, Netherlands, Germany and wider European targets before spending energy on low-fit roles."
+    title: "Country fit",
+    body: "UK, Ireland, Netherlands, Germany and wider EU market signals."
   },
   {
-    title: "Work-right strategy",
+    title: "Work-right risk",
     body:
-      "Clarify sponsorship, relocation, notice period and location risk before you write another application."
+      "Sponsorship wording, relocation practicality and right-to-work blockers."
   },
   {
-    title: "European tech workflow",
-    body:
-      "Save roles from common tech hiring platforms, tailor applications and track follow-up across countries."
+    title: "Positioning angle",
+    body: "The strongest story to use if the role is worth applying to."
   }
 ]
 
 const strategySignals = [
-  "Country fit",
-  "Work-right clarity",
-  "Role-language match",
-  "Follow-up timing"
-]
-
-const freeFeatures = [
-  "Chrome extension with local storage",
-  "5 AI job analyses per month",
-  "Unlimited application tracking"
-]
-
-const proFeatures = [
-  "Unlimited AI analyses",
-  "Cloud sync across devices",
-  "Application content and interview prep"
+  "Skill match",
+  "ATS compatibility",
+  "Sponsorship",
+  "Right to work",
+  "Relocation",
+  "Country fit"
 ]
 
 export default async function LandingPage() {
@@ -77,12 +64,12 @@ export default async function LandingPage() {
 
       <section className="landing-hero">
         <div className="landing-hero-copy">
-          <p className="eyebrow">Built for European tech candidates</p>
-          <h1>Choose the right European tech roles before you apply</h1>
+          <p className="eyebrow">UK/EU job-search OS</p>
+          <h1>Decide if a European tech role is worth applying to</h1>
           <p>
-            AutoTime helps you compare country fit, work-right risk, role
-            language and application effort, so your UK and EU job search is
-            focused instead of scattered.
+            AutoTime checks country fit, work-right risk and sponsorship
+            likelihood before it writes anything, so international candidates
+            spend effort on realistic roles.
           </p>
           <div className="landing-actions">
             <Link className="primary-link" href="/login">
@@ -92,16 +79,12 @@ export default async function LandingPage() {
               See pricing
             </Link>
           </div>
-          <div className="proof-strip" aria-label="AutoTime capabilities">
-            {strategySignals.map((signal) => (
-              <span key={signal}>{signal}</span>
-            ))}
-          </div>
         </div>
+
         <div className="landing-signal-panel" aria-label="AutoTime decision preview">
           <header>
-            <span>European role brief</span>
-            <strong>Worth applying</strong>
+            <span>Decision</span>
+            <strong>Apply</strong>
           </header>
           <dl>
             <div>
@@ -109,26 +92,46 @@ export default async function LandingPage() {
               <dd>84%</dd>
             </div>
             <div>
-              <dt>Country</dt>
-              <dd>London</dd>
+              <dt>Work right</dt>
+              <dd>Clear</dd>
             </div>
             <div>
-              <dt>Profile gaps</dt>
-              <dd>2 gaps</dd>
+              <dt>Sponsor signal</dt>
+              <dd>Medium</dd>
             </div>
           </dl>
           <ol>
-            <li>Confirm hybrid location and sponsorship wording.</li>
-            <li>Use payments delivery examples in the application.</li>
-            <li>Track follow-up after 5 working days.</li>
+            <li>Lead with payments delivery and regulated product experience.</li>
+            <li>Confirm hybrid location before spending time on tailoring.</li>
+            <li>Follow up after 5 working days if no response.</li>
           </ol>
         </div>
       </section>
 
       <section className="landing-section">
         <div className="section-heading">
-          <p className="eyebrow">How it works</p>
-          <h2>From European job page to clear decision</h2>
+          <p className="eyebrow">Fit model</p>
+          <h2>Each role is judged before content is generated</h2>
+        </div>
+        <div className="proof-strip landing-proof-grid" aria-label="AutoTime fit model">
+          {strategySignals.map((signal) => (
+            <span key={signal}>{signal}</span>
+          ))}
+        </div>
+        <div className="feature-band">
+          {featureBlocks.map((feature) => (
+            <article className="landing-feature" key={feature.title}>
+              <h2>{feature.title}</h2>
+              <p>{feature.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-section">
+        <div className="section-heading">
+          <p className="eyebrow">Workflow</p>
+          <h2>From job import to next best action</h2>
         </div>
         <div className="landing-step-grid">
           {workflowSteps.map((step, index) => (
@@ -141,50 +144,17 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-section feature-band">
-        {featureBlocks.map((feature) => (
-          <article className="landing-feature" key={feature.title}>
-            <h2>{feature.title}</h2>
-            <p>{feature.body}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="landing-section">
-        <div className="section-heading">
-          <p className="eyebrow">Pricing</p>
-          <h2>Start local, upgrade when the search gets serious</h2>
+      <section className="landing-cta-band">
+        <div>
+          <p className="eyebrow">Start focused</p>
+          <h2>
+            Free tracking first. Pro when your search needs unlimited AI and
+            cloud sync.
+          </h2>
         </div>
-        <div className="pricing-teaser-grid">
-          <article className="pricing-teaser">
-            <div>
-              <h3>Free</h3>
-              <strong>£0/month</strong>
-            </div>
-            <ul>
-              {freeFeatures.map((feature) => (
-                <li key={feature}>{feature}</li>
-              ))}
-            </ul>
-            <Link className="secondary-link" href="/login">
-              Get started free
-            </Link>
-          </article>
-          <article className="pricing-teaser pricing-teaser-pro">
-            <div>
-              <h3>Pro</h3>
-              <strong>£9/month</strong>
-            </div>
-            <ul>
-              {proFeatures.map((feature) => (
-                <li key={feature}>{feature}</li>
-              ))}
-            </ul>
-            <Link className="primary-link" href="/pricing">
-              Compare plans
-            </Link>
-          </article>
-        </div>
+        <Link className="primary-link" href="/pricing">
+          Compare plans
+        </Link>
       </section>
 
       <footer className="landing-footer">
