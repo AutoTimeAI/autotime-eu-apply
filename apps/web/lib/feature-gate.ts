@@ -1,5 +1,5 @@
 import { createAdminClient } from "./supabase/admin"
-import type { SubscriptionPlan } from "./supabase/types"
+import type { SubscriptionPlan, SubscriptionStatus } from "./supabase/types"
 
 export const FREE_AI_CALLS_PER_MONTH = 5
 
@@ -18,6 +18,10 @@ function normalisePlan(plan: SubscriptionPlan | null | undefined) {
   return plan === "pro" ? "pro" : "free"
 }
 
+function isEntitledStatus(status: SubscriptionStatus | null | undefined) {
+  return status === "active" || status === "trialing"
+}
+
 export async function getUserPlan(
   userId: string
 ): Promise<SubscriptionPlan> {
@@ -25,7 +29,7 @@ export async function getUserPlan(
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("plan")
+      .select("plan,status")
       .eq("user_id", userId)
       .maybeSingle()
 
@@ -33,7 +37,10 @@ export async function getUserPlan(
       throw new Error(error.message)
     }
 
-    const plan = normalisePlan(data?.plan)
+    const plan =
+      normalisePlan(data?.plan) === "pro" && isEntitledStatus(data?.status)
+        ? "pro"
+        : "free"
 
     return plan
   } catch (error: unknown) {

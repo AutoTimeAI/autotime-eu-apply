@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { z } from "zod"
+import type { SubscriptionPlan } from "../lib/supabase/types"
 
 type BillingInterval = "month" | "year"
+type PricingCardAction = "checkout" | "link" | "portal"
 
 type PricingCardFeature = {
   label: string
@@ -11,20 +13,24 @@ type PricingCardFeature = {
 }
 
 type PricingCardProps = {
+  action: PricingCardAction
   annualPriceId?: string
   billingInterval: BillingInterval
   ctaLabel: string
   description: string
   features: PricingCardFeature[]
   highlighted?: boolean
+  href?: string
   monthlyPriceId?: string
   name: string
   price: string
 }
 
 type PricingCardsProps = {
+  accountPlan?: SubscriptionPlan | null
   annualPriceId: string
   freeFeatures: PricingCardFeature[]
+  isSignedIn?: boolean
   monthlyPriceId: string
   proFeatures: PricingCardFeature[]
 }
@@ -66,13 +72,32 @@ async function startCheckout(priceId: string): Promise<string> {
   return parsed.data.url
 }
 
+async function startBillingPortal(): Promise<string> {
+  const response = await fetch("/api/stripe/portal", {
+    body: JSON.stringify({ returnUrl: window.location.href }),
+    headers: {
+      "Content-Type": "application/json"
+    },
+    method: "POST"
+  })
+  const parsed = checkoutResponseSchema.parse(await response.json())
+
+  if (!response.ok || !parsed.data?.url) {
+    throw new Error(parsed.error ?? "Billing portal could not be opened")
+  }
+
+  return parsed.data.url
+}
+
 function PricingCard({
+  action,
   annualPriceId,
   billingInterval,
   ctaLabel,
   description,
   features,
   highlighted = false,
+  href,
   monthlyPriceId,
   name,
   price
@@ -82,6 +107,29 @@ function PricingCard({
   const priceId = billingInterval === "year" ? annualPriceId : monthlyPriceId
 
   async function handleCheckout() {
+    if (action === "link") {
+      window.location.assign(href ?? "/login")
+      return
+    }
+
+    if (action === "portal") {
+      try {
+        setError(null)
+        setIsPending(true)
+        window.location.assign(await startBillingPortal())
+      } catch (checkoutError: unknown) {
+        const message =
+          checkoutError instanceof Error
+            ? checkoutError.message
+            : "Billing portal could not be opened"
+        setError(message)
+      } finally {
+        setIsPending(false)
+      }
+
+      return
+    }
+
     if (!priceId) {
       window.location.assign("/login")
       return
@@ -126,9 +174,13 @@ function PricingCard({
           </li>
         ))}
       </ul>
-      {priceId ? (
+      {action === "link" ? (
+        <a className="secondary-link" href={href ?? "/login"}>
+          {ctaLabel}
+        </a>
+      ) : priceId || action === "portal" ? (
         <button disabled={isPending} type="button" onClick={handleCheckout}>
-          {isPending ? "Starting checkout" : ctaLabel}
+          {isPending ? "Opening" : ctaLabel}
         </button>
       ) : (
         <a className="secondary-link" href="/login">
@@ -141,8 +193,10 @@ function PricingCard({
 }
 
 export function PricingCards({
+  accountPlan = null,
   annualPriceId,
   freeFeatures,
+  isSignedIn = false,
   monthlyPriceId,
   proFeatures
 }: PricingCardsProps) {
@@ -150,6 +204,7 @@ export function PricingCards({
     useState<BillingInterval>("month")
   const proPrice =
     billingInterval === "year" ? "GBP 79/year" : "GBP 9/month"
+  const isPro = accountPlan === "pro"
 
   return (
     <>
@@ -172,17 +227,20 @@ export function PricingCards({
       </div>
       <div className="pricing-card-grid">
         <PricingCard
+          action="link"
           billingInterval={billingInterval}
-          ctaLabel="Get started free"
+          ctaLabel={isSignedIn ? "Open workspace" : "Get started free"}
           description="For local-first tracking and light AI usage while you validate your search."
           features={freeFeatures}
+          href={isSignedIn ? "/dashboard" : "/login"}
           name="Free"
           price="GBP 0/month"
         />
         <PricingCard
+          action={isPro ? "portal" : "checkout"}
           annualPriceId={annualPriceId}
           billingInterval={billingInterval}
-          ctaLabel="Start Pro"
+          ctaLabel={isPro ? "Manage plan" : "Start Pro"}
           description="For serious UK/EU applications, unlimited AI and resilient cloud sync."
           features={proFeatures}
           highlighted

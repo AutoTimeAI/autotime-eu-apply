@@ -7,6 +7,7 @@ import type { SubscriptionPlan } from "../lib/supabase/types"
 
 type DashboardPlanContextValue = {
   plan: SubscriptionPlan
+  userId: string
 }
 
 type UserNavProps = {
@@ -29,13 +30,15 @@ export function useDashboardPlan(): DashboardPlanContextValue {
 
 export function DashboardPlanProvider({
   children,
-  plan
+  plan,
+  userId
 }: {
   children: ReactNode
   plan: SubscriptionPlan
+  userId: string
 }) {
   return (
-    <DashboardPlanContext.Provider value={{ plan }}>
+    <DashboardPlanContext.Provider value={{ plan, userId }}>
       {children}
     </DashboardPlanContext.Provider>
   )
@@ -46,7 +49,6 @@ function getInitial(email: string): string {
 }
 
 const dashboardTopNavItems = [
-  { href: "/dashboard", label: "Workspace" },
   { href: "/dashboard/profile", label: "Profile" },
   { href: "/dashboard/jobs", label: "Job Check" },
   { href: "/dashboard/applications", label: "Applications" },
@@ -94,6 +96,12 @@ export function UserNav({ email, plan }: UserNavProps) {
   const openBillingPortal = async () => {
     try {
       setStatus(null)
+
+      if (plan !== "pro") {
+        window.location.href = "/pricing"
+        return
+      }
+
       const response = await fetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,17 +128,43 @@ export function UserNav({ email, plan }: UserNavProps) {
   const signOut = async () => {
     try {
       setStatus(null)
-      const supabase = createBrowserClient()
-      const { error } = await supabase.auth.signOut()
+      const response = await fetch("/auth/signout", { method: "POST" })
 
-      if (error) {
-        setStatus(error.message)
-        return
+      if (!response.ok) {
+        const supabase = createBrowserClient()
+        const { error } = await supabase.auth.signOut()
+
+        if (error) {
+          setStatus(error.message)
+          return
+        }
+      } else {
+        const supabase = createBrowserClient()
+        await supabase.auth.signOut({ scope: "local" })
       }
 
-      window.location.href = "/login"
+      window.location.replace("/login?loggedOut=1")
     } catch (error: unknown) {
-      setStatus(error instanceof Error ? error.message : "Sign out failed.")
+      try {
+        const supabase = createBrowserClient()
+        const { error: signOutError } = await supabase.auth.signOut()
+
+        if (signOutError) {
+          setStatus(signOutError.message)
+          return
+        }
+
+        window.location.replace("/login?loggedOut=1")
+        return
+      } catch (fallbackError: unknown) {
+        setStatus(
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : error instanceof Error
+              ? error.message
+              : "Sign out failed."
+        )
+      }
     }
   }
 
@@ -159,7 +193,7 @@ export function UserNav({ email, plan }: UserNavProps) {
             type="button"
             onClick={openBillingPortal}
           >
-            Billing &amp; Plan
+            {plan === "pro" ? "Billing &amp; Plan" : "Upgrade plan"}
           </button>
           <button className="secondary-button" type="button" onClick={signOut}>
             Sign out

@@ -1,6 +1,37 @@
 import { PublicNav } from "../../components/PublicNav"
 import { PricingCards } from "../../components/PricingCard"
 import { getServerEnv } from "../../lib/env"
+import { getUserPlan } from "../../lib/feature-gate"
+import { createServerClient } from "../../lib/supabase/server"
+import type { SubscriptionPlan } from "../../lib/supabase/types"
+
+export const dynamic = "force-dynamic"
+
+type PricingAccount = {
+  email: string
+  plan: SubscriptionPlan
+}
+
+async function getPricingAccount(): Promise<PricingAccount | null> {
+  try {
+    const supabase = await createServerClient()
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser()
+
+    if (error || !user) {
+      return null
+    }
+
+    return {
+      email: user.email ?? "account",
+      plan: await getUserPlan(user.id)
+    }
+  } catch (error: unknown) {
+    return null
+  }
+}
 
 const faqs = [
   {
@@ -51,12 +82,13 @@ const proFeatures = [
   { label: "Cancel any time", included: true }
 ]
 
-export default function PricingPage() {
+export default async function PricingPage() {
   const serverEnv = getServerEnv()
+  const account = await getPricingAccount()
 
   return (
     <main className="pricing-shell">
-      <PublicNav />
+      <PublicNav currentPath="/pricing" user={account} />
 
       <header className="pricing-hero">
         <div>
@@ -71,8 +103,10 @@ export default function PricingPage() {
       </header>
 
       <PricingCards
+        accountPlan={account?.plan ?? null}
         annualPriceId={serverEnv.STRIPE_PRO_ANNUAL_PRICE_ID}
         freeFeatures={freeFeatures}
+        isSignedIn={Boolean(account)}
         monthlyPriceId={serverEnv.STRIPE_PRO_MONTHLY_PRICE_ID}
         proFeatures={proFeatures}
       />

@@ -2,6 +2,7 @@ html,
 body {
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
   font-family: Arial, sans-serif;
   background: #f4f7fb;
   color: #172033;
@@ -12,8 +13,16 @@ body {
 }
 
 main {
-  min-width: 320px;
+  width: 100%;
+  min-width: 0;
   padding: 16px;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
 }
 
 button {
@@ -60,7 +69,7 @@ section {
 .side-panel-shell {
   display: grid;
   gap: 16px;
-  min-width: 320px;
+  min-width: 0;
 }
 
 .side-panel-shell h1,
@@ -129,8 +138,14 @@ section {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 8px 10px;
   text-align: left;
+}
+
+.section-nav button span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .section-nav button.active {
@@ -318,6 +333,11 @@ section {
   gap: 10px;
 }
 
+.application-actions {
+  display: grid;
+  gap: 8px;
+}
+
 .application-filters {
   display: grid;
   gap: 8px;
@@ -336,4 +356,24 @@ section {
 .application-record h3,
 .application-record p {
   margin: 0;
+}
+
+@media (min-width: 420px) {
+  .application-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 340px) {
+  main {
+    padding: 12px;
+  }
+
+  .side-panel-shell {
+    gap: 12px;
+  }
+
+  .side-panel-shell h1 {
+    font-size: 20px;
+  }
 }

@@ -27,6 +27,7 @@ import {
   getBrowserCloudSyncReadiness,
   prepareProfileSyncAction
 } from "../lib/cloud-sync"
+import { useDashboardPlan } from "./UserNav"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
 type DashboardFocus =
@@ -178,6 +179,10 @@ const analyticsServiceBaseUrl =
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const trustStateStorageKey = "autotime-v2-trust-state"
+
+function getUserScopedStorageKey(baseKey: string, userId: string) {
+  return `${baseKey}:${userId}`
+}
 
 const applicationStatuses: ApplicationStatus[] = [
   "Saved",
@@ -797,13 +802,16 @@ function isLegacySampleState(state: CompanionDashboardState) {
   )
 }
 
-function getStoredState() {
+function getStoredState(userId: string) {
   if (typeof window === "undefined") {
     return defaultState
   }
 
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? "null")
+    const parsed = JSON.parse(
+      window.localStorage.getItem(getUserScopedStorageKey(storageKey, userId)) ??
+        "null"
+    )
     const result = companionDashboardStateSchema.safeParse(parsed)
     return result.success && !isLegacySampleState(result.data)
       ? {
@@ -818,11 +826,14 @@ function getStoredState() {
   }
 }
 
-function saveState(state: CompanionDashboardState) {
-  window.localStorage.setItem(storageKey, JSON.stringify(state))
+function saveState(state: CompanionDashboardState, userId: string) {
+  window.localStorage.setItem(
+    getUserScopedStorageKey(storageKey, userId),
+    JSON.stringify(state)
+  )
 }
 
-function getStoredProductContext() {
+function getStoredProductContext(userId: string) {
   if (typeof window === "undefined") {
     return defaultProductContext
   }
@@ -830,7 +841,9 @@ function getStoredProductContext() {
   try {
     const parsed = productContextSchema.safeParse(
       JSON.parse(
-        window.localStorage.getItem(productContextStorageKey) ?? "null"
+        window.localStorage.getItem(
+          getUserScopedStorageKey(productContextStorageKey, userId)
+        ) ?? "null"
       )
     )
 
@@ -845,18 +858,25 @@ function getStoredProductContext() {
   }
 }
 
-function saveProductContext(context: ProductContext) {
-  window.localStorage.setItem(productContextStorageKey, JSON.stringify(context))
+function saveProductContext(context: ProductContext, userId: string) {
+  window.localStorage.setItem(
+    getUserScopedStorageKey(productContextStorageKey, userId),
+    JSON.stringify(context)
+  )
 }
 
-function getStoredTrustState(): TrustState {
+function getStoredTrustState(userId: string): TrustState {
   if (typeof window === "undefined") {
     return defaultTrustState
   }
 
   try {
     const parsed = trustStateSchema.safeParse(
-      JSON.parse(window.localStorage.getItem(trustStateStorageKey) ?? "null")
+      JSON.parse(
+        window.localStorage.getItem(
+          getUserScopedStorageKey(trustStateStorageKey, userId)
+        ) ?? "null"
+      )
     )
 
     return parsed.success
@@ -870,8 +890,11 @@ function getStoredTrustState(): TrustState {
   }
 }
 
-function saveTrustState(state: TrustState) {
-  window.localStorage.setItem(trustStateStorageKey, JSON.stringify(state))
+function saveTrustState(state: TrustState, userId: string) {
+  window.localStorage.setItem(
+    getUserScopedStorageKey(trustStateStorageKey, userId),
+    JSON.stringify(state)
+  )
 }
 
 function getWordSignals(text: string) {
@@ -1935,6 +1958,7 @@ export default function HomePage({
   focus?: DashboardFocus
   view?: DashboardTab | "overview"
 }) {
+  const { userId } = useDashboardPlan()
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
   const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
@@ -1951,6 +1975,8 @@ export default function HomePage({
   const [interviewDraftAnswer, setInterviewDraftAnswer] = useState("")
   const [interviewBuddyOutputs, setInterviewBuddyOutputs] =
     useState<InterviewBuddyOutputs>(emptyInterviewBuddyOutputs)
+  const [isCopilotThinking, setIsCopilotThinking] = useState(false)
+  const [selectedCopilotPrompt, setSelectedCopilotPrompt] = useState("")
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
@@ -2198,10 +2224,10 @@ export default function HomePage({
   ]
 
   useEffect(() => {
-    const localState = getStoredState()
+    const localState = getStoredState(userId)
     setState(localState)
-    setProductContext(getStoredProductContext())
-    setTrustState(getStoredTrustState())
+    setProductContext(getStoredProductContext(userId))
+    setTrustState(getStoredTrustState(userId))
 
     if (!cloudSyncReadiness.configured) {
       return
@@ -2236,7 +2262,7 @@ export default function HomePage({
           outcomeRecords: body.data.dashboard.outcomeRecords ?? []
         }
         setState(nextState)
-        saveState(nextState)
+        saveState(nextState, userId)
       })
       .catch(() => {
         // Keep local-first behavior if cloud sync is unavailable.
@@ -2245,11 +2271,11 @@ export default function HomePage({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [userId])
 
   const persist = (next: CompanionDashboardState, message: string) => {
     setState(next)
-    saveState(next)
+    saveState(next, userId)
     setStatus(message)
     setTimeout(() => setStatus(""), 3000)
   }
@@ -2302,7 +2328,7 @@ export default function HomePage({
         ...current,
         profile: { ...current.profile, [key]: value }
       }
-      saveState(next)
+      saveState(next, userId)
       return next
     })
   }
@@ -2316,7 +2342,7 @@ export default function HomePage({
         ...current,
         jobAnalysis: { ...current.jobAnalysis, [key]: value }
       }
-      saveState(next)
+      saveState(next, userId)
       return next
     })
   }
@@ -2330,7 +2356,7 @@ export default function HomePage({
         ...current,
         reusableAnswers: { ...current.reusableAnswers, [key]: value }
       }
-      saveState(next)
+      saveState(next, userId)
       return next
     })
   }
@@ -2341,7 +2367,7 @@ export default function HomePage({
       officialSourceReviewedAt: reviewed ? new Date().toISOString() : ""
     }
     setTrustState(next)
-    saveTrustState(next)
+    saveTrustState(next, userId)
   }
 
   const openDashboardView = (nextView: DashboardTab | "overview") => {
@@ -2357,7 +2383,7 @@ export default function HomePage({
   ) => {
     setProductContext((current) => {
       const next = { ...current, [key]: value }
-      saveProductContext(next)
+      saveProductContext(next, userId)
       return next
     })
   }
@@ -2423,7 +2449,7 @@ export default function HomePage({
       urgency: contextSuggestion.urgency,
       targetCountry: contextSuggestion.targetCountry,
       experienceLevel: contextSuggestion.experienceLevel
-    })
+    }, userId)
     setProductContext(contextSuggestion)
     persist(
       {
@@ -2592,6 +2618,62 @@ export default function HomePage({
       "Application saved with evidence and outcome records"
     )
     openDashboardView("applications")
+  }
+
+  const runAiJobAnalysis = async () => {
+    if (!hasJobDraft(state.jobAnalysis)) {
+      setStatus("Add a job title, company, URL or description before asking AI")
+      return
+    }
+
+    try {
+      setIsCopilotThinking(true)
+      setStatus("AI Copilot is checking the role against your profile...")
+      const response = await fetch("/api/ai/analyse", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          jobAnalysis: state.jobAnalysis,
+          profile: state.profile
+        })
+      })
+      const body = (await response.json()) as {
+        data: {
+          result?: Partial<JobAnalysisDraft>
+          upgradeUrl?: string
+        } | null
+        error: string | null
+      }
+
+      if (!response.ok || body.error || !body.data?.result) {
+        if (body.data?.upgradeUrl) {
+          window.location.href = body.data.upgradeUrl
+          return
+        }
+
+        setStatus(body.error ?? "AI role analysis failed")
+        return
+      }
+
+      const next = {
+        ...state,
+        jobAnalysis: {
+          ...state.jobAnalysis,
+          ...body.data.result
+        }
+      }
+
+      persist(next, "AI Copilot updated the role analysis")
+      setSelectedCopilotPrompt(
+        "Review the AI fit summary, then save this checked job with its evidence."
+      )
+    } catch (error: unknown) {
+      setStatus(error instanceof Error ? error.message : "AI role analysis failed")
+    } finally {
+      setIsCopilotThinking(false)
+    }
   }
 
   const updateApplication = (
@@ -2861,6 +2943,42 @@ export default function HomePage({
       )
     }
   }
+
+  const deleteProfileForAccount = async () => {
+    if (!window.confirm("Delete the synced profile for this account?")) {
+      return
+    }
+
+    try {
+      const response = await fetch("/api/sync/profile", {
+        method: "DELETE",
+        headers: {
+          "x-autotime-source": "web"
+        }
+      })
+      const body = (await response.json()) as {
+        error: string | null
+      }
+
+      if (!response.ok || body.error) {
+        setStatus(body.error ?? "Could not delete synced profile")
+        return
+      }
+
+      const nextState = {
+        ...state,
+        profile: emptyProfile
+      }
+
+      setState(nextState)
+      saveState(nextState, userId)
+      setStatus("Profile deleted for this account")
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not delete profile"
+      )
+    }
+  }
   const activeInterviewQuestion =
     customInterviewQuestion.trim() || interviewQuestion
   const interviewDisclaimer = getInterviewBuddyDisclaimer(activeInterviewQuestion)
@@ -2868,6 +2986,47 @@ export default function HomePage({
   const hasInterviewBuddyOutputs = Boolean(
     interviewBuddyOutputs.strongFinalAnswer.trim()
   )
+  const copilotPrompts =
+    currentTab === "jobs"
+      ? [
+          "Check this role for work-right, skill and location risk.",
+          "Summarise the strongest positioning angle before I apply.",
+          "Tell me what evidence is missing before saving this role."
+        ]
+      : currentTab === "profile"
+        ? [
+            "Help me complete the minimum profile evidence.",
+            "Turn my CV notes into target-role evidence.",
+            "Check whether my work-right details are clear enough."
+          ]
+        : currentTab === "applications"
+          ? [
+              "Show the roles that need a next action.",
+              "Help me prioritise applications by evidence and risk.",
+              "Find applications that are ready for interview prep."
+            ]
+          : [
+              "Help me turn my rough answer into a stronger interview answer.",
+              "Check whether this answer invents any unsupported claims.",
+              "Build a concise STAR structure from my saved evidence."
+            ]
+  const activeCopilotPrompt = selectedCopilotPrompt || copilotPrompts[0]
+  const copilotStateLabel =
+    currentTab === "jobs"
+      ? hasJobDraft(state.jobAnalysis)
+        ? "Ready to analyse current role"
+        : "Waiting for role details"
+      : currentTab === "profile"
+        ? profileBridgeReady
+          ? "Profile evidence ready"
+          : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing`
+        : currentTab === "applications"
+          ? activeActionCount > 0
+            ? `${activeActionCount} next action${activeActionCount === 1 ? "" : "s"} waiting`
+            : "No urgent next action"
+          : hasInterviewBuddyOutputs
+            ? "Answer draft ready"
+            : "Waiting for your rough answer"
 
   const generateInterviewBuddyAnswers = () => {
     if (!activeInterviewQuestion.trim()) {
@@ -3047,6 +3206,87 @@ export default function HomePage({
         </aside>
 
         <div className="command-content">
+          <section className="ai-copilot-panel" aria-label="AI Copilot">
+            <div className="ai-copilot-header">
+              <div>
+                <p className="eyebrow">AI Copilot</p>
+                <h2>{activeCopilotPrompt}</h2>
+                <p>{copilotStateLabel}</p>
+              </div>
+              <span>{isCopilotThinking ? "Thinking" : "Ready"}</span>
+            </div>
+            <div className="ai-prompt-row" aria-label="Suggested prompts">
+              {copilotPrompts.map((prompt) => (
+                <button
+                  className={
+                    activeCopilotPrompt === prompt ? "active" : undefined
+                  }
+                  key={prompt}
+                  type="button"
+                  onClick={() => setSelectedCopilotPrompt(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            <div className="ai-action-row">
+              {currentTab === "jobs" ? (
+                <>
+                  <button
+                    disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
+                    type="button"
+                    onClick={runAiJobAnalysis}
+                  >
+                    {isCopilotThinking ? "Checking role" : "Ask AI to check role"}
+                  </button>
+                  <button
+                    className="secondary-button"
+                    disabled={!canSaveCheckedJob}
+                    type="button"
+                    onClick={saveApplicationFromJob}
+                  >
+                    Save checked job
+                  </button>
+                </>
+              ) : currentTab === "profile" ? (
+                <>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={reviewResumeForContext}
+                  >
+                    Review CV notes
+                  </button>
+                  <button type="button" onClick={applyMarketContextToProfile}>
+                    Apply market context
+                  </button>
+                </>
+              ) : currentTab === "applications" ? (
+                <>
+                  <a className="secondary-button" href="/dashboard/follow-ups">
+                    Open follow-ups
+                  </a>
+                  <a className="secondary-button" href="/dashboard/interview">
+                    Open interview prep
+                  </a>
+                </>
+              ) : (
+                <>
+                  <button type="button" onClick={generateInterviewBuddyAnswers}>
+                    Generate answers
+                  </button>
+                  <button
+                    className="secondary-button"
+                    disabled={!hasInterviewBuddyOutputs}
+                    type="button"
+                    onClick={saveFinalInterviewAnswer}
+                  >
+                    Save final answer
+                  </button>
+                </>
+              )}
+            </div>
+          </section>
 
       {!isOverview && currentTab === "profile" && showProfileSettingsPanel && (
       <section className="market-context-panel" aria-label="Profile settings">
@@ -3226,13 +3466,13 @@ export default function HomePage({
 
       {currentTab === "jobs" && (
       <section
-        className="decision-brief-panel"
+        className="decision-brief-panel job-check-brief"
         aria-label="UK/EU apply decision brief"
       >
         <div>
           <p className="eyebrow">Job decision</p>
-          <h2>Current role decision</h2>
-          <p>Score, evidence, risks and next step for the current role.</p>
+          <h2>Job Check verdict</h2>
+          <p>Paste a role below to get a practical apply, stretch or pause decision.</p>
         </div>
         <div className="decision-score">
           <strong>{decisionBrief.score}</strong>
@@ -3298,126 +3538,6 @@ export default function HomePage({
           application advice without clear limits.
         </p>
       </section>
-      )}
-
-      {currentTab === "jobs" && (
-      <details className="audit-details">
-      <summary>Audit and source checks</summary>
-      <section className="trust-grid" aria-label="Evidence and official verification">
-        <section className="evidence-ledger-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Evidence ledger</p>
-            <h2>Traceable recommendation</h2>
-          </div>
-          <div className="ledger-table">
-            {evidenceLedgerRows.map((row) => (
-              <article className="ledger-row" key={row.id}>
-                <div>
-                  <strong>{row.check}</strong>
-                  <span className={`ledger-status ${row.status}`}>
-                    {row.status}
-                  </span>
-                </div>
-                <p>{row.explanation}</p>
-                <dl>
-                  <div>
-                    <dt>Evidence</dt>
-                    <dd>{row.evidence.join(" ")}</dd>
-                  </div>
-                  <div>
-                    <dt>Limit</dt>
-                    <dd>{row.limit}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="content-guardrail-panel">
-          <div className="section-heading">
-            <p className="eyebrow">AI honesty guardrails</p>
-            <h2>Content guardrails</h2>
-          </div>
-          <div className="guardrail-list">
-            {contentGuardrails.map((item) => (
-              <article className="guardrail-item" key={item.label}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <span className={`guardrail-status ${item.status}`}>
-                    {item.status}
-                  </span>
-                </div>
-                <p>{item.reason}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="verification-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Before applying</p>
-            <h2>Manual verification checklist</h2>
-          </div>
-          <div className="verification-list">
-            {verificationChecklist.map((item) => (
-              <article className="verification-item" key={item.id}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <span className={`verification-status ${item.status}`}>
-                    {item.status === "ready"
-                      ? "ready"
-                      : item.status === "blocked"
-                        ? "blocked"
-                        : "check"}
-                  </span>
-                </div>
-                <p>{item.evidence}</p>
-                <small>{item.limit}</small>
-              </article>
-            ))}
-          </div>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={exportDecisionAudit}
-          >
-            Export decision audit
-          </button>
-        </section>
-
-        <section className="official-source-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Official verification</p>
-            <h2>Official sources</h2>
-          </div>
-          <div className="official-source-list">
-            {officialSources.map((source) => (
-              <a
-                href={source.url}
-                key={source.url}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <strong>{source.label}</strong>
-                <span>{source.note}</span>
-              </a>
-            ))}
-          </div>
-          <label className="official-review-control">
-            <input
-              checked={trustState.officialSourceReviewed}
-              type="checkbox"
-              onChange={(event) =>
-                setOfficialSourceReviewed(event.target.checked)
-              }
-            />
-            I have reviewed the official source for this country and understand
-            AutoTime does not authorise work, visa or sponsorship status.
-          </label>
-        </section>
-      </section>
-      </details>
       )}
 
 
@@ -3563,6 +3683,14 @@ export default function HomePage({
             Load synced profile
           </button>
           <button
+            className="danger-button"
+            disabled={!cloudSyncReadiness.configured}
+            type="button"
+            onClick={deleteProfileForAccount}
+          >
+            Delete profile
+          </button>
+          <button
             disabled={!cloudSyncReadiness.configured}
             type="button"
             onClick={syncDashboardToCloud}
@@ -3581,7 +3709,7 @@ export default function HomePage({
       </section>
       )}
 
-      {(!isOverview && (currentTab === "applications" || currentTab === "interview")) && (
+      {!isOverview && currentTab === "applications" && (
       <section
         className="metrics-strip"
         aria-label="Job search progress"
@@ -3744,11 +3872,21 @@ export default function HomePage({
       )}
 
       {!isOverview && currentTab === "jobs" && (
-        <section className="workspace-grid">
-          <div className="input-column">
+        <section className="workspace-grid job-check-grid">
+          <div className="input-column job-check-input">
+            <div className="section-heading">
+              <p className="eyebrow">Role input</p>
+              <h2>Check one job before you apply</h2>
+              <p>
+                Add the title, company, link and enough job text for the model
+                to check fit, work-right risk and next action.
+              </p>
+            </div>
+            <div className="job-check-field-grid">
             <label>
               Job title
               <input
+                placeholder="Business Systems Analyst"
                 value={state.jobAnalysis.jobTitle}
                 onChange={(event) => updateJob("jobTitle", event.target.value)}
               />
@@ -3756,13 +3894,16 @@ export default function HomePage({
             <label>
               Company
               <input
+                placeholder="Company name"
                 value={state.jobAnalysis.company}
                 onChange={(event) => updateJob("company", event.target.value)}
               />
             </label>
+            </div>
             <label>
               Job URL
               <input
+                placeholder="https://..."
                 value={state.jobAnalysis.jobUrl}
                 onChange={(event) => updateJob("jobUrl", event.target.value)}
               />
@@ -3770,6 +3911,8 @@ export default function HomePage({
             <label>
               Job description
               <textarea
+                className="job-description-input"
+                placeholder="Paste the role description, requirements, location, sponsorship notes and salary details."
                 value={state.jobAnalysis.jobDescription}
                 onChange={(event) =>
                   updateJob("jobDescription", event.target.value)
@@ -3787,12 +3930,16 @@ export default function HomePage({
                   ? "Save as stretch"
                   : "Save blocker for review"}
             </button>
+            <p className="job-check-save-note">
+              Saving moves this checked role into Applications with the current
+              score, risks and next action attached.
+            </p>
           </div>
 
-          <div className="output-column">
+          <div className="output-column job-check-results">
             <section className="panel country-fit-panel">
               <div className="section-heading">
-                <p className="eyebrow">Country-fit model</p>
+                <p className="eyebrow">Live result</p>
                 <h2>{fitEvaluation.decision}</h2>
               </div>
               <div className="fit-gate-banner">
@@ -3911,6 +4058,126 @@ export default function HomePage({
             </section>
           </div>
         </section>
+      )}
+
+      {currentTab === "jobs" && (
+      <details className="audit-details job-check-audit">
+      <summary>Audit and source checks</summary>
+      <section className="trust-grid" aria-label="Evidence and official verification">
+        <section className="evidence-ledger-panel">
+          <div className="section-heading">
+            <p className="eyebrow">Evidence ledger</p>
+            <h2>Traceable recommendation</h2>
+          </div>
+          <div className="ledger-table">
+            {evidenceLedgerRows.map((row) => (
+              <article className="ledger-row" key={row.id}>
+                <div>
+                  <strong>{row.check}</strong>
+                  <span className={`ledger-status ${row.status}`}>
+                    {row.status}
+                  </span>
+                </div>
+                <p>{row.explanation}</p>
+                <dl>
+                  <div>
+                    <dt>Evidence</dt>
+                    <dd>{row.evidence.join(" ")}</dd>
+                  </div>
+                  <div>
+                    <dt>Limit</dt>
+                    <dd>{row.limit}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="content-guardrail-panel">
+          <div className="section-heading">
+            <p className="eyebrow">AI honesty guardrails</p>
+            <h2>Content guardrails</h2>
+          </div>
+          <div className="guardrail-list">
+            {contentGuardrails.map((item) => (
+              <article className="guardrail-item" key={item.label}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <span className={`guardrail-status ${item.status}`}>
+                    {item.status}
+                  </span>
+                </div>
+                <p>{item.reason}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="verification-panel">
+          <div className="section-heading">
+            <p className="eyebrow">Before applying</p>
+            <h2>Manual verification checklist</h2>
+          </div>
+          <div className="verification-list">
+            {verificationChecklist.map((item) => (
+              <article className="verification-item" key={item.id}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <span className={`verification-status ${item.status}`}>
+                    {item.status === "ready"
+                      ? "ready"
+                      : item.status === "blocked"
+                        ? "blocked"
+                        : "check"}
+                  </span>
+                </div>
+                <p>{item.evidence}</p>
+                <small>{item.limit}</small>
+              </article>
+            ))}
+          </div>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={exportDecisionAudit}
+          >
+            Export decision audit
+          </button>
+        </section>
+
+        <section className="official-source-panel">
+          <div className="section-heading">
+            <p className="eyebrow">Official verification</p>
+            <h2>Official sources</h2>
+          </div>
+          <div className="official-source-list">
+            {officialSources.map((source) => (
+              <a
+                href={source.url}
+                key={source.url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <strong>{source.label}</strong>
+                <span>{source.note}</span>
+              </a>
+            ))}
+          </div>
+          <label className="official-review-control">
+            <input
+              checked={trustState.officialSourceReviewed}
+              type="checkbox"
+              onChange={(event) =>
+                setOfficialSourceReviewed(event.target.checked)
+              }
+            />
+            I have reviewed the official source for this country and understand
+            AutoTime does not authorise work, visa or sponsorship status.
+          </label>
+        </section>
+      </section>
+      </details>
       )}
 
       {!isOverview && currentTab === "applications" && (

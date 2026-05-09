@@ -31,7 +31,7 @@ export default async function DashboardLayout({
     const email = user.email ?? "account"
 
     return (
-      <DashboardPlanProvider plan={plan}>
+      <DashboardPlanProvider plan={plan} userId={user.id}>
         <div className="dashboard-app-shell">
           <header className="dashboard-topbar">
             <a className="dashboard-brand" href="/dashboard">

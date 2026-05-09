@@ -382,6 +382,119 @@ test("cleans priority platform job page titles", () => {
   )
 })
 
+test("infers priority ATS details from realistic titles and explicit metadata", () => {
+  const cases = [
+    {
+      input: {
+        title: "Senior Data Analyst - Example Co",
+        location: "Berlin, Germany",
+        url: "https://jobs.ashbyhq.com/example/abc123"
+      },
+      expected: {
+        roleTitle: "Senior Data Analyst",
+        company: "Example Co",
+        location: "Berlin, Germany",
+        platform: "Ashby"
+      }
+    },
+    {
+      input: {
+        title: "Product Operations Analyst | Example Co",
+        url: "https://jobs.smartrecruiters.com/example/123"
+      },
+      expected: {
+        roleTitle: "Product Operations Analyst",
+        company: "Example Co",
+        location: "",
+        platform: "SmartRecruiters"
+      }
+    },
+    {
+      input: {
+        title: "Business Analyst - Example Co Careers",
+        url: "https://careers.icims.com/jobs/123/business-analyst"
+      },
+      expected: {
+        roleTitle: "Business Analyst",
+        company: "Example Co Careers",
+        location: "",
+        platform: "iCIMS"
+      }
+    },
+    {
+      input: {
+        title: "Application Support Analyst at Example Co",
+        url: "https://example.bamboohr.com/careers/123"
+      },
+      expected: {
+        roleTitle: "Application Support Analyst",
+        company: "Example Co",
+        location: "",
+        platform: "BambooHR"
+      }
+    },
+    {
+      input: {
+        title: "Systems Analyst - Example Co - Teamtailor",
+        url: "https://jobs.teamtailor.com/example/123"
+      },
+      expected: {
+        roleTitle: "Systems Analyst",
+        company: "Example Co",
+        location: "",
+        platform: "Teamtailor"
+      }
+    },
+    {
+      input: {
+        title: "Implementation Analyst - Example Co - Recruitee",
+        url: "https://example.recruitee.com/o/implementation-analyst"
+      },
+      expected: {
+        roleTitle: "Implementation Analyst",
+        company: "Example Co",
+        location: "",
+        platform: "Recruitee"
+      }
+    },
+    {
+      input: {
+        title: "Technical Business Analyst | Example Co | Jobvite",
+        url: "https://jobs.jobvite.com/example/job/123"
+      },
+      expected: {
+        roleTitle: "Technical Business Analyst",
+        company: "Example Co",
+        location: "",
+        platform: "Jobvite"
+      }
+    },
+    {
+      input: {
+        title: "Revenue Operations Analyst - Example Co",
+        company: "Example Co",
+        url: "https://example.jobs.personio.com/job/123"
+      },
+      expected: {
+        roleTitle: "Revenue Operations Analyst",
+        company: "Example Co",
+        location: "",
+        platform: "Personio"
+      }
+    }
+  ]
+
+  cases.forEach(({ input, expected }) => {
+    const details = inferJobPageDetails(input)
+
+    assert.equal(details.roleTitle, expected.roleTitle)
+    assert.equal(details.company, expected.company)
+    assert.equal(details.location, expected.location)
+    assert.equal(details.platform, expected.platform)
+    assert.equal(details.url, input.url)
+  })
+})
+
 test("formats imported job page notes from detected metadata", () => {
   assert.equal(
     formatJobPageNotes({
