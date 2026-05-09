@@ -62,9 +62,30 @@ type DecisionBrief = {
   score: number
   contentGate: CountryFitEvaluation["contentGate"]
   rationale: string[]
+  evidenceFound: string[]
   risks: string[]
   nextActions: string[]
   missingInputs: string[]
+}
+
+type OfficialSource = {
+  label: string
+  url: string
+  note: string
+}
+
+type VerificationChecklistItem = {
+  id: string
+  label: string
+  status: "ready" | "needs-check" | "blocked"
+  evidence: string
+  limit: string
+}
+
+type ContentGuardrail = {
+  label: string
+  status: "ready" | "warning" | "blocked"
+  reason: string
 }
 
 const storageKey = "autotime-v2-companion-dashboard"
@@ -383,6 +404,78 @@ const euCountryOptions = [
   "Switzerland"
 ]
 
+const officialSourceFallback: OfficialSource[] = [
+  {
+    label: "EU immigration portal",
+    url: "https://immigration-portal.ec.europa.eu/index_en",
+    note:
+      "Use this as a starting point, then verify the hiring country directly."
+  }
+]
+
+const officialCountrySources: Record<string, OfficialSource[]> = {
+  "United Kingdom": [
+    {
+      label: "GOV.UK Skilled Worker visa",
+      url: "https://www.gov.uk/skilled-worker-visa",
+      note: "Verify job, salary, sponsor and document requirements."
+    },
+    {
+      label: "GOV.UK sponsor licence guidance",
+      url: "https://www.gov.uk/uk-visa-sponsorship-employers",
+      note: "Check employer sponsorship responsibilities and limits."
+    }
+  ],
+  Ireland: [
+    {
+      label: "Ireland Critical Skills Employment Permit",
+      url: "https://enterprise.gov.ie/en/what-we-do/workplace-and-skills/employment-permits/permit-types/critical-skills-employment-permit/",
+      note: "Verify eligibility, remuneration and permit requirements."
+    },
+    {
+      label: "Ireland employment permit types",
+      url: "https://enterprise.gov.ie/en/what-we-do/workplace-and-skills/employment-permits/permit-types/",
+      note: "Compare permit routes before assuming a role is viable."
+    }
+  ],
+  Germany: [
+    {
+      label: "Make it in Germany work visa",
+      url: "https://www.make-it-in-germany.com/en/visa-residence/types/work-qualified-professionals",
+      note: "Verify qualification, job offer and work visa requirements."
+    },
+    {
+      label: "Make it in Germany visa procedure",
+      url: "https://www.make-it-in-germany.com/en/visa-residence/procedure/entry-process",
+      note: "Check the visa process and required verification steps."
+    }
+  ],
+  Netherlands: [
+    {
+      label: "IND highly skilled migrant",
+      url: "https://ind.nl/en/residence-permits/work/highly-skilled-migrant",
+      note: "Verify recognised sponsor, contract and income requirements."
+    },
+    {
+      label: "IND recognised sponsor background",
+      url: "https://ind.nl/en/about-us/background-articles/national-highly-skilled-migrant-scheme",
+      note: "Understand recognised sponsor obligations and register context."
+    }
+  ],
+  France: [
+    {
+      label: "France-Visas salaried employment",
+      url: "https://www.france-visas.gouv.fr/en/salaried-employment",
+      note: "Verify work permit and visa route requirements."
+    },
+    {
+      label: "Service-Public work authorisation",
+      url: "https://www.service-public.fr/particuliers/vosdroits/F2728",
+      note: "Check when work authorisation is required in France."
+    }
+  ]
+}
+
 const defaultProductContext: ProductContext = {
   roleMarket: "general-tech",
   candidatePosition: "foreign-candidate",
@@ -422,64 +515,44 @@ const emptyProfile: CandidateProfile = {
   portfolioUrl: "",
   currentCountry: "United Kingdom",
   currentCity: "",
-  targetCountries: "United Kingdom, Ireland, Netherlands, Germany",
-  targetRoles:
-    "Business Analyst, Systems Analyst, Product Analyst, Application Support Analyst",
+  targetCountries: "",
+  targetRoles: "",
   workRightDetails: "",
   sponsorshipNeeded: false,
   relocationWillingness: "depends",
   salaryExpectation: "",
-  noticePeriod: "Negotiable",
-  baseCvText:
-    "Business analyst with payments, application support, UAT, stakeholder management, SQL reporting and systems delivery experience.",
-  projectSummaries:
-    "Add a few projects, achievements or examples you want applications to use.",
-  experienceHighlights:
-    "Requirements analysis, UAT coordination, stakeholder translation, operational problem solving and regulated systems documentation."
+  noticePeriod: "",
+  baseCvText: "",
+  projectSummaries: "",
+  experienceHighlights: ""
 }
 
 const emptyReusableAnswers: ReusableAnswers = {
   sponsorshipAnswer: "",
   relocationAnswer: "",
   workAuthorisationAnswer: "",
-  noticePeriodAnswer: "My notice period is negotiable.",
+  noticePeriodAnswer: "",
   salaryExpectationAnswer: "",
-  motivationAnswer:
-    "I am interested in roles where I can combine business analysis, systems thinking and delivery clarity.",
-  strengthsAnswer:
-    "My strengths are requirements analysis, stakeholder management, UAT and operational problem solving.",
+  motivationAnswer: "",
+  strengthsAnswer: "",
   availabilityAnswer: ""
 }
 
 const emptyJobAnalysis: JobAnalysisDraft = {
-  jobTitle: "Business Systems Analyst",
-  company: "Example FinTech",
-  jobUrl: "https://example.com/jobs/business-systems-analyst",
-  location: "London, United Kingdom",
-  workMode: "hybrid",
-  jobDescription:
-    "Business systems analyst role supporting payments delivery, requirements gathering, stakeholder management, UAT coordination, SQL reporting and API integration.",
-  notes: "V2 dashboard local companion sample.",
-  skills: [
-    "Requirements analysis",
-    "Stakeholder management",
-    "UAT",
-    "Payments",
-    "SQL"
-  ],
-  seniority: "Mid-level",
-  summary:
-    "Business Systems Analyst at Example FinTech appears to be a mid-level hybrid opportunity.",
-  gaps: ["Confirm sponsorship and location practicality before applying."],
-  fitScore: 82,
-  recommendation: "High Priority",
-  positioningAngle:
-    "Position around FinTech systems, application support, and cross-functional delivery.",
-  scoreFactors: [
-    "Role title aligns with the target analyst/systems role family.",
-    "Domain language supports a FinTech or regulated-systems positioning angle.",
-    "Work mode supports practical UK/EU application execution."
-  ]
+  jobTitle: "",
+  company: "",
+  jobUrl: "",
+  location: "",
+  workMode: "unknown",
+  jobDescription: "",
+  notes: "",
+  skills: [],
+  seniority: "",
+  summary: "",
+  gaps: [],
+  fitScore: 0,
+  positioningAngle: "",
+  scoreFactors: []
 }
 
 const defaultState: CompanionDashboardState = {
@@ -490,6 +563,15 @@ const defaultState: CompanionDashboardState = {
   interviewPrepPacks: []
 }
 
+function isLegacySampleState(state: CompanionDashboardState) {
+  return (
+    state.applications.length === 0 &&
+    state.jobAnalysis.company === "Example FinTech" &&
+    state.jobAnalysis.jobUrl ===
+      "https://example.com/jobs/business-systems-analyst"
+  )
+}
+
 function getStoredState() {
   if (typeof window === "undefined") {
     return defaultState
@@ -498,7 +580,9 @@ function getStoredState() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? "null")
     const result = companionDashboardStateSchema.safeParse(parsed)
-    return result.success ? result.data : defaultState
+    return result.success && !isLegacySampleState(result.data)
+      ? result.data
+      : defaultState
   } catch {
     return defaultState
   }
@@ -907,12 +991,17 @@ function getDecisionBrief({
   const fitRisks = fitEvaluation.components
     .filter((item) => item.status === "weak" || item.status === "blocker")
     .map((item) => `${item.label}: ${item.rationale}`)
+  const evidenceFound = fitEvaluation.components.flatMap((item) =>
+    item.evidence.length
+      ? item.evidence.map((evidence) => `${item.label}: ${evidence}`)
+      : []
+  )
   const risks = [
     ...fitRisks,
     !state.profile.baseCvText.trim() &&
-      "CV text is missing, so the advice will be weaker.",
+      "CV text is missing, so skill and ATS checks cannot be verified.",
     !state.jobAnalysis.jobDescription.trim() &&
-      "Job description is missing, so role classification is incomplete.",
+      "Job description is missing, so role classification cannot be verified.",
     (state.jobAnalysis.gaps?.length ?? 0) > 0 &&
       `${state.jobAnalysis.gaps?.length} saved role gap${
         state.jobAnalysis.gaps?.length === 1 ? "" : "s"
@@ -925,17 +1014,22 @@ function getDecisionBrief({
     score: fitEvaluation.overallScore,
     contentGate: fitEvaluation.contentGate,
     rationale: [
-      `${getMarketLabel(context)} mode is active for ${context.targetCountry}.`,
-      `Country-fit score is ${fitEvaluation.overallScore}% and profile readiness is ${readinessScore}%.`,
+      `Assessment mode: ${getMarketLabel(context)} / ${context.targetCountry}.`,
+      `Decision index: ${fitEvaluation.overallScore}/100. Profile readiness: ${readinessScore}/100.`,
       fitEvaluation.positioningAngle,
-      getUrgencyGuidance(context),
-      fitEvaluation.learningPrompt
+      getUrgencyGuidance(context)
     ],
+    evidenceFound:
+      evidenceFound.length > 0
+        ? evidenceFound
+        : [
+            "No supporting evidence has been found yet. Add real profile, work-right and job-description details."
+          ],
     risks:
       risks.length > 0
         ? risks
         : [
-            "No critical risk is visible from the saved profile and job context."
+            "No rule-based blocker was detected. This is not employer, visa or legal confirmation."
           ],
     nextActions:
       fitEvaluation.contentGate === "ready"
@@ -957,6 +1051,176 @@ function getDecisionBrief({
             ],
     missingInputs
   }
+}
+
+function getOfficialSources(targetCountry: string) {
+  return officialCountrySources[targetCountry] ?? officialSourceFallback
+}
+
+function getEvidenceLedgerRows(
+  fitEvaluation: CountryFitEvaluation,
+  missingInputs: string[]
+) {
+  return [
+    ...fitEvaluation.components.map((component) => ({
+      id: component.key,
+      check: component.label,
+      status: component.status,
+      explanation: component.rationale,
+      evidence: component.evidence.length
+        ? component.evidence
+        : ["No direct supporting evidence found yet."],
+      limit:
+        component.status === "strong" || component.status === "medium"
+          ? "Supported by saved text and rule checks, not officially verified."
+          : "Requires user or employer confirmation before relying on this advice."
+    })),
+    ...missingInputs.map((input) => ({
+      id: `missing-${input}`,
+      check: `Missing: ${input}`,
+      status: "missing",
+      explanation: `The ${input} input is required for a stronger decision.`,
+      evidence: ["No user-provided evidence is saved for this input."],
+      limit: "AutoTime must not infer this from unrelated information."
+    }))
+  ]
+}
+
+function getVerificationChecklist({
+  state,
+  fitEvaluation,
+  officialSources
+}: {
+  state: CompanionDashboardState
+  fitEvaluation: CountryFitEvaluation
+  officialSources: OfficialSource[]
+}): VerificationChecklistItem[] {
+  const hasJobDescription = Boolean(state.jobAnalysis.jobDescription.trim())
+  const hasWorkRight = Boolean(state.profile.workRightDetails.trim())
+  const hasTargetCountry = Boolean(state.profile.targetCountries.trim())
+  const hasCv = Boolean(state.profile.baseCvText.trim())
+  const hasOfficialSources = officialSources.length > 0
+  const hasHardBlocker = fitEvaluation.blockers.length > 0
+
+  return [
+    {
+      id: "job-description",
+      label: "Job description saved",
+      status: hasJobDescription ? "ready" : "needs-check",
+      evidence: hasJobDescription
+        ? "Job text is available for role, skill and sponsorship checks."
+        : "No job description has been saved.",
+      limit: "A thin or partial job post can hide sponsorship, location or salary constraints."
+    },
+    {
+      id: "work-right",
+      label: "Work-right position stated",
+      status: hasWorkRight ? "ready" : "blocked",
+      evidence: hasWorkRight
+        ? state.profile.workRightDetails
+        : "No work-right evidence is saved.",
+      limit:
+        "The user must verify work authorisation with official guidance or the employer."
+    },
+    {
+      id: "target-country",
+      label: "Target country confirmed",
+      status: hasTargetCountry ? "ready" : "needs-check",
+      evidence: hasTargetCountry
+        ? state.profile.targetCountries
+        : "No target country is saved in the profile.",
+      limit:
+        "Broad EU or remote roles still need country-specific hiring verification."
+    },
+    {
+      id: "cv-evidence",
+      label: "CV evidence available",
+      status: hasCv ? "ready" : "needs-check",
+      evidence: hasCv
+        ? "CV text is saved and can be compared with role language."
+        : "No CV text is saved.",
+      limit:
+        "Application content should not invent achievements or role experience."
+    },
+    {
+      id: "official-source",
+      label: "Official source reviewed",
+      status: hasOfficialSources ? "needs-check" : "blocked",
+      evidence: hasOfficialSources
+        ? officialSources.map((source) => source.label).join(", ")
+        : "No official verification source is available for this country.",
+      limit:
+        "The app provides links only; the user must verify current requirements."
+    },
+    {
+      id: "blockers",
+      label: "Hard blockers resolved",
+      status: hasHardBlocker ? "blocked" : "ready",
+      evidence: hasHardBlocker
+        ? fitEvaluation.blockers.join(" ")
+        : "No hard blocker was detected by the current rules.",
+      limit:
+        "No detected blocker is not the same as employer, visa or legal approval."
+    }
+  ]
+}
+
+function getContentGuardrails({
+  decisionBrief,
+  verificationChecklist
+}: {
+  decisionBrief: DecisionBrief
+  verificationChecklist: VerificationChecklistItem[]
+}): ContentGuardrail[] {
+  const blockedChecks = verificationChecklist.filter(
+    (item) => item.status === "blocked"
+  )
+  const needsCheck = verificationChecklist.filter(
+    (item) => item.status === "needs-check"
+  )
+
+  return [
+    {
+      label: "Decision gate",
+      status:
+        decisionBrief.contentGate === "blocked"
+          ? "blocked"
+          : decisionBrief.contentGate === "stretch"
+            ? "warning"
+            : "ready",
+      reason:
+        decisionBrief.contentGate === "blocked"
+          ? "Application content is blocked until the strongest risk is resolved."
+          : decisionBrief.contentGate === "stretch"
+            ? "Content can only be drafted with a clear stretch-risk label."
+            : "No content blocker was detected by the current rules."
+    },
+    {
+      label: "Evidence minimum",
+      status:
+        blockedChecks.length > 0
+          ? "blocked"
+          : needsCheck.length > 0
+            ? "warning"
+            : "ready",
+      reason:
+        blockedChecks.length > 0
+          ? `${blockedChecks.length} required check${
+              blockedChecks.length === 1 ? "" : "s"
+            } blocked.`
+          : needsCheck.length > 0
+            ? `${needsCheck.length} check${
+                needsCheck.length === 1 ? "" : "s"
+              } still need manual confirmation.`
+            : "Core verification checks are ready."
+    },
+    {
+      label: "No invention rule",
+      status: "ready",
+      reason:
+        "Generated content must only use saved profile, reusable answers and job text."
+    }
+  ]
 }
 
 export default function HomePage() {
@@ -1027,6 +1291,31 @@ export default function HomePage() {
         readinessScore
       }),
     [productContext, state, fitEvaluation, readinessScore]
+  )
+  const officialSources = useMemo(
+    () => getOfficialSources(productContext.targetCountry),
+    [productContext.targetCountry]
+  )
+  const evidenceLedgerRows = useMemo(
+    () => getEvidenceLedgerRows(fitEvaluation, decisionBrief.missingInputs),
+    [fitEvaluation, decisionBrief.missingInputs]
+  )
+  const verificationChecklist = useMemo(
+    () =>
+      getVerificationChecklist({
+        state,
+        fitEvaluation,
+        officialSources
+      }),
+    [state, fitEvaluation, officialSources]
+  )
+  const contentGuardrails = useMemo(
+    () =>
+      getContentGuardrails({
+        decisionBrief,
+        verificationChecklist
+      }),
+    [decisionBrief, verificationChecklist]
   )
   const profileBridgeIssues = useMemo(
     () => getCandidateProfileBridgeIssues(state.profile),
@@ -1286,6 +1575,52 @@ export default function HomePage() {
     setStatus("Dashboard backup exported")
   }
 
+  const exportDecisionAudit = () => {
+    const audit = {
+      productPrinciple:
+        "No claim without evidence. No score without explanation. No application advice without clear limits.",
+      exportedAt: new Date().toISOString(),
+      targetContext: productContext,
+      role: {
+        title: state.jobAnalysis.jobTitle,
+        company: state.jobAnalysis.company,
+        url: state.jobAnalysis.jobUrl,
+        location: state.jobAnalysis.location,
+        workMode: state.jobAnalysis.workMode
+      },
+      decision: {
+        index: decisionBrief.score,
+        label: decisionBrief.decision,
+        ruleConfidence: decisionBrief.confidence,
+        contentGate: decisionBrief.contentGate,
+        notProbability: true
+      },
+      rationale: decisionBrief.rationale,
+      evidenceFound: decisionBrief.evidenceFound,
+      risksToVerify: decisionBrief.risks,
+      missingInputs: decisionBrief.missingInputs,
+      nextSteps: decisionBrief.nextActions,
+      evidenceLedger: evidenceLedgerRows,
+      verificationChecklist,
+      officialSources,
+      limits: [
+        "This report is generated from user-saved profile and job text.",
+        "This report is not an official employer, immigration, sponsorship or legal decision.",
+        "Official sources and employer requirements should be checked before relying on the recommendation."
+      ]
+    }
+    const blob = new Blob([JSON.stringify(audit, null, 2)], {
+      type: "application/json;charset=utf-8"
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "autotime-decision-audit.json"
+    link.click()
+    URL.revokeObjectURL(url)
+    setStatus("Decision audit exported")
+  }
+
   const importDashboard = (value: string) => {
     if (!value.trim()) {
       setStatus("Paste exported V2 dashboard JSON before importing")
@@ -1368,12 +1703,12 @@ export default function HomePage() {
         </div>
         <div className="executive-panel" aria-label="Your job search summary">
           <div>
-            <small>Profile ready</small>
-            <strong>{readinessScore}%</strong>
+            <small>Profile evidence</small>
+            <strong>{readinessScore}</strong>
           </div>
           <div>
-            <small>Job fit</small>
-            <strong>{fitEvaluation.overallScore}%</strong>
+            <small>Decision index</small>
+            <strong>{fitEvaluation.overallScore}</strong>
           </div>
           <p>{fitEvaluation.decision}</p>
         </div>
@@ -1611,16 +1946,17 @@ export default function HomePage() {
           </p>
         </div>
         <div className="decision-score">
-          <strong>{decisionBrief.score}%</strong>
+          <strong>{decisionBrief.score}</strong>
           <span>{decisionBrief.decision}</span>
-          <small>{decisionBrief.confidence} confidence</small>
+          <small>{decisionBrief.confidence} rule confidence</small>
           <small>
             {decisionBrief.contentGate === "ready"
-              ? "Content ready"
+              ? "No content blocker detected"
               : decisionBrief.contentGate === "stretch"
                 ? "Stretch label required"
                 : "Content blocked"}
           </small>
+          <small>Decision index, not probability</small>
         </div>
         <div className="decision-columns">
           <section>
@@ -1632,7 +1968,15 @@ export default function HomePage() {
             </ul>
           </section>
           <section>
-            <h3>Risks to check</h3>
+            <h3>Evidence found</h3>
+            <ul className="bullets-list">
+              {decisionBrief.evidenceFound.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <h3>Risks to verify</h3>
             <ul className="bullets-list">
               {decisionBrief.risks.map((item) => (
                 <li key={item}>{item}</li>
@@ -1660,6 +2004,135 @@ export default function HomePage() {
             </ul>
           </section>
         </div>
+        <p className="decision-integrity-note">
+          No claim without evidence. No score without explanation. No
+          application advice without clear limits.
+        </p>
+        <p className="decision-integrity-note">
+          This is a rule-based decision aid using the profile and job text saved
+          in this browser. It is not an official employer, immigration,
+          sponsorship or legal decision.
+        </p>
+      </section>
+
+      <section className="trust-grid" aria-label="Evidence and official verification">
+        <section className="evidence-ledger-panel">
+          <div className="section-heading">
+            <p className="eyebrow">Evidence ledger</p>
+            <h2>Every recommendation must be traceable</h2>
+            <p>
+              Each row separates the check, the evidence used and the limit of
+              what AutoTime can safely conclude.
+            </p>
+          </div>
+          <div className="ledger-table">
+            {evidenceLedgerRows.map((row) => (
+              <article className="ledger-row" key={row.id}>
+                <div>
+                  <strong>{row.check}</strong>
+                  <span className={`ledger-status ${row.status}`}>
+                    {row.status}
+                  </span>
+                </div>
+                <p>{row.explanation}</p>
+                <dl>
+                  <div>
+                    <dt>Evidence</dt>
+                    <dd>{row.evidence.join(" ")}</dd>
+                  </div>
+                  <div>
+                    <dt>Limit</dt>
+                    <dd>{row.limit}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="content-guardrail-panel">
+          <div className="section-heading">
+            <p className="eyebrow">AI honesty guardrails</p>
+            <h2>Content generation is allowed only when evidence supports it</h2>
+            <p>
+              AutoTime must not write around blockers, invent proof or present
+              uncertain advice as verified.
+            </p>
+          </div>
+          <div className="guardrail-list">
+            {contentGuardrails.map((item) => (
+              <article className="guardrail-item" key={item.label}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <span className={`guardrail-status ${item.status}`}>
+                    {item.status}
+                  </span>
+                </div>
+                <p>{item.reason}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="verification-panel">
+          <div className="section-heading">
+            <p className="eyebrow">Before applying</p>
+            <h2>Manual verification checklist</h2>
+            <p>
+              These checks keep the workflow honest before you save, tailor or
+              submit an application.
+            </p>
+          </div>
+          <div className="verification-list">
+            {verificationChecklist.map((item) => (
+              <article className="verification-item" key={item.id}>
+                <div>
+                  <strong>{item.label}</strong>
+                  <span className={`verification-status ${item.status}`}>
+                    {item.status === "ready"
+                      ? "ready"
+                      : item.status === "blocked"
+                        ? "blocked"
+                        : "check"}
+                  </span>
+                </div>
+                <p>{item.evidence}</p>
+                <small>{item.limit}</small>
+              </article>
+            ))}
+          </div>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={exportDecisionAudit}
+          >
+            Export decision audit
+          </button>
+        </section>
+
+        <section className="official-source-panel">
+          <div className="section-heading">
+            <p className="eyebrow">Official verification</p>
+            <h2>Check the source before relying on visa or work-right advice</h2>
+            <p>
+              These links are provided for verification. AutoTime does not
+              authorise employment, sponsorship, visas or immigration status.
+            </p>
+          </div>
+          <div className="official-source-list">
+            {officialSources.map((source) => (
+              <a
+                href={source.url}
+                key={source.url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <strong>{source.label}</strong>
+                <span>{source.note}</span>
+              </a>
+            ))}
+          </div>
+        </section>
       </section>
 
       <nav className="tab-bar" aria-label="Dashboard sections">
@@ -2050,10 +2523,10 @@ export default function HomePage() {
                 <h2>{fitEvaluation.decision}</h2>
               </div>
               <div className="fit-gate-banner">
-                <strong>{fitEvaluation.overallScore}%</strong>
+                <strong>{fitEvaluation.overallScore}</strong>
                 <span>
                   {fitEvaluation.contentGate === "ready"
-                    ? "Generate content after positioning"
+                    ? "No content blocker detected by current rules"
                     : fitEvaluation.contentGate === "stretch"
                       ? "Stretch application: label the risk"
                       : "Do not write content yet"}
@@ -2084,10 +2557,19 @@ export default function HomePage() {
                   <article className={`fit-component ${item.status}`} key={item.key}>
                     <div>
                       <strong>{item.label}</strong>
-                      <span>{item.score}%</span>
+                      <span>{item.score}/100</span>
                     </div>
                     <small>{item.status}</small>
                     <p>{item.rationale}</p>
+                    <ul className="component-evidence-list">
+                      {item.evidence.length ? (
+                        item.evidence.map((evidence) => (
+                          <li key={evidence}>{evidence}</li>
+                        ))
+                      ) : (
+                        <li>No direct supporting evidence found yet.</li>
+                      )}
+                    </ul>
                   </article>
                 ))}
               </div>
@@ -2099,7 +2581,8 @@ export default function HomePage() {
                 </ul>
               ) : (
                 <p className="empty-state">
-                  No blocker is visible in the country/work-right model.
+                  No blocker was detected by the current rules. Verify employer
+                  requirements before applying.
                 </p>
               )}
               <ul className="evidence-list">
@@ -2190,7 +2673,8 @@ export default function HomePage() {
                     <small>{application.url}</small>
                     {application.fitDecision ? (
                       <small>
-                        {application.fitScore ?? 0}% - {application.fitDecision}
+                        Decision index {application.fitScore ?? 0} -{" "}
+                        {application.fitDecision}
                         {application.contentGate === "stretch"
                           ? " - stretch"
                           : application.contentGate === "blocked"

@@ -277,6 +277,8 @@ export async function generateContentWithOpenAI({
       "You write concise, truthful UK/EU job application content.",
       "Return only valid JSON with keys coverLetter, profileSummary, motivationAnswer, strengthsAnswer, availabilityAnswer.",
       "Do not invent employers, credentials, degrees, work rights, salary, or relocation facts.",
+      "Every claim must be supported by the candidate profile, reusable answers, or job text.",
+      "If evidence is thin, write conservatively and avoid strong claims.",
       "Use the candidate profile and job analysis. Keep outputs editable and specific."
     ].join(" "),
     input: { profile, job, reusableAnswers },

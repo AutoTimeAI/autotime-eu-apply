@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import {
   candidateProfileSchema,
+  evaluateCountryFit,
   jobAnalysisDraftSchema,
   reusableAnswersSchema,
   type ApplicationContentDraft
@@ -35,6 +36,46 @@ const requestSchema = z.object({
   reusableAnswers: reusableAnswersSchema.nullable()
 })
 
+function getFirstTargetCountry(profileTargetCountries: string, jobLocation: string) {
+  return (
+    profileTargetCountries
+      .split(",")
+      .map((item) => item.trim())
+      .find(Boolean) ||
+    jobLocation.trim() ||
+    "European Union"
+  )
+}
+
+function getContentGuardrailIssues(body: z.infer<typeof requestSchema>) {
+  const missing = [
+    !body.profile.baseCvText.trim() && "CV text",
+    !body.profile.targetRoles.trim() && "target roles",
+    !body.profile.workRightDetails.trim() && "work-right details",
+    !body.job.jobDescription.trim() && "job description"
+  ].filter(Boolean) as string[]
+  const evaluation = evaluateCountryFit({
+    profile: body.profile,
+    job: body.job,
+    context: {
+      candidatePosition: body.profile.sponsorshipNeeded
+        ? "foreign-candidate"
+        : "native-candidate",
+      targetCountry: getFirstTargetCountry(
+        body.profile.targetCountries,
+        body.job.location
+      )
+    }
+  })
+
+  return [
+    ...missing.map((item) => `Missing required evidence: ${item}.`),
+    ...evaluation.blockers,
+    evaluation.contentGate === "blocked" &&
+      "Content generation is blocked by the country/work-right decision gate."
+  ].filter(Boolean) as string[]
+}
+
 function jsonResponse(
   body: ApiResponse<ContentRouteData>
 ): NextResponse<ApiResponse<ContentRouteData>> {
@@ -62,10 +103,23 @@ export async function POST(
       })
     }
 
+    const body = requestSchema.parse(await request.json())
+    const guardrailIssues = getContentGuardrailIssues(body)
+
+    if (guardrailIssues.length > 0) {
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.content.guardrail.blocked",
+        data: null,
+        error: `Content generation blocked: ${guardrailIssues.join(" ")}`,
+        request,
+        status: 422
+      })
+    }
+
     await assertAiRouteRateLimit(user.id)
     await assertCanUseAi(user.id)
 
-    const body = requestSchema.parse(await request.json())
     const result = await generateContentWithOpenAI(body)
 
     await trackAiCall(user.id, {

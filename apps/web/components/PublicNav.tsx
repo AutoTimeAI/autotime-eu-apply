@@ -7,7 +7,7 @@ export function PublicNav() {
         AutoTime <span>EU Apply</span>
       </Link>
       <div>
-        <Link href="/">Product</Link>
+        <Link href="/dashboard">Workspace</Link>
         <Link href="/pricing">Pricing</Link>
         <Link className="nav-cta" href="/login">
           Sign in

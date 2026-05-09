@@ -126,8 +126,15 @@ function hasText(value: string | undefined) {
 }
 
 function includesAny(value: string, words: string[]) {
+  if (!value.trim()) {
+    return false
+  }
+
   const text = value.toLowerCase()
-  return words.some((word) => text.includes(word.toLowerCase()))
+  return words
+    .map((word) => word.trim().toLowerCase())
+    .filter(Boolean)
+    .some((word) => text.includes(word))
 }
 
 function getText(profile: CandidateProfile, job: JobAnalysisDraft) {
@@ -184,7 +191,7 @@ function getSkillMatch(profileText: string, jobText: string) {
   if (jobSignals.length === 0) {
     return component(
       "skillMatch",
-      45,
+      0,
       "The job description is too thin to compare skill language confidently."
     )
   }
@@ -199,6 +206,14 @@ function getSkillMatch(profileText: string, jobText: string) {
 }
 
 function getAtsCompatibility(profile: CandidateProfile, job: JobAnalysisDraft) {
+  if (!hasText(profile.baseCvText) || !hasText(job.jobTitle)) {
+    return component(
+      "atsCompatibility",
+      15,
+      "CV text and job title are required before screening compatibility can be checked."
+    )
+  }
+
   const hasRole = includesAny(profile.targetRoles, [job.jobTitle]) ||
     includesAny(job.jobTitle, profile.targetRoles.split(",").map((item) => item.trim()).filter(Boolean))
   const hasCv = hasText(profile.baseCvText)
@@ -255,6 +270,20 @@ function getSponsorshipLikelihood(
       15,
       "The role appears to reject sponsorship while the profile says sponsorship is needed.",
       ["Negative sponsorship language was detected in the job text."]
+    )
+  }
+
+  if (
+    context.candidatePosition === "foreign-candidate" &&
+    !hasText(profile.workRightDetails)
+  ) {
+    return component(
+      "sponsorshipLikelihood",
+      35 - strictnessPenalty - learnedPenalty,
+      "Sponsorship status is not verified because work-right details are missing.",
+      rule.evidencePrompts.filter((item) =>
+        item.toLowerCase().includes("sponsor")
+      )
     )
   }
 

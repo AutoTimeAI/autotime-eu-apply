@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import type { CookieOptions } from "@supabase/ssr"
 import { type NextRequest, NextResponse } from "next/server"
-import { logDiagnostic, createDiagnostic } from "./lib/diagnostics"
+import { createDiagnostic, logDiagnostic } from "./lib/diagnostics"
 import { publicEnv } from "./lib/env"
 import type { Database } from "./lib/supabase/types"
 
@@ -63,7 +63,7 @@ function applyAuthCookies({
   return response
 }
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   try {
     const cookiesToSet: CookieToSet[] = []
     const headersToSet: Record<string, string> = {}
@@ -109,7 +109,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       logDiagnostic(
         createDiagnostic({
           area: "auth",
-          code: "auth.middleware.protected-redirect",
+          code: "auth.proxy.protected-redirect",
           message: "Protected route requested without a session",
           request,
           status: 307
@@ -135,8 +135,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       logDiagnostic(
         createDiagnostic({
           area: "auth",
-          code: "auth.middleware.failed",
-          message: error instanceof Error ? error.message : "Middleware failed",
+          code: "auth.proxy.failed",
+          message: error instanceof Error ? error.message : "Proxy failed",
           request,
           status: 307
         })

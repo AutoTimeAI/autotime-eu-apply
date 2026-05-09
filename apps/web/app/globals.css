@@ -581,7 +581,7 @@ h4 {
 
 .decision-columns {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 
@@ -736,6 +736,19 @@ h4 {
   line-height: 1.45;
 }
 
+.component-evidence-list {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.component-evidence-list li {
+  color: #526276;
+  font-size: 0.82rem;
+  line-height: 1.42;
+}
+
 .blocker-list li {
   color: var(--red);
   font-weight: 650;
@@ -749,6 +762,281 @@ h4 {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.decision-integrity-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.decision-integrity-note:first-of-type {
+  border-top: 1px solid var(--border);
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding-top: 12px;
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.evidence-ledger-panel {
+  grid-row: span 2;
+}
+
+.evidence-ledger-panel,
+.content-guardrail-panel,
+.verification-panel,
+.official-source-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-tight);
+  padding: 18px;
+}
+
+.ledger-table,
+.guardrail-list,
+.verification-list,
+.official-source-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ledger-row {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.ledger-row > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ledger-row strong {
+  color: var(--ink);
+}
+
+.ledger-row p,
+.ledger-row dd,
+.official-source-list span {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ledger-row dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.ledger-row dt {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ledger-row dd {
+  margin-top: 4px;
+  font-size: 0.88rem;
+}
+
+.ledger-status {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.ledger-status.strong {
+  border-color: #9ed8bd;
+  background: #e5f7ee;
+  color: var(--green);
+}
+
+.ledger-status.medium {
+  border-color: #b7c9ee;
+  background: #edf3ff;
+  color: var(--blue);
+}
+
+.ledger-status.weak,
+.ledger-status.missing {
+  border-color: #efd7ad;
+  background: #fff7e8;
+  color: var(--amber);
+}
+
+.ledger-status.blocker {
+  border-color: #e1b8bd;
+  background: #fff1f2;
+  color: var(--red);
+}
+
+.official-source-list a {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+  text-decoration: none;
+}
+
+.official-source-list a:hover {
+  border-color: var(--accent);
+  background: #edf7f5;
+}
+
+.official-source-list strong {
+  color: var(--accent-strong);
+}
+
+.guardrail-item {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.guardrail-item > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guardrail-item strong {
+  color: var(--ink);
+}
+
+.guardrail-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.guardrail-status {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.guardrail-status.ready {
+  border-color: #9ed8bd;
+  background: #e5f7ee;
+  color: var(--green);
+}
+
+.guardrail-status.warning {
+  border-color: #efd7ad;
+  background: #fff7e8;
+  color: var(--amber);
+}
+
+.guardrail-status.blocked {
+  border-color: #e1b8bd;
+  background: #fff1f2;
+  color: var(--red);
+}
+
+.verification-panel button {
+  width: fit-content;
+}
+
+.verification-item {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.verification-item > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.verification-item strong {
+  color: var(--ink);
+}
+
+.verification-item p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.verification-item small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.verification-status {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.verification-status.ready {
+  border-color: #9ed8bd;
+  background: #e5f7ee;
+  color: var(--green);
+}
+
+.verification-status.needs-check {
+  border-color: #efd7ad;
+  background: #fff7e8;
+  color: var(--amber);
+}
+
+.verification-status.blocked {
+  border-color: #e1b8bd;
+  background: #fff1f2;
+  color: var(--red);
 }
 
 .metrics-strip {
@@ -2028,6 +2316,7 @@ h4 {
   .app-header,
   .context-grid,
   .decision-brief-panel,
+  .trust-grid,
   .workspace-grid,
   .ai-settings-panel,
   .profile-bridge-panel,
@@ -2075,6 +2364,10 @@ h4 {
   .landing-hero {
     min-height: auto;
     padding: 54px 0;
+  }
+
+  .evidence-ledger-panel {
+    grid-row: auto;
   }
 
   .suggestion-card {
@@ -2138,6 +2431,10 @@ h4 {
     grid-template-columns: 1fr;
   }
 
+  .ledger-row dl {
+    grid-template-columns: 1fr;
+  }
+
   .header-actions,
   .header-actions button {
     width: 100%;
@@ -2198,6 +2495,10 @@ h4 {
 
   .landing-cta-band a {
     display: flex;
+    width: 100%;
+  }
+
+  .verification-panel button {
     width: 100%;
   }
 
