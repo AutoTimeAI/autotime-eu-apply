@@ -3206,6 +3206,30 @@ export default function HomePage({
         </aside>
 
         <div className="command-content">
+          {isOverview ? (
+            <section
+              className="dashboard-demo-panel"
+              aria-labelledby="dashboard-demo-title"
+            >
+              <div className="section-heading">
+                <p className="eyebrow">Start here</p>
+                <h2 id="dashboard-demo-title">Watch the product walkthrough</h2>
+                <p>
+                  See profile evidence, Job Check, extension import,
+                  application content, tracking, interview prep and Pro in one
+                  quick tour.
+                </p>
+              </div>
+              <video
+                controls
+                preload="metadata"
+                src="/demo/autotime-first-user-demo.mp4"
+              >
+                Your browser does not support embedded video.
+              </video>
+            </section>
+          ) : null}
+
           <section className="ai-copilot-panel" aria-label="AI Copilot">
             <div className="ai-copilot-header">
               <div>

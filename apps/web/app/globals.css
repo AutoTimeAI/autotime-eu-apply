@@ -690,6 +690,35 @@ h4 {
   color: var(--accent-strong);
 }
 
+.dashboard-demo-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 0.9fr);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+  border: 1px solid rgba(49, 95, 186, 0.2);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(248, 251, 255, 0.96), rgba(237, 247, 245, 0.9)),
+    var(--surface);
+  box-shadow: var(--shadow-tight);
+  padding: 16px;
+}
+
+.dashboard-demo-panel .section-heading p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.dashboard-demo-panel video {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #000000;
+  box-shadow: var(--shadow-tight);
+}
+
 .command-centre-overview {
   display: grid;
   gap: 12px;
@@ -3134,6 +3163,7 @@ h4 {
   .context-grid,
   .auth-shell,
   .auth-demo-panel,
+  .dashboard-demo-panel,
   .pricing-demo-panel,
   .decision-brief-panel,
   .trust-grid,
