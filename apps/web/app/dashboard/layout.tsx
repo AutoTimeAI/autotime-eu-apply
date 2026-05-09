@@ -43,8 +43,8 @@ export default async function DashboardLayout({
               <a href="/dashboard/jobs">Job Check</a>
               <a href="/dashboard/applications">Applications</a>
               <a href="/dashboard/interview">Interview</a>
+              <a href="/dashboard/extension">Extension</a>
               <a href="/pricing">Pricing</a>
-              <a href="/extension/connect">Extension</a>
             </nav>
             <UserNav email={email} plan={plan} />
           </header>
