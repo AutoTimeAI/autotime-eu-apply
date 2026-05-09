@@ -32,6 +32,24 @@ type PrepPackOptions = {
   now?: string
 }
 
+export type InterviewPrepGuardrailResult = {
+  ready: boolean
+  blockers: string[]
+  warnings: string[]
+  evidence: string[]
+  limits: string[]
+}
+
+export class InterviewPrepGuardrailError extends Error {
+  guardrails: InterviewPrepGuardrailResult
+
+  constructor(guardrails: InterviewPrepGuardrailResult) {
+    super(`Interview prep blocked: ${guardrails.blockers.join(" ")}`)
+    this.name = "InterviewPrepGuardrailError"
+    this.guardrails = guardrails
+  }
+}
+
 const modelPricesPerMillionTokens: Record<
   string,
   { input: number; output: number }
@@ -66,6 +84,161 @@ function toStringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : []
+}
+
+function cleanText(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function hasMeaningfulText(value: unknown, minLength = 20) {
+  return cleanText(value).replace(/\s+/g, " ").length >= minLength
+}
+
+function addIfMeaningful(items: string[], label: string, value: unknown) {
+  const text = cleanText(value)
+
+  if (text) {
+    items.push(`${label}: ${text}`)
+  }
+}
+
+function getProfileEvidence(profile: CandidateProfile) {
+  const evidence: string[] = []
+
+  addIfMeaningful(evidence, "Target roles", profile.targetRoles)
+  addIfMeaningful(evidence, "Current location", profile.currentCountry)
+  addIfMeaningful(evidence, "Target countries", profile.targetCountries)
+  addIfMeaningful(evidence, "CV evidence", profile.baseCvText)
+  addIfMeaningful(evidence, "Experience evidence", profile.experienceHighlights)
+  addIfMeaningful(evidence, "Project evidence", profile.projectSummaries)
+  addIfMeaningful(evidence, "Work-right evidence", profile.workRightDetails)
+  addIfMeaningful(evidence, "Notice period", profile.noticePeriod)
+
+  return evidence
+}
+
+function getJobEvidence(
+  application: ApplicationRecord,
+  job: JobAnalysisDraft
+) {
+  const evidence: string[] = []
+
+  addIfMeaningful(evidence, "Saved role", application.roleTitle || application.title)
+  addIfMeaningful(evidence, "Saved company", application.company)
+  addIfMeaningful(evidence, "Saved application note", application.notes)
+  addIfMeaningful(evidence, "Job title", job.jobTitle)
+  addIfMeaningful(evidence, "Company", job.company)
+  addIfMeaningful(evidence, "Job description", job.jobDescription)
+  addIfMeaningful(evidence, "Analysis summary", job.summary)
+  addIfMeaningful(evidence, "Positioning angle", job.positioningAngle)
+
+  if (job.skills?.length) {
+    evidence.push(`Saved skills: ${job.skills.join(", ")}`)
+  }
+
+  if (job.gaps?.length) {
+    evidence.push(`Known gaps: ${job.gaps.join(", ")}`)
+  }
+
+  return evidence
+}
+
+export function getInterviewPrepGuardrails({
+  application,
+  job,
+  profile
+}: {
+  application: ApplicationRecord
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}): InterviewPrepGuardrailResult {
+  const blockers: string[] = []
+  const warnings: string[] = []
+  const limits: string[] = [
+    "General career preparation only; this is not immigration, legal or hiring advice.",
+    "Use only evidence saved in the profile, job analysis and application notes.",
+    "Replace any placeholder prompt with a real example before using it in an interview."
+  ]
+  const role = cleanText(application.roleTitle || application.title || job.jobTitle)
+  const company = cleanText(application.company || job.company)
+  const profileEvidence = getProfileEvidence(profile)
+  const jobEvidence = getJobEvidence(application, job)
+  const candidateProofCount = [
+    hasMeaningfulText(profile.baseCvText, 35),
+    hasMeaningfulText(profile.experienceHighlights, 25),
+    hasMeaningfulText(profile.projectSummaries, 25)
+  ].filter(Boolean).length
+  const jobProofCount = [
+    hasMeaningfulText(job.jobDescription, 35),
+    hasMeaningfulText(job.summary, 25),
+    hasMeaningfulText(job.positioningAngle, 25),
+    Boolean(job.skills?.length && job.skills.length >= 2),
+    hasMeaningfulText(application.notes, 20)
+  ].filter(Boolean).length
+
+  if (application.status !== "Interview") {
+    blockers.push("Move this application to Interview before generating prep.")
+  }
+
+  if (!role) {
+    blockers.push("Add the role title before generating prep.")
+  }
+
+  if (!company) {
+    blockers.push("Add the company name before generating prep.")
+  }
+
+  if (candidateProofCount < 2) {
+    blockers.push(
+      "Add at least two candidate evidence sources: CV text, experience highlights, or project summaries."
+    )
+  }
+
+  if (jobProofCount < 2) {
+    blockers.push(
+      "Add stronger job evidence: job description, analysis summary, positioning angle, saved skills, or application notes."
+    )
+  }
+
+  if (!hasMeaningfulText(profile.workRightDetails, 8)) {
+    warnings.push(
+      "Work-right details are missing, so prep must not make visa or authorisation claims."
+    )
+  }
+
+  if (!hasMeaningfulText(profile.salaryExpectation, 2)) {
+    warnings.push("Salary expectation is missing; keep salary answers general.")
+  }
+
+  if (!hasMeaningfulText(profile.noticePeriod, 2)) {
+    warnings.push("Notice period is missing; keep availability answers general.")
+  }
+
+  return {
+    ready: blockers.length === 0,
+    blockers,
+    warnings,
+    evidence: [...profileEvidence, ...jobEvidence],
+    limits
+  }
+}
+
+export function assertInterviewPrepReady({
+  application,
+  job,
+  profile
+}: {
+  application: ApplicationRecord
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}) {
+  const guardrails = getInterviewPrepGuardrails({ application, job, profile })
+
+  if (!guardrails.ready) {
+    throw new InterviewPrepGuardrailError(guardrails)
+  }
+
+  return guardrails
 }
 
 function getOutputText(response: OpenAIResponse) {
@@ -154,41 +327,45 @@ export function createLocalInterviewPrepPack(
   job: JobAnalysisDraft,
   options: PrepPackOptions = {}
 ): InterviewPrepPack {
+  const guardrails = assertInterviewPrepReady({ application, job, profile })
   const now = options.now ?? getTimestamp()
   const role = application.roleTitle || job.jobTitle || "the role"
   const company = application.company || job.company || "the company"
-  const skills = job.skills?.length
-    ? job.skills
-    : ["requirements analysis", "stakeholder management", "delivery"]
+  const skills = job.skills?.length ? job.skills : ["Review saved job evidence"]
+  const profileEvidence = getProfileEvidence(profile).slice(0, 4)
+  const projectTalkingPoints = profile.projectSummaries
+    ? [
+        `Use only this saved project evidence: ${profile.projectSummaries}`,
+        "Explain your role, action and result only where the saved profile supports it."
+      ]
+    : [
+        "Add a real project example before discussing project work in the interview."
+      ]
 
   return {
     id: options.id ?? getId(),
     applicationId: application.id,
-    roleSummary: `${role} at ${company} needs clear analysis, delivery judgement and evidence that maps to the saved job description.`,
+    roleSummary: `${role} at ${company} is ready for interview prep because the saved profile and job record contain enough evidence to prepare without inventing claims.`,
     positioningStatement:
       job.positioningAngle ||
-      `Position ${profile.fullName || "the candidate"} around systems thinking, truthful experience and practical delivery impact.`,
+      `Position ${profile.fullName || "the candidate"} only around the saved evidence: ${profileEvidence.join(" ")}`,
     fitAndGapRecap: [
-      job.summary || `${role} is currently scored at ${job.fitScore ?? 0}%.`,
+      job.summary || `${role} is currently saved with fit score ${job.fitScore ?? 0}%.`,
       ...(job.gaps ?? [])
     ].join(" "),
     likelyQuestions: [
       `Why are you interested in ${role} at ${company}?`,
-      "Walk us through a requirements problem you clarified.",
-      "How do you handle conflicting stakeholder priorities?",
-      "Describe a UAT or delivery issue you helped resolve.",
+      "Which saved experience from your profile best proves you can do this role?",
+      "What job requirement do you meet most clearly, and what evidence supports it?",
+      "Where is your fit weaker, and how would you explain that honestly?",
       "What would you check first in the first 30 days?"
     ],
     starAnswerPrompts: [
-      "Use a real requirements or UAT example: situation, task, action, measurable result.",
-      "Use a stakeholder-management example where you translated ambiguity into a clear next step.",
-      "Use an operational support or incident example only if it is truthful and relevant."
+      "Use a real example from saved CV or experience notes: situation, task, action, result.",
+      "If the saved profile does not prove the example, write 'evidence missing' and add the missing detail first.",
+      "Do not add numbers, employers, tools, certifications or outcomes unless they are saved evidence."
     ],
-    projectTalkingPoints: [
-      profile.projectSummaries ||
-        "Explain AutoTime as a practical MVP focused on job analysis, content quality and tracking.",
-      "Connect any FinTech project discussion to resilience, risk, SLA visibility and stakeholder communication."
-    ],
+    projectTalkingPoints,
     skillsToRevise: skills.slice(0, 8),
     questionsToAskEmployer: [
       "What are the most important outcomes for this role in the first quarter?",
@@ -199,10 +376,12 @@ export function createLocalInterviewPrepPack(
     ],
     finalPrepChecklist: [
       "Review the saved job description and positioning angle.",
-      "Prepare two truthful STAR examples.",
-      "Check commute, hybrid expectations and work-right details.",
+      "Prepare two truthful STAR examples using saved evidence only.",
+      "Check commute, hybrid expectations and work-right details against official sources.",
       "Prepare questions for the employer.",
-      "Keep salary and notice-period answers consistent with saved profile data."
+      "Keep salary and notice-period answers consistent with saved profile data.",
+      ...guardrails.warnings,
+      ...guardrails.limits
     ],
     createdAt: now,
     updatedAt: now
@@ -251,6 +430,8 @@ export async function generateAIInterviewPrepPack({
   fallbackPack: InterviewPrepPack
   fetchImpl?: typeof fetch
 }) {
+  assertInterviewPrepReady({ application, job, profile })
+
   const response = await fetchImpl("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -264,7 +445,10 @@ export async function generateAIInterviewPrepPack({
         "Return only valid JSON with keys roleSummary, positioningStatement, fitAndGapRecap, likelyQuestions, starAnswerPrompts, projectTalkingPoints, skillsToRevise, questionsToAskEmployer, finalPrepChecklist.",
         "All list keys must be string arrays.",
         "Use only the supplied candidate profile, reusable answers, job analysis and application record.",
-        "Do not invent experience, employers, degrees, certifications, work rights, salary, relocation facts, or outcomes."
+        "Do not invent experience, employers, degrees, certifications, work rights, salary, relocation facts, or outcomes.",
+        "If a claim has no supplied evidence, state that evidence is missing instead of writing the claim.",
+        "STAR prompts must ask the user to supply truthful examples; do not fabricate complete stories.",
+        "No immigration or legal advice. For work-right questions, keep it general and tell the user to check official sources or a qualified adviser."
       ].join(" "),
       input: JSON.stringify({ profile, reusableAnswers, job, application }),
       max_output_tokens: 1400

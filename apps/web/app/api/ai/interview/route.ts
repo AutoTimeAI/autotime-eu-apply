@@ -12,6 +12,7 @@ import {
   generateInterviewPrepWithOpenAI,
   RateLimitError
 } from "../../../../lib/openai-server"
+import { InterviewPrepGuardrailError } from "../../../../lib/interview-prep"
 import {
   assertCanUseAi,
   FeatureGateError,
@@ -114,6 +115,17 @@ export async function POST(
         error: "Invalid request body",
         request,
         status: 400
+      })
+    }
+
+    if (error instanceof InterviewPrepGuardrailError) {
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.interview.guardrails.blocked",
+        data: null,
+        error: error.message,
+        request,
+        status: 422
       })
     }
 

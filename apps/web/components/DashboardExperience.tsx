@@ -21,6 +21,7 @@ import {
 } from "shared"
 import {
   createLocalInterviewPrepPack,
+  getInterviewPrepGuardrails,
 } from "../lib/interview-prep"
 import {
   getBrowserCloudSyncReadiness,
@@ -2519,6 +2520,17 @@ export default function HomePage({
   }
 
   const generateInterviewPrep = (application: ApplicationRecord) => {
+    const guardrails = getInterviewPrepGuardrails({
+      application,
+      profile: state.profile,
+      job: state.jobAnalysis
+    })
+
+    if (!guardrails.ready) {
+      setStatus(`Interview prep blocked: ${guardrails.blockers.join(" ")}`)
+      return
+    }
+
     const pack = createLocalInterviewPrepPack(
       application,
       state.profile,

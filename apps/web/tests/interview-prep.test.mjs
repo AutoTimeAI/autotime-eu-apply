@@ -5,6 +5,7 @@ import {
   defaultWebAISettings,
   estimateOpenAIInterviewCostUsd,
   generateAIInterviewPrepPack,
+  getInterviewPrepGuardrails,
   normalizeAIInterviewPrepPack
 } from "../lib/interview-prep.ts"
 
@@ -86,6 +87,48 @@ test("creates local interview prep pack without AI", () => {
   assert.match(fallbackPack.roleSummary, /Business Systems Analyst/)
   assert.ok(fallbackPack.likelyQuestions.length >= 5)
   assert.deepEqual(fallbackPack.skillsToRevise, ["Payments", "UAT", "SQL"])
+  assert.ok(
+    fallbackPack.projectTalkingPoints.every((item) => !item.includes("FinTech"))
+  )
+  assert.ok(
+    fallbackPack.finalPrepChecklist.some((item) =>
+      item.includes("General career preparation only")
+    )
+  )
+})
+
+test("blocks interview prep when evidence is too thin", () => {
+  const thinProfile = {
+    ...profile,
+    baseCvText: "",
+    projectSummaries: "",
+    experienceHighlights: "",
+    workRightDetails: ""
+  }
+  const thinJob = {
+    ...job,
+    jobDescription: "",
+    summary: "",
+    positioningAngle: "",
+    skills: []
+  }
+  const draftApplication = {
+    ...application,
+    status: "Saved",
+    notes: ""
+  }
+  const guardrails = getInterviewPrepGuardrails({
+    application: draftApplication,
+    profile: thinProfile,
+    job: thinJob
+  })
+
+  assert.equal(guardrails.ready, false)
+  assert.ok(guardrails.blockers.length >= 3)
+  assert.throws(
+    () => createLocalInterviewPrepPack(draftApplication, thinProfile, thinJob),
+    /Interview prep blocked/
+  )
 })
 
 test("normalizes partial AI interview prep output", () => {

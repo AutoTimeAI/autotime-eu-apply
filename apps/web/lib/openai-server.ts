@@ -1,7 +1,10 @@
 import OpenAI from "openai"
 import { z } from "zod"
 import { getServerEnv } from "./env"
-import { createLocalInterviewPrepPack } from "./interview-prep"
+import {
+  assertInterviewPrepReady,
+  createLocalInterviewPrepPack
+} from "./interview-prep"
 import { createAdminClient } from "./supabase/admin"
 import type {
   ApplicationContentDraft,
@@ -302,6 +305,8 @@ export async function generateInterviewPrepWithOpenAI({
   profile: CandidateProfile
   reusableAnswers: ReusableAnswers
 }): Promise<ServerAIResult<InterviewPrepPack>> {
+  assertInterviewPrepReady({ application, job, profile })
+
   const fallbackPack = createLocalInterviewPrepPack(application, profile, job)
   const result = await createJsonResponse({
     instructions: [
@@ -309,7 +314,10 @@ export async function generateInterviewPrepWithOpenAI({
       "Return only valid JSON with keys roleSummary, positioningStatement, fitAndGapRecap, likelyQuestions, starAnswerPrompts, projectTalkingPoints, skillsToRevise, questionsToAskEmployer, finalPrepChecklist.",
       "All list keys must be string arrays.",
       "Use only the supplied candidate profile, reusable answers, job analysis and application record.",
-      "Do not invent experience, employers, degrees, certifications, work rights, salary, relocation facts, or outcomes."
+      "Do not invent experience, employers, degrees, certifications, work rights, salary, relocation facts, or outcomes.",
+      "If a claim has no supplied evidence, state that evidence is missing instead of writing the claim.",
+      "STAR prompts must ask the user to supply truthful examples; do not fabricate complete stories.",
+      "No immigration or legal advice. For work-right questions, keep it general and tell the user to check official sources or a qualified adviser."
     ].join(" "),
     input: { profile, reusableAnswers, job, application },
     schema: interviewPrepPackPartialSchema
