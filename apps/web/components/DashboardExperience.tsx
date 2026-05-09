@@ -860,10 +860,10 @@ function getCountryGuidance(context: ProductContext) {
   const country = context.targetCountry || "selected country"
 
   if (context.candidatePosition === "foreign-candidate") {
-    return `For ${country}, AutoTime should check work-right clarity, sponsorship language, relocation practicality, timezone/location fit, and whether the role is worth applying before spending effort.`
+    return `${country} checks should include work-right clarity, sponsorship wording, relocation practicality, timezone or location fit, and missing evidence before any application advice is used.`
   }
 
-  return `For ${country}, AutoTime should focus on local credibility, salary/notice-period consistency, role seniority, domain fit, and interview conversion.`
+  return `${country} checks should include local availability, salary and notice-period consistency, role seniority, domain fit, and missing evidence before next steps are suggested.`
 }
 
 function getMarketPositioning(context: ProductContext) {
@@ -885,23 +885,23 @@ function getUrgencyGuidance(context: ProductContext) {
 function getAIUseCases(context: ProductContext) {
   return [
     {
-      title: "Pick the right country",
-      body: `Focus ${context.targetCountry} roles only when location, salary, seniority and work-right expectations make sense.`
+      title: "Country evidence",
+      body: `${context.targetCountry} should be used only with job location, salary, seniority and work-right evidence.`
     },
     {
-      title: "Check work-right risk",
+      title: "Work-right evidence",
       body:
         context.candidatePosition === "foreign-candidate"
-          ? "Treat sponsorship, relocation timing and local presence as early filters, not afterthoughts."
-          : "Keep notice period, salary range and local availability consistent across every application."
+          ? "Sponsorship, relocation timing and local presence must be treated as checks that need evidence."
+          : "Notice period, salary range and local availability must stay consistent with the saved profile."
     },
     {
-      title: "Match role language",
+      title: "Role evidence",
       body: getMarketPositioning(context)
     },
     {
-      title: "Follow up deliberately",
-      body: "Track source, next action and interview stage across platforms so promising European roles do not disappear."
+      title: "Action evidence",
+      body: "Saved jobs should keep source, next action, status and interview stage traceable."
     }
   ]
 }
@@ -909,16 +909,16 @@ function getAIUseCases(context: ProductContext) {
 function getEuropeanStrategySteps(context: ProductContext) {
   return [
     {
-      title: "Country focus",
-      body: `Start with ${context.targetCountry}, then compare nearby markets only when your profile and work-right story are clear.`
+      title: "Country",
+      body: `${context.targetCountry} is the current target country. Compare other markets only when profile and work-right evidence is complete.`
     },
     {
-      title: "Hiring platform fit",
+      title: "Job source",
       body:
-        "Prioritise roles with clear job descriptions, named locations and realistic seniority. Avoid vague reposts unless the company is strategic."
+        "Use clear job descriptions, named locations, realistic seniority and employer source details as quality signals."
     },
     {
-      title: "Application angle",
+      title: "Role language",
       body: getRoleMarket(context).positioning
     }
   ]
@@ -1486,7 +1486,7 @@ export default function HomePage() {
           positioningAngle: getMarketPositioning(productContext),
           notes: [
             state.jobAnalysis.notes,
-            `Search preferences: ${getMarketLabel(productContext)} / ${
+            `Profile settings: ${getMarketLabel(productContext)} / ${
               productContext.candidatePosition === "foreign-candidate"
                 ? "foreign or relocating"
                 : "native or local"
@@ -1496,7 +1496,7 @@ export default function HomePage() {
             .join("\n")
         }
       },
-      "Search preferences applied to profile and role intelligence"
+      "Profile settings applied to saved evidence"
     )
   }
 
@@ -1754,12 +1754,11 @@ export default function HomePage() {
       <header className="app-header">
         <div className="header-copy">
           <p className="eyebrow">AutoTime EU Apply</p>
-          <h1>Your job search, organised.</h1>
+          <h1>Dashboard workspace</h1>
           <p>
-            Decide whether a UK/EU role is realistic before writing anything.
-            AutoTime checks skill match, country fit, sponsorship, work rights
-            and relocation, then turns viable roles into application and
-            interview next steps.
+            Review saved profile evidence, check the current role, and track
+            next actions. Scores and advice stay limited when required evidence
+            is missing.
           </p>
           <div
             className="header-actions"
@@ -1781,7 +1780,7 @@ export default function HomePage() {
             </button>
           </div>
         </div>
-        <div className="executive-panel" aria-label="Your job search summary">
+        <div className="executive-panel" aria-label="Dashboard evidence summary">
           <div>
             <small>Profile evidence</small>
             <strong>{readinessScore}</strong>
@@ -1794,17 +1793,14 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section
-        className="market-context-panel"
-        aria-label="Search preferences"
-      >
+      <section className="market-context-panel" aria-label="Profile settings">
         <div className="section-intro">
-          <p className="eyebrow">Search preferences</p>
-          <h2>Set the basics for your job search</h2>
+          <p className="eyebrow">Profile settings</p>
+          <h2>Inputs used for role checks</h2>
           <p>
-            Choose your target country, role focus and work authorisation
-            status. AutoTime uses these profile settings to keep country,
-            sponsorship, location and follow-up advice grounded in your search.
+            These settings tell the dashboard how to interpret a job. Update
+            them when your target country, role focus or work-right situation
+            changes.
           </p>
         </div>
 
@@ -1914,7 +1910,7 @@ export default function HomePage() {
 
         <div
           className="ai-use-case-grid"
-          aria-label="European tech market strategy"
+          aria-label="Decision evidence checks"
         >
           {getAIUseCases(productContext).map((useCase) => (
             <article key={useCase.title}>
@@ -1926,12 +1922,11 @@ export default function HomePage() {
 
         <section className="market-strategy-panel">
           <div className="section-heading">
-            <p className="eyebrow">European tech strategy</p>
-            <h2>Turn your search into a country-aware plan</h2>
+            <p className="eyebrow">Decision checks</p>
+            <h2>Evidence required before action</h2>
             <p>
-              European tech hiring is fragmented by country, work-right rules,
-              platform habits and local role language. AutoTime keeps those
-              decisions visible before you apply.
+              Each check should show the evidence used, the risk found and the
+              limit of what the dashboard can safely conclude.
             </p>
           </div>
           <div className="strategy-card-grid">
@@ -1946,18 +1941,17 @@ export default function HomePage() {
 
         <section className="resume-intake-panel" aria-label="CV context review">
           <div className="section-heading">
-            <p className="eyebrow">Profile helper</p>
-            <h2>Paste your CV to fill the basics faster</h2>
+            <p className="eyebrow">CV import</p>
+            <h2>Use CV text to update profile evidence</h2>
             <p>
-              AutoTime can suggest your role focus, seniority and work-right
-              wording from a CV. You approve every change before it updates
-              your profile.
+              Suggestions remain pending until you approve them. Nothing in
+              your profile is overwritten automatically.
             </p>
           </div>
           <label>
             CV or profile text
             <textarea
-              placeholder="Paste your CV, resume, or LinkedIn summary. AutoTime suggests profile updates only; it will not overwrite anything without approval."
+              placeholder="Add CV, resume, or LinkedIn summary text. Suggested profile updates stay pending until you approve them."
               value={resumeIntake}
               onChange={(event) => setResumeIntake(event.target.value)}
             />
@@ -2017,11 +2011,11 @@ export default function HomePage() {
       >
         <div>
           <p className="eyebrow">Job decision</p>
-          <h2>Should you apply, pause, or improve your profile?</h2>
+          <h2>Current role decision</h2>
           <p>
-            AutoTime turns your profile and the job details into plain next
-            steps, so you can spend energy on European roles where the country,
-            work-right path and skill match make sense.
+            This panel uses saved profile evidence and job details. If the
+            evidence is incomplete, the decision stays limited and shows what is
+            missing.
           </p>
         </div>
         <div className="decision-score">
@@ -2253,19 +2247,18 @@ export default function HomePage() {
           <p className="eyebrow">Profile readiness</p>
           <h2>
             {profileBridgeReady
-              ? "Your profile is ready to use"
-              : "Finish your profile for better job advice"}
+              ? "Profile evidence is ready"
+              : "Complete profile evidence"}
           </h2>
           <p>
-            AutoTime works best when your target roles, CV text and work-right
-            details are saved. This keeps job checks and interview prep grounded
-            in your real experience.
+            Target roles, CV text and work-right details are required before job
+            checks can make stronger recommendations.
           </p>
         </div>
         {profileBridgeReady ? (
           <ul className="bullets-list">
-            <li>Your profile can guide job-fit scores and next steps.</li>
-            <li>Work-right and country details can support interview prep.</li>
+            <li>Profile evidence can support job-fit scores and next steps.</li>
+            <li>Work-right and country details are available for checks.</li>
             <li>You can export a backup any time.</li>
           </ul>
         ) : (
