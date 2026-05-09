@@ -4,10 +4,13 @@ import { appUrl } from "../lib/openai"
 import { getStatusClassName } from "./utils"
 
 type AccountSectionProps = {
+  canSyncProfile: boolean
   session: AccountSession | null
   status: string
   statusRef: Ref<HTMLParagraphElement>
+  onLoadProfileFromDashboard: () => void
   onSignOut: () => void
+  onSyncProfileToDashboard: () => void
 }
 
 function PlanBadge({ plan }: { plan: AccountSession["plan"] }) {
@@ -24,10 +27,13 @@ function openExtensionConnect() {
 }
 
 export function AccountSection({
+  canSyncProfile,
+  onLoadProfileFromDashboard,
   session,
   status,
   statusRef,
-  onSignOut
+  onSignOut,
+  onSyncProfileToDashboard
 }: AccountSectionProps) {
   const isSignedIn = Boolean(session?.authToken.trim())
 
@@ -56,6 +62,20 @@ export function AccountSection({
 
             <button type="button" onClick={() => openAppPath("/pricing")}>
               Manage plan
+            </button>
+            <button
+              disabled={!canSyncProfile}
+              type="button"
+              onClick={onSyncProfileToDashboard}
+            >
+              Sync profile to dashboard
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={onLoadProfileFromDashboard}
+            >
+              Load dashboard profile
             </button>
             <button className="secondary-button" type="button" onClick={onSignOut}>
               Sign out

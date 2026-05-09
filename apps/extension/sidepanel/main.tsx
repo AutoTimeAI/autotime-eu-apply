@@ -56,6 +56,10 @@ import {
   getOpenAIErrorMessage
 } from "../lib/openai"
 import {
+  loadProfileFromDashboard,
+  syncProfileToDashboard
+} from "../lib/cloud-sync"
+import {
   createV2DashboardState,
   v2DashboardStateToJson
 } from "../lib/v2-dashboard"
@@ -933,6 +937,51 @@ function SidePanelApp() {
     setTimeout(() => setAccountStatus(""), 2500)
   }
 
+  const handleSyncProfileToDashboard = async () => {
+    if (!savedProfile) {
+      setAccountStatus("Save profile essentials before syncing.")
+      setTimeout(() => setAccountStatus(""), 3500)
+      return
+    }
+
+    try {
+      await syncProfileToDashboard({
+        profile: savedProfile,
+        session: accountSession
+      })
+      setAccountStatus("Profile synced to dashboard")
+    } catch (error: unknown) {
+      setAccountStatus(
+        error instanceof Error ? error.message : "Profile sync failed"
+      )
+    }
+
+    setTimeout(() => setAccountStatus(""), 5000)
+  }
+
+  const handleLoadProfileFromDashboard = async () => {
+    try {
+      const syncedProfile = await loadProfileFromDashboard(accountSession)
+
+      if (!syncedProfile) {
+        setAccountStatus("No synced dashboard profile found.")
+        setTimeout(() => setAccountStatus(""), 3500)
+        return
+      }
+
+      await saveProfile(syncedProfile)
+      setSavedProfile(syncedProfile)
+      setProfile(syncedProfile)
+      setAccountStatus("Dashboard profile loaded into extension")
+    } catch (error: unknown) {
+      setAccountStatus(
+        error instanceof Error ? error.message : "Could not load profile"
+      )
+    }
+
+    setTimeout(() => setAccountStatus(""), 5000)
+  }
+
   return (
     <main className="side-panel-shell">
       <header>
@@ -1057,10 +1106,13 @@ function SidePanelApp() {
         />
       ) : activeSection === "account" ? (
         <AccountSection
+          canSyncProfile={Boolean(savedProfile)}
+          onLoadProfileFromDashboard={handleLoadProfileFromDashboard}
+          onSignOut={handleSignOut}
+          onSyncProfileToDashboard={handleSyncProfileToDashboard}
           session={accountSession}
           status={accountStatus}
           statusRef={accountStatusRef}
-          onSignOut={handleSignOut}
         />
       ) : (
         <section className="panel-section">

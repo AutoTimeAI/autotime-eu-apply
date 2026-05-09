@@ -16,7 +16,7 @@ export type CloudSyncReadiness = {
   configured: boolean
   modeLabel: "Local only" | "Flagged" | "Ready for auth wiring"
   accountLabel: "Sign-in locked" | "Auth wiring ready"
-  syncActionLabel: "Keep local evidence" | "Connect account next"
+  syncActionLabel: "Keep local evidence" | "Sync profile"
   sessionLabel: "Session check blocked" | "Session check ready"
   firstSliceLabel: "Profile first"
   safetyLabel: "No secrets"
@@ -96,6 +96,18 @@ export type ProfileSyncResult = {
   error: string | null
 }
 
+export type ProfileReadResult =
+  | {
+      success: true
+      error: null
+      profile: CandidateProfile | null
+    }
+  | {
+      success: false
+      error: string
+      profile: null
+    }
+
 type SessionClient = Pick<SupabaseClient, "auth">
 
 function hasValue(value: string | undefined) {
@@ -127,7 +139,7 @@ export function getCloudSyncReadiness(
         ? "Flagged"
         : "Local only",
     accountLabel: configured ? "Auth wiring ready" : "Sign-in locked",
-    syncActionLabel: configured ? "Connect account next" : "Keep local evidence",
+    syncActionLabel: configured ? "Sync profile" : "Keep local evidence",
     sessionLabel: configured ? "Session check ready" : "Session check blocked",
     firstSliceLabel: "Profile first",
     safetyLabel: "No secrets",
@@ -284,20 +296,21 @@ export function prepareProfileSyncAction({
     ready: true,
     payload: payloadResult.payload,
     message:
-      "Profile sync payload is ready. Supabase write remains disabled until the explicit upload implementation is added."
+      "Profile sync payload is ready for authenticated upload."
   }
 }
 
 export async function syncProfile(
   client: SupabaseClient<Database>,
   userId: string,
-  profile: CandidateProfile
+  profile: CandidateProfile,
+  sourceSurface: "web" | "extension" = "web"
 ): Promise<ProfileSyncResult> {
   try {
     const payloadResult = createProfileSyncPayload({
       profile,
       userId,
-      sourceSurface: "web"
+      sourceSurface
     })
 
     if (!payloadResult.ready) {
@@ -337,9 +350,12 @@ export async function syncProfile(
       user_id: userId,
       entity_type: "profile",
       entity_id: syncedProfile.id,
-      source_surface: "web",
+      source_surface: sourceSurface,
       action: existingProfile ? "updated" : "created",
-      message: "Profile synced from web dashboard",
+      message:
+        sourceSurface === "extension"
+          ? "Profile synced from Chrome extension"
+          : "Profile synced from web dashboard",
       schema_version: 1
     })
 
@@ -347,6 +363,21 @@ export async function syncProfile(
       return {
         success: false,
         error: syncEventError.message
+      }
+    }
+
+    if (sourceSurface === "extension") {
+      const { error: extensionSyncError } = await client
+        .from("extension_connections")
+        .update({ last_synced_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .is("revoked_at", null)
+
+      if (extensionSyncError) {
+        return {
+          success: false,
+          error: extensionSyncError.message
+        }
       }
     }
 
@@ -358,6 +389,65 @@ export async function syncProfile(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Profile sync failed"
+    }
+  }
+}
+
+function rowToCandidateProfile(
+  row: Database["public"]["Tables"]["profiles"]["Row"]
+): CandidateProfile {
+  return {
+    fullName: row.full_name,
+    email: row.email ?? "",
+    phone: row.phone ?? "",
+    linkedInUrl: row.linkedin_url ?? "",
+    githubUrl: row.github_url ?? "",
+    portfolioUrl: row.portfolio_url ?? "",
+    currentCountry: row.current_country,
+    currentCity: row.current_city ?? "",
+    targetCountries: row.target_countries,
+    targetRoles: row.target_roles,
+    workRightDetails: row.work_right_details,
+    sponsorshipNeeded: row.sponsorship_needed,
+    relocationWillingness: row.relocation_willingness,
+    salaryExpectation: row.salary_expectation ?? "",
+    noticePeriod: row.notice_period ?? "",
+    baseCvText: row.base_cv_text,
+    projectSummaries: row.project_summaries ?? "",
+    experienceHighlights: row.experience_highlights ?? ""
+  }
+}
+
+export async function readSyncedProfile(
+  client: SupabaseClient<Database>,
+  userId: string
+): Promise<ProfileReadResult> {
+  try {
+    const { data, error } = await client
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message,
+        profile: null
+      }
+    }
+
+    return {
+      success: true,
+      error: null,
+      profile: data ? rowToCandidateProfile(data) : null
+    }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Synced profile read failed",
+      profile: null
     }
   }
 }

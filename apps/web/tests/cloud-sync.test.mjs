@@ -79,7 +79,7 @@ test("marks cloud sync ready only when public env is present", () => {
   assert.equal(readiness.configured, true)
   assert.equal(readiness.modeLabel, "Ready for auth wiring")
   assert.equal(readiness.accountLabel, "Auth wiring ready")
-  assert.equal(readiness.syncActionLabel, "Connect account next")
+  assert.equal(readiness.syncActionLabel, "Sync profile")
   assert.deepEqual(readiness.issues, [])
 })
 
@@ -300,7 +300,7 @@ test("prepares profile sync action only after readiness, session, consent and cl
   assert.equal(result.payload.user_id, "pilot@example.com")
   assert.equal(
     result.message,
-    "Profile sync payload is ready. Supabase write remains disabled until the explicit upload implementation is added."
+    "Profile sync payload is ready for authenticated upload."
   )
 })
 

@@ -1726,26 +1726,93 @@ export default function HomePage() {
   const explainCloudSyncTrack = () => {
     setStatus(
       cloudSyncReadiness.configured
-        ? "Cloud sync env is ready for auth wiring, but profile upload remains blocked until Supabase auth, RLS and delete controls are validated."
+        ? "Cloud sync is ready for signed-in profile upload and download. Database writes require user consent and an authenticated account."
         : `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
     )
   }
 
-  const explainAccountSync = () => {
+  const syncProfileToCloud = async () => {
     const action = prepareProfileSyncAction({
       readiness: cloudSyncReadiness,
       session: {
-        checked: false,
-        authenticated: false,
-        userEmail: null,
-        message: "Session check is not active in local-first MVP mode."
+        checked: true,
+        authenticated: true,
+        userEmail: "signed-in-account",
+        message: "Dashboard session will be checked by the sync endpoint."
       },
       profile: state.profile,
       explicitUserAction: true,
       consentGranted: cloudSyncConsent
     })
 
-    setStatus(action.message)
+    if (!action.ready) {
+      setStatus(action.message)
+      return
+    }
+
+    try {
+      const response = await fetch("/api/sync/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-autotime-source": "web"
+        },
+        body: JSON.stringify(state.profile)
+      })
+      const body = (await response.json()) as {
+        error: string | null
+      }
+
+      if (!response.ok || body.error) {
+        setStatus(body.error ?? "Profile sync failed")
+        return
+      }
+
+      setStatus("Profile synced to your dashboard account")
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error ? error.message : "Profile sync failed"
+      )
+    }
+  }
+
+  const loadProfileFromCloud = async () => {
+    if (!cloudSyncReadiness.configured) {
+      setStatus(
+        `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+      )
+      return
+    }
+
+    try {
+      const response = await fetch("/api/sync/profile")
+      const body = (await response.json()) as {
+        data: { profile: CandidateProfile | null } | null
+        error: string | null
+      }
+
+      if (!response.ok || body.error) {
+        setStatus(body.error ?? "Could not load synced profile")
+        return
+      }
+
+      if (!body.data?.profile) {
+        setStatus("No synced profile found for this account yet")
+        return
+      }
+
+      persist(
+        {
+          ...state,
+          profile: body.data.profile
+        },
+        "Synced profile loaded into this browser"
+      )
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not load synced profile"
+      )
+    }
   }
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
 
@@ -2320,7 +2387,7 @@ export default function HomePage() {
               type="checkbox"
               onChange={(event) => setCloudSyncConsent(event.target.checked)}
             />
-            I consent to sync my candidate profile when account sync is ready.
+            I consent to sync my candidate profile to my authenticated account.
           </label>
           <button
             className="secondary-button"
@@ -2332,9 +2399,17 @@ export default function HomePage() {
           <button
             disabled={!cloudSyncReadiness.configured}
             type="button"
-            onClick={explainAccountSync}
+            onClick={syncProfileToCloud}
           >
-            {cloudSyncReadiness.syncActionLabel}
+            Sync profile
+          </button>
+          <button
+            className="secondary-button"
+            disabled={!cloudSyncReadiness.configured}
+            type="button"
+            onClick={loadProfileFromCloud}
+          >
+            Load synced profile
           </button>
         </div>
       </section>

@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { candidateProfileSchema } from "shared"
+import { getRequestUser } from "../../../../lib/api-auth"
+import { createAdminClient } from "../../../../lib/supabase/admin"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { isProUser } from "../../../../lib/feature-gate"
-import { syncProfile } from "../../../../lib/cloud-sync"
-import { createServerClient } from "../../../../lib/supabase/server"
+import { readSyncedProfile, syncProfile } from "../../../../lib/cloud-sync"
 
 type ApiResponse<T> = {
   data: T | null
@@ -16,21 +17,96 @@ type ProfileSyncRouteData = {
   synced: true
 }
 
+type ProfileReadRouteData = {
+  profile: z.infer<typeof candidateProfileSchema> | null
+}
+
 function jsonResponse(
   body: ApiResponse<ProfileSyncRouteData>
 ): NextResponse<ApiResponse<ProfileSyncRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
 
+function readJsonResponse(
+  body: ApiResponse<ProfileReadRouteData>
+): NextResponse<ApiResponse<ProfileReadRouteData>> {
+  return NextResponse.json(body, { status: body.status })
+}
+
+function getSourceSurface(request: NextRequest): "web" | "extension" {
+  return request.headers.get("x-autotime-source") === "extension"
+    ? "extension"
+    : "web"
+}
+
+export async function GET(
+  request: NextRequest
+): Promise<NextResponse<ApiResponse<ProfileReadRouteData>>> {
+  try {
+    const { user, error: userError } = await getRequestUser(request)
+
+    if (userError || !user) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.auth.missing-user",
+        data: null,
+        error: "Unauthorised",
+        request,
+        status: 401
+      })
+    }
+
+    if (!(await isProUser(user.id))) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.plan.not-pro",
+        data: null,
+        error: "Cloud sync requires a Pro plan",
+        request,
+        status: 403
+      })
+    }
+
+    const result = await readSyncedProfile(createAdminClient(), user.id)
+
+    if (!result.success) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.read.failed",
+        data: null,
+        error: result.error,
+        log: true,
+        request,
+        status: 500
+      })
+    }
+
+    return readJsonResponse({
+      data: { profile: result.profile },
+      error: null,
+      status: 200
+    })
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Synced profile read failed"
+
+    return diagnosticJson({
+      area: "sync",
+      code: "sync.profile.read.unexpected",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 500
+    })
+  }
+}
+
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<ProfileSyncRouteData>>> {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error: userError
-    } = await supabase.auth.getUser()
+    const { user, error: userError } = await getRequestUser(request)
 
     if (userError || !user) {
       return diagnosticJson({
@@ -55,7 +131,12 @@ export async function POST(
     }
 
     const profile = candidateProfileSchema.parse(await request.json())
-    const result = await syncProfile(supabase, user.id, profile)
+    const result = await syncProfile(
+      createAdminClient(),
+      user.id,
+      profile,
+      getSourceSurface(request)
+    )
 
     if (!result.success) {
       return diagnosticJson({

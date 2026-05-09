@@ -57,6 +57,27 @@ async function getAccount(accessToken: string): Promise<AccountMeResponse> {
   return (await response.json()) as AccountMeResponse
 }
 
+async function recordExtensionConnection(
+  accessToken: string,
+  extensionId: string
+): Promise<void> {
+  const response = await fetch("/api/sync/extension", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ extensionId })
+  })
+  const body = (await response.json()) as {
+    error: string | null
+  }
+
+  if (!response.ok || body.error) {
+    throw new Error(body.error ?? "Could not record extension connection.")
+  }
+}
+
 function sendToExtension(
   extensionId: string,
   message: ExtensionConnectMessage
@@ -124,6 +145,8 @@ export default function ExtensionConnect() {
         setStatus(account.error ?? "Could not read your AutoTime account.")
         return
       }
+
+      await recordExtensionConnection(session.access_token, extensionId)
 
       await sendToExtension(extensionId, {
         authToken: session.access_token,

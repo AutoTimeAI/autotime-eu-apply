@@ -105,6 +105,72 @@ export type Database = {
         }
         Relationships: []
       }
+      user_accounts: {
+        Row: {
+          user_id: string
+          email: string | null
+          full_name: string | null
+          avatar_url: string | null
+          last_sign_in_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          email?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
+          last_sign_in_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          email?: string | null
+          full_name?: string | null
+          avatar_url?: string | null
+          last_sign_in_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      extension_connections: {
+        Row: {
+          id: string
+          user_id: string
+          extension_id: string | null
+          browser_label: string | null
+          last_connected_at: string
+          last_synced_at: string | null
+          revoked_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          extension_id?: string | null
+          browser_label?: string | null
+          last_connected_at?: string
+          last_synced_at?: string | null
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          extension_id?: string | null
+          browser_label?: string | null
+          last_connected_at?: string
+          last_synced_at?: string | null
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           id: string
