@@ -2674,6 +2674,35 @@ h4 {
   line-height: 1.65;
 }
 
+.pricing-demo-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.46fr) minmax(0, 0.84fr);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 254, 0.9)),
+    var(--surface);
+  box-shadow: var(--shadow-tight);
+  padding: 18px;
+}
+
+.pricing-demo-panel .section-heading p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.pricing-demo-panel video {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #000000;
+  box-shadow: var(--shadow-tight);
+}
+
 .billing-toggle {
   display: inline-flex;
   gap: 4px;
@@ -3105,6 +3134,7 @@ h4 {
   .context-grid,
   .auth-shell,
   .auth-demo-panel,
+  .pricing-demo-panel,
   .decision-brief-panel,
   .trust-grid,
   .workspace-grid,
