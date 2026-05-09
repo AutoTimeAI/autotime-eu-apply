@@ -283,11 +283,15 @@ h4 {
 }
 
 .tab-button {
+  display: inline-flex;
   min-height: 42px;
+  align-items: center;
   border-color: transparent;
   border-radius: 6px 6px 0 0;
   background: transparent;
   color: var(--muted);
+  padding: 10px 14px;
+  text-decoration: none;
 }
 
 .tab-button:hover {
@@ -312,6 +316,42 @@ h4 {
   color: var(--accent-strong);
   font-weight: 650;
   padding: 12px 14px;
+}
+
+.dashboard-route-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.dashboard-route-card {
+  display: grid;
+  gap: 6px;
+  min-height: 116px;
+  align-content: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+  color: inherit;
+  padding: 16px;
+  text-decoration: none;
+}
+
+.dashboard-route-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.dashboard-route-card strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.dashboard-route-card span {
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .market-context-panel {
@@ -1418,6 +1458,73 @@ h4 {
   margin-top: 0;
 }
 
+.interview-buddy-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.interview-buddy-form,
+.interview-buddy-output,
+.buddy-answer-card {
+  display: grid;
+  gap: 12px;
+}
+
+.interview-buddy-form,
+.buddy-answer-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 14px;
+}
+
+.buddy-character-panel {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #cfe2df;
+  border-radius: 8px;
+  background: #f0f8f6;
+  padding: 12px;
+}
+
+.buddy-character-panel span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  font-size: 1.45rem;
+}
+
+.buddy-character-panel strong,
+.buddy-answer-card h3 {
+  color: var(--ink);
+}
+
+.buddy-character-panel p,
+.buddy-answer-card p {
+  margin: 0;
+  color: #3a4659;
+  line-height: 1.58;
+}
+
+.buddy-answer-card > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.buddy-answer-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .ai-settings-panel {
   display: grid;
   grid-template-columns:
@@ -2333,6 +2440,7 @@ h4 {
   .decision-brief-panel,
   .trust-grid,
   .workspace-grid,
+  .interview-buddy-layout,
   .ai-settings-panel,
   .profile-bridge-panel,
   .cloud-sync-panel,
@@ -2345,6 +2453,7 @@ h4 {
     .strategy-card-grid,
     .decision-columns,
   .readiness-roadmap,
+  .dashboard-route-grid,
   .pipeline-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2430,6 +2539,8 @@ h4 {
   }
 
   .executive-panel,
+  .interview-buddy-layout,
+  .dashboard-route-grid,
   .metrics-strip,
   .segmented-options,
   .context-controls,

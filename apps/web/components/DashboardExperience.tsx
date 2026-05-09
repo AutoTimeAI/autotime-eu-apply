@@ -93,6 +93,16 @@ type ContentGuardrail = {
   reason: string
 }
 
+type InterviewBuddyOutputKey =
+  | "professionalAnswer"
+  | "naturalAnswer"
+  | "lightFunnyAnswer"
+  | "strongFinalAnswer"
+
+type InterviewBuddyOutputs = Record<InterviewBuddyOutputKey, string>
+
+type ReusableAnswerKey = keyof ReusableAnswers
+
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const trustStateStorageKey = "autotime-v2-trust-state"
@@ -118,11 +128,60 @@ const applicationOutcomeReasons: ApplicationOutcomeReason[] = [
   "Role closed"
 ]
 
-const tabLabels: Array<[DashboardTab, string]> = [
-  ["profile", "My Profile"],
-  ["jobs", "Check a Job"],
-  ["applications", "Applications"],
-  ["interview", "Interview Prep"]
+const interviewQuestionOptions = [
+  "Tell me about yourself.",
+  "Why are you interested in this role?",
+  "What is your strongest relevant experience?",
+  "Tell me about a difficult stakeholder situation.",
+  "Describe a project where you improved a process or system.",
+  "What are your strengths?",
+  "What is your notice period or availability?",
+  "Do you need sponsorship or work authorisation support?"
+]
+
+const emptyInterviewBuddyOutputs: InterviewBuddyOutputs = {
+  professionalAnswer: "",
+  naturalAnswer: "",
+  lightFunnyAnswer: "",
+  strongFinalAnswer: ""
+}
+
+const dashboardRoutes: Array<{
+  href: string
+  id: DashboardTab | "overview"
+  label: string
+  summary: string
+}> = [
+  {
+    href: "/dashboard",
+    id: "overview",
+    label: "Overview",
+    summary: "Status, evidence and next workflow step."
+  },
+  {
+    href: "/dashboard/profile",
+    id: "profile",
+    label: "Profile",
+    summary: "Candidate evidence and reusable answers."
+  },
+  {
+    href: "/dashboard/jobs",
+    id: "jobs",
+    label: "Job Check",
+    summary: "Role fit, missing evidence and decision limits."
+  },
+  {
+    href: "/dashboard/applications",
+    id: "applications",
+    label: "Applications",
+    summary: "Pipeline, outcomes and follow-up actions."
+  },
+  {
+    href: "/dashboard/interview",
+    id: "interview",
+    label: "Interview Buddy",
+    summary: "Interview answers and prep packs."
+  }
 ]
 
 const roleMarkets: Array<{
@@ -670,6 +729,132 @@ function getWordSignals(text: string) {
         ) ?? []
     )
   )
+}
+
+function normaliseSentence(value: string) {
+  const trimmed = value.replace(/\s+/g, " ").trim()
+
+  if (!trimmed) {
+    return ""
+  }
+
+  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`
+}
+
+function getProfileContextForInterview(profile: CandidateProfile) {
+  return [
+    profile.targetRoles && `Target roles: ${profile.targetRoles}`,
+    profile.targetCountries && `Target countries: ${profile.targetCountries}`,
+    profile.currentCountry && `Current country: ${profile.currentCountry}`,
+    profile.experienceHighlights &&
+      `Experience evidence: ${profile.experienceHighlights}`,
+    profile.projectSummaries && `Project evidence: ${profile.projectSummaries}`,
+    profile.baseCvText && `CV evidence: ${profile.baseCvText.slice(0, 420)}`
+  ]
+    .filter(Boolean)
+    .join(" ")
+}
+
+function isImmigrationRelatedQuestion(question: string) {
+  return /\b(visa|immigration|sponsor|sponsorship|work permit|right to work|work authori[sz]ation|settled status|pre-settled|skilled worker)\b/i.test(
+    question
+  )
+}
+
+function getInterviewBuddyDisclaimer(question: string) {
+  return isImmigrationRelatedQuestion(question)
+    ? "General career preparation only; check official sources or a qualified adviser for immigration decisions."
+    : ""
+}
+
+function inferReusableAnswerKey(question: string): ReusableAnswerKey {
+  if (/\b(sponsor|sponsorship|visa|work permit)\b/i.test(question)) {
+    return "sponsorshipAnswer"
+  }
+
+  if (/\b(work authori[sz]ation|right to work|work rights)\b/i.test(question)) {
+    return "workAuthorisationAnswer"
+  }
+
+  if (/\b(relocat|move country|move to)\b/i.test(question)) {
+    return "relocationAnswer"
+  }
+
+  if (/\b(notice)\b/i.test(question)) {
+    return "noticePeriodAnswer"
+  }
+
+  if (/\b(availab|start date)\b/i.test(question)) {
+    return "availabilityAnswer"
+  }
+
+  if (/\b(strength|strongest|best at)\b/i.test(question)) {
+    return "strengthsAnswer"
+  }
+
+  return "motivationAnswer"
+}
+
+function getReusableAnswerLabel(key: ReusableAnswerKey) {
+  const labels: Record<ReusableAnswerKey, string> = {
+    sponsorshipAnswer: "sponsorship answer",
+    relocationAnswer: "relocation answer",
+    workAuthorisationAnswer: "work authorisation answer",
+    noticePeriodAnswer: "notice period answer",
+    salaryExpectationAnswer: "salary expectation answer",
+    motivationAnswer: "motivation answer",
+    strengthsAnswer: "strengths answer",
+    availabilityAnswer: "availability answer"
+  }
+
+  return labels[key]
+}
+
+function createInterviewBuddyOutputs({
+  draft,
+  profile,
+  question
+}: {
+  draft: string
+  profile: CandidateProfile
+  question: string
+}): InterviewBuddyOutputs {
+  const cleanQuestion = question.trim()
+  const cleanDraft = normaliseSentence(draft)
+  const profileContext = getProfileContextForInterview(profile)
+  const evidenceLine = profileContext
+    ? `I would connect that to my profile evidence: ${normaliseSentence(profileContext)}`
+    : "I would keep the answer limited to the experience I can clearly evidence."
+  const limitLine =
+    "I would avoid adding claims that are not already in my draft or saved profile."
+
+  if (!cleanDraft) {
+    return emptyInterviewBuddyOutputs
+  }
+
+  return {
+    professionalAnswer: [
+      `For "${cleanQuestion}", I would answer: ${cleanDraft}`,
+      evidenceLine,
+      limitLine
+    ].join(" "),
+    naturalAnswer: [
+      cleanDraft,
+      "The simple version is that I can explain what I did, what changed, and where I still need to be precise.",
+      "I would keep it conversational and stay within what I can prove."
+    ].join(" "),
+    lightFunnyAnswer: [
+      cleanDraft,
+      "In plain terms, I try to be the person who turns messy work into something the team can actually use.",
+      "That is the light version, but I would still keep the interview answer factual."
+    ].join(" "),
+    strongFinalAnswer: [
+      `My answer to "${cleanQuestion}" would be: ${cleanDraft}`,
+      evidenceLine,
+      "The outcome I would emphasise is clearer delivery, better stakeholder confidence, and a practical next step.",
+      limitLine
+    ].join(" ")
+  }
 }
 
 function getFitScore(profile: CandidateProfile, job: JobAnalysisDraft) {
@@ -1276,8 +1461,11 @@ function getContentGuardrails({
   ]
 }
 
-export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<DashboardTab>("profile")
+export default function HomePage({
+  view = "overview"
+}: {
+  view?: DashboardTab | "overview"
+}) {
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
   const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
@@ -1287,6 +1475,13 @@ export default function HomePage() {
   const [resumeIntake, setResumeIntake] = useState("")
   const [contextSuggestion, setContextSuggestion] =
     useState<ContextSuggestion | null>(null)
+  const [interviewQuestion, setInterviewQuestion] = useState(
+    interviewQuestionOptions[0]
+  )
+  const [customInterviewQuestion, setCustomInterviewQuestion] = useState("")
+  const [interviewDraftAnswer, setInterviewDraftAnswer] = useState("")
+  const [interviewBuddyOutputs, setInterviewBuddyOutputs] =
+    useState<InterviewBuddyOutputs>(emptyInterviewBuddyOutputs)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
   const fitScore = useMemo(
@@ -1384,6 +1579,8 @@ export default function HomePage() {
   const interviewApplications = state.applications.filter(
     (application) => application.status === "Interview"
   )
+  const currentTab: DashboardTab = view === "overview" ? "profile" : view
+  const isOverview = view === "overview"
 
   useEffect(() => {
     setState(getStoredState())
@@ -1447,6 +1644,10 @@ export default function HomePage() {
     }
     setTrustState(next)
     saveTrustState(next)
+  }
+
+  const openDashboardView = (nextView: DashboardTab) => {
+    window.location.assign(`/dashboard/${nextView}`)
   }
 
   const updateProductContext = <K extends keyof ProductContext>(
@@ -1580,7 +1781,7 @@ export default function HomePage() {
       },
       "Application saved to dashboard"
     )
-    setActiveTab("applications")
+    openDashboardView("applications")
   }
 
   const updateApplication = (
@@ -1629,7 +1830,7 @@ export default function HomePage() {
       },
       message
     )
-    setActiveTab("interview")
+    openDashboardView("interview")
   }
 
   const generateInterviewPrep = (application: ApplicationRecord) => {
@@ -1815,6 +2016,67 @@ export default function HomePage() {
     }
   }
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
+  const activeInterviewQuestion =
+    customInterviewQuestion.trim() || interviewQuestion
+  const interviewDisclaimer = getInterviewBuddyDisclaimer(activeInterviewQuestion)
+  const finalAnswerStorageKey = inferReusableAnswerKey(activeInterviewQuestion)
+  const hasInterviewBuddyOutputs = Boolean(
+    interviewBuddyOutputs.strongFinalAnswer.trim()
+  )
+
+  const generateInterviewBuddyAnswers = () => {
+    if (!activeInterviewQuestion.trim()) {
+      setStatus("Choose or type an interview question first")
+      return
+    }
+
+    if (!interviewDraftAnswer.trim()) {
+      setStatus("Add your rough draft answer first")
+      return
+    }
+
+    setInterviewBuddyOutputs(
+      createInterviewBuddyOutputs({
+        draft: interviewDraftAnswer,
+        profile: state.profile,
+        question: activeInterviewQuestion
+      })
+    )
+    setStatus("Interview Buddy answers generated from your draft")
+    setTimeout(() => setStatus(""), 3000)
+  }
+
+  const saveFinalInterviewAnswer = () => {
+    if (!interviewBuddyOutputs.strongFinalAnswer.trim()) {
+      setStatus("Generate a strong final answer before saving")
+      return
+    }
+
+    const next = {
+      ...state,
+      reusableAnswers: {
+        ...state.reusableAnswers,
+        [finalAnswerStorageKey]: interviewBuddyOutputs.strongFinalAnswer
+      }
+    }
+
+    persist(
+      next,
+      `Final answer saved to ${getReusableAnswerLabel(finalAnswerStorageKey)}`
+    )
+  }
+
+  const speakInterviewAnswer = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setStatus("Text-to-speech is not available in this browser")
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = 0.95
+    window.speechSynthesis.speak(utterance)
+  }
 
   return (
     <main className="dashboard-shell">
@@ -1860,6 +2122,7 @@ export default function HomePage() {
         </div>
       </header>
 
+      {!isOverview && currentTab === "profile" && (
       <section className="market-context-panel" aria-label="Profile settings">
         <div className="section-intro">
           <p className="eyebrow">Profile settings</p>
@@ -2071,7 +2334,9 @@ export default function HomePage() {
 
         <p className="context-guidance">{getCountryGuidance(productContext)}</p>
       </section>
+      )}
 
+      {currentTab === "jobs" && (
       <section
         className="decision-brief-panel"
         aria-label="UK/EU apply decision brief"
@@ -2154,7 +2419,9 @@ export default function HomePage() {
           sponsorship or legal decision.
         </p>
       </section>
+      )}
 
+      {currentTab === "jobs" && (
       <section className="trust-grid" aria-label="Evidence and official verification">
         <section className="evidence-ledger-panel">
           <div className="section-heading">
@@ -2285,23 +2552,37 @@ export default function HomePage() {
           </label>
         </section>
       </section>
+      )}
 
       <nav className="tab-bar" aria-label="Dashboard sections">
-        {tabLabels.map(([id, label]) => (
-          <button
-            aria-pressed={activeTab === id}
-            className={activeTab === id ? "tab-button active" : "tab-button"}
-            key={id}
-            type="button"
-            onClick={() => setActiveTab(id as DashboardTab)}
+        {dashboardRoutes.map((route) => (
+          <a
+            aria-current={view === route.id ? "page" : undefined}
+            className={view === route.id ? "tab-button active" : "tab-button"}
+            href={route.href}
+            key={route.id}
           >
-            {label}
-          </button>
+            {route.label}
+          </a>
         ))}
       </nav>
 
       {status && <p className="status-banner">{status}</p>}
 
+      {isOverview && (
+        <section className="dashboard-route-grid" aria-label="Dashboard workflow">
+          {dashboardRoutes
+            .filter((route) => route.id !== "overview")
+            .map((route) => (
+              <a className="dashboard-route-card" href={route.href} key={route.id}>
+                <strong>{route.label}</strong>
+                <span>{route.summary}</span>
+              </a>
+            ))}
+        </section>
+      )}
+
+      {!isOverview && currentTab === "profile" && (
       <section
         className={
           profileBridgeReady
@@ -2336,7 +2617,9 @@ export default function HomePage() {
           </ul>
         )}
       </section>
+      )}
 
+      {!isOverview && currentTab === "profile" && (
       <section
         className={
           cloudSyncReadiness.configured
@@ -2413,7 +2696,9 @@ export default function HomePage() {
           </button>
         </div>
       </section>
+      )}
 
+      {(isOverview || currentTab === "applications" || currentTab === "interview") && (
       <section
         className="metrics-strip"
         aria-label="Job search progress"
@@ -2451,7 +2736,9 @@ export default function HomePage() {
           <p>{riskLabel}</p>
         </div>
       </section>
+      )}
 
+      {isOverview && (
       <section className="readiness-roadmap" aria-label="Readiness roadmap">
         <div className="section-intro">
           <p className="eyebrow">Quick checklist</p>
@@ -2494,8 +2781,9 @@ export default function HomePage() {
           </article>
         ))}
       </section>
+      )}
 
-      {activeTab === "profile" && (
+      {!isOverview && currentTab === "profile" && (
         <section className="workspace-grid">
           <div className="input-column">
             <label>
@@ -2617,7 +2905,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {activeTab === "jobs" && (
+      {!isOverview && currentTab === "jobs" && (
         <section className="workspace-grid">
           <div className="input-column">
             <label>
@@ -2787,7 +3075,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {activeTab === "applications" && (
+      {!isOverview && currentTab === "applications" && (
         <section className="applications-section full-width-section">
           <div className="section-intro">
             <p className="eyebrow">Applications</p>
@@ -2918,14 +3206,133 @@ export default function HomePage() {
         </section>
       )}
 
-      {activeTab === "interview" && (
+      {!isOverview && currentTab === "interview" && (
         <section className="prep-section full-width-section">
           <div className="section-intro">
-            <p className="eyebrow">Interview prep</p>
-            <h2>Prepare for the roles that reach interview</h2>
+            <p className="eyebrow">Interview Buddy</p>
+            <h2>Shape a rough answer into interview-ready versions</h2>
             <p>
-              Prep packs use your saved profile, job details and application
-              status. They do not invent experience.
+              Interview Buddy rewrites only what you provide and what is saved
+              in your profile. It does not invent experience, claims or legal
+              advice.
+            </p>
+          </div>
+
+          <div className="interview-buddy-layout">
+            <section
+              className="interview-buddy-form"
+              aria-label="Interview Buddy input"
+            >
+              <div className="buddy-character-panel">
+                <span aria-hidden="true">🙂</span>
+                <div>
+                  <strong>Buddy check</strong>
+                  <p>
+                    Keep it honest, specific and calm. A rough draft is enough
+                    to start.
+                  </p>
+                </div>
+              </div>
+
+              <label>
+                Choose a question
+                <select
+                  value={interviewQuestion}
+                  onChange={(event) => {
+                    setInterviewQuestion(event.target.value)
+                    setCustomInterviewQuestion("")
+                  }}
+                >
+                  {interviewQuestionOptions.map((question) => (
+                    <option key={question} value={question}>
+                      {question}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Or type your own question
+                <input
+                  placeholder="Example: Tell me about a time you handled changing requirements."
+                  value={customInterviewQuestion}
+                  onChange={(event) =>
+                    setCustomInterviewQuestion(event.target.value)
+                  }
+                />
+              </label>
+
+              <label>
+                Rough draft answer
+                <textarea
+                  placeholder="Write the honest version first. Include only facts, examples and outcomes you can explain."
+                  value={interviewDraftAnswer}
+                  onChange={(event) =>
+                    setInterviewDraftAnswer(event.target.value)
+                  }
+                />
+              </label>
+
+              {interviewDisclaimer ? (
+                <p className="decision-integrity-note">
+                  {interviewDisclaimer}
+                </p>
+              ) : null}
+
+              <div className="header-actions">
+                <button type="button" onClick={generateInterviewBuddyAnswers}>
+                  Generate answers
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={!hasInterviewBuddyOutputs}
+                  type="button"
+                  onClick={saveFinalInterviewAnswer}
+                >
+                  Save Final Answer
+                </button>
+              </div>
+            </section>
+
+            <section
+              className="interview-buddy-output"
+              aria-label="Interview Buddy outputs"
+            >
+              {(
+                [
+                  ["professionalAnswer", "Professional answer"],
+                  ["naturalAnswer", "Natural answer"],
+                  ["lightFunnyAnswer", "Light funny version"],
+                  ["strongFinalAnswer", "Strong final interview answer"]
+                ] as Array<[InterviewBuddyOutputKey, string]>
+              ).map(([key, label]) => (
+                <article className="buddy-answer-card" key={key}>
+                  <div>
+                    <h3>{label}</h3>
+                    <button
+                      className="secondary-button"
+                      disabled={!interviewBuddyOutputs[key]}
+                      type="button"
+                      onClick={() => speakInterviewAnswer(interviewBuddyOutputs[key])}
+                    >
+                      Speak
+                    </button>
+                  </div>
+                  <p>
+                    {interviewBuddyOutputs[key] ||
+                      "Generate answers to see this version."}
+                  </p>
+                </article>
+              ))}
+            </section>
+          </div>
+
+          <div className="section-intro">
+            <p className="eyebrow">Saved prep packs</p>
+            <h2>Prep generated from applications</h2>
+            <p>
+              Prep packs still use saved profile, job details and application
+              status. They remain separate from Interview Buddy answers.
             </p>
           </div>
           <div className="prep-grid">

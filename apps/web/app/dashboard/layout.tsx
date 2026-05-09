@@ -39,6 +39,10 @@ export default async function DashboardLayout({
             </a>
             <nav className="dashboard-topnav" aria-label="Dashboard">
               <a href="/dashboard">Workspace</a>
+              <a href="/dashboard/profile">Profile</a>
+              <a href="/dashboard/jobs">Job Check</a>
+              <a href="/dashboard/applications">Applications</a>
+              <a href="/dashboard/interview">Interview</a>
               <a href="/pricing">Pricing</a>
               <a href="/extension/connect">Extension</a>
             </nav>
