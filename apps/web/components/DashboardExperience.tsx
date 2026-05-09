@@ -205,33 +205,60 @@ const dashboardRoutes: Array<{
   {
     href: "/dashboard",
     id: "overview",
-    label: "Overview",
-    summary: "Status, evidence and next workflow step."
+    label: "Dashboard",
+    summary: "Today's Action Plan and weekly progress."
   },
   {
     href: "/dashboard/profile",
     id: "profile",
-    label: "Profile",
-    summary: "Candidate evidence and reusable answers."
+    label: "Autofill Profile",
+    summary: "Candidate evidence, documents and reusable answers."
   },
   {
     href: "/dashboard/jobs",
     id: "jobs",
-    label: "Job Check",
-    summary: "Role fit, missing evidence and decision limits."
+    label: "Match Score",
+    summary: "Role Fit Score, missing evidence and decision limits."
   },
   {
     href: "/dashboard/applications",
     id: "applications",
-    label: "Applications",
+    label: "Application Tracker",
     summary: "Pipeline, outcomes and follow-up actions."
   },
   {
     href: "/dashboard/interview",
     id: "interview",
-    label: "Interview Buddy",
+    label: "Interview Prep",
     summary: "Interview answers and prep packs."
   }
+]
+
+const commandSidebarItems: Array<{
+  href: string
+  label: string
+  routeId: DashboardTab | "overview"
+}> = [
+  { href: "/dashboard", label: "Dashboard", routeId: "overview" },
+  { href: "/dashboard/applications", label: "Job Inbox", routeId: "applications" },
+  { href: "/dashboard/jobs", label: "Match Score", routeId: "jobs" },
+  { href: "/dashboard/profile", label: "CV Tailor", routeId: "profile" },
+  {
+    href: "/dashboard/interview",
+    label: "Application Answers",
+    routeId: "interview"
+  },
+  { href: "/dashboard/profile", label: "Autofill Profile", routeId: "profile" },
+  {
+    href: "/dashboard/applications",
+    label: "Application Tracker",
+    routeId: "applications"
+  },
+  { href: "/dashboard/applications", label: "Follow-ups", routeId: "applications" },
+  { href: "/dashboard/interview", label: "Interview Prep", routeId: "interview" },
+  { href: "/dashboard/applications", label: "Insights", routeId: "applications" },
+  { href: "/dashboard/profile", label: "Documents", routeId: "profile" },
+  { href: "/dashboard/profile", label: "Settings", routeId: "profile" }
 ]
 
 const roleMarkets: Array<{
@@ -1709,6 +1736,7 @@ export default function HomePage({
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
   const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
+  const [commandSearch, setCommandSearch] = useState("")
   const [productContext, setProductContext] = useState<ProductContext>(
     defaultProductContext
   )
@@ -1839,6 +1867,72 @@ export default function HomePage({
     currentRouteIndex >= 0 && currentRouteIndex < dashboardRoutes.length - 1
       ? dashboardRoutes[currentRouteIndex + 1]
       : null
+  const activeSidebarLabel = {
+    overview: "Dashboard",
+    profile: "Autofill Profile",
+    jobs: "Match Score",
+    applications: "Application Tracker",
+    interview: "Interview Prep"
+  }[view]
+  const filteredDashboardRoutes = dashboardRoutes
+    .filter((route) => route.id !== "overview")
+    .filter((route) => {
+      const query = commandSearch.trim().toLowerCase()
+
+      if (!query) {
+        return true
+      }
+
+      return `${route.label} ${route.summary}`.toLowerCase().includes(query)
+    })
+  const commandCentreCards = [
+    {
+      title: "Today's Action Plan",
+      value: activeActionCount > 0 ? `${activeActionCount} actions` : "Clear",
+      body:
+        activeActionCount > 0
+          ? "Open follow-ups and deadlines that need attention."
+          : "No urgent follow-up is due from saved applications."
+    },
+    {
+      title: "Best Job Matches",
+      value: `${fitEvaluation.overallScore}/100`,
+      body: fitEvaluation.decision
+    },
+    {
+      title: "Application Readiness",
+      value: `${readinessScore}%`,
+      body:
+        decisionBrief.missingInputs.length > 0
+          ? `${decisionBrief.missingInputs.length} missing input${decisionBrief.missingInputs.length === 1 ? "" : "s"}`
+          : "Profile evidence is ready for scoring."
+    },
+    {
+      title: "Jobs Needing Action",
+      value: riskLabel,
+      body:
+        decisionBrief.contentGate === "ready"
+          ? "Ready to Apply"
+          : decisionBrief.contentGate === "stretch"
+            ? "Needs Tailoring"
+            : "Missing Keywords"
+    },
+    {
+      title: "Application Pipeline",
+      value: `${state.applications.length} jobs`,
+      body: `${statusCounts.Applied + statusCounts.Interview} progressed beyond saved.`
+    },
+    {
+      title: "Follow-ups & Deadlines",
+      value: `${activeActionCount}`,
+      body: "Follow-up Queue across live applications."
+    },
+    {
+      title: "Weekly Progress",
+      value: `${state.interviewPrepPacks.length} prep packs`,
+      body: `${state.applications.length} saved jobs and ${interviewApplications.length} interviews.`
+    }
+  ]
 
   useEffect(() => {
     setState(getStoredState())
@@ -2417,8 +2511,29 @@ export default function HomePage({
       <header className="app-header">
         <div className="header-copy">
           <p className="eyebrow">AutoTime EU Apply</p>
-          <h1>Dashboard workspace</h1>
-          <p>Profile, job checks, applications and interview prep in one place.</p>
+          <h1>Job Search Command Centre</h1>
+          <p>Profile, job inbox, match score, applications and interview prep in one workspace.</p>
+          <div className="command-header-tools">
+            <label className="command-search">
+              <span>Search jobs/applications</span>
+              <input
+                placeholder="Search workflow areas"
+                type="search"
+                value={commandSearch}
+                onChange={(event) => setCommandSearch(event.target.value)}
+              />
+            </label>
+            <a className="secondary-button" href="/dashboard/jobs">
+              Import Job
+            </a>
+            <a className="secondary-button" href="/dashboard/jobs">
+              Analyse Current Page
+            </a>
+            <div className="profile-completion-meter">
+              <small>User Profile Completion</small>
+              <strong>{readinessScore}%</strong>
+            </div>
+          </div>
           <div
             className="header-actions"
             aria-label="Primary dashboard actions"
@@ -2453,18 +2568,6 @@ export default function HomePage({
       </header>
 
       <div className="dashboard-page-nav">
-        <nav className="tab-bar" aria-label="Dashboard sections">
-          {dashboardRoutes.map((route) => (
-            <a
-              aria-current={view === route.id ? "page" : undefined}
-              className={view === route.id ? "tab-button active" : "tab-button"}
-              href={route.href}
-              key={route.id}
-            >
-              {route.label}
-            </a>
-          ))}
-        </nav>
         <nav className="page-arrow-nav" aria-label="Page step controls">
           {previousRoute ? (
             <a className="page-arrow-button" href={previousRoute.href}>
@@ -2492,6 +2595,25 @@ export default function HomePage({
       </div>
 
       {status && <p className="status-banner">{status}</p>}
+
+      <div className="command-workspace">
+        <aside className="command-sidebar" aria-label="Command centre navigation">
+          <p>Workspace</p>
+          <nav>
+            {commandSidebarItems.map((item) => (
+              <a
+                aria-current={activeSidebarLabel === item.label ? "page" : undefined}
+                className={activeSidebarLabel === item.label ? "active" : undefined}
+                href={item.href}
+                key={item.label}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="command-content">
 
       {!isOverview && currentTab === "profile" && (
       <section className="market-context-panel" aria-label="Profile settings">
@@ -2900,15 +3022,35 @@ export default function HomePage({
 
 
       {isOverview && (
-        <section className="dashboard-route-grid" aria-label="Dashboard workflow">
-          {dashboardRoutes
-            .filter((route) => route.id !== "overview")
-            .map((route) => (
-              <a className="dashboard-route-card" href={route.href} key={route.id}>
-                <strong>{route.label}</strong>
-                <span>{route.summary}</span>
-              </a>
+        <section className="command-centre-overview" aria-label="Homepage sections">
+          <div className="section-intro">
+            <p className="eyebrow">Dashboard</p>
+            <h2>Today's Action Plan</h2>
+            <p>Clear next steps, fit signals and application movement.</p>
+          </div>
+          <div className="command-centre-grid">
+            {commandCentreCards.map((card) => (
+              <article className="command-centre-card" key={card.title}>
+                <span>{card.title}</span>
+                <strong>{card.value}</strong>
+                <p>{card.body}</p>
+              </article>
             ))}
+          </div>
+        </section>
+      )}
+
+      {isOverview && (
+        <section className="dashboard-route-grid" aria-label="Dashboard workflow">
+          {filteredDashboardRoutes.map((route) => (
+            <a className="dashboard-route-card" href={route.href} key={route.id}>
+              <strong>{route.label}</strong>
+              <span>{route.summary}</span>
+            </a>
+          ))}
+          {!filteredDashboardRoutes.length && (
+            <p className="empty-state">No workflow area matched that search.</p>
+          )}
         </section>
       )}
 
@@ -3891,6 +4033,9 @@ export default function HomePage({
           </div>
         </section>
       )}
+
+        </div>
+      </div>
 
       <section className="utility-bar">
         <button type="button" onClick={saveDashboard}>
