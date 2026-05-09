@@ -2266,11 +2266,19 @@ h4 {
   gap: 12px;
 }
 
+.extension-distribution-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .extension-install-steps {
   display: grid;
   gap: 12px;
-  border-top: 1px solid var(--border);
-  padding-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 16px;
 }
 
 .extension-install-steps h2 {
@@ -2487,6 +2495,7 @@ h4 {
   .trust-grid,
   .workspace-grid,
   .interview-buddy-layout,
+  .extension-distribution-grid,
   .ai-settings-panel,
   .profile-bridge-panel,
   .cloud-sync-panel,
@@ -2587,6 +2596,7 @@ h4 {
   .executive-panel,
   .interview-buddy-layout,
   .dashboard-route-grid,
+  .extension-distribution-grid,
   .metrics-strip,
   .segmented-options,
   .context-controls,
