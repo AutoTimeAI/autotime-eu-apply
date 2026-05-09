@@ -2418,11 +2418,7 @@ export default function HomePage({
         <div className="header-copy">
           <p className="eyebrow">AutoTime EU Apply</p>
           <h1>Dashboard workspace</h1>
-          <p>
-            Review saved profile evidence, check the current role, and track
-            next actions. Scores and advice stay limited when required evidence
-            is missing.
-          </p>
+          <p>Profile, job checks, applications and interview prep in one place.</p>
           <div
             className="header-actions"
             aria-label="Primary dashboard actions"
@@ -2456,16 +2452,53 @@ export default function HomePage({
         </div>
       </header>
 
+      <div className="dashboard-page-nav">
+        <nav className="tab-bar" aria-label="Dashboard sections">
+          {dashboardRoutes.map((route) => (
+            <a
+              aria-current={view === route.id ? "page" : undefined}
+              className={view === route.id ? "tab-button active" : "tab-button"}
+              href={route.href}
+              key={route.id}
+            >
+              {route.label}
+            </a>
+          ))}
+        </nav>
+        <nav className="page-arrow-nav" aria-label="Page step controls">
+          {previousRoute ? (
+            <a className="page-arrow-button" href={previousRoute.href}>
+              <span aria-hidden="true">{"\u2190"}</span>
+              Back
+            </a>
+          ) : (
+            <span className="page-arrow-button disabled">
+              <span aria-hidden="true">{"\u2190"}</span>
+              Back
+            </span>
+          )}
+          {nextRoute ? (
+            <a className="page-arrow-button" href={nextRoute.href}>
+              Next
+              <span aria-hidden="true">{"\u2192"}</span>
+            </a>
+          ) : (
+            <span className="page-arrow-button disabled">
+              Next
+              <span aria-hidden="true">{"\u2192"}</span>
+            </span>
+          )}
+        </nav>
+      </div>
+
+      {status && <p className="status-banner">{status}</p>}
+
       {!isOverview && currentTab === "profile" && (
       <section className="market-context-panel" aria-label="Profile settings">
         <div className="section-intro">
           <p className="eyebrow">Profile settings</p>
-          <h2>Inputs used for role checks</h2>
-          <p>
-            These settings tell the dashboard how to interpret a job. Update
-            them when your target country, role focus or work-right situation
-            changes.
-          </p>
+          <h2>Candidate context</h2>
+          <p>Set country, role focus and work-right context for checks.</p>
         </div>
 
         <div className="context-grid">
@@ -2572,6 +2605,8 @@ export default function HomePage({
           </div>
         </div>
 
+        <details className="audit-details compact">
+          <summary>Europe tech checks</summary>
         <div
           className="ai-use-case-grid"
           aria-label="Decision evidence checks"
@@ -2583,15 +2618,14 @@ export default function HomePage({
             </article>
           ))}
         </div>
+        </details>
 
+        <details className="audit-details compact">
+          <summary>Evidence rules</summary>
         <section className="market-strategy-panel">
           <div className="section-heading">
             <p className="eyebrow">Decision checks</p>
-            <h2>Evidence required before action</h2>
-            <p>
-              Each check should show the evidence used, the risk found and the
-              limit of what the dashboard can safely conclude.
-            </p>
+            <h2>Evidence before action</h2>
           </div>
           <div className="strategy-card-grid">
             {europeanStrategySteps.map((step) => (
@@ -2602,15 +2636,13 @@ export default function HomePage({
             ))}
           </div>
         </section>
+        </details>
 
         <section className="resume-intake-panel" aria-label="CV context review">
           <div className="section-heading">
             <p className="eyebrow">CV import</p>
-            <h2>Use CV text to update profile evidence</h2>
-            <p>
-              Suggestions remain pending until you approve them. Nothing in
-              your profile is overwritten automatically.
-            </p>
+            <h2>Review CV text</h2>
+            <p>Suggestions stay pending until you approve them.</p>
           </div>
           <label>
             CV or profile text
@@ -2678,11 +2710,7 @@ export default function HomePage({
         <div>
           <p className="eyebrow">Job decision</p>
           <h2>Current role decision</h2>
-          <p>
-            This panel uses saved profile evidence and job details. If the
-            evidence is incomplete, the decision stays limited and shows what is
-            missing.
-          </p>
+          <p>Score, evidence, risks and next step for the current role.</p>
         </div>
         <div className="decision-score">
           <strong>{decisionBrief.score}</strong>
@@ -2747,24 +2775,17 @@ export default function HomePage({
           No claim without evidence. No score without explanation. No
           application advice without clear limits.
         </p>
-        <p className="decision-integrity-note">
-          This is a rule-based decision aid using the profile and job text saved
-          in this browser. It is not an official employer, immigration,
-          sponsorship or legal decision.
-        </p>
       </section>
       )}
 
       {currentTab === "jobs" && (
+      <details className="audit-details">
+      <summary>Audit and source checks</summary>
       <section className="trust-grid" aria-label="Evidence and official verification">
         <section className="evidence-ledger-panel">
           <div className="section-heading">
             <p className="eyebrow">Evidence ledger</p>
-            <h2>Every recommendation must be traceable</h2>
-            <p>
-              Each row separates the check, the evidence used and the limit of
-              what AutoTime can safely conclude.
-            </p>
+            <h2>Traceable recommendation</h2>
           </div>
           <div className="ledger-table">
             {evidenceLedgerRows.map((row) => (
@@ -2794,11 +2815,7 @@ export default function HomePage({
         <section className="content-guardrail-panel">
           <div className="section-heading">
             <p className="eyebrow">AI honesty guardrails</p>
-            <h2>Content generation is allowed only when evidence supports it</h2>
-            <p>
-              AutoTime must not write around blockers, invent proof or present
-              uncertain advice as verified.
-            </p>
+            <h2>Content guardrails</h2>
           </div>
           <div className="guardrail-list">
             {contentGuardrails.map((item) => (
@@ -2819,10 +2836,6 @@ export default function HomePage({
           <div className="section-heading">
             <p className="eyebrow">Before applying</p>
             <h2>Manual verification checklist</h2>
-            <p>
-              These checks keep the workflow honest before you save, tailor or
-              submit an application.
-            </p>
           </div>
           <div className="verification-list">
             {verificationChecklist.map((item) => (
@@ -2854,11 +2867,7 @@ export default function HomePage({
         <section className="official-source-panel">
           <div className="section-heading">
             <p className="eyebrow">Official verification</p>
-            <h2>Check the source before relying on visa or work-right advice</h2>
-            <p>
-              These links are provided for verification. AutoTime does not
-              authorise employment, sponsorship, visas or immigration status.
-            </p>
+            <h2>Official sources</h2>
           </div>
           <div className="official-source-list">
             {officialSources.map((source) => (
@@ -2886,48 +2895,9 @@ export default function HomePage({
           </label>
         </section>
       </section>
+      </details>
       )}
 
-      <div className="dashboard-page-nav">
-        <nav className="tab-bar" aria-label="Dashboard sections">
-          {dashboardRoutes.map((route) => (
-            <a
-              aria-current={view === route.id ? "page" : undefined}
-              className={view === route.id ? "tab-button active" : "tab-button"}
-              href={route.href}
-              key={route.id}
-            >
-              {route.label}
-            </a>
-          ))}
-        </nav>
-        <nav className="page-arrow-nav" aria-label="Page step controls">
-          {previousRoute ? (
-            <a className="page-arrow-button" href={previousRoute.href}>
-              <span aria-hidden="true">←</span>
-              Back
-            </a>
-          ) : (
-            <span className="page-arrow-button disabled">
-              <span aria-hidden="true">←</span>
-              Back
-            </span>
-          )}
-          {nextRoute ? (
-            <a className="page-arrow-button" href={nextRoute.href}>
-              Next
-              <span aria-hidden="true">→</span>
-            </a>
-          ) : (
-            <span className="page-arrow-button disabled">
-              Next
-              <span aria-hidden="true">→</span>
-            </span>
-          )}
-        </nav>
-      </div>
-
-      {status && <p className="status-banner">{status}</p>}
 
       {isOverview && (
         <section className="dashboard-route-grid" aria-label="Dashboard workflow">
