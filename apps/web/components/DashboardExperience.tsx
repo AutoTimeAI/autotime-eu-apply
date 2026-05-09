@@ -1962,14 +1962,14 @@ export default function HomePage({
   const isOverview = view === "overview"
   const activeFocus = focus ?? defaultDashboardFocusByView[view]
   const focusCopy = dashboardFocusCopy[activeFocus]
-  const currentRouteIndex = dashboardRoutes.findIndex(
-    (route) => route.id === view
+  const commandNavIndex = commandSidebarItems.findIndex(
+    (item) => item.focus === activeFocus
   )
-  const previousRoute =
-    currentRouteIndex > 0 ? dashboardRoutes[currentRouteIndex - 1] : null
-  const nextRoute =
-    currentRouteIndex >= 0 && currentRouteIndex < dashboardRoutes.length - 1
-      ? dashboardRoutes[currentRouteIndex + 1]
+  const previousCommandItem =
+    commandNavIndex > 0 ? commandSidebarItems[commandNavIndex - 1] : null
+  const nextCommandItem =
+    commandNavIndex >= 0 && commandNavIndex < commandSidebarItems.length - 1
+      ? commandSidebarItems[commandNavIndex + 1]
       : null
   const activeSidebarLabel = {
     dashboard: "Dashboard",
@@ -2653,25 +2653,20 @@ export default function HomePage({
               <strong>{readinessScore}%</strong>
             </div>
           </div>
-          <div
-            className="header-actions"
-            aria-label="Primary dashboard actions"
-          >
-            <button
-              disabled={!canSaveCheckedJob}
-              type="button"
-              onClick={saveApplicationFromJob}
+          {currentTab === "jobs" ? (
+            <div
+              className="header-actions"
+              aria-label="Primary job scoring actions"
             >
-              Save checked job
-            </button>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={exportDashboard}
-            >
-              Export backup
-            </button>
-          </div>
+              <button
+                disabled={!canSaveCheckedJob}
+                type="button"
+                onClick={saveApplicationFromJob}
+              >
+                Save checked job
+              </button>
+            </div>
+          ) : null}
         </div>
         <div className="executive-panel" aria-label="Dashboard evidence summary">
           <div>
@@ -2688,25 +2683,32 @@ export default function HomePage({
 
       <div className="dashboard-page-nav">
         <nav className="page-arrow-nav" aria-label="Page step controls">
-          {previousRoute ? (
-            <a className="page-arrow-button" href={previousRoute.href}>
+          {activeFocus !== "dashboard" ? (
+            <a className="page-arrow-button" href="/dashboard">
+              Dashboard
+            </a>
+          ) : null}
+          {previousCommandItem ? (
+            <a className="page-arrow-button" href={previousCommandItem.href}>
               <span aria-hidden="true">{"\u2190"}</span>
-              Back
+              <span>Back</span>
+              <small>{previousCommandItem.label}</small>
             </a>
           ) : (
             <span className="page-arrow-button disabled">
               <span aria-hidden="true">{"\u2190"}</span>
-              Back
+              <span>Back</span>
             </span>
           )}
-          {nextRoute ? (
-            <a className="page-arrow-button" href={nextRoute.href}>
-              Next
+          {nextCommandItem ? (
+            <a className="page-arrow-button" href={nextCommandItem.href}>
+              <span>Next</span>
+              <small>{nextCommandItem.label}</small>
               <span aria-hidden="true">{"\u2192"}</span>
             </a>
           ) : (
             <span className="page-arrow-button disabled">
-              Next
+              <span>Next</span>
               <span aria-hidden="true">{"\u2192"}</span>
             </span>
           )}
@@ -2733,15 +2735,6 @@ export default function HomePage({
         </aside>
 
         <div className="command-content">
-          {!isOverview && (
-            <section className="focus-strip" aria-label="Current workspace focus">
-              <div>
-                <p className="eyebrow">{focusCopy.eyebrow}</p>
-                <h2>{focusCopy.title}</h2>
-              </div>
-              <p>{focusCopy.body}</p>
-            </section>
-          )}
 
       {!isOverview && currentTab === "profile" && showProfileSettingsPanel && (
       <section className="market-context-panel" aria-label="Profile settings">
