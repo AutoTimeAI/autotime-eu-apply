@@ -30,8 +30,16 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Python analytics dependencies
+        run: python -m pip install -e "apps/analytics[dev]"
 
       - name: Verify React type alignment
         run: |
@@ -56,6 +64,9 @@ jobs:
 
       - name: Run country-fit model tests
         run: pnpm test:country-fit
+
+      - name: Run analytics service tests
+        run: python -m pytest apps/analytics/tests
 
       - name: Run typecheck
         run: pnpm -r typecheck

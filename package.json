@@ -2,6 +2,10 @@
   "name": "autotime-eu-apply",
   "private": true,
   "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": "10.33.0"
+  },
   "scripts": {
     "build": "pnpm build:extension",
     "dev:web": "pnpm --filter web dev",

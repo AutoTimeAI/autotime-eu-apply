@@ -10,13 +10,22 @@ build
 .env.local
 .env.*.local
 .DS_Store
+.idea/
 coverage
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.nyc_output/
 *.tsbuildinfo
 .codex-temp
 __pycache__
 *.pyc
+.venv/
+venv/
 .pytest_cache
 pytest-cache-files-*
+*.sqlite
+*.db
 _tmp_*
 
 .vercel

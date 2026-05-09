@@ -9,6 +9,7 @@ web app shell, and a shared package.
 
 - `apps/extension` - Chrome extension built with WXT.
 - `apps/web` - V2 web companion dashboard built with Next.js.
+- `apps/analytics` - Python FastAPI evidence and outcome analytics service.
 - `packages/shared` - V2 shared types and schemas.
 
 The Chrome extension source of truth is `apps/extension`.
@@ -48,6 +49,9 @@ Current V2 implementation:
 - AI interview prep in the web dashboard is optional and browser-local: users
   provide their own OpenAI key, local fallback remains available, and no
   AutoTime backend stores the key.
+- Python analytics provides evidence summaries, outcome calibration readiness,
+  ML feature rows, and learning-stage signals without exposing unsupported
+  success-probability claims.
 - Production web dashboard: <https://autotime-eu-apply.vercel.app>.
 
 V2 details live in `docs/v2-product-surface.md`.
@@ -280,17 +284,17 @@ pnpm build:web
 Use these Vercel project settings:
 
 ```text
-Framework Preset: Next.js
+Framework Preset: Services
 Install Command: pnpm install --frozen-lockfile
 Build Command: pnpm build:web
 Output Directory: apps/web/.next
 Root Directory: repository root
 ```
 
-Only `apps/web` is intended for Vercel hosting. The Chrome extension remains a
-local-first browser extension and is not hosted on Vercel.
-The root `package.json` keeps `next` as a dependency so Vercel can detect
-the framework from the repository root while still building `apps/web`.
+Vercel serves `apps/web` at `/` and `apps/analytics/main.py` at `/analytics`.
+Verify the analytics service after deployment with `/analytics/health`.
+The Chrome extension remains a browser extension and is not hosted as a normal
+Vercel web app.
 
 ## Tests
 
@@ -314,6 +318,12 @@ pnpm test:web:interview
 pnpm test:v2:ats-live
 pnpm test:v2:ai-live
 pnpm smoke:web
+```
+
+Run Python analytics tests:
+
+```bash
+python -m pytest apps/analytics/tests
 ```
 
 `pnpm test:v2:ai-live` performs the controlled-cost live OpenAI check only when
@@ -349,10 +359,9 @@ The extension uses these Chrome permissions:
 - `activeTab` for reading/importing the current job page and sending autofill messages.
 - `sidePanel` for opening the Chrome side panel.
 
-The WXT content script is configured with `matches: ["<all_urls>"]` and
-`exclude_matches: ["*://*.linkedin.com/*"]` so the side panel can request
-autofill and job-page import on normal application pages while keeping LinkedIn
-manual-input only.
+The WXT content script is limited to supported ATS domains such as Greenhouse,
+Lever, Workday, Ashby, SmartRecruiters, iCIMS, BambooHR, Teamtailor, Recruitee,
+Jobvite, and Personio. LinkedIn remains manual-input only.
 
 After building, load the generated extension from:
 
