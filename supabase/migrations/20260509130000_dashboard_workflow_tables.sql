@@ -32,7 +32,7 @@ create table if not exists public.applications (
   role_title text,
   source text,
   status text not null default 'Saved'
-    check (status in ('Saved', 'Applied', 'Interview', 'Rejected', 'Offer', 'Closed')),
+    check (status in ('Saved', 'Applying', 'Applied', 'Interview', 'Rejected', 'Closed')),
   next_action text,
   next_action_date date,
   notes text,
@@ -40,27 +40,23 @@ create table if not exists public.applications (
     check (
       outcome_reason in (
         'Unknown',
-        'No response',
-        'Rejected after application',
-        'Rejected after interview',
         'Interview secured',
         'Offer or final stage',
+        'No response',
         'Sponsorship blocker',
         'Work-right blocker',
-        'Role mismatch',
+        'Skill mismatch',
         'Location mismatch',
-        'Salary mismatch',
-        'Withdrew',
-        'Other'
+        'Role closed'
       )
     ),
   fit_score integer check (fit_score is null or (fit_score >= 0 and fit_score <= 100)),
   fit_decision text check (
     fit_decision is null or fit_decision in (
       'Apply now',
-      'Worth applying',
       'Stretch application',
-      'Skip for now'
+      'Skip for now',
+      'Improve profile first'
     )
   ),
   content_gate text check (
@@ -115,23 +111,19 @@ create table if not exists public.outcome_records (
   country text,
   source text,
   status text not null
-    check (status in ('Saved', 'Applied', 'Interview', 'Rejected', 'Offer', 'Closed')),
+    check (status in ('Saved', 'Applying', 'Applied', 'Interview', 'Rejected', 'Closed')),
   outcome_reason text not null
     check (
       outcome_reason in (
         'Unknown',
-        'No response',
-        'Rejected after application',
-        'Rejected after interview',
         'Interview secured',
         'Offer or final stage',
+        'No response',
         'Sponsorship blocker',
         'Work-right blocker',
-        'Role mismatch',
+        'Skill mismatch',
         'Location mismatch',
-        'Salary mismatch',
-        'Withdrew',
-        'Other'
+        'Role closed'
       )
     ),
   decision_index_at_save integer
@@ -139,9 +131,9 @@ create table if not exists public.outcome_records (
   decision_label_at_save text check (
     decision_label_at_save is null or decision_label_at_save in (
       'Apply now',
-      'Worth applying',
       'Stretch application',
-      'Skip for now'
+      'Skip for now',
+      'Improve profile first'
     )
   ),
   content_gate_at_save text check (

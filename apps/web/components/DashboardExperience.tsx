@@ -1990,9 +1990,53 @@ export default function HomePage({
   ]
 
   useEffect(() => {
-    setState(getStoredState())
+    const localState = getStoredState()
+    setState(localState)
     setProductContext(getStoredProductContext())
     setTrustState(getStoredTrustState())
+
+    if (!cloudSyncReadiness.configured) {
+      return
+    }
+
+    let cancelled = false
+
+    fetch("/api/sync/dashboard")
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          data: {
+            dashboard: Pick<
+              CompanionDashboardState,
+              | "reusableAnswers"
+              | "applications"
+              | "evidenceRecords"
+              | "outcomeRecords"
+              | "interviewPrepPacks"
+            >
+          } | null
+          error: string | null
+        }
+
+        if (!response.ok || body.error || !body.data?.dashboard || cancelled) {
+          return
+        }
+
+        const nextState = {
+          ...localState,
+          ...body.data.dashboard,
+          evidenceRecords: body.data.dashboard.evidenceRecords ?? [],
+          outcomeRecords: body.data.dashboard.outcomeRecords ?? []
+        }
+        setState(nextState)
+        saveState(nextState)
+      })
+      .catch(() => {
+        // Keep local-first behavior if cloud sync is unavailable.
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const persist = (next: CompanionDashboardState, message: string) => {
@@ -2193,6 +2237,103 @@ export default function HomePage({
 
   const saveDashboard = () => {
     persist(state, "Dashboard saved locally")
+  }
+
+  const syncDashboardToCloud = async () => {
+    if (!cloudSyncReadiness.configured) {
+      setStatus(
+        `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+      )
+      return
+    }
+
+    if (!cloudSyncConsent) {
+      setStatus("Cloud dashboard sync requires your consent.")
+      return
+    }
+
+    try {
+      const response = await fetch("/api/sync/dashboard", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-autotime-source": "web"
+        },
+        body: JSON.stringify({
+          reusableAnswers: state.reusableAnswers,
+          applications: state.applications,
+          evidenceRecords: state.evidenceRecords ?? [],
+          outcomeRecords: state.outcomeRecords ?? [],
+          interviewPrepPacks: state.interviewPrepPacks
+        })
+      })
+      const body = (await response.json()) as {
+        error: string | null
+      }
+
+      if (!response.ok || body.error) {
+        setStatus(body.error ?? "Dashboard sync failed")
+        return
+      }
+
+      setStatus("Dashboard workflow synced to your account")
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error ? error.message : "Dashboard sync failed"
+      )
+    }
+  }
+
+  const loadDashboardFromCloud = async () => {
+    if (!cloudSyncReadiness.configured) {
+      setStatus(
+        `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+      )
+      return
+    }
+
+    try {
+      const response = await fetch("/api/sync/dashboard")
+      const body = (await response.json()) as {
+        data: {
+          dashboard: Pick<
+            CompanionDashboardState,
+            | "reusableAnswers"
+            | "applications"
+            | "evidenceRecords"
+            | "outcomeRecords"
+            | "interviewPrepPacks"
+          >
+        } | null
+        error: string | null
+      }
+
+      if (!response.ok || body.error) {
+        setStatus(body.error ?? "Could not load synced dashboard")
+        return
+      }
+
+      if (!body.data?.dashboard) {
+        setStatus("No synced dashboard workflow found for this account yet")
+        return
+      }
+
+      persist(
+        {
+          ...state,
+          ...body.data.dashboard,
+          evidenceRecords: body.data.dashboard.evidenceRecords ?? [],
+          outcomeRecords: body.data.dashboard.outcomeRecords ?? []
+        },
+        "Synced dashboard workflow loaded"
+      )
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not load synced dashboard"
+      )
+    }
   }
 
   const saveApplicationFromJob = () => {
@@ -3160,7 +3301,8 @@ export default function HomePage({
               type="checkbox"
               onChange={(event) => setCloudSyncConsent(event.target.checked)}
             />
-            I consent to sync my candidate profile to my authenticated account.
+            I consent to sync my candidate profile and dashboard workflow to my
+            authenticated account.
           </label>
           <button
             className="secondary-button"
@@ -3183,6 +3325,21 @@ export default function HomePage({
             onClick={loadProfileFromCloud}
           >
             Load synced profile
+          </button>
+          <button
+            disabled={!cloudSyncReadiness.configured}
+            type="button"
+            onClick={syncDashboardToCloud}
+          >
+            Sync dashboard
+          </button>
+          <button
+            className="secondary-button"
+            disabled={!cloudSyncReadiness.configured}
+            type="button"
+            onClick={loadDashboardFromCloud}
+          >
+            Load dashboard
           </button>
         </div>
       </section>
