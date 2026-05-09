@@ -1410,11 +1410,126 @@ h4 {
   gap: 8px;
 }
 
-.pipeline-summary div {
+.pipeline-summary div,
+.analytics-grid article,
+.online-analytics-results article,
+.evidence-record-card {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-raised);
   padding: 12px;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analytics-grid article,
+.online-analytics-panel,
+.online-analytics-results,
+.evidence-outcome-panel,
+.evidence-record-list,
+.evidence-record-card {
+  display: grid;
+  gap: 10px;
+}
+
+.analytics-grid span {
+  color: var(--ink);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.analytics-grid strong,
+.online-analytics-results strong,
+.evidence-record-card strong {
+  color: var(--ink);
+}
+
+.analytics-grid p,
+.online-analytics-results p,
+.analytics-limits p,
+.evidence-record-card p,
+.evidence-record-card small {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.online-analytics-panel,
+.evidence-outcome-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 14px;
+}
+
+.online-analytics-panel {
+  align-items: start;
+}
+
+.online-analytics-panel .secondary-button {
+  justify-self: start;
+}
+
+.online-analytics-results {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.online-analytics-results article span {
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.score-band-table,
+.analytics-limits {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.score-band-table div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.86rem;
+  padding-top: 8px;
+}
+
+.score-band-table span:first-child {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.analytics-limits {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.evidence-record-list {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.evidence-record-card div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.evidence-record-card span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
 }
 
 .application-row {
@@ -2509,6 +2624,8 @@ h4 {
     .decision-columns,
   .readiness-roadmap,
   .dashboard-route-grid,
+  .analytics-grid,
+  .online-analytics-results,
   .pipeline-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2547,6 +2664,10 @@ h4 {
 
   .evidence-ledger-panel {
     grid-row: auto;
+  }
+
+  .score-band-table div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .suggestion-card {
@@ -2597,6 +2718,8 @@ h4 {
   .interview-buddy-layout,
   .dashboard-route-grid,
   .extension-distribution-grid,
+  .analytics-grid,
+  .online-analytics-results,
   .metrics-strip,
   .segmented-options,
   .context-controls,
@@ -2606,6 +2729,10 @@ h4 {
   .readiness-roadmap,
   .pipeline-summary,
   .application-row {
+    grid-template-columns: 1fr;
+  }
+
+  .score-band-table div {
     grid-template-columns: 1fr;
   }
 

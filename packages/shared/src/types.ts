@@ -7,9 +7,12 @@ import type {
   applicationStatusSchema,
   candidateProfileSchema,
   companionDashboardStateSchema,
+  evidenceRecordSchema,
+  evidenceSourceTypeSchema,
   interviewPrepPackSchema,
   jobAnalysisDraftSchema,
   jobRecommendationSchema,
+  outcomeRecordSchema,
   reusableAnswersSchema,
   workModeSchema
 } from "./schemas.ts"
@@ -30,6 +33,9 @@ export type ApplicationContentSnapshot = z.infer<
 >
 export type JobAnalysisDraft = z.infer<typeof jobAnalysisDraftSchema>
 export type ApplicationRecord = z.infer<typeof applicationRecordSchema>
+export type EvidenceSourceType = z.infer<typeof evidenceSourceTypeSchema>
+export type EvidenceRecord = z.infer<typeof evidenceRecordSchema>
+export type OutcomeRecord = z.infer<typeof outcomeRecordSchema>
 export type InterviewPrepPack = z.infer<typeof interviewPrepPackSchema>
 export type CompanionDashboardState = z.infer<
   typeof companionDashboardStateSchema

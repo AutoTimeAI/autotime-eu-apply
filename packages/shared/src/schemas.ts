@@ -175,6 +175,52 @@ export const applicationRecordSchema = z.object({
   contentSnapshot: applicationContentSnapshotSchema.optional()
 })
 
+export const evidenceSourceTypeSchema = z.enum([
+  "profile",
+  "cv",
+  "job_text",
+  "user_answer",
+  "official_source",
+  "system_rule"
+])
+
+export const evidenceRecordSchema = z.object({
+  id: z.string(),
+  applicationId: z.string().optional(),
+  jobUrl: z.string().optional(),
+  checkKey: z.string(),
+  checkLabel: z.string(),
+  status: z.enum(["found", "missing", "risk", "limit"]),
+  evidenceText: z.string(),
+  sourceType: evidenceSourceTypeSchema,
+  sourceLabel: z.string(),
+  missingInput: z.string().optional(),
+  riskFlag: z.string().optional(),
+  explanation: z.string(),
+  limit: z.string(),
+  createdAt: z.string()
+})
+
+export const outcomeRecordSchema = z.object({
+  id: z.string(),
+  applicationId: z.string(),
+  roleTitle: z.string(),
+  company: z.string().optional(),
+  country: z.string().optional(),
+  source: z.string().optional(),
+  status: applicationStatusSchema,
+  outcomeReason: applicationOutcomeReasonSchema,
+  decisionIndexAtSave: z.number().optional(),
+  decisionLabelAtSave: countryFitDecisionSchema.optional(),
+  contentGateAtSave: contentGenerationGateSchema.optional(),
+  appliedAt: z.string().optional(),
+  interviewAt: z.string().optional(),
+  closedAt: z.string().optional(),
+  notes: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string()
+})
+
 export const interviewPrepPackSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
@@ -196,5 +242,7 @@ export const companionDashboardStateSchema = z.object({
   reusableAnswers: reusableAnswersSchema,
   jobAnalysis: jobAnalysisDraftSchema,
   applications: z.array(applicationRecordSchema),
-  interviewPrepPacks: z.array(interviewPrepPackSchema)
+  interviewPrepPacks: z.array(interviewPrepPackSchema),
+  evidenceRecords: z.array(evidenceRecordSchema).optional(),
+  outcomeRecords: z.array(outcomeRecordSchema).optional()
 })

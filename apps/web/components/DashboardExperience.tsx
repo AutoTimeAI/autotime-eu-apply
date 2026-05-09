@@ -13,7 +13,9 @@ import {
   type CandidateProfile,
   type CompanionDashboardState,
   type CountryFitEvaluation,
+  type EvidenceRecord,
   type JobAnalysisDraft,
+  type OutcomeRecord,
   type OutcomeLearningSignals,
   type ReusableAnswers
 } from "shared"
@@ -103,6 +105,32 @@ type InterviewBuddyOutputs = Record<InterviewBuddyOutputKey, string>
 
 type ReusableAnswerKey = keyof ReusableAnswers
 
+type OnlineAnalyticsReport = {
+  summary: {
+    evidenceRecords: number
+    outcomeRecords: number
+    interviewSignals: number
+    observedInterviewRate: number
+    calibrationReady: boolean
+    calibrationStatus: string
+    minimumRecordsForCalibration: number
+  }
+  evidenceStatus: Record<string, number>
+  missingInputs: Record<string, number>
+  riskFlags: Record<string, number>
+  outcomesByStatus: Record<string, number>
+  outcomesByReason: Record<string, number>
+  scoreBands: Array<{
+    band: string
+    records: number
+    interviews: number
+    observedInterviewRate: number
+  }>
+  limits: string[]
+}
+
+const analyticsServiceBaseUrl =
+  process.env.NEXT_PUBLIC_ANALYTICS_URL ?? "/analytics"
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const trustStateStorageKey = "autotime-v2-trust-state"
@@ -635,7 +663,9 @@ const defaultState: CompanionDashboardState = {
   reusableAnswers: emptyReusableAnswers,
   jobAnalysis: emptyJobAnalysis,
   applications: [],
-  interviewPrepPacks: []
+  interviewPrepPacks: [],
+  evidenceRecords: [],
+  outcomeRecords: []
 }
 
 function isLegacySampleState(state: CompanionDashboardState) {
@@ -656,7 +686,12 @@ function getStoredState() {
     const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? "null")
     const result = companionDashboardStateSchema.safeParse(parsed)
     return result.success && !isLegacySampleState(result.data)
-      ? result.data
+      ? {
+          ...defaultState,
+          ...result.data,
+          evidenceRecords: result.data.evidenceRecords ?? [],
+          outcomeRecords: result.data.outcomeRecords ?? []
+        }
       : defaultState
   } catch {
     return defaultState
@@ -924,6 +959,162 @@ function createApplication(
   }
 }
 
+function createEvidenceRecords({
+  application,
+  fitEvaluation,
+  profile
+}: {
+  application: ApplicationRecord
+  fitEvaluation: CountryFitEvaluation
+  profile: CandidateProfile
+}): EvidenceRecord[] {
+  const now = new Date().toISOString()
+  const componentRecords = fitEvaluation.components.map((component) => ({
+    id: crypto.randomUUID(),
+    applicationId: application.id,
+    jobUrl: application.url,
+    checkKey: component.key,
+    checkLabel: component.label,
+    status:
+      component.status === "blocker"
+        ? "risk"
+        : component.evidence.length
+          ? "found"
+          : "missing",
+    evidenceText: component.evidence.join(" ") || "No direct evidence found.",
+    sourceType: component.evidence.length ? "job_text" : "system_rule",
+    sourceLabel: component.evidence.length
+      ? "Saved profile and job text"
+      : "AutoTime rule check",
+    missingInput: component.evidence.length ? undefined : component.label,
+    riskFlag: component.status === "blocker" ? component.rationale : undefined,
+    explanation: component.rationale,
+    limit:
+      "This evidence record is based on saved profile, job text and local decision rules only.",
+    createdAt: now
+  })) satisfies EvidenceRecord[]
+
+  const profileEvidence: EvidenceRecord[] = [
+    {
+      id: crypto.randomUUID(),
+      applicationId: application.id,
+      jobUrl: application.url,
+      checkKey: "profile-work-right",
+      checkLabel: "Work-right evidence",
+      status: profile.workRightDetails.trim() ? "found" : "missing",
+      evidenceText:
+        profile.workRightDetails.trim() || "Work-right evidence is missing.",
+      sourceType: "profile",
+      sourceLabel: "Saved candidate profile",
+      missingInput: profile.workRightDetails.trim()
+        ? undefined
+        : "work-right details",
+      explanation:
+        "Work-right evidence is required before application advice can be treated as strong.",
+      limit:
+        "AutoTime does not authorise employment, visa, immigration or sponsorship status.",
+      createdAt: now
+    },
+    {
+      id: crypto.randomUUID(),
+      applicationId: application.id,
+      jobUrl: application.url,
+      checkKey: "profile-cv",
+      checkLabel: "CV evidence",
+      status: profile.baseCvText.trim() ? "found" : "missing",
+      evidenceText: profile.baseCvText.trim()
+        ? profile.baseCvText.trim().slice(0, 600)
+        : "CV evidence is missing.",
+      sourceType: "cv",
+      sourceLabel: "Saved CV text",
+      missingInput: profile.baseCvText.trim() ? undefined : "CV evidence",
+      explanation:
+        "CV evidence is used to avoid inventing experience or unsupported application claims.",
+      limit:
+        "Only user-saved CV text is used; AutoTime cannot verify facts outside the provided evidence.",
+      createdAt: now
+    }
+  ]
+
+  const blockerRecords = fitEvaluation.blockers.map((blocker) => ({
+    id: crypto.randomUUID(),
+    applicationId: application.id,
+    jobUrl: application.url,
+    checkKey: "decision-blocker",
+    checkLabel: "Decision blocker",
+    status: "risk",
+    evidenceText: blocker,
+    sourceType: "system_rule",
+    sourceLabel: "AutoTime decision rule",
+    riskFlag: blocker,
+    explanation: blocker,
+    limit:
+      "A blocker is a risk signal, not an official employer, immigration or legal decision.",
+    createdAt: now
+  })) satisfies EvidenceRecord[]
+
+  return [...componentRecords, ...profileEvidence, ...blockerRecords]
+}
+
+function createOutcomeRecord(application: ApplicationRecord): OutcomeRecord {
+  const now = new Date().toISOString()
+
+  return {
+    id: crypto.randomUUID(),
+    applicationId: application.id,
+    roleTitle: application.roleTitle || application.title,
+    company: application.company,
+    source: application.source,
+    status: application.status,
+    outcomeReason: application.outcomeReason ?? "Unknown",
+    decisionIndexAtSave: application.fitScore,
+    decisionLabelAtSave: application.fitDecision,
+    contentGateAtSave: application.contentGate,
+    appliedAt: application.status === "Applied" ? now : undefined,
+    interviewAt: application.status === "Interview" ? now : undefined,
+    closedAt:
+      application.status === "Rejected" || application.status === "Closed"
+        ? now
+        : undefined,
+    notes: application.notes,
+    createdAt: now,
+    updatedAt: now
+  }
+}
+
+function updateOutcomeRecordFromApplication(
+  existing: OutcomeRecord | undefined,
+  application: ApplicationRecord
+): OutcomeRecord {
+  const now = new Date().toISOString()
+  const base = existing ?? createOutcomeRecord(application)
+
+  return {
+    ...base,
+    roleTitle: application.roleTitle || application.title,
+    company: application.company,
+    source: application.source,
+    status: application.status,
+    outcomeReason: application.outcomeReason ?? "Unknown",
+    decisionIndexAtSave: base.decisionIndexAtSave ?? application.fitScore,
+    decisionLabelAtSave: base.decisionLabelAtSave ?? application.fitDecision,
+    contentGateAtSave: base.contentGateAtSave ?? application.contentGate,
+    appliedAt:
+      base.appliedAt ??
+      (application.status === "Applied" ? now : undefined),
+    interviewAt:
+      base.interviewAt ??
+      (application.status === "Interview" ? now : undefined),
+    closedAt:
+      base.closedAt ??
+      (application.status === "Rejected" || application.status === "Closed"
+        ? now
+        : undefined),
+    notes: application.notes,
+    updatedAt: now
+  }
+}
+
 function getOutcomeLearningSignals(
   applications: ApplicationRecord[]
 ): OutcomeLearningSignals {
@@ -1004,6 +1195,33 @@ function getNextActionCount(applications: ApplicationRecord[]) {
       application.status !== "Rejected" &&
       (application.nextAction?.trim() || application.status === "Saved")
   ).length
+}
+
+function getOutcomeAnalytics(outcomeRecords: OutcomeRecord[]) {
+  const tracked = outcomeRecords.filter(
+    (record) => record.outcomeReason !== "Unknown" || record.status !== "Saved"
+  )
+  const interviews = outcomeRecords.filter(
+    (record) =>
+      record.status === "Interview" ||
+      record.outcomeReason === "Interview secured"
+  )
+  const blockers = outcomeRecords.filter((record) =>
+    [
+      "Sponsorship blocker",
+      "Work-right blocker",
+      "Skill mismatch",
+      "Location mismatch"
+    ].includes(record.outcomeReason)
+  )
+
+  return {
+    total: outcomeRecords.length,
+    tracked: tracked.length,
+    interviews: interviews.length,
+    blockers: blockers.length,
+    calibrationReady: outcomeRecords.length >= 30
+  }
 }
 
 function getRiskLabel(state: CompanionDashboardState) {
@@ -1484,6 +1702,9 @@ export default function HomePage({
     useState<InterviewBuddyOutputs>(emptyInterviewBuddyOutputs)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
+  const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
+    useState<OnlineAnalyticsReport | null>(null)
+  const [onlineAnalyticsStatus, setOnlineAnalyticsStatus] = useState("")
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -1579,6 +1800,12 @@ export default function HomePage({
   const interviewApplications = state.applications.filter(
     (application) => application.status === "Interview"
   )
+  const persistedEvidenceRecords = state.evidenceRecords ?? []
+  const persistedOutcomeRecords = state.outcomeRecords ?? []
+  const outcomeAnalytics = useMemo(
+    () => getOutcomeAnalytics(persistedOutcomeRecords),
+    [persistedOutcomeRecords]
+  )
   const currentTab: DashboardTab = view === "overview" ? "profile" : view
   const isOverview = view === "overview"
 
@@ -1593,6 +1820,45 @@ export default function HomePage({
     saveState(next)
     setStatus(message)
     setTimeout(() => setStatus(""), 3000)
+  }
+
+  const runOnlineAnalytics = async () => {
+    if (!persistedEvidenceRecords.length && !persistedOutcomeRecords.length) {
+      setOnlineAnalyticsStatus("Save a checked job before running analytics.")
+      return
+    }
+
+    setOnlineAnalyticsStatus("Running Python analytics from saved evidence...")
+    try {
+      const response = await fetch(
+        `${analyticsServiceBaseUrl}/evidence-outcomes`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            evidenceRecords: persistedEvidenceRecords,
+            outcomeRecords: persistedOutcomeRecords
+          })
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(`service returned ${response.status}`)
+      }
+
+      const report = (await response.json()) as OnlineAnalyticsReport
+      setOnlineAnalyticsReport(report)
+      setOnlineAnalyticsStatus(
+        "Python analytics updated from evidence and outcomes."
+      )
+    } catch (error) {
+      setOnlineAnalyticsReport(null)
+      setOnlineAnalyticsStatus(
+        error instanceof Error
+          ? `Python analytics unavailable: ${error.message}`
+          : "Python analytics unavailable."
+      )
+    }
   }
 
   const updateProfile = <K extends keyof CandidateProfile>(
@@ -1777,9 +2043,21 @@ export default function HomePage({
     persist(
       {
         ...state,
-        applications: [application, ...state.applications]
+        applications: [application, ...state.applications],
+        evidenceRecords: [
+          ...createEvidenceRecords({
+            application,
+            fitEvaluation,
+            profile: state.profile
+          }),
+          ...(state.evidenceRecords ?? [])
+        ],
+        outcomeRecords: [
+          createOutcomeRecord(application),
+          ...(state.outcomeRecords ?? [])
+        ]
       },
-      "Application saved to dashboard"
+      "Application saved with evidence and outcome records"
     )
     openDashboardView("applications")
   }
@@ -1788,14 +2066,33 @@ export default function HomePage({
     id: string,
     changes: Partial<ApplicationRecord>
   ) => {
+    const updatedApplications = state.applications.map((application) =>
+      application.id === id ? { ...application, ...changes } : application
+    )
+    const updatedApplication = updatedApplications.find(
+      (application) => application.id === id
+    )
+    const existingOutcome = (state.outcomeRecords ?? []).find(
+      (record) => record.applicationId === id
+    )
+    const updatedOutcome = updatedApplication
+      ? updateOutcomeRecordFromApplication(existingOutcome, updatedApplication)
+      : null
+
     persist(
       {
         ...state,
-        applications: state.applications.map((application) =>
-          application.id === id ? { ...application, ...changes } : application
-        )
+        applications: updatedApplications,
+        outcomeRecords: updatedOutcome
+          ? [
+              updatedOutcome,
+              ...(state.outcomeRecords ?? []).filter(
+                (record) => record.applicationId !== id
+              )
+            ]
+          : (state.outcomeRecords ?? [])
       },
-      "Application updated"
+      "Application and outcome record updated"
     )
   }
 
@@ -1805,6 +2102,12 @@ export default function HomePage({
         ...state,
         applications: state.applications.filter(
           (application) => application.id !== id
+        ),
+        evidenceRecords: (state.evidenceRecords ?? []).filter(
+          (record) => record.applicationId !== id
+        ),
+        outcomeRecords: (state.outcomeRecords ?? []).filter(
+          (record) => record.applicationId !== id
         ),
         interviewPrepPacks: state.interviewPrepPacks.filter(
           (pack) => pack.applicationId !== id
@@ -3096,6 +3399,136 @@ export default function HomePage({
               </div>
             ))}
           </div>
+          <section
+            className="analytics-grid"
+            aria-label="Evidence and outcome analytics"
+          >
+            <article>
+              <span>{persistedEvidenceRecords.length}</span>
+              <strong>Evidence records</strong>
+              <p>Stored checks from saved jobs, profile proof and risks.</p>
+            </article>
+            <article>
+              <span>{outcomeAnalytics.total}</span>
+              <strong>Outcome records</strong>
+              <p>Saved decisions with status and result changes.</p>
+            </article>
+            <article>
+              <span>{outcomeAnalytics.interviews}</span>
+              <strong>Interview signals</strong>
+              <p>Tracked interview outcomes for future calibration.</p>
+            </article>
+            <article>
+              <span>
+                {outcomeAnalytics.calibrationReady ? "Ready" : "Collecting"}
+              </span>
+              <strong>Calibration status</strong>
+              <p>
+                {outcomeAnalytics.calibrationReady
+                  ? "Enough records exist to begin score-band calibration."
+                  : "Decision Index remains non-probability until enough outcomes exist."}
+              </p>
+            </article>
+          </section>
+          <section className="online-analytics-panel">
+            <div className="section-heading">
+              <p className="eyebrow">Python analytics</p>
+              <h2>Online evidence and outcome report</h2>
+              <p>
+                Descriptive analytics only: observed outcomes from saved records,
+                not a promise or probability claim.
+              </p>
+            </div>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={runOnlineAnalytics}
+            >
+              Run Python analytics
+            </button>
+            {onlineAnalyticsStatus ? (
+              <p className="status-message">{onlineAnalyticsStatus}</p>
+            ) : null}
+            {onlineAnalyticsReport ? (
+              <div className="online-analytics-results">
+                <article>
+                  <span>
+                    {Math.round(
+                      onlineAnalyticsReport.summary.observedInterviewRate
+                    )}
+                    %
+                  </span>
+                  <strong>Observed interview rate</strong>
+                  <p>Based only on tracked outcome records.</p>
+                </article>
+                <article>
+                  <span>
+                    {onlineAnalyticsReport.summary.calibrationReady
+                      ? "Ready"
+                      : "Collecting"}
+                  </span>
+                  <strong>Calibration readiness</strong>
+                  <p>{onlineAnalyticsReport.summary.calibrationStatus}</p>
+                </article>
+                <article>
+                  <span>{onlineAnalyticsReport.summary.interviewSignals}</span>
+                  <strong>Interview signals</strong>
+                  <p>Outcome records marked as interview or final stage.</p>
+                </article>
+                <div className="score-band-table">
+                  <strong>Score-band outcomes</strong>
+                  {onlineAnalyticsReport.scoreBands.length ? (
+                    onlineAnalyticsReport.scoreBands.map((band) => (
+                      <div key={band.band}>
+                        <span>{band.band}</span>
+                        <span>{band.records} records</span>
+                        <span>{band.interviews} interviews</span>
+                        <span>
+                          {Math.round(band.observedInterviewRate)}% observed
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p>No score-band outcomes yet.</p>
+                  )}
+                </div>
+                <div className="analytics-limits">
+                  {onlineAnalyticsReport.limits.map((limit) => (
+                    <p key={limit}>{limit}</p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+          <section className="evidence-outcome-panel">
+            <div className="section-heading">
+              <p className="eyebrow">Evidence engine</p>
+              <h2>Latest persisted evidence</h2>
+              <p>
+                These records are saved with applications so future scoring can
+                be audited and calibrated against real outcomes.
+              </p>
+            </div>
+            <div className="evidence-record-list">
+              {persistedEvidenceRecords.length ? (
+                persistedEvidenceRecords.slice(0, 6).map((record) => (
+                  <article className="evidence-record-card" key={record.id}>
+                    <div>
+                      <strong>{record.checkLabel}</strong>
+                      <span>{record.status}</span>
+                    </div>
+                    <p>{record.evidenceText}</p>
+                    <small>{record.explanation}</small>
+                    <small>{record.limit}</small>
+                  </article>
+                ))
+              ) : (
+                <p className="empty-state">
+                  Save a checked job to create evidence records.
+                </p>
+              )}
+            </div>
+          </section>
           <div className="application-table">
             {state.applications.length ? (
               state.applications.map((application) => (
@@ -3224,7 +3657,7 @@ export default function HomePage({
               aria-label="Interview Buddy input"
             >
               <div className="buddy-character-panel">
-                <span aria-hidden="true">🙂</span>
+                <span aria-hidden="true">:)</span>
                 <div>
                   <strong>Buddy check</strong>
                   <p>

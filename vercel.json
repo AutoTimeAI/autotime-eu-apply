@@ -1,7 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build:web",
-  "outputDirectory": "apps/web/.next"
+  "outputDirectory": "apps/web/.next",
+  "experimentalServices": {
+    "web": {
+      "entrypoint": "apps/web",
+      "routePrefix": "/"
+    },
+    "analytics": {
+      "entrypoint": "apps/analytics/main.py",
+      "routePrefix": "/analytics"
+    }
+  }
 }
