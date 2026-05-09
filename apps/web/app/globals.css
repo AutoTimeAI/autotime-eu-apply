@@ -2873,13 +2873,18 @@ h4 {
 
 .auth-shell {
   display: grid;
-  width: min(760px, calc(100% - 36px));
+  width: min(1180px, calc(100% - 36px));
   min-height: 100vh;
   margin: 0 auto;
-  place-items: center;
+  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.58fr);
+  gap: 18px;
+  align-content: center;
+  align-items: stretch;
   padding: 32px 0;
 }
 
+.auth-intro,
+.auth-demo-panel,
 .auth-card {
   display: grid;
   width: 100%;
@@ -2891,6 +2896,65 @@ h4 {
     var(--surface);
   box-shadow: var(--shadow);
   padding: 26px;
+}
+
+.auth-intro {
+  align-content: space-between;
+}
+
+.auth-intro h1 {
+  margin-bottom: 14px;
+  font-size: 2.45rem;
+}
+
+.auth-intro p:not(.eyebrow),
+.auth-demo-panel .section-heading p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.auth-proof-grid div {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.auth-proof-grid strong {
+  color: var(--ink);
+}
+
+.auth-proof-grid span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.auth-demo-panel {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(260px, 0.44fr) minmax(0, 0.86fr);
+  align-items: center;
+}
+
+.auth-demo-panel video {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #000000;
+  box-shadow: var(--shadow-tight);
+}
+
+.auth-card {
+  align-content: center;
 }
 
 .faq-item p {
@@ -3039,6 +3103,8 @@ h4 {
   .command-header-tools,
   .command-workspace,
   .context-grid,
+  .auth-shell,
+  .auth-demo-panel,
   .decision-brief-panel,
   .trust-grid,
   .workspace-grid,
@@ -3071,6 +3137,10 @@ h4 {
 
   .country-rule-strip {
     grid-template-columns: 1fr;
+  }
+
+  .auth-demo-panel {
+    grid-column: auto;
   }
 
   .landing-hero,
@@ -3168,6 +3238,7 @@ h4 {
   }
 
   .landing-hero-copy h1,
+  .auth-intro h1,
   .pricing-hero h1,
   .legal-header h1 {
     font-size: 2rem;
@@ -3192,6 +3263,10 @@ h4 {
   }
 
   .score-band-table div {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-proof-grid {
     grid-template-columns: 1fr;
   }
 
