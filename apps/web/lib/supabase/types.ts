@@ -18,7 +18,49 @@ export type SubscriptionStatus =
   | "paused"
 export type RelocationWillingness = "yes" | "no" | "depends"
 export type SourceSurface = "web" | "extension"
-export type SyncEntityType = "profile" | "profile_revision"
+export type ApplicationStatus =
+  | "Saved"
+  | "Applied"
+  | "Interview"
+  | "Rejected"
+  | "Offer"
+  | "Closed"
+export type ApplicationOutcomeReason =
+  | "Unknown"
+  | "No response"
+  | "Rejected after application"
+  | "Rejected after interview"
+  | "Interview secured"
+  | "Offer or final stage"
+  | "Sponsorship blocker"
+  | "Work-right blocker"
+  | "Role mismatch"
+  | "Location mismatch"
+  | "Salary mismatch"
+  | "Withdrew"
+  | "Other"
+export type CountryFitDecision =
+  | "Apply now"
+  | "Worth applying"
+  | "Stretch application"
+  | "Skip for now"
+export type ContentGenerationGate = "ready" | "stretch" | "blocked"
+export type EvidenceRecordStatus = "found" | "missing" | "risk" | "limit"
+export type EvidenceSourceType =
+  | "profile"
+  | "cv"
+  | "job_text"
+  | "user_answer"
+  | "official_source"
+  | "system_rule"
+export type SyncEntityType =
+  | "profile"
+  | "profile_revision"
+  | "reusable_answers"
+  | "application"
+  | "evidence_record"
+  | "outcome_record"
+  | "interview_prep_pack"
 export type SyncAction = "created" | "updated" | "deleted"
 
 export type Database = {
@@ -257,6 +299,306 @@ export type Database = {
           rate_limit_key?: string
           request_count?: number
           reset_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reusable_answers: {
+        Row: {
+          user_id: string
+          sponsorship_answer: string
+          relocation_answer: string
+          work_authorisation_answer: string
+          notice_period_answer: string
+          salary_expectation_answer: string
+          motivation_answer: string
+          strengths_answer: string
+          availability_answer: string
+          source_surface: SourceSurface
+          schema_version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          sponsorship_answer?: string
+          relocation_answer?: string
+          work_authorisation_answer?: string
+          notice_period_answer?: string
+          salary_expectation_answer?: string
+          motivation_answer?: string
+          strengths_answer?: string
+          availability_answer?: string
+          source_surface?: SourceSurface
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          sponsorship_answer?: string
+          relocation_answer?: string
+          work_authorisation_answer?: string
+          notice_period_answer?: string
+          salary_expectation_answer?: string
+          motivation_answer?: string
+          strengths_answer?: string
+          availability_answer?: string
+          source_surface?: SourceSurface
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      applications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          url: string
+          company: string | null
+          role_title: string | null
+          source: string | null
+          status: ApplicationStatus
+          next_action: string | null
+          next_action_date: string | null
+          notes: string | null
+          outcome_reason: ApplicationOutcomeReason
+          fit_score: number | null
+          fit_decision: CountryFitDecision | null
+          content_gate: ContentGenerationGate | null
+          content_snapshot: Json | null
+          job_snapshot: Json | null
+          source_surface: SourceSurface
+          schema_version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          url?: string
+          company?: string | null
+          role_title?: string | null
+          source?: string | null
+          status?: ApplicationStatus
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          outcome_reason?: ApplicationOutcomeReason
+          fit_score?: number | null
+          fit_decision?: CountryFitDecision | null
+          content_gate?: ContentGenerationGate | null
+          content_snapshot?: Json | null
+          job_snapshot?: Json | null
+          source_surface?: SourceSurface
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          url?: string
+          company?: string | null
+          role_title?: string | null
+          source?: string | null
+          status?: ApplicationStatus
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          outcome_reason?: ApplicationOutcomeReason
+          fit_score?: number | null
+          fit_decision?: CountryFitDecision | null
+          content_gate?: ContentGenerationGate | null
+          content_snapshot?: Json | null
+          job_snapshot?: Json | null
+          source_surface?: SourceSurface
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      evidence_records: {
+        Row: {
+          id: string
+          user_id: string
+          application_id: string | null
+          job_url: string | null
+          check_key: string
+          check_label: string
+          status: EvidenceRecordStatus
+          evidence_text: string
+          source_type: EvidenceSourceType
+          source_label: string
+          missing_input: string | null
+          risk_flag: string | null
+          explanation: string
+          limit_text: string
+          schema_version: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          application_id?: string | null
+          job_url?: string | null
+          check_key: string
+          check_label: string
+          status: EvidenceRecordStatus
+          evidence_text: string
+          source_type: EvidenceSourceType
+          source_label: string
+          missing_input?: string | null
+          risk_flag?: string | null
+          explanation: string
+          limit_text: string
+          schema_version?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          application_id?: string | null
+          job_url?: string | null
+          check_key?: string
+          check_label?: string
+          status?: EvidenceRecordStatus
+          evidence_text?: string
+          source_type?: EvidenceSourceType
+          source_label?: string
+          missing_input?: string | null
+          risk_flag?: string | null
+          explanation?: string
+          limit_text?: string
+          schema_version?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      outcome_records: {
+        Row: {
+          id: string
+          user_id: string
+          application_id: string
+          role_title: string
+          company: string | null
+          country: string | null
+          source: string | null
+          status: ApplicationStatus
+          outcome_reason: ApplicationOutcomeReason
+          decision_index_at_save: number | null
+          decision_label_at_save: CountryFitDecision | null
+          content_gate_at_save: ContentGenerationGate | null
+          applied_at: string | null
+          interview_at: string | null
+          closed_at: string | null
+          notes: string | null
+          schema_version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          application_id: string
+          role_title: string
+          company?: string | null
+          country?: string | null
+          source?: string | null
+          status: ApplicationStatus
+          outcome_reason: ApplicationOutcomeReason
+          decision_index_at_save?: number | null
+          decision_label_at_save?: CountryFitDecision | null
+          content_gate_at_save?: ContentGenerationGate | null
+          applied_at?: string | null
+          interview_at?: string | null
+          closed_at?: string | null
+          notes?: string | null
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          application_id?: string
+          role_title?: string
+          company?: string | null
+          country?: string | null
+          source?: string | null
+          status?: ApplicationStatus
+          outcome_reason?: ApplicationOutcomeReason
+          decision_index_at_save?: number | null
+          decision_label_at_save?: CountryFitDecision | null
+          content_gate_at_save?: ContentGenerationGate | null
+          applied_at?: string | null
+          interview_at?: string | null
+          closed_at?: string | null
+          notes?: string | null
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      interview_prep_packs: {
+        Row: {
+          id: string
+          user_id: string
+          application_id: string
+          role_summary: string
+          positioning_statement: string
+          fit_and_gap_recap: string
+          likely_questions: string[]
+          star_answer_prompts: string[]
+          project_talking_points: string[]
+          skills_to_revise: string[]
+          questions_to_ask_employer: string[]
+          final_prep_checklist: string[]
+          source_surface: SourceSurface
+          schema_version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          application_id: string
+          role_summary: string
+          positioning_statement: string
+          fit_and_gap_recap: string
+          likely_questions?: string[]
+          star_answer_prompts?: string[]
+          project_talking_points?: string[]
+          skills_to_revise?: string[]
+          questions_to_ask_employer?: string[]
+          final_prep_checklist?: string[]
+          source_surface?: SourceSurface
+          schema_version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          application_id?: string
+          role_summary?: string
+          positioning_statement?: string
+          fit_and_gap_recap?: string
+          likely_questions?: string[]
+          star_answer_prompts?: string[]
+          project_talking_points?: string[]
+          skills_to_revise?: string[]
+          questions_to_ask_employer?: string[]
+          final_prep_checklist?: string[]
+          source_surface?: SourceSurface
+          schema_version?: number
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
