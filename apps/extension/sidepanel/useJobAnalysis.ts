@@ -131,6 +131,48 @@ export function useJobAnalysis({
     setTimeout(() => setJobStatus(""), aiFallbackMessage ? 8000 : 3500)
   }
 
+  const ensureContentScriptReady = async (tabId: number) => {
+    try {
+      await chrome.tabs.sendMessage(tabId, {
+        type: "AUTOTIME_DETECT_JOB_PAGE"
+      })
+    } catch {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ["content-scripts/autotime.js"]
+      })
+    }
+  }
+
+  const detectJobPageFromTab = async (
+    activeTab: chrome.tabs.Tab
+  ): Promise<JobPageResponse | null> => {
+    if (!activeTab.id) {
+      return activeTab.url || activeTab.title
+        ? inferJobPageDetails({
+            title: activeTab.title,
+            url: activeTab.url
+          })
+        : null
+    }
+
+    try {
+      await ensureContentScriptReady(activeTab.id)
+      return (await chrome.tabs.sendMessage(activeTab.id, {
+        type: "AUTOTIME_DETECT_JOB_PAGE"
+      })) as JobPageResponse
+    } catch {
+      if (!activeTab.url && !activeTab.title) {
+        return null
+      }
+
+      return inferJobPageDetails({
+        title: activeTab.title,
+        url: activeTab.url
+      })
+    }
+  }
+
   const handleImportCurrentJobPageForAnalysis = async () => {
     setJobStatus("Detecting current job page...")
 
@@ -150,48 +192,33 @@ export function useJobAnalysis({
       return
     }
 
-    try {
-      const details = (await chrome.tabs.sendMessage(activeTab.id, {
-        type: "AUTOTIME_DETECT_JOB_PAGE"
-      })) as JobPageResponse
+    const details = await detectJobPageFromTab(activeTab)
 
-      if (details.message && !details.roleTitle && !details.company) {
-        setJobStatus(details.message)
-        return
-      }
-
-      setJobAnalysisDraft((current) => ({
-        ...current,
-        jobTitle: current.jobTitle || details.roleTitle,
-        company: current.company || details.company,
-        jobUrl: current.jobUrl || details.url,
-        location: current.location || details.location,
-        notes: current.notes || formatJobPageNotes(details)
-      }))
-      clearSaveAttempt("job-analysis")
-      setJobStatus("Current job page imported")
-      setTimeout(() => setJobStatus(""), 3500)
-    } catch {
-      const details = inferJobPageDetails({
-        title: activeTab.title,
-        url: activeTab.url
-      })
-
-      if (!details.roleTitle && !details.url) {
-        setJobStatus("Could not detect job details on this page.")
-        return
-      }
-
-      setJobAnalysisDraft((current) => ({
-        ...current,
-        jobTitle: current.jobTitle || details.roleTitle,
-        jobUrl: current.jobUrl || details.url,
-        notes: current.notes || formatJobPageNotes(details)
-      }))
-      clearSaveAttempt("job-analysis")
-      setJobStatus("Current tab imported")
-      setTimeout(() => setJobStatus(""), 3500)
+    if (!details) {
+      setJobStatus("Could not detect job details on this page.")
+      return
     }
+
+    if (details.message && !details.roleTitle && !details.company) {
+      setJobStatus(details.message)
+      return
+    }
+
+    setJobAnalysisDraft((current) => ({
+      ...current,
+      jobTitle: current.jobTitle || details.roleTitle,
+      company: current.company || details.company,
+      jobUrl: current.jobUrl || details.url,
+      location: current.location || details.location,
+      notes: current.notes || formatJobPageNotes(details)
+    }))
+    clearSaveAttempt("job-analysis")
+    setJobStatus(
+      details.roleTitle || details.company
+        ? "Current job page imported"
+        : "Current tab imported"
+    )
+    setTimeout(() => setJobStatus(""), 3500)
   }
 
   return {

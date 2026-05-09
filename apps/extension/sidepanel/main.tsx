@@ -417,21 +417,33 @@ function SidePanelApp() {
     setTimeout(() => setApplicationsStatus(""), 2500)
   }
 
-  const getCurrentTabApplicationDetails = async (
-    activeTab: chrome.tabs.Tab
-  ) => {
-    if (activeTab.url && activeTab.title) {
-      return inferJobPageDetails({
-        title: activeTab.title,
-        url: activeTab.url
+  const ensureContentScriptReady = async (tabId: number) => {
+    try {
+      await chrome.tabs.sendMessage(tabId, {
+        type: "AUTOTIME_DETECT_JOB_PAGE"
+      })
+    } catch {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ["content-scripts/autotime.js"]
       })
     }
+  }
 
+  const detectJobPageFromTab = async (
+    activeTab: chrome.tabs.Tab
+  ): Promise<JobPageResponse | null> => {
     if (!activeTab.id) {
-      return null
+      return activeTab.url || activeTab.title
+        ? inferJobPageDetails({
+            title: activeTab.title,
+            url: activeTab.url
+          })
+        : null
     }
 
     try {
+      await ensureContentScriptReady(activeTab.id)
       return (await chrome.tabs.sendMessage(activeTab.id, {
         type: "AUTOTIME_DETECT_JOB_PAGE"
       })) as JobPageResponse
@@ -445,6 +457,12 @@ function SidePanelApp() {
         url: activeTab.url
       })
     }
+  }
+
+  const getCurrentTabApplicationDetails = async (
+    activeTab: chrome.tabs.Tab
+  ) => {
+    return detectJobPageFromTab(activeTab)
   }
 
   const saveCurrentTabAsApplication = async () => {
@@ -605,6 +623,7 @@ function SidePanelApp() {
     }
 
     try {
+      await ensureContentScriptReady(activeTab.id)
       const response = (await chrome.tabs.sendMessage(activeTab.id, {
         type: "AUTOTIME_AUTOFILL_PROFILE"
       })) as AutofillResponse
@@ -741,6 +760,7 @@ function SidePanelApp() {
     }
 
     try {
+      await ensureContentScriptReady(activeTab.id)
       const response = (await chrome.tabs.sendMessage(activeTab.id, {
         type: "AUTOTIME_INSERT_APPLICATION_CONTENT"
       })) as AutofillResponse
@@ -848,49 +868,33 @@ function SidePanelApp() {
       return
     }
 
-    try {
-      const details = (await chrome.tabs.sendMessage(activeTab.id, {
-        type: "AUTOTIME_DETECT_JOB_PAGE"
-      })) as JobPageResponse
+    const details = await detectJobPageFromTab(activeTab)
 
-      if (details.message && !details.roleTitle && !details.company) {
-        setTrackerStatus(details.message)
-        return
-      }
-
-      setTrackerDraft((current) => ({
-        ...current,
-        roleTitle: current.roleTitle || details.roleTitle,
-        company: current.company || details.company,
-        applicationUrl: current.applicationUrl || details.url,
-        nextAction: current.nextAction || "Tailor application",
-        notes: current.notes || formatJobPageNotes(details)
-      }))
-      clearSaveAttempt("tracker")
-      setTrackerStatus("Current job page imported")
-      setTimeout(() => setTrackerStatus(""), 3500)
-    } catch {
-      const details = inferJobPageDetails({
-        title: activeTab.title,
-        url: activeTab.url
-      })
-
-      if (!details.roleTitle && !details.url) {
-        setTrackerStatus("Could not detect job details on this page.")
-        return
-      }
-
-      setTrackerDraft((current) => ({
-        ...current,
-        roleTitle: current.roleTitle || details.roleTitle,
-        applicationUrl: current.applicationUrl || details.url,
-        nextAction: current.nextAction || "Tailor application",
-        notes: current.notes || formatJobPageNotes(details)
-      }))
-      clearSaveAttempt("tracker")
-      setTrackerStatus("Current tab imported")
-      setTimeout(() => setTrackerStatus(""), 3500)
+    if (!details) {
+      setTrackerStatus("Could not detect job details on this page.")
+      return
     }
+
+    if (details.message && !details.roleTitle && !details.company) {
+      setTrackerStatus(details.message)
+      return
+    }
+
+    setTrackerDraft((current) => ({
+      ...current,
+      roleTitle: current.roleTitle || details.roleTitle,
+      company: current.company || details.company,
+      applicationUrl: current.applicationUrl || details.url,
+      nextAction: current.nextAction || "Tailor application",
+      notes: current.notes || formatJobPageNotes(details)
+    }))
+    clearSaveAttempt("tracker")
+    setTrackerStatus(
+      details.roleTitle || details.company
+        ? "Current job page imported"
+        : "Current tab imported"
+    )
+    setTimeout(() => setTrackerStatus(""), 3500)
   }
 
   const handleClearProfile = async () => {
