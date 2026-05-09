@@ -209,44 +209,6 @@ const emptyInterviewBuddyOutputs: InterviewBuddyOutputs = {
   strongFinalAnswer: ""
 }
 
-const dashboardRoutes: Array<{
-  href: string
-  id: DashboardTab | "overview"
-  label: string
-  summary: string
-}> = [
-  {
-    href: "/dashboard",
-    id: "overview",
-    label: "Dashboard",
-    summary: "Today's Action Plan and weekly progress."
-  },
-  {
-    href: "/dashboard/profile",
-    id: "profile",
-    label: "Autofill Profile",
-    summary: "Candidate evidence, documents and reusable answers."
-  },
-  {
-    href: "/dashboard/jobs",
-    id: "jobs",
-    label: "Match Score",
-    summary: "Role Fit Score, missing evidence and decision limits."
-  },
-  {
-    href: "/dashboard/applications",
-    id: "applications",
-    label: "Application Tracker",
-    summary: "Pipeline, outcomes and follow-up actions."
-  },
-  {
-    href: "/dashboard/interview",
-    id: "interview",
-    label: "Interview Prep",
-    summary: "Interview answers and prep packs."
-  }
-]
-
 const commandSidebarItems: Array<{
   href: string
   focus: DashboardFocus
@@ -1434,48 +1396,6 @@ function getUrgencyGuidance(context: ProductContext) {
   return "Balance targeted applications with quality. Track next actions and improve positioning after each outcome."
 }
 
-function getAIUseCases(context: ProductContext) {
-  return [
-    {
-      title: "Country evidence",
-      body: `${context.targetCountry} should be used only with job location, salary, seniority and work-right evidence.`
-    },
-    {
-      title: "Work-right evidence",
-      body:
-        context.candidatePosition === "foreign-candidate"
-          ? "Sponsorship, relocation timing and local presence must be treated as checks that need evidence."
-          : "Notice period, salary range and local availability must stay consistent with the saved profile."
-    },
-    {
-      title: "Role evidence",
-      body: getMarketPositioning(context)
-    },
-    {
-      title: "Action evidence",
-      body: "Saved jobs should keep source, next action, status and interview stage traceable."
-    }
-  ]
-}
-
-function getEuropeanStrategySteps(context: ProductContext) {
-  return [
-    {
-      title: "Country",
-      body: `${context.targetCountry} is the current target country. Compare other markets only when profile and work-right evidence is complete.`
-    },
-    {
-      title: "Job source",
-      body:
-        "Use clear job descriptions, named locations, realistic seniority and employer source details as quality signals."
-    },
-    {
-      title: "Role language",
-      body: getRoleMarket(context).positioning
-    }
-  ]
-}
-
 function includesAny(value: string, words: string[]) {
   const text = value.toLowerCase()
   return words.some((word) => text.includes(word.toLowerCase()))
@@ -1838,7 +1758,6 @@ export default function HomePage({
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
   const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
-  const [commandSearch, setCommandSearch] = useState("")
   const [productContext, setProductContext] = useState<ProductContext>(
     defaultProductContext
   )
@@ -1900,10 +1819,6 @@ export default function HomePage({
     [state.applications]
   )
   const riskLabel = useMemo(() => getRiskLabel(state), [state])
-  const europeanStrategySteps = useMemo(
-    () => getEuropeanStrategySteps(productContext),
-    [productContext]
-  )
   const decisionBrief = useMemo(
     () =>
       getDecisionBrief({
@@ -1985,17 +1900,9 @@ export default function HomePage({
     documents: "Documents",
     settings: "Settings"
   }[activeFocus]
-  const filteredDashboardRoutes = dashboardRoutes
-    .filter((route) => route.id !== "overview")
-    .filter((route) => {
-      const query = commandSearch.trim().toLowerCase()
-
-      if (!query) {
-        return true
-      }
-
-      return `${route.label} ${route.summary}`.toLowerCase().includes(query)
-    })
+  const showHeaderJobActions =
+    isOverview || currentTab === "jobs" || currentTab === "applications"
+  const showExecutivePanel = isOverview || currentTab === "jobs"
   const showProfileSettingsPanel =
     activeFocus === "autofill-profile" || activeFocus === "settings"
   const showProfileCloudSync =
@@ -2661,21 +2568,16 @@ export default function HomePage({
           <h1>{focusCopy.title}</h1>
           <p>{focusCopy.body}</p>
           <div className="command-header-tools">
-            <label className="command-search">
-              <span>Search jobs/applications</span>
-              <input
-                placeholder="Search workflow areas"
-                type="search"
-                value={commandSearch}
-                onChange={(event) => setCommandSearch(event.target.value)}
-              />
-            </label>
-            <a className="secondary-button" href="/dashboard/jobs">
-              Import Job
-            </a>
-            <a className="secondary-button" href="/dashboard/jobs">
-              Analyse Current Page
-            </a>
+            {showHeaderJobActions ? (
+              <>
+                <a className="secondary-button" href="/dashboard/jobs">
+                  Import Job
+                </a>
+                <a className="secondary-button" href="/dashboard/jobs">
+                  Analyse Current Page
+                </a>
+              </>
+            ) : null}
             <div className="profile-completion-meter">
               <small>User Profile Completion</small>
               <strong>{readinessScore}%</strong>
@@ -2699,6 +2601,7 @@ export default function HomePage({
             </div>
           ) : null}
         </div>
+        {showExecutivePanel ? (
         <div className="executive-panel" aria-label="Dashboard evidence summary">
           <div>
             <small>Profile evidence</small>
@@ -2710,6 +2613,7 @@ export default function HomePage({
           </div>
           <p>{fitEvaluation.decision}</p>
         </div>
+        ) : null}
       </header>
 
       <div className="dashboard-page-nav">
@@ -2878,39 +2782,6 @@ export default function HomePage({
             </button>
           </div>
         </div>
-
-        <details className="audit-details compact">
-          <summary>Europe tech checks</summary>
-        <div
-          className="ai-use-case-grid"
-          aria-label="Decision evidence checks"
-        >
-          {getAIUseCases(productContext).map((useCase) => (
-            <article key={useCase.title}>
-              <h3>{useCase.title}</h3>
-              <p>{useCase.body}</p>
-            </article>
-          ))}
-        </div>
-        </details>
-
-        <details className="audit-details compact">
-          <summary>Evidence rules</summary>
-        <section className="market-strategy-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Decision checks</p>
-            <h2>Evidence before action</h2>
-          </div>
-          <div className="strategy-card-grid">
-            {europeanStrategySteps.map((step) => (
-              <article key={step.title}>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-        </details>
 
         <section className="resume-intake-panel" aria-label="CV context review">
           <div className="section-heading">
@@ -3201,21 +3072,6 @@ export default function HomePage({
         </section>
       )}
 
-      {isOverview && (
-        <section className="dashboard-route-grid" aria-label="Dashboard workflow">
-          {filteredDashboardRoutes.map((route) => (
-            <a className="dashboard-route-card" href={route.href} key={route.id}>
-              <strong>{route.label}</strong>
-              <span>{route.summary}</span>
-              <small>Open workspace</small>
-            </a>
-          ))}
-          {!filteredDashboardRoutes.length && (
-            <p className="empty-state">No workflow area matched that search.</p>
-          )}
-        </section>
-      )}
-
       {!isOverview && currentTab === "profile" && activeFocus !== "settings" && (
       <section
         className={
@@ -3332,7 +3188,7 @@ export default function HomePage({
       </section>
       )}
 
-      {(isOverview || currentTab === "applications" || currentTab === "interview") && (
+      {(!isOverview && (currentTab === "applications" || currentTab === "interview")) && (
       <section
         className="metrics-strip"
         aria-label="Job search progress"
@@ -3369,51 +3225,6 @@ export default function HomePage({
           <small>Job details</small>
           <p>{riskLabel}</p>
         </div>
-      </section>
-      )}
-
-      {isOverview && (
-      <section className="readiness-roadmap" aria-label="Readiness roadmap">
-        <div className="section-intro">
-          <p className="eyebrow">Quick checklist</p>
-          <h2>Before you spend time on this job</h2>
-        </div>
-        {[
-          {
-            title: "1. Confirm your target",
-            done:
-              Boolean(state.profile.targetRoles.trim()) &&
-              Boolean(productContext.targetCountry),
-            body:
-              productContext.candidatePosition === "foreign-candidate"
-                ? "Target country, role focus and relocation status should be clear."
-                : "Target country, role focus and local availability should be clear."
-          },
-          {
-            title: "2. Add your CV proof",
-            done: Boolean(state.profile.baseCvText.trim()),
-            body: "Your CV text should include the skills and examples this role needs."
-          },
-          {
-            title: "3. Check work-right risk",
-            done: Boolean(state.profile.workRightDetails.trim()),
-            body: "Work rights, sponsorship, relocation, salary and notice period should be clear enough."
-          },
-          {
-            title: "4. Decide apply or skip",
-            done: Boolean(state.jobAnalysis.jobDescription.trim()),
-            body: "A real job description lets AutoTime score fit, risks and next actions."
-          }
-        ].map((step) => (
-          <article
-            className={step.done ? "roadmap-step done" : "roadmap-step"}
-            key={step.title}
-          >
-            <span>{step.done ? "Ready" : "Needed"}</span>
-            <h3>{step.title}</h3>
-            <p>{step.body}</p>
-          </article>
-        ))}
       </section>
       )}
 
@@ -4208,7 +4019,8 @@ export default function HomePage({
         </div>
       </div>
 
-      <section className="utility-bar">
+      <details className="utility-bar">
+        <summary>Data tools</summary>
         <button type="button" onClick={saveDashboard}>
           Save changes
         </button>
@@ -4234,7 +4046,7 @@ export default function HomePage({
         >
           Import backup
         </button>
-      </section>
+      </details>
     </main>
   )
 }
