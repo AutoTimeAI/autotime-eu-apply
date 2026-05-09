@@ -62,8 +62,15 @@ def test_evidence_outcome_report_score_bands():
     assert body["summary"]["evidenceRecords"] == 2
     assert body["summary"]["outcomeRecords"] == 2
     assert body["summary"]["interviewSignals"] == 1
+    assert body["mlReadiness"]["stage"] == "collecting"
+    assert body["mlReadiness"]["featureRows"] == 2
+    assert body["mlReadiness"]["blockedOutput"] == "probability of success"
     assert body["missingInputs"]["work-right details"] == 1
     assert any(
         band["band"] == "80-100" and band["observedInterviewRate"] == 100.0
         for band in body["scoreBands"]
+    )
+    assert any(
+        segment["segment"] == "no-risk" and segment["records"] == 2
+        for segment in body["riskSegments"]
     )

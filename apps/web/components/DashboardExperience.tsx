@@ -115,6 +115,16 @@ type OnlineAnalyticsReport = {
     calibrationStatus: string
     minimumRecordsForCalibration: number
   }
+  mlReadiness: {
+    stage: "collecting" | "early-calibration" | "calibration-ready"
+    message: string
+    featureRows: number
+    minimumRowsForEarlyCalibration: number
+    minimumRowsForModelTraining: number
+    modelTrainingReady: boolean
+    allowedOutput: string
+    blockedOutput: string
+  }
   evidenceStatus: Record<string, number>
   missingInputs: Record<string, number>
   riskFlags: Record<string, number>
@@ -122,6 +132,18 @@ type OnlineAnalyticsReport = {
   outcomesByReason: Record<string, number>
   scoreBands: Array<{
     band: string
+    records: number
+    interviews: number
+    observedInterviewRate: number
+  }>
+  contentGates: Array<{
+    gate: string
+    records: number
+    interviews: number
+    observedInterviewRate: number
+  }>
+  riskSegments: Array<{
+    segment: string
     records: number
     interviews: number
     observedInterviewRate: number
@@ -3475,6 +3497,28 @@ export default function HomePage({
                   <strong>Interview signals</strong>
                   <p>Outcome records marked as interview or final stage.</p>
                 </article>
+                <article>
+                  <span>{onlineAnalyticsReport.mlReadiness.featureRows}</span>
+                  <strong>ML feature rows</strong>
+                  <p>{onlineAnalyticsReport.mlReadiness.allowedOutput}</p>
+                </article>
+                <article>
+                  <span>
+                    {onlineAnalyticsReport.mlReadiness.modelTrainingReady
+                      ? "Ready"
+                      : "Locked"}
+                  </span>
+                  <strong>Model training</strong>
+                  <p>
+                    Blocked output:{" "}
+                    {onlineAnalyticsReport.mlReadiness.blockedOutput}.
+                  </p>
+                </article>
+                <article>
+                  <span>{onlineAnalyticsReport.mlReadiness.stage}</span>
+                  <strong>Learning readiness</strong>
+                  <p>{onlineAnalyticsReport.mlReadiness.message}</p>
+                </article>
                 <div className="score-band-table">
                   <strong>Score-band outcomes</strong>
                   {onlineAnalyticsReport.scoreBands.length ? (
@@ -3490,6 +3534,40 @@ export default function HomePage({
                     ))
                   ) : (
                     <p>No score-band outcomes yet.</p>
+                  )}
+                </div>
+                <div className="score-band-table">
+                  <strong>Content gate outcomes</strong>
+                  {onlineAnalyticsReport.contentGates.length ? (
+                    onlineAnalyticsReport.contentGates.map((gate) => (
+                      <div key={gate.gate}>
+                        <span>{gate.gate}</span>
+                        <span>{gate.records} records</span>
+                        <span>{gate.interviews} interviews</span>
+                        <span>
+                          {Math.round(gate.observedInterviewRate)}% observed
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p>No content-gate outcomes yet.</p>
+                  )}
+                </div>
+                <div className="score-band-table">
+                  <strong>Risk segment outcomes</strong>
+                  {onlineAnalyticsReport.riskSegments.length ? (
+                    onlineAnalyticsReport.riskSegments.map((segment) => (
+                      <div key={segment.segment}>
+                        <span>{segment.segment}</span>
+                        <span>{segment.records} records</span>
+                        <span>{segment.interviews} interviews</span>
+                        <span>
+                          {Math.round(segment.observedInterviewRate)}% observed
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p>No risk segment outcomes yet.</p>
                   )}
                 </div>
                 <div className="analytics-limits">
