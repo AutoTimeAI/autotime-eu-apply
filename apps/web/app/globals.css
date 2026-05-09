@@ -395,6 +395,135 @@ h4 {
   padding: 12px 14px;
 }
 
+.job-detail-panel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.job-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 18px;
+}
+
+.job-detail-header h2,
+.job-detail-header p {
+  margin: 0;
+}
+
+.job-detail-header h2 {
+  margin-bottom: 6px;
+}
+
+.readiness-pill {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.readiness-pill.ready {
+  border-color: #9bc6b5;
+  background: #eaf7f0;
+  color: #25634b;
+}
+
+.readiness-pill.needs-check {
+  border-color: #dac88b;
+  background: #fff8dd;
+  color: #725b12;
+}
+
+.readiness-pill.blocked {
+  border-color: #e4a3a3;
+  background: #fff0f0;
+  color: #8c2d2d;
+}
+
+.job-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ready-checklist {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 18px;
+}
+
+.ready-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.ready-check-item {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.ready-check-item span {
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.ready-check-item p,
+.ready-check-item small {
+  margin: 0;
+}
+
+.ready-check-item.ready span {
+  background: #eaf7f0;
+  color: #25634b;
+}
+
+.ready-check-item.needs-check span {
+  background: #fff8dd;
+  color: #725b12;
+}
+
+.ready-check-item.blocked span {
+  background: #fff0f0;
+  color: #8c2d2d;
+}
+
+.document-snapshot {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.document-snapshot p,
+.document-snapshot small {
+  margin: 0;
+}
+
 .audit-details {
   display: grid;
   gap: 12px;
@@ -2923,6 +3052,19 @@ h4 {
   .dashboard-page-nav {
     position: static;
     margin: 0 0 14px;
+  }
+
+  .job-detail-header,
+  .job-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .job-detail-header {
+    flex-direction: column;
+  }
+
+  .readiness-pill {
+    width: fit-content;
   }
 
   .page-arrow-nav {

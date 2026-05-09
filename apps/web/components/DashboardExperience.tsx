@@ -109,6 +109,14 @@ type ContentGuardrail = {
   reason: string
 }
 
+type ReadyToApplyItem = {
+  id: string
+  label: string
+  status: "ready" | "needs-check" | "blocked"
+  evidence: string
+  action: string
+}
+
 type InterviewBuddyOutputKey =
   | "professionalAnswer"
   | "naturalAnswer"
@@ -1810,10 +1818,120 @@ function getContentGuardrails({
   ]
 }
 
+function getReadyToApplyChecklist({
+  application,
+  evidenceRecords,
+  profile
+}: {
+  application: ApplicationRecord
+  evidenceRecords: EvidenceRecord[]
+  profile: CandidateProfile
+}): ReadyToApplyItem[] {
+  const applicationEvidence = evidenceRecords.filter(
+    (record) => record.applicationId === application.id
+  )
+  const hasMissingEvidence = applicationEvidence.some(
+    (record) => record.status === "missing"
+  )
+  const hasRiskEvidence = applicationEvidence.some(
+    (record) => record.status === "risk"
+  )
+  const hasContentSnapshot = Boolean(application.contentSnapshot)
+  const hasWorkRight = Boolean(profile.workRightDetails.trim())
+  const hasCvEvidence = Boolean(profile.baseCvText.trim())
+  const hasNextAction = Boolean(application.nextAction?.trim())
+  const isBlocked =
+    application.contentGate === "blocked" || hasRiskEvidence || !hasWorkRight
+
+  return [
+    {
+      id: "score-explained",
+      label: "Score explanation saved",
+      status: application.fitDecision ? "ready" : "needs-check",
+      evidence: application.fitDecision
+        ? `${application.fitScore ?? 0}/100 - ${application.fitDecision}`
+        : "No saved decision index is attached to this job.",
+      action: "Analyse the role before treating this job as ready."
+    },
+    {
+      id: "evidence-records",
+      label: "Evidence checked",
+      status: hasRiskEvidence
+        ? "blocked"
+        : hasMissingEvidence || applicationEvidence.length === 0
+          ? "needs-check"
+          : "ready",
+      evidence: applicationEvidence.length
+        ? `${applicationEvidence.length} evidence record${
+            applicationEvidence.length === 1 ? "" : "s"
+          } saved.`
+        : "No evidence records are saved for this job.",
+      action: "Review missing or risk evidence before applying."
+    },
+    {
+      id: "cv-proof",
+      label: "CV proof available",
+      status: hasCvEvidence ? "ready" : "needs-check",
+      evidence: hasCvEvidence
+        ? "Saved CV text is available for truthful tailoring."
+        : "CV text is missing.",
+      action: "Add CV text so application content can stay evidence-based."
+    },
+    {
+      id: "application-content",
+      label: "Application content saved",
+      status: hasContentSnapshot ? "ready" : "needs-check",
+      evidence: hasContentSnapshot
+        ? `Saved on ${new Date(
+            application.contentSnapshot?.savedAt ?? application.createdAt
+          ).toLocaleDateString()}.`
+        : "No tailored answer or cover-letter snapshot is saved yet.",
+      action: "Save a tailored content snapshot before applying."
+    },
+    {
+      id: "work-right",
+      label: "Work-right statement verified",
+      status: hasWorkRight ? "ready" : "blocked",
+      evidence: hasWorkRight
+        ? profile.workRightDetails
+        : "No work-right details are saved.",
+      action:
+        "Add truthful work-right details and check official sources or a qualified adviser for immigration decisions."
+    },
+    {
+      id: "next-action",
+      label: "Next action clear",
+      status: hasNextAction ? "ready" : "needs-check",
+      evidence: hasNextAction
+        ? application.nextAction ?? ""
+        : "No next action is set.",
+      action: "Set the next manual step so the job does not get lost."
+    },
+    {
+      id: "final-gate",
+      label: "Final apply gate",
+      status: isBlocked
+        ? "blocked"
+        : application.contentGate === "stretch" || hasMissingEvidence
+          ? "needs-check"
+          : "ready",
+      evidence: isBlocked
+        ? "A blocker or risk is still present."
+        : application.contentGate === "stretch"
+          ? "This is a stretch application."
+          : "No saved blocker is currently attached to this job.",
+      action:
+        "Apply only after unsupported claims, blockers and missing evidence are resolved."
+    }
+  ]
+}
+
 export default function HomePage({
+  applicationId,
   focus,
   view = "overview"
 }: {
+  applicationId?: string
   focus?: DashboardFocus
   view?: DashboardTab | "overview"
 }) {
@@ -1931,6 +2049,33 @@ export default function HomePage({
   )
   const persistedEvidenceRecords = state.evidenceRecords ?? []
   const persistedOutcomeRecords = state.outcomeRecords ?? []
+  const selectedApplication = applicationId
+    ? state.applications.find((application) => application.id === applicationId)
+    : undefined
+  const selectedApplicationEvidence = selectedApplication
+    ? persistedEvidenceRecords.filter(
+        (record) => record.applicationId === selectedApplication.id
+      )
+    : []
+  const selectedInterviewPrepPack = selectedApplication
+    ? state.interviewPrepPacks.find(
+        (pack) => pack.applicationId === selectedApplication.id
+      )
+    : undefined
+  const selectedReadyChecklist = selectedApplication
+    ? getReadyToApplyChecklist({
+        application: selectedApplication,
+        evidenceRecords: persistedEvidenceRecords,
+        profile: state.profile
+      })
+    : []
+  const selectedReadyStatus = selectedReadyChecklist.some(
+    (item) => item.status === "blocked"
+  )
+    ? "Blocked"
+    : selectedReadyChecklist.some((item) => item.status === "needs-check")
+      ? "Needs tailoring"
+      : "Ready to apply"
   const outcomeAnalytics = useMemo(
     () => getOutcomeAnalytics(persistedOutcomeRecords),
     [persistedOutcomeRecords]
@@ -1970,8 +2115,9 @@ export default function HomePage({
   const showProfileCloudSync =
     activeFocus === "autofill-profile" || activeFocus === "settings"
   const showApplicationAnalytics =
-    activeFocus === "application-tracker" || activeFocus === "insights"
-  const showApplicationList = activeFocus !== "insights"
+    (activeFocus === "application-tracker" || activeFocus === "insights") &&
+    !selectedApplication
+  const showApplicationList = activeFocus !== "insights" && !selectedApplication
   const showInterviewPrepPacks = activeFocus === "interview-prep"
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const commandCentreCards = [
@@ -3977,6 +4123,208 @@ export default function HomePage({
           </section>
           </>
           )}
+          {applicationId && !selectedApplication ? (
+            <section className="job-detail-panel">
+              <div className="section-heading">
+                <p className="eyebrow">Application detail</p>
+                <h2>Job not found</h2>
+                <p>
+                  This job is not in the local dashboard state yet. Load cloud
+                  sync or return to the tracker.
+                </p>
+              </div>
+              <a className="secondary-button" href="/dashboard/applications">
+                Back to applications
+              </a>
+            </section>
+          ) : null}
+          {selectedApplication ? (
+          <section className="job-detail-panel" aria-label="Application detail">
+            <div className="job-detail-header">
+              <div>
+                <p className="eyebrow">Application Detail</p>
+                <h2>
+                  {selectedApplication.roleTitle || selectedApplication.title}
+                </h2>
+                <p>
+                  {selectedApplication.company || "Unknown company"} ·{" "}
+                  {selectedApplication.status}
+                </p>
+              </div>
+              <div className={`readiness-pill ${selectedReadyStatus === "Ready to apply" ? "ready" : selectedReadyStatus === "Blocked" ? "blocked" : "needs-check"}`}>
+                {selectedReadyStatus}
+              </div>
+            </div>
+
+            <div className="job-detail-grid">
+              <article className="panel">
+                <div className="section-heading">
+                  <p className="eyebrow">Decision</p>
+                  <h3>Score and limits</h3>
+                </div>
+                <dl className="summary-list">
+                  <div>
+                    <dt>Decision index</dt>
+                    <dd>{selectedApplication.fitScore ?? "Not scored"}</dd>
+                  </div>
+                  <div>
+                    <dt>Decision</dt>
+                    <dd>{selectedApplication.fitDecision ?? "Not analysed"}</dd>
+                  </div>
+                  <div>
+                    <dt>Content gate</dt>
+                    <dd>{selectedApplication.contentGate ?? "Not checked"}</dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>{selectedApplication.source || selectedApplication.url}</dd>
+                  </div>
+                </dl>
+              </article>
+
+              <article className="panel">
+                <div className="section-heading">
+                  <p className="eyebrow">Workflow</p>
+                  <h3>Current action</h3>
+                </div>
+                <label>
+                  Status
+                  <select
+                    value={selectedApplication.status}
+                    onChange={(event) =>
+                      updateApplication(selectedApplication.id, {
+                        status: event.target.value as ApplicationStatus
+                      })
+                    }
+                  >
+                    {applicationStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Next action
+                  <input
+                    value={selectedApplication.nextAction ?? ""}
+                    onChange={(event) =>
+                      updateApplication(selectedApplication.id, {
+                        nextAction: event.target.value
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Outcome learning
+                  <textarea
+                    value={selectedApplication.notes ?? ""}
+                    onChange={(event) =>
+                      updateApplication(selectedApplication.id, {
+                        notes: event.target.value
+                      })
+                    }
+                  />
+                </label>
+              </article>
+            </div>
+
+            <section className="ready-checklist" aria-label="Ready to apply checklist">
+              <div className="section-heading">
+                <p className="eyebrow">Ready to Apply</p>
+                <h3>Evidence gate</h3>
+                <p>
+                  No claim without evidence. Resolve blocked items before using
+                  this job as application-ready.
+                </p>
+              </div>
+              <div className="ready-checklist-grid">
+                {selectedReadyChecklist.map((item) => (
+                  <article className={`ready-check-item ${item.status}`} key={item.id}>
+                    <span>{item.status}</span>
+                    <strong>{item.label}</strong>
+                    <p>{item.evidence}</p>
+                    <small>{item.action}</small>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <div className="job-detail-grid">
+              <section className="panel">
+                <div className="section-heading">
+                  <p className="eyebrow">Evidence</p>
+                  <h3>Records for this job</h3>
+                </div>
+                <div className="evidence-record-list">
+                  {selectedApplicationEvidence.length ? (
+                    selectedApplicationEvidence.map((record) => (
+                      <article className="evidence-record-card" key={record.id}>
+                        <div>
+                          <strong>{record.checkLabel}</strong>
+                          <span>{record.status}</span>
+                        </div>
+                        <p>{record.evidenceText}</p>
+                        <small>{record.explanation}</small>
+                        <small>{record.limit}</small>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="empty-state">
+                      No evidence records are attached to this job yet.
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              <section className="panel">
+                <div className="section-heading">
+                  <p className="eyebrow">Documents</p>
+                  <h3>Saved application content</h3>
+                </div>
+                {selectedApplication.contentSnapshot ? (
+                  <div className="document-snapshot">
+                    <strong>Saved content snapshot</strong>
+                    <p>{selectedApplication.contentSnapshot.profileSummary}</p>
+                    <small>
+                      Saved{" "}
+                      {new Date(
+                        selectedApplication.contentSnapshot.savedAt
+                      ).toLocaleString()}
+                    </small>
+                  </div>
+                ) : (
+                  <p className="empty-state">
+                    No content snapshot is saved for this job yet.
+                  </p>
+                )}
+                <div className="application-actions">
+                  <a className="secondary-button" href="/dashboard/application-answers">
+                    Application Answers
+                  </a>
+                  <button
+                    className="secondary-button"
+                    disabled={selectedApplication.status !== "Interview"}
+                    type="button"
+                    onClick={() => generateInterviewPrep(selectedApplication)}
+                  >
+                    Generate Prep
+                  </button>
+                </div>
+                {selectedInterviewPrepPack ? (
+                  <div className="document-snapshot">
+                    <strong>Interview prep ready</strong>
+                    <p>{selectedInterviewPrepPack.roleSummary}</p>
+                    <small>
+                      {selectedInterviewPrepPack.likelyQuestions.length} likely
+                      questions saved
+                    </small>
+                  </div>
+                ) : null}
+              </section>
+            </div>
+          </section>
+          ) : null}
           {showApplicationList && (
           <div className="application-table">
             {state.applications.length ? (
@@ -4058,6 +4406,12 @@ export default function HomePage({
                     />
                   </label>
                   <div className="application-actions">
+                    <a
+                      className="secondary-button"
+                      href={`/dashboard/applications/${application.id}`}
+                    >
+                      Open
+                    </a>
                     <button
                       className="secondary-button"
                       disabled={application.status !== "Interview"}
