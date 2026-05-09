@@ -49,6 +49,11 @@ type ProductContext = {
   experienceLevel: string
 }
 
+type TrustState = {
+  officialSourceReviewed: boolean
+  officialSourceReviewedAt: string
+}
+
 type ContextSuggestion = ProductContext & {
   targetRoles: string
   workRightPrompt: string
@@ -90,6 +95,7 @@ type ContentGuardrail = {
 
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
+const trustStateStorageKey = "autotime-v2-trust-state"
 
 const applicationStatuses: ApplicationStatus[] = [
   "Saved",
@@ -484,6 +490,11 @@ const defaultProductContext: ProductContext = {
   experienceLevel: "Mid-level"
 }
 
+const defaultTrustState: TrustState = {
+  officialSourceReviewed: false,
+  officialSourceReviewedAt: ""
+}
+
 const productContextSchema = z.object({
   roleMarket: z
     .enum(roleMarkets.map((market) => market.id) as [RoleMarket, ...RoleMarket[]])
@@ -504,6 +515,11 @@ const productContextSchema = z.object({
     .optional(),
   targetCountry: z.string().trim().min(1).optional(),
   experienceLevel: z.string().trim().min(1).optional()
+})
+
+const trustStateSchema = z.object({
+  officialSourceReviewed: z.boolean().optional(),
+  officialSourceReviewedAt: z.string().optional()
 })
 
 const emptyProfile: CandidateProfile = {
@@ -617,6 +633,31 @@ function getStoredProductContext() {
 
 function saveProductContext(context: ProductContext) {
   window.localStorage.setItem(productContextStorageKey, JSON.stringify(context))
+}
+
+function getStoredTrustState(): TrustState {
+  if (typeof window === "undefined") {
+    return defaultTrustState
+  }
+
+  try {
+    const parsed = trustStateSchema.safeParse(
+      JSON.parse(window.localStorage.getItem(trustStateStorageKey) ?? "null")
+    )
+
+    return parsed.success
+      ? {
+          ...defaultTrustState,
+          ...parsed.data
+        }
+      : defaultTrustState
+  } catch {
+    return defaultTrustState
+  }
+}
+
+function saveTrustState(state: TrustState) {
+  window.localStorage.setItem(trustStateStorageKey, JSON.stringify(state))
 }
 
 function getWordSignals(text: string) {
@@ -1089,11 +1130,13 @@ function getEvidenceLedgerRows(
 function getVerificationChecklist({
   state,
   fitEvaluation,
-  officialSources
+  officialSources,
+  trustState
 }: {
   state: CompanionDashboardState
   fitEvaluation: CountryFitEvaluation
   officialSources: OfficialSource[]
+  trustState: TrustState
 }): VerificationChecklistItem[] {
   const hasJobDescription = Boolean(state.jobAnalysis.jobDescription.trim())
   const hasWorkRight = Boolean(state.profile.workRightDetails.trim())
@@ -1145,9 +1188,19 @@ function getVerificationChecklist({
     {
       id: "official-source",
       label: "Official source reviewed",
-      status: hasOfficialSources ? "needs-check" : "blocked",
+      status: trustState.officialSourceReviewed
+        ? "ready"
+        : hasOfficialSources
+          ? "needs-check"
+          : "blocked",
       evidence: hasOfficialSources
-        ? officialSources.map((source) => source.label).join(", ")
+        ? trustState.officialSourceReviewedAt
+          ? `Reviewed on ${new Date(
+              trustState.officialSourceReviewedAt
+            ).toLocaleDateString()}: ${officialSources
+              .map((source) => source.label)
+              .join(", ")}`
+          : officialSources.map((source) => source.label).join(", ")
         : "No official verification source is available for this country.",
       limit:
         "The app provides links only; the user must verify current requirements."
@@ -1235,6 +1288,7 @@ export default function HomePage() {
   const [contextSuggestion, setContextSuggestion] =
     useState<ContextSuggestion | null>(null)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
+  const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -1305,9 +1359,10 @@ export default function HomePage() {
       getVerificationChecklist({
         state,
         fitEvaluation,
-        officialSources
+        officialSources,
+        trustState
       }),
-    [state, fitEvaluation, officialSources]
+    [state, fitEvaluation, officialSources, trustState]
   )
   const contentGuardrails = useMemo(
     () =>
@@ -1333,6 +1388,7 @@ export default function HomePage() {
   useEffect(() => {
     setState(getStoredState())
     setProductContext(getStoredProductContext())
+    setTrustState(getStoredTrustState())
   }, [])
 
   const persist = (next: CompanionDashboardState, message: string) => {
@@ -1368,6 +1424,29 @@ export default function HomePage() {
       saveState(next)
       return next
     })
+  }
+
+  const updateReusableAnswer = <K extends keyof ReusableAnswers>(
+    key: K,
+    value: ReusableAnswers[K]
+  ) => {
+    setState((current) => {
+      const next = {
+        ...current,
+        reusableAnswers: { ...current.reusableAnswers, [key]: value }
+      }
+      saveState(next)
+      return next
+    })
+  }
+
+  const setOfficialSourceReviewed = (reviewed: boolean) => {
+    const next = {
+      officialSourceReviewed: reviewed,
+      officialSourceReviewedAt: reviewed ? new Date().toISOString() : ""
+    }
+    setTrustState(next)
+    saveTrustState(next)
   }
 
   const updateProductContext = <K extends keyof ProductContext>(
@@ -1581,6 +1660,7 @@ export default function HomePage() {
         "No claim without evidence. No score without explanation. No application advice without clear limits.",
       exportedAt: new Date().toISOString(),
       targetContext: productContext,
+      trustState,
       role: {
         title: state.jobAnalysis.jobTitle,
         company: state.jobAnalysis.company,
@@ -2132,6 +2212,17 @@ export default function HomePage() {
               </a>
             ))}
           </div>
+          <label className="official-review-control">
+            <input
+              checked={trustState.officialSourceReviewed}
+              type="checkbox"
+              onChange={(event) =>
+                setOfficialSourceReviewed(event.target.checked)
+              }
+            />
+            I have reviewed the official source for this country and understand
+            AutoTime does not authorise work, visa or sponsorship status.
+          </label>
         </section>
       </section>
 
@@ -2388,6 +2479,7 @@ export default function HomePage() {
             <label>
               Work-right details
               <textarea
+                placeholder="Example: UK citizen, settled/pre-settled status, Skilled Worker visa, EU citizen, or no sponsorship required. Add only facts you can verify."
                 value={state.profile.workRightDetails}
                 onChange={(event) =>
                   updateProfile("workRightDetails", event.target.value)
@@ -2440,13 +2532,7 @@ export default function HomePage() {
                 <textarea
                   value={state.reusableAnswers.motivationAnswer}
                   onChange={(event) =>
-                    setState((current) => ({
-                      ...current,
-                      reusableAnswers: {
-                        ...current.reusableAnswers,
-                        motivationAnswer: event.target.value
-                      }
-                    }))
+                    updateReusableAnswer("motivationAnswer", event.target.value)
                   }
                 />
               </label>
@@ -2455,13 +2541,7 @@ export default function HomePage() {
                 <textarea
                   value={state.reusableAnswers.strengthsAnswer}
                   onChange={(event) =>
-                    setState((current) => ({
-                      ...current,
-                      reusableAnswers: {
-                        ...current.reusableAnswers,
-                        strengthsAnswer: event.target.value
-                      }
-                    }))
+                    updateReusableAnswer("strengthsAnswer", event.target.value)
                   }
                 />
               </label>

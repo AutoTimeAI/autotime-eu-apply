@@ -33,10 +33,19 @@ type ContentRouteData =
 const requestSchema = z.object({
   profile: candidateProfileSchema,
   job: jobAnalysisDraftSchema,
-  reusableAnswers: reusableAnswersSchema.nullable()
+  reusableAnswers: reusableAnswersSchema.nullable(),
+  context: z
+    .object({
+      candidatePosition: z.enum(["foreign-candidate", "native-candidate"]),
+      targetCountry: z.string().trim().min(1)
+    })
+    .optional()
 })
 
-function getFirstTargetCountry(profileTargetCountries: string, jobLocation: string) {
+function getFirstTargetCountry(
+  profileTargetCountries: string,
+  jobLocation: string
+) {
   return (
     profileTargetCountries
       .split(",")
@@ -58,13 +67,14 @@ function getContentGuardrailIssues(body: z.infer<typeof requestSchema>) {
     profile: body.profile,
     job: body.job,
     context: {
-      candidatePosition: body.profile.sponsorshipNeeded
-        ? "foreign-candidate"
-        : "native-candidate",
-      targetCountry: getFirstTargetCountry(
-        body.profile.targetCountries,
-        body.job.location
-      )
+      candidatePosition:
+        body.context?.candidatePosition ??
+        (body.profile.sponsorshipNeeded
+          ? "foreign-candidate"
+          : "native-candidate"),
+      targetCountry:
+        body.context?.targetCountry ??
+        getFirstTargetCountry(body.profile.targetCountries, body.job.location)
     }
   })
 
@@ -103,6 +113,9 @@ export async function POST(
       })
     }
 
+    await assertAiRouteRateLimit(user.id)
+    await assertCanUseAi(user.id)
+
     const body = requestSchema.parse(await request.json())
     const guardrailIssues = getContentGuardrailIssues(body)
 
@@ -116,9 +129,6 @@ export async function POST(
         status: 422
       })
     }
-
-    await assertAiRouteRateLimit(user.id)
-    await assertCanUseAi(user.id)
 
     const result = await generateContentWithOpenAI(body)
 

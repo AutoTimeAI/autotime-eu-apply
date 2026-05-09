@@ -918,6 +918,21 @@ h4 {
   color: var(--accent-strong);
 }
 
+.official-review-control {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.official-review-control input {
+  width: auto;
+  margin-top: 2px;
+}
+
 .guardrail-item {
   display: grid;
   gap: 8px;
