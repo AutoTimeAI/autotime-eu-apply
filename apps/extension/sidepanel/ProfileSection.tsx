@@ -1,9 +1,7 @@
 import type { Ref } from "react"
-import { countryOptions } from "../lib/countries"
 import type { CandidateProfile } from "../lib/storage"
 import type { ProfileIssue } from "../lib/validation"
 import { getIssueForField } from "../lib/validation"
-import { noticePeriodOptions } from "./constants"
 import { getStatusClassName } from "./utils"
 
 type ProfileSectionProps = {
@@ -13,6 +11,7 @@ type ProfileSectionProps = {
     key: K,
     value: CandidateProfile[K]
   ) => void
+  onOpenProfileSetup: () => void
   onSave: () => void
   profile: CandidateProfile
   saveAttempted: boolean
@@ -24,6 +23,7 @@ export function ProfileSection({
   issues,
   onAutofillCurrentPage,
   onFieldChange,
+  onOpenProfileSetup,
   onSave,
   profile,
   saveAttempted,
@@ -32,7 +32,12 @@ export function ProfileSection({
 }: ProfileSectionProps) {
   return (
     <section className="panel-section">
-      <h2>Profile</h2>
+      <h2>Profile essentials</h2>
+      <p className="empty-state">
+        Keep only the evidence needed for extension actions here. Manage the
+        full profile, reusable answers and verification details in the web
+        dashboard.
+      </p>
 
       <div className="form-grid">
         {saveAttempted && issues.length > 0 && (
@@ -84,100 +89,17 @@ export function ProfileSection({
         </label>
 
         <label>
-          Phone
-          {saveAttempted && getIssueForField(issues, "phone") && (
-            <span className="field-alert">
-              {getIssueForField(issues, "phone")}
-            </span>
-          )}
-          <input
-            aria-invalid={Boolean(
-              saveAttempted && getIssueForField(issues, "phone")
-            )}
-            value={profile.phone}
-            onChange={(event) => onFieldChange("phone", event.target.value)}
-          />
-        </label>
-
-        <label>
-          LinkedIn URL
-          <input
-            type="url"
-            value={profile.linkedInUrl}
-            onChange={(event) =>
-              onFieldChange("linkedInUrl", event.target.value)
-            }
-          />
-        </label>
-
-        <label>
-          GitHub URL
-          <input
-            type="url"
-            value={profile.githubUrl}
-            onChange={(event) =>
-              onFieldChange("githubUrl", event.target.value)
-            }
-          />
-        </label>
-
-        <label>
-          Portfolio URL
-          <input
-            type="url"
-            value={profile.portfolioUrl}
-            onChange={(event) =>
-              onFieldChange("portfolioUrl", event.target.value)
-            }
-          />
-        </label>
-
-        <label>
-          Current country
-          {saveAttempted && getIssueForField(issues, "currentCountry") && (
-            <span className="field-alert">
-              {getIssueForField(issues, "currentCountry")}
-            </span>
-          )}
-          <select
-            aria-invalid={Boolean(
-              saveAttempted && getIssueForField(issues, "currentCountry")
-            )}
-            value={profile.currentCountry}
-            onChange={(event) =>
-              onFieldChange("currentCountry", event.target.value)
-            }
-          >
-            <option value="">Select country</option>
-            {countryOptions.map((country) => (
-              <option key={country.code} value={country.name}>
-                {country.name} ({country.callingCode})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Current city
-          {saveAttempted && getIssueForField(issues, "currentCity") && (
-            <span className="field-alert">
-              {getIssueForField(issues, "currentCity")}
-            </span>
-          )}
-          <input
-            aria-invalid={Boolean(
-              saveAttempted && getIssueForField(issues, "currentCity")
-            )}
-            value={profile.currentCity}
-            onChange={(event) =>
-              onFieldChange("currentCity", event.target.value)
-            }
-          />
-        </label>
-
-        <label>
           Target countries
+          {saveAttempted && getIssueForField(issues, "targetCountries") && (
+            <span className="field-alert">
+              {getIssueForField(issues, "targetCountries")}
+            </span>
+          )}
           <textarea
+            aria-invalid={Boolean(
+              saveAttempted && getIssueForField(issues, "targetCountries")
+            )}
+            placeholder="Example: United Kingdom, Ireland, Netherlands"
             value={profile.targetCountries}
             onChange={(event) =>
               onFieldChange("targetCountries", event.target.value)
@@ -187,7 +109,16 @@ export function ProfileSection({
 
         <label>
           Target roles
+          {saveAttempted && getIssueForField(issues, "targetRoles") && (
+            <span className="field-alert">
+              {getIssueForField(issues, "targetRoles")}
+            </span>
+          )}
           <textarea
+            aria-invalid={Boolean(
+              saveAttempted && getIssueForField(issues, "targetRoles")
+            )}
+            placeholder="Example: Business Analyst, Product Analyst, Application Support Analyst"
             value={profile.targetRoles}
             onChange={(event) =>
               onFieldChange("targetRoles", event.target.value)
@@ -196,46 +127,20 @@ export function ProfileSection({
         </label>
 
         <label>
-          Work-right details
+          Work authorisation status
+          {saveAttempted && getIssueForField(issues, "workRightDetails") && (
+            <span className="field-alert">
+              {getIssueForField(issues, "workRightDetails")}
+            </span>
+          )}
           <textarea
+            aria-invalid={Boolean(
+              saveAttempted && getIssueForField(issues, "workRightDetails")
+            )}
+            placeholder="Example: UK citizen, settled status, Skilled Worker visa, EU citizen, or no sponsorship required. Add only facts you can verify."
             value={profile.workRightDetails}
             onChange={(event) =>
               onFieldChange("workRightDetails", event.target.value)
-            }
-          />
-        </label>
-
-        <label>
-          Notice period
-          {saveAttempted && getIssueForField(issues, "noticePeriod") && (
-            <span className="field-alert">
-              {getIssueForField(issues, "noticePeriod")}
-            </span>
-          )}
-          <select
-            aria-invalid={Boolean(
-              saveAttempted && getIssueForField(issues, "noticePeriod")
-            )}
-            value={profile.noticePeriod}
-            onChange={(event) =>
-              onFieldChange("noticePeriod", event.target.value)
-            }
-          >
-            <option value="">Select notice period</option>
-            {noticePeriodOptions.map((noticePeriod) => (
-              <option key={noticePeriod} value={noticePeriod}>
-                {noticePeriod}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Salary expectation
-          <input
-            value={profile.salaryExpectation}
-            onChange={(event) =>
-              onFieldChange("salaryExpectation", event.target.value)
             }
           />
         </label>
@@ -269,8 +174,17 @@ export function ProfileSection({
         </label>
 
         <label>
-          Base CV text
+          CV text
+          {saveAttempted && getIssueForField(issues, "baseCvText") && (
+            <span className="field-alert">
+              {getIssueForField(issues, "baseCvText")}
+            </span>
+          )}
           <textarea
+            aria-invalid={Boolean(
+              saveAttempted && getIssueForField(issues, "baseCvText")
+            )}
+            placeholder="Paste enough CV text to support job matching. The extension will not invent experience."
             value={profile.baseCvText}
             onChange={(event) =>
               onFieldChange("baseCvText", event.target.value)
@@ -278,32 +192,16 @@ export function ProfileSection({
           />
         </label>
 
-        <label>
-          Project summaries
-          <textarea
-            value={profile.projectSummaries}
-            onChange={(event) =>
-              onFieldChange("projectSummaries", event.target.value)
-            }
-          />
-        </label>
-
-        <label>
-          Experience highlights
-          <textarea
-            value={profile.experienceHighlights}
-            onChange={(event) =>
-              onFieldChange("experienceHighlights", event.target.value)
-            }
-          />
-        </label>
-
         <button type="button" onClick={onSave}>
-          Save Profile
+          Save essentials
         </button>
 
         <button type="button" onClick={onAutofillCurrentPage}>
           Autofill Current Page
+        </button>
+
+        <button type="button" onClick={onOpenProfileSetup}>
+          Open full profile setup
         </button>
 
         {status && (

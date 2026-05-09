@@ -32,18 +32,11 @@ export const onboardingSteps: Array<{
   title: string
 }> = [
   {
-    ctaLabel: "Go to Profile",
+    ctaLabel: "Add essentials",
     description:
-      "Start by saving your core candidate details so AutoTime can reuse them.",
+      "Save only the profile evidence the extension needs for job checks. Full setup lives in the web dashboard.",
     section: "profile",
-    title: "Save your profile"
-  },
-  {
-    ctaLabel: "Go to Reusable Answers",
-    description:
-      "Add answers for sponsorship, relocation, availability, and common prompts.",
-    section: "reusable-answers",
-    title: "Add reusable answers"
+    title: "Save profile essentials"
   },
   {
     ctaLabel: "Go to Job Analysis",
@@ -135,10 +128,10 @@ export const noticePeriodOptions = [
 ]
 
 export const sections: Array<{ group: string; id: Section; label: string }> = [
-  { group: "Memory", id: "profile", label: "Profile" },
-  { group: "Memory", id: "profile-view", label: "View Profile" },
-  { group: "Memory", id: "reusable-answers", label: "Reusable Answers" },
-  { group: "Memory", id: "reusable-answers-view", label: "View Answers" },
+  { group: "Setup", id: "profile", label: "Profile Essentials" },
+  { group: "Setup", id: "profile-view", label: "View Essentials" },
+  { group: "Setup", id: "reusable-answers", label: "Optional Answers" },
+  { group: "Setup", id: "reusable-answers-view", label: "View Answers" },
   { group: "Apply", id: "job-analysis", label: "Job Analysis" },
   { group: "Apply", id: "job-analysis-view", label: "View Job Analysis" },
   { group: "Apply", id: "application-content", label: "Application Content" },

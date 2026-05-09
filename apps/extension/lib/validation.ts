@@ -38,10 +38,10 @@ const requiredProfileFields: Array<{
 }> = [
   { field: "fullName", label: "Full name" },
   { field: "email", label: "Email" },
-  { field: "phone", label: "Phone" },
-  { field: "currentCountry", label: "Current country" },
-  { field: "currentCity", label: "Current city" },
-  { field: "noticePeriod", label: "Notice period" }
+  { field: "targetCountries", label: "Target countries" },
+  { field: "targetRoles", label: "Target roles" },
+  { field: "workRightDetails", label: "Work authorisation status" },
+  { field: "baseCvText", label: "CV text" }
 ]
 
 const requiredJobAnalysisFields: Array<{
@@ -78,12 +78,7 @@ const applicationContentWordRules: Array<{
 const requiredReusableAnswerFields: Array<{
   field: keyof ReusableAnswers
   label: string
-}> = [
-  { field: "sponsorshipAnswer", label: "Sponsorship answer" },
-  { field: "relocationAnswer", label: "Relocation answer" },
-  { field: "workAuthorisationAnswer", label: "Work authorisation answer" },
-  { field: "noticePeriodAnswer", label: "Notice period answer" }
-]
+}> = []
 
 const reusableAnswerWordRules: Array<{
   field: keyof ReusableAnswers

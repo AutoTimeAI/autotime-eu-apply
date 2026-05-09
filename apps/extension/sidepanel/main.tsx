@@ -51,6 +51,7 @@ import {
   type TrackerDraft
 } from "../lib/storage"
 import {
+  appUrl,
   generateAIApplicationContentDraft,
   getOpenAIErrorMessage
 } from "../lib/openai"
@@ -564,7 +565,7 @@ function SidePanelApp() {
     markSaveAttempted("profile")
 
     if (profileIssues.length > 0) {
-      setStatus("Complete the highlighted profile fields before saving.")
+      setStatus("Complete the highlighted profile essentials before saving.")
       return
     }
 
@@ -572,8 +573,12 @@ function SidePanelApp() {
     setSavedProfile(profile)
     setProfile(emptyProfile)
     clearSaveAttempt("profile")
-    setStatus("Profile saved")
+    setStatus("Profile essentials saved")
     setTimeout(() => setStatus(""), 3500)
+  }
+
+  const openProfileSetup = () => {
+    chrome.tabs.create({ url: `${appUrl}/dashboard` })
   }
 
   const handleAutofillCurrentPage = async () => {
@@ -619,7 +624,7 @@ function SidePanelApp() {
 
     if (reusableAnswerIssues.length > 0) {
       setReusableStatus(
-        "Complete the highlighted reusable answer fields before saving."
+        "Complete or clear the highlighted optional answers before saving."
       )
       return
     }
@@ -628,7 +633,7 @@ function SidePanelApp() {
     setSavedReusableAnswers(reusableAnswers)
     setReusableAnswers(emptyReusableAnswers)
     clearSaveAttempt("reusable-answers")
-    setReusableStatus("Reusable answers saved")
+    setReusableStatus("Optional answers saved")
     setTimeout(() => setReusableStatus(""), 3500)
   }
 
@@ -952,6 +957,7 @@ function SidePanelApp() {
           issues={profileIssues}
           onAutofillCurrentPage={handleAutofillCurrentPage}
           onFieldChange={updateField}
+          onOpenProfileSetup={openProfileSetup}
           onSave={handleSaveProfile}
           profile={profile}
           saveAttempted={saveAttempts.profile}

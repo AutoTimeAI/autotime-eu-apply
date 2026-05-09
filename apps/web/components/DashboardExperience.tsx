@@ -1486,7 +1486,7 @@ export default function HomePage() {
           positioningAngle: getMarketPositioning(productContext),
           notes: [
             state.jobAnalysis.notes,
-            `Candidate market context: ${getMarketLabel(productContext)} / ${
+            `Search preferences: ${getMarketLabel(productContext)} / ${
               productContext.candidatePosition === "foreign-candidate"
                 ? "foreign or relocating"
                 : "native or local"
@@ -1496,7 +1496,7 @@ export default function HomePage() {
             .join("\n")
         }
       },
-      "Market context applied to profile and role intelligence"
+      "Search preferences applied to profile and role intelligence"
     )
   }
 
@@ -1796,22 +1796,21 @@ export default function HomePage() {
 
       <section
         className="market-context-panel"
-        aria-label="Candidate market context"
+        aria-label="Search preferences"
       >
         <div className="section-intro">
-          <p className="eyebrow">Start here</p>
-          <h2>Tell AutoTime what kind of role you want</h2>
+          <p className="eyebrow">Search preferences</p>
+          <h2>Set the basics for your job search</h2>
           <p>
-            Choose your target country, role type and work-right situation.
-            AutoTime uses this to shape advice around the European tech market:
-            location expectations, sponsorship risk, local role language and
-            platform follow-up.
+            Choose your target country, role focus and work authorisation
+            status. AutoTime uses these profile settings to keep country,
+            sponsorship, location and follow-up advice grounded in your search.
           </p>
         </div>
 
         <div className="context-grid">
           <fieldset className="segmented-field">
-            <legend>Role type</legend>
+            <legend>Target role focus</legend>
             <div className="segmented-options">
               {roleMarkets.map((market) => (
                 <button
@@ -1833,7 +1832,7 @@ export default function HomePage() {
           </fieldset>
 
           <fieldset className="segmented-field">
-            <legend>Work-right situation</legend>
+            <legend>Work authorisation status</legend>
             <div className="segmented-options">
               {candidatePositions.map((position) => (
                 <button
@@ -1984,7 +1983,7 @@ export default function HomePage() {
               </div>
               <dl>
                 <div>
-                  <dt>Work-right situation</dt>
+                  <dt>Work authorisation status</dt>
                   <dd>
                     {contextSuggestion.candidatePosition === "foreign-candidate"
                       ? "Foreign / relocating"
@@ -1992,7 +1991,7 @@ export default function HomePage() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Role type</dt>
+                  <dt>Target role focus</dt>
                   <dd>{getMarketLabel(contextSuggestion)}</dd>
                 </div>
                 <div>
@@ -2398,8 +2397,8 @@ export default function HomePage() {
               Boolean(productContext.targetCountry),
             body:
               productContext.candidatePosition === "foreign-candidate"
-                ? "Target country, role type and relocation status should be clear."
-                : "Target country, role type and local availability should be clear."
+                ? "Target country, role focus and relocation status should be clear."
+                : "Target country, role focus and local availability should be clear."
           },
           {
             title: "2. Add your CV proof",

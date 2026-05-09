@@ -1075,18 +1075,23 @@ test("validates missing and mismatched profile fields", () => {
     phone: "abc",
     currentCountry: "",
     currentCity: "",
+    targetCountries: "",
+    targetRoles: "",
+    workRightDetails: "",
     sponsorshipNeeded: false,
     relocationWillingness: "depends",
-    noticePeriod: ""
+    noticePeriod: "",
+    baseCvText: ""
   })
 
   assert.deepEqual(
     issues.map((issue) => issue.field),
     [
       "fullName",
-      "currentCountry",
-      "currentCity",
-      "noticePeriod",
+      "targetCountries",
+      "targetRoles",
+      "workRightDetails",
+      "baseCvText",
       "email",
       "phone"
     ]
@@ -1100,9 +1105,13 @@ test("validates profile phone against selected country calling code", () => {
     phone: "+1 202 555 0199",
     currentCountry: "United Kingdom",
     currentCity: "London",
+    targetCountries: "United Kingdom",
+    targetRoles: "Business Analyst",
+    workRightDetails: "Right to work in the UK.",
     sponsorshipNeeded: false,
     relocationWillingness: "depends",
-    noticePeriod: "1 month"
+    noticePeriod: "1 month",
+    baseCvText: "Business analyst with UAT and stakeholder experience."
   })
 
   assert.deepEqual(
@@ -1184,15 +1193,7 @@ test("validates reusable answer fields", () => {
     noticePeriodAnswer: ""
   })
 
-  assert.deepEqual(
-    issues.map((issue) => issue.field),
-    [
-      "sponsorshipAnswer",
-      "relocationAnswer",
-      "workAuthorisationAnswer",
-      "noticePeriodAnswer"
-    ]
-  )
+  assert.deepEqual(issues, [])
 })
 
 test("validates reusable answer minimum word counts when provided", () => {

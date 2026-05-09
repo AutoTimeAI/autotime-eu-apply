@@ -45,12 +45,16 @@ export function ReusableAnswersSection({
 
   return (
     <section className="panel-section">
-      <h2>Reusable Answers</h2>
+      <h2>Optional Answers</h2>
+      <p className="empty-state">
+        These are optional shortcuts for repeated application questions. Leave
+        them blank if you prefer to manage fuller answers in the web dashboard.
+      </p>
 
       <div className="form-grid">
         {saveAttempted && issues.length > 0 && (
           <div className="alert-panel" role="alert">
-            <strong>Reusable Answers need attention</strong>
+            <strong>Optional answers need attention</strong>
             <ul>
               {issues.map((issue) => (
                 <li key={`${issue.field}-${issue.message}`}>
@@ -207,7 +211,7 @@ export function ReusableAnswersSection({
         </label>
 
         <button type="button" onClick={onSave}>
-          Save Reusable Answers
+          Save optional answers
         </button>
 
         {status && (

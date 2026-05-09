@@ -57,7 +57,7 @@ export function ProfileView({
 }: SavedViewProps<CandidateProfile>) {
   return (
     <section className="panel-section">
-      <h2>View Profile</h2>
+      <h2>View Profile Essentials</h2>
 
       {draft ? (
         <>
@@ -71,30 +71,6 @@ export function ProfileView({
               <dd>{draft.email}</dd>
             </div>
             <div>
-              <dt>Phone</dt>
-              <dd>{draft.phone}</dd>
-            </div>
-            <div>
-              <dt>LinkedIn URL</dt>
-              <dd>{draft.linkedInUrl || "None"}</dd>
-            </div>
-            <div>
-              <dt>GitHub URL</dt>
-              <dd>{draft.githubUrl || "None"}</dd>
-            </div>
-            <div>
-              <dt>Portfolio URL</dt>
-              <dd>{draft.portfolioUrl || "None"}</dd>
-            </div>
-            <div>
-              <dt>Current country</dt>
-              <dd>{draft.currentCountry}</dd>
-            </div>
-            <div>
-              <dt>Current city</dt>
-              <dd>{draft.currentCity}</dd>
-            </div>
-            <div>
               <dt>Target countries</dt>
               <dd>{draft.targetCountries || "None"}</dd>
             </div>
@@ -103,7 +79,7 @@ export function ProfileView({
               <dd>{draft.targetRoles || "None"}</dd>
             </div>
             <div>
-              <dt>Work-right details</dt>
+              <dt>Work authorisation status</dt>
               <dd>{draft.workRightDetails || "None"}</dd>
             </div>
             <div>
@@ -115,32 +91,16 @@ export function ProfileView({
               <dd>{draft.relocationWillingness}</dd>
             </div>
             <div>
-              <dt>Notice period</dt>
-              <dd>{draft.noticePeriod}</dd>
-            </div>
-            <div>
-              <dt>Salary expectation</dt>
-              <dd>{draft.salaryExpectation || "None"}</dd>
-            </div>
-            <div>
-              <dt>Base CV text</dt>
+              <dt>CV text</dt>
               <dd>{draft.baseCvText || "None"}</dd>
-            </div>
-            <div>
-              <dt>Project summaries</dt>
-              <dd>{draft.projectSummaries || "None"}</dd>
-            </div>
-            <div>
-              <dt>Experience highlights</dt>
-              <dd>{draft.experienceHighlights || "None"}</dd>
             </div>
           </dl>
           <button className="danger-button" type="button" onClick={onClear}>
-            Clear Saved Profile
+            Clear Saved Essentials
           </button>
         </>
       ) : (
-        <p className="empty-state">No saved profile yet.</p>
+        <p className="empty-state">No saved profile essentials yet.</p>
       )}
     </section>
   )
