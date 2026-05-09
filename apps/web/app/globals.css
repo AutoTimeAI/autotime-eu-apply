@@ -484,6 +484,28 @@ h4 {
   min-width: 0;
 }
 
+.focus-strip {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 14px;
+}
+
+.focus-strip h2,
+.focus-strip p {
+  margin: 0;
+}
+
+.focus-strip > p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .command-centre-overview {
   display: grid;
   gap: 12px;
@@ -2815,6 +2837,7 @@ h4 {
   .app-header,
   .command-header-tools,
   .command-workspace,
+  .focus-strip,
   .context-grid,
   .decision-brief-panel,
   .trust-grid,

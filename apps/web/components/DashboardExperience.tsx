@@ -28,6 +28,19 @@ import {
 } from "../lib/cloud-sync"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
+type DashboardFocus =
+  | "dashboard"
+  | "job-inbox"
+  | "match-score"
+  | "cv-tailor"
+  | "application-answers"
+  | "autofill-profile"
+  | "application-tracker"
+  | "follow-ups"
+  | "interview-prep"
+  | "insights"
+  | "documents"
+  | "settings"
 type MetricTone = "neutral" | "good" | "warn"
 type RoleMarket =
   | "general-tech"
@@ -236,30 +249,117 @@ const dashboardRoutes: Array<{
 
 const commandSidebarItems: Array<{
   href: string
+  focus: DashboardFocus
   label: string
   routeId: DashboardTab | "overview"
 }> = [
-  { href: "/dashboard", label: "Dashboard", routeId: "overview" },
-  { href: "/dashboard/applications", label: "Job Inbox", routeId: "applications" },
-  { href: "/dashboard/jobs", label: "Match Score", routeId: "jobs" },
-  { href: "/dashboard/profile", label: "CV Tailor", routeId: "profile" },
+  { href: "/dashboard", focus: "dashboard", label: "Dashboard", routeId: "overview" },
   {
-    href: "/dashboard/interview",
+    href: "/dashboard/inbox",
+    focus: "job-inbox",
+    label: "Job Inbox",
+    routeId: "applications"
+  },
+  { href: "/dashboard/match-score", focus: "match-score", label: "Match Score", routeId: "jobs" },
+  { href: "/dashboard/cv-tailor", focus: "cv-tailor", label: "CV Tailor", routeId: "profile" },
+  {
+    href: "/dashboard/application-answers",
+    focus: "application-answers",
     label: "Application Answers",
     routeId: "interview"
   },
-  { href: "/dashboard/profile", label: "Autofill Profile", routeId: "profile" },
+  {
+    href: "/dashboard/autofill-profile",
+    focus: "autofill-profile",
+    label: "Autofill Profile",
+    routeId: "profile"
+  },
   {
     href: "/dashboard/applications",
+    focus: "application-tracker",
     label: "Application Tracker",
     routeId: "applications"
   },
-  { href: "/dashboard/applications", label: "Follow-ups", routeId: "applications" },
-  { href: "/dashboard/interview", label: "Interview Prep", routeId: "interview" },
-  { href: "/dashboard/applications", label: "Insights", routeId: "applications" },
-  { href: "/dashboard/profile", label: "Documents", routeId: "profile" },
-  { href: "/dashboard/profile", label: "Settings", routeId: "profile" }
+  { href: "/dashboard/follow-ups", focus: "follow-ups", label: "Follow-ups", routeId: "applications" },
+  { href: "/dashboard/interview", focus: "interview-prep", label: "Interview Prep", routeId: "interview" },
+  { href: "/dashboard/insights", focus: "insights", label: "Insights", routeId: "applications" },
+  { href: "/dashboard/documents", focus: "documents", label: "Documents", routeId: "profile" },
+  { href: "/dashboard/settings", focus: "settings", label: "Settings", routeId: "profile" }
 ]
+
+const dashboardFocusCopy: Record<
+  DashboardFocus,
+  { eyebrow: string; title: string; body: string }
+> = {
+  dashboard: {
+    eyebrow: "Dashboard",
+    title: "Job Search Command Centre",
+    body: "Profile, job inbox, match score, applications and interview prep in one workspace."
+  },
+  "job-inbox": {
+    eyebrow: "Job Inbox",
+    title: "Job Inbox",
+    body: "Saved and checked roles, with the next action kept visible."
+  },
+  "match-score": {
+    eyebrow: "Match Score",
+    title: "Role Fit Score",
+    body: "Evidence, missing inputs and clear limits behind the score."
+  },
+  "cv-tailor": {
+    eyebrow: "CV Tailor",
+    title: "CV Tailor",
+    body: "Profile evidence and CV proof used to tailor applications honestly."
+  },
+  "application-answers": {
+    eyebrow: "Application Answers",
+    title: "Application Answers",
+    body: "Reusable, truthful answers based only on your draft and profile context."
+  },
+  "autofill-profile": {
+    eyebrow: "Autofill Profile",
+    title: "Autofill Profile",
+    body: "Mandatory profile details and reusable evidence for extension sync."
+  },
+  "application-tracker": {
+    eyebrow: "Application Tracker",
+    title: "Application Tracker",
+    body: "Pipeline, outcomes and follow-up actions for live applications."
+  },
+  "follow-ups": {
+    eyebrow: "Follow-ups",
+    title: "Follow-up Queue",
+    body: "Deadlines, reminders and next actions across saved applications."
+  },
+  "interview-prep": {
+    eyebrow: "Interview Prep",
+    title: "Interview Prep",
+    body: "Interview Buddy answers and prep packs for interview-stage roles."
+  },
+  insights: {
+    eyebrow: "Insights",
+    title: "Search Insights",
+    body: "Evidence analytics, outcomes and learning readiness without inflated claims."
+  },
+  documents: {
+    eyebrow: "Documents",
+    title: "Documents",
+    body: "CV text, evidence notes and reusable application material."
+  },
+  settings: {
+    eyebrow: "Settings",
+    title: "Settings",
+    body: "Market context, cloud sync and profile controls."
+  }
+}
+
+const defaultDashboardFocusByView: Record<DashboardTab | "overview", DashboardFocus> = {
+  overview: "dashboard",
+  profile: "autofill-profile",
+  jobs: "match-score",
+  applications: "application-tracker",
+  interview: "interview-prep"
+}
 
 const roleMarkets: Array<{
   id: RoleMarket
@@ -1729,8 +1829,10 @@ function getContentGuardrails({
 }
 
 export default function HomePage({
+  focus,
   view = "overview"
 }: {
+  focus?: DashboardFocus
   view?: DashboardTab | "overview"
 }) {
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
@@ -1858,6 +1960,8 @@ export default function HomePage({
   )
   const currentTab: DashboardTab = view === "overview" ? "profile" : view
   const isOverview = view === "overview"
+  const activeFocus = focus ?? defaultDashboardFocusByView[view]
+  const focusCopy = dashboardFocusCopy[activeFocus]
   const currentRouteIndex = dashboardRoutes.findIndex(
     (route) => route.id === view
   )
@@ -1868,12 +1972,19 @@ export default function HomePage({
       ? dashboardRoutes[currentRouteIndex + 1]
       : null
   const activeSidebarLabel = {
-    overview: "Dashboard",
-    profile: "Autofill Profile",
-    jobs: "Match Score",
-    applications: "Application Tracker",
-    interview: "Interview Prep"
-  }[view]
+    dashboard: "Dashboard",
+    "job-inbox": "Job Inbox",
+    "match-score": "Match Score",
+    "cv-tailor": "CV Tailor",
+    "application-answers": "Application Answers",
+    "autofill-profile": "Autofill Profile",
+    "application-tracker": "Application Tracker",
+    "follow-ups": "Follow-ups",
+    "interview-prep": "Interview Prep",
+    insights: "Insights",
+    documents: "Documents",
+    settings: "Settings"
+  }[activeFocus]
   const filteredDashboardRoutes = dashboardRoutes
     .filter((route) => route.id !== "overview")
     .filter((route) => {
@@ -1885,6 +1996,14 @@ export default function HomePage({
 
       return `${route.label} ${route.summary}`.toLowerCase().includes(query)
     })
+  const showProfileSettingsPanel =
+    activeFocus === "autofill-profile" || activeFocus === "settings"
+  const showProfileCloudSync =
+    activeFocus === "autofill-profile" || activeFocus === "settings"
+  const showApplicationAnalytics =
+    activeFocus === "application-tracker" || activeFocus === "insights"
+  const showApplicationList = activeFocus !== "insights"
+  const showInterviewPrepPacks = activeFocus === "interview-prep"
   const commandCentreCards = [
     {
       title: "Today's Action Plan",
@@ -2510,9 +2629,9 @@ export default function HomePage({
     <main className="dashboard-shell">
       <header className="app-header">
         <div className="header-copy">
-          <p className="eyebrow">AutoTime EU Apply</p>
-          <h1>Job Search Command Centre</h1>
-          <p>Profile, job inbox, match score, applications and interview prep in one workspace.</p>
+          <p className="eyebrow">{focusCopy.eyebrow}</p>
+          <h1>{focusCopy.title}</h1>
+          <p>{focusCopy.body}</p>
           <div className="command-header-tools">
             <label className="command-search">
               <span>Search jobs/applications</span>
@@ -2614,8 +2733,17 @@ export default function HomePage({
         </aside>
 
         <div className="command-content">
+          {!isOverview && (
+            <section className="focus-strip" aria-label="Current workspace focus">
+              <div>
+                <p className="eyebrow">{focusCopy.eyebrow}</p>
+                <h2>{focusCopy.title}</h2>
+              </div>
+              <p>{focusCopy.body}</p>
+            </section>
+          )}
 
-      {!isOverview && currentTab === "profile" && (
+      {!isOverview && currentTab === "profile" && showProfileSettingsPanel && (
       <section className="market-context-panel" aria-label="Profile settings">
         <div className="section-intro">
           <p className="eyebrow">Profile settings</p>
@@ -3054,7 +3182,7 @@ export default function HomePage({
         </section>
       )}
 
-      {!isOverview && currentTab === "profile" && (
+      {!isOverview && currentTab === "profile" && activeFocus !== "settings" && (
       <section
         className={
           profileBridgeReady
@@ -3091,7 +3219,7 @@ export default function HomePage({
       </section>
       )}
 
-      {!isOverview && currentTab === "profile" && (
+      {!isOverview && currentTab === "profile" && showProfileCloudSync && (
       <section
         className={
           cloudSyncReadiness.configured
@@ -3550,13 +3678,11 @@ export default function HomePage({
       {!isOverview && currentTab === "applications" && (
         <section className="applications-section full-width-section">
           <div className="section-intro">
-            <p className="eyebrow">Applications</p>
-            <h2>Your job application tracker</h2>
-            <p>
-              Keep every role, status and next action in one place, so follow-up
-              never depends on memory.
-            </p>
+            <p className="eyebrow">{focusCopy.eyebrow}</p>
+            <h2>{focusCopy.title}</h2>
+            <p>{focusCopy.body}</p>
           </div>
+          {activeFocus !== "insights" && (
           <div
             className="pipeline-summary"
             aria-label="Application status counts"
@@ -3568,6 +3694,9 @@ export default function HomePage({
               </div>
             ))}
           </div>
+          )}
+          {showApplicationAnalytics && (
+          <>
           <section
             className="analytics-grid"
             aria-label="Evidence and outcome analytics"
@@ -3754,6 +3883,9 @@ export default function HomePage({
               )}
             </div>
           </section>
+          </>
+          )}
+          {showApplicationList && (
           <div className="application-table">
             {state.applications.length ? (
               state.applications.map((application) => (
@@ -3861,6 +3993,7 @@ export default function HomePage({
               </div>
             )}
           </div>
+          )}
         </section>
       )}
 
@@ -3985,52 +4118,56 @@ export default function HomePage({
             </section>
           </div>
 
-          <div className="section-intro">
-            <p className="eyebrow">Saved prep packs</p>
-            <h2>Prep generated from applications</h2>
-            <p>
-              Prep packs still use saved profile, job details and application
-              status. They remain separate from Interview Buddy answers.
-            </p>
-          </div>
-          <div className="prep-grid">
-            {state.interviewPrepPacks.length ? (
-              state.interviewPrepPacks.map((pack) => (
-                <article className="prep-card" key={pack.id}>
-                  <h3>{pack.roleSummary}</h3>
-                  <p>{pack.positioningStatement}</p>
-                  <h4>STAR Prompts</h4>
-                  <ul className="bullets-list">
-                    {pack.starAnswerPrompts.map((prompt) => (
-                      <li key={prompt}>{prompt}</li>
-                    ))}
-                  </ul>
-                  <h4>Likely Questions</h4>
-                  <ul className="bullets-list">
-                    {pack.likelyQuestions.map((question) => (
-                      <li key={question}>{question}</li>
-                    ))}
-                  </ul>
-                  <h4>Employer Questions</h4>
-                  <ul className="bullets-list">
-                    {pack.questionsToAskEmployer.map((question) => (
-                      <li key={question}>{question}</li>
-                    ))}
-                  </ul>
-                  <h4>Final Checklist</h4>
-                  <ul className="bullets-list">
-                    {pack.finalPrepChecklist.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </article>
-              ))
-            ) : (
-              <p className="empty-state">
-                Move an application to Interview, then generate a prep pack.
-              </p>
-            )}
-          </div>
+          {showInterviewPrepPacks && (
+            <>
+              <div className="section-intro">
+                <p className="eyebrow">Saved prep packs</p>
+                <h2>Prep generated from applications</h2>
+                <p>
+                  Prep packs still use saved profile, job details and application
+                  status. They remain separate from Interview Buddy answers.
+                </p>
+              </div>
+              <div className="prep-grid">
+                {state.interviewPrepPacks.length ? (
+                  state.interviewPrepPacks.map((pack) => (
+                    <article className="prep-card" key={pack.id}>
+                      <h3>{pack.roleSummary}</h3>
+                      <p>{pack.positioningStatement}</p>
+                      <h4>STAR Prompts</h4>
+                      <ul className="bullets-list">
+                        {pack.starAnswerPrompts.map((prompt) => (
+                          <li key={prompt}>{prompt}</li>
+                        ))}
+                      </ul>
+                      <h4>Likely Questions</h4>
+                      <ul className="bullets-list">
+                        {pack.likelyQuestions.map((question) => (
+                          <li key={question}>{question}</li>
+                        ))}
+                      </ul>
+                      <h4>Employer Questions</h4>
+                      <ul className="bullets-list">
+                        {pack.questionsToAskEmployer.map((question) => (
+                          <li key={question}>{question}</li>
+                        ))}
+                      </ul>
+                      <h4>Final Checklist</h4>
+                      <ul className="bullets-list">
+                        {pack.finalPrepChecklist.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))
+                ) : (
+                  <p className="empty-state">
+                    Move an application to Interview, then generate a prep pack.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
         </section>
       )}
 
