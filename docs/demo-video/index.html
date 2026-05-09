@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AutoTime EU Apply Demo Video Deck</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #eef3f8;
+        --ink: #0d1728;
+        --text: #293548;
+        --muted: #667385;
+        --surface: #ffffff;
+        --raised: #f8fbff;
+        --line: #d8e1ec;
+        --accent: #0f766e;
+        --blue: #315fba;
+        --green: #1d7a4d;
+        --amber: #a86616;
+        --red: #ad3f48;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+        background:
+          radial-gradient(circle at 20% 0%, rgba(49, 95, 186, 0.14), transparent 34rem),
+          linear-gradient(180deg, #ffffff, var(--bg));
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        min-height: 100vh;
+      }
+
+      button {
+        min-height: 38px;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        background: var(--accent);
+        color: #ffffff;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        padding: 8px 12px;
+      }
+
+      .stage {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        padding: 26px;
+      }
+
+      .deck {
+        position: relative;
+        overflow: hidden;
+        width: min(1180px, 100%);
+        aspect-ratio: 16 / 9;
+        border: 1px solid rgba(141, 156, 174, 0.35);
+        border-radius: 18px;
+        background: #fbfdff;
+        box-shadow: 0 28px 80px rgba(13, 23, 40, 0.16);
+      }
+
+      .slide {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 0.72fr) minmax(360px, 0.58fr);
+        gap: 30px;
+        align-items: center;
+        opacity: 0;
+        padding: 46px;
+        transform: translateX(28px);
+        transition:
+          opacity 420ms ease,
+          transform 420ms ease;
+        pointer-events: none;
+      }
+
+      .slide.active {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+      }
+
+      .slide.full {
+        grid-template-columns: 1fr;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 720px;
+        margin-bottom: 16px;
+        color: var(--ink);
+        font-size: 3.1rem;
+        line-height: 1.04;
+      }
+
+      h2 {
+        margin-bottom: 14px;
+        color: var(--ink);
+        font-size: 2.15rem;
+        line-height: 1.1;
+      }
+
+      p {
+        line-height: 1.62;
+      }
+
+      .lead {
+        max-width: 720px;
+        color: var(--muted);
+        font-size: 1.08rem;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 24px;
+        color: var(--ink);
+        font-size: 1.15rem;
+        font-weight: 800;
+      }
+
+      .brand span {
+        color: var(--accent);
+      }
+
+      .browser {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: 0 20px 60px rgba(13, 23, 40, 0.13);
+      }
+
+      .browser-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        background: #f4f7fb;
+        padding: 10px 12px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #d65b67;
+      }
+
+      .dot:nth-child(2) {
+        background: #e4a93d;
+      }
+
+      .dot:nth-child(3) {
+        background: #43ad72;
+      }
+
+      .url {
+        flex: 1;
+        border-radius: 999px;
+        background: #ffffff;
+        color: var(--muted);
+        font-size: 0.78rem;
+        padding: 6px 12px;
+      }
+
+      .app {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+      }
+
+      .topnav,
+      .row,
+      .split,
+      .metric-grid,
+      .chips,
+      .tracker-row,
+      .sidepanel-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .topnav {
+        justify-content: space-between;
+      }
+
+      .nav-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .pill,
+      .chip {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #f8fbff;
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 5px 8px;
+      }
+
+      .pill.active,
+      .chip.active {
+        border-color: #a9d6d0;
+        background: #e7f5f2;
+        color: var(--accent);
+      }
+
+      .panel {
+        display: grid;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--raised);
+        padding: 14px;
+      }
+
+      .profile-grid,
+      .job-grid,
+      .metric-grid,
+      .tracker-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .profile-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--ink);
+        font-size: 0.82rem;
+        font-weight: 650;
+        padding: 9px 10px;
+      }
+
+      .field small,
+      .panel small {
+        display: block;
+        color: var(--muted);
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .job-grid {
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      }
+
+      .textarea {
+        min-height: 145px;
+      }
+
+      .score {
+        display: grid;
+        width: 132px;
+        height: 132px;
+        place-items: center;
+        border: 10px solid #c8e8e2;
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        color: var(--ink);
+        font-size: 2.2rem;
+        font-weight: 850;
+      }
+
+      .split {
+        align-items: stretch;
+      }
+
+      .split > * {
+        flex: 1;
+      }
+
+      .risk {
+        border-left: 4px solid var(--amber);
+      }
+
+      .good {
+        border-left: 4px solid var(--green);
+      }
+
+      .ats-page {
+        display: grid;
+        gap: 12px;
+        border: 1px solid #d9e1ed;
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 18px;
+      }
+
+      .sidepanel {
+        display: grid;
+        gap: 10px;
+        width: 310px;
+        border: 1px solid #cbd6e4;
+        border-radius: 14px;
+        background: #f4f7fb;
+        padding: 12px;
+      }
+
+      .sidepanel button {
+        width: 100%;
+      }
+
+      .tracker-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .tracker-row {
+        justify-content: space-between;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #ffffff;
+        padding: 10px;
+      }
+
+      .caption {
+        position: absolute;
+        right: 24px;
+        bottom: 18px;
+        left: 24px;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .sidebar {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        gap: 14px;
+        border-left: 1px solid #d7e0ec;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 18px;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .controls button {
+        min-height: 34px;
+        padding: 6px 8px;
+      }
+
+      .controls .secondary {
+        border-color: var(--line);
+        background: #ffffff;
+        color: var(--text);
+      }
+
+      .script {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 14px;
+      }
+
+      .script h2 {
+        font-size: 1rem;
+      }
+
+      .script p {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .slide-list {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .slide-list button {
+        width: 100%;
+        min-height: 32px;
+        border-color: var(--line);
+        background: #ffffff;
+        color: var(--text);
+        font-size: 0.8rem;
+        text-align: left;
+      }
+
+      .slide-list button.active {
+        border-color: var(--accent);
+        background: #e7f5f2;
+        color: var(--accent);
+      }
+
+      @media (max-width: 980px) {
+        body {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-left: 0;
+          border-top: 1px solid #d7e0ec;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage">
+      <section class="deck" aria-label="Demo video slides">
+        <article class="slide active full">
+          <div>
+            <div class="brand"><span>AutoTime</span><strong>EU Apply</strong></div>
+            <p class="eyebrow">First-time user walkthrough</p>
+            <h1>One workspace for serious UK/EU job search decisions</h1>
+            <p class="lead">
+              Check role fit, use evidence-backed AI, prepare applications, and track
+              every next action without turning your search into a spreadsheet maze.
+            </p>
+          </div>
+          <div class="caption">
+            <span>Scene 1</span>
+            <span>Start with the problem and product promise</span>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div>
+            <p class="eyebrow">Profile evidence</p>
+            <h2>Build a reusable profile the AI can trust</h2>
+            <p class="lead">
+              The product starts with facts: work rights, target roles, CV evidence,
+              project examples, and relocation context.
+            </p>
+          </div>
+          <div class="browser">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">autotime-eu-apply.vercel.app/dashboard/profile</span></div>
+            <div class="app">
+              <div class="topnav"><strong>Profile</strong><div class="nav-pills"><span class="pill active">Profile</span><span class="pill">Job Check</span><span class="pill">Applications</span></div></div>
+              <div class="profile-grid">
+                <div class="field"><small>Name</small>Maya Patel</div>
+                <div class="field"><small>Target roles</small>Business Analyst, Product Analyst</div>
+                <div class="field"><small>Work rights</small>UK citizen, no UK sponsorship required</div>
+                <div class="field"><small>Target countries</small>United Kingdom, Ireland, Netherlands</div>
+              </div>
+              <div class="panel good"><strong>Evidence ready</strong><span>CV text, projects, work-right details and target markets are saved.</span></div>
+            </div>
+          </div>
+          <div class="caption"><span>Scene 2</span><span>Evidence first, AI second</span></div>
+        </article>
+
+        <article class="slide">
+          <div>
+            <p class="eyebrow">Job Check</p>
+            <h2>Turn a job description into a decision</h2>
+            <p class="lead">
+              Paste the role details and let AutoTime structure the fit, gaps, risks,
+              and next action.
+            </p>
+          </div>
+          <div class="browser">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">/dashboard/jobs</span></div>
+            <div class="app job-grid">
+              <div class="panel">
+                <div class="field"><small>Role</small>Business Systems Analyst</div>
+                <div class="field"><small>Company</small>Northstar Payments</div>
+                <div class="field textarea"><small>Description</small>Payments operations, SQL dashboards, stakeholder workshops, Dublin hybrid role...</div>
+                <button>Check role fit</button>
+              </div>
+              <div class="panel">
+                <strong>Live result</strong>
+                <div class="row"><div class="score">78</div><div><h3>Recommended with review</h3><p>Ireland work authorisation needs manual confirmation.</p></div></div>
+                <div class="split"><div class="panel good">Strong match: payments, SQL, stakeholder work</div><div class="panel risk">Risk: relocation and right-to-work evidence</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="caption"><span>Scene 3</span><span>Score, reason, risk, next action</span></div>
+        </article>
+
+        <article class="slide">
+          <div>
+            <p class="eyebrow">Chrome extension</p>
+            <h2>Bring the workflow onto ATS job boards</h2>
+            <p class="lead">
+              Supported platforms can be detected and imported. LinkedIn stays manual
+              copy/paste only so the user remains in control.
+            </p>
+          </div>
+          <div class="split">
+            <div class="ats-page">
+              <p class="eyebrow">Greenhouse job page</p>
+              <h3>Business Systems Analyst</h3>
+              <p>Northstar Payments · Dublin, Ireland · Hybrid</p>
+              <p>Responsibilities include process mapping, payments operations, Jira, SQL reporting, and stakeholder management.</p>
+            </div>
+            <div class="sidepanel">
+              <div class="sidepanel-head"><strong>AutoTime EU Apply</strong><span class="chip active">Ready</span></div>
+              <div class="panel"><small>Detected</small>Business Systems Analyst<br />Northstar Payments</div>
+              <button>Import current job page</button>
+              <button>Save to tracker</button>
+            </div>
+          </div>
+          <div class="caption"><span>Scene 4</span><span>Supported ATS import plus conservative LinkedIn policy</span></div>
+        </article>
+
+        <article class="slide">
+          <div>
+            <p class="eyebrow">Application content</p>
+            <h2>Draft answers from real evidence</h2>
+            <p class="lead">
+              AutoTime generates editable content from the profile and job analysis.
+              It should assist the candidate, not invent their background.
+            </p>
+          </div>
+          <div class="browser">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">/dashboard/application-answers</span></div>
+            <div class="app">
+              <div class="panel">
+                <strong>AI application content</strong>
+                <div class="field textarea"><small>Motivation answer</small>I am interested in this role because it connects payments operations, stakeholder workshops, and SQL-backed process improvement...</div>
+                <div class="field textarea"><small>Strengths answer</small>My strongest match is translating operational problems into clear product and systems requirements...</div>
+                <button>Save final answer</button>
+              </div>
+            </div>
+          </div>
+          <div class="caption"><span>Scene 5</span><span>User-controlled drafting and saving</span></div>
+        </article>
+
+        <article class="slide">
+          <div>
+            <p class="eyebrow">Tracker</p>
+            <h2>Keep every role and follow-up visible</h2>
+            <p class="lead">
+              Serious job searching is operational. The tracker keeps role status,
+              notes, source, next action, and follow-up dates in one place.
+            </p>
+          </div>
+          <div class="browser">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">/dashboard/applications</span></div>
+            <div class="app tracker-grid">
+              <div class="tracker-row"><strong>Business Systems Analyst</strong><span class="chip active">Saved</span><span>Follow up: Tailor CV</span></div>
+              <div class="tracker-row"><strong>Product Analyst</strong><span class="chip">Applied</span><span>Follow up: May 13</span></div>
+              <div class="tracker-row"><strong>Operations Analyst</strong><span class="chip">Interview</span><span>Prep pack ready</span></div>
+            </div>
+          </div>
+          <div class="caption"><span>Scene 6</span><span>Status, notes, and next actions</span></div>
+        </article>
+
+        <article class="slide">
+          <div>
+            <p class="eyebrow">Interview prep</p>
+            <h2>Prepare for the role that progresses</h2>
+            <p class="lead">
+              Interview Prep converts saved role context into likely questions,
+              answer structure, risks to prepare for, and questions for the employer.
+            </p>
+          </div>
+          <div class="browser">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">/dashboard/interview</span></div>
+            <div class="app split">
+              <div class="panel"><strong>Likely questions</strong><p>Tell us about a process you improved using data.</p><p>How do you handle conflicting stakeholder requirements?</p></div>
+              <div class="panel"><strong>Answer structure</strong><p>Situation, constraint, action, measured outcome, lesson.</p><p>Use payments migration and SQL dashboard evidence.</p></div>
+            </div>
+          </div>
+          <div class="caption"><span>Scene 7</span><span>Role-specific interview readiness</span></div>
+        </article>
+
+        <article class="slide">
+          <div>
+            <p class="eyebrow">Pro workflow</p>
+            <h2>Upgrade when the search becomes serious</h2>
+            <p class="lead">
+              Free is enough to start. Pro unlocks cloud sync, unlimited AI job
+              analysis, application content, and interview prep for higher search volume.
+            </p>
+          </div>
+          <div class="browser">
+            <div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">/pricing</span></div>
+            <div class="app split">
+              <div class="panel"><h3>Free</h3><p>Local tracking and light AI usage.</p><button>Open workspace</button></div>
+              <div class="panel good"><h3>Pro</h3><p>Cloud sync, unlimited AI, application content, interview prep.</p><button>Start Pro</button></div>
+            </div>
+          </div>
+          <div class="caption"><span>Scene 8</span><span>Clear upgrade path</span></div>
+        </article>
+
+        <article class="slide full">
+          <div>
+            <div class="brand"><span>AutoTime</span><strong>EU Apply</strong></div>
+            <p class="eyebrow">Final message</p>
+            <h1>Not a magic apply button. A serious copilot for better job search decisions.</h1>
+            <p class="lead">Start with Job Check. Apply with evidence. Track every next action.</p>
+          </div>
+          <div class="caption"><span>Scene 9</span><span>End card</span></div>
+        </article>
+      </section>
+    </main>
+
+    <aside class="sidebar">
+      <div>
+        <h2>Demo Controls</h2>
+        <p id="timer">00:00 / 03:00</p>
+      </div>
+      <div class="controls">
+        <button id="prev" class="secondary" type="button">Prev</button>
+        <button id="play" type="button">Play</button>
+        <button id="next" class="secondary" type="button">Next</button>
+      </div>
+      <div class="script">
+        <h2 id="script-title">Scene 1 voiceover</h2>
+        <p id="script-body"></p>
+        <ul class="slide-list" id="slide-list"></ul>
+      </div>
+    </aside>
+
+    <script>
+      const slides = Array.from(document.querySelectorAll(".slide"))
+      const durations = [10, 15, 20, 20, 20, 20, 20, 20, 15]
+      const scripts = [
+        "Applying across UK and EU roles gets messy fast. AutoTime EU Apply brings role fit, profile evidence, AI assistance, tracking, and interview prep into one workspace.",
+        "First, create a reusable candidate profile. The product works from facts: work rights, target roles, CV evidence, projects, and relocation context.",
+        "When you find a role, Job Check turns the description into a structured fit review: score, reasons, gaps, risks, and the next action.",
+        "The Chrome extension brings the workflow onto supported ATS job boards. LinkedIn stays manual copy and paste only, keeping the user in control.",
+        "Once the profile and role are ready, AutoTime drafts application content from real evidence. The user reviews, edits, and saves the final answer.",
+        "Every role can be tracked with status, source, notes, next action, and follow-up date, so the search stays operational across weeks.",
+        "When a role progresses, Interview Prep creates likely questions, answer structure, risks to prepare for, and employer questions.",
+        "Free is enough to start. Pro is for serious search volume: cloud sync, unlimited AI analysis, application content, and interview prep.",
+        "AutoTime EU Apply is not a magic apply button. It is a serious copilot for better, faster, evidence-backed job search decisions."
+      ]
+      const total = durations.reduce((sum, duration) => sum + duration, 0)
+      let index = 0
+      let elapsed = 0
+      let slideElapsed = 0
+      let playing = false
+      let interval = null
+
+      const playButton = document.querySelector("#play")
+      const timer = document.querySelector("#timer")
+      const scriptTitle = document.querySelector("#script-title")
+      const scriptBody = document.querySelector("#script-body")
+      const list = document.querySelector("#slide-list")
+
+      function format(seconds) {
+        const minutes = Math.floor(seconds / 60)
+          .toString()
+          .padStart(2, "0")
+        const remaining = Math.floor(seconds % 60)
+          .toString()
+          .padStart(2, "0")
+        return `${minutes}:${remaining}`
+      }
+
+      function renderList() {
+        list.innerHTML = ""
+        slides.forEach((_, slideIndex) => {
+          const item = document.createElement("li")
+          const button = document.createElement("button")
+          button.type = "button"
+          button.textContent = `Scene ${slideIndex + 1}`
+          button.className = slideIndex === index ? "active" : ""
+          button.addEventListener("click", () => goTo(slideIndex))
+          item.append(button)
+          list.append(item)
+        })
+      }
+
+      function update() {
+        slides.forEach((slide, slideIndex) => {
+          slide.classList.toggle("active", slideIndex === index)
+        })
+        scriptTitle.textContent = `Scene ${index + 1} voiceover`
+        scriptBody.textContent = scripts[index]
+        timer.textContent = `${format(elapsed)} / ${format(total)}`
+        renderList()
+      }
+
+      function goTo(nextIndex) {
+        index = Math.max(0, Math.min(slides.length - 1, nextIndex))
+        elapsed = durations.slice(0, index).reduce((sum, duration) => sum + duration, 0)
+        slideElapsed = 0
+        update()
+      }
+
+      function stop() {
+        playing = false
+        playButton.textContent = "Play"
+        if (interval) {
+          clearInterval(interval)
+          interval = null
+        }
+      }
+
+      function start() {
+        playing = true
+        playButton.textContent = "Pause"
+        interval = setInterval(() => {
+          elapsed += 1
+          slideElapsed += 1
+
+          if (slideElapsed >= durations[index]) {
+            if (index >= slides.length - 1) {
+              stop()
+            } else {
+              index += 1
+              slideElapsed = 0
+            }
+          }
+
+          update()
+        }, 1000)
+      }
+
+      document.querySelector("#prev").addEventListener("click", () => goTo(index - 1))
+      document.querySelector("#next").addEventListener("click", () => goTo(index + 1))
+      playButton.addEventListener("click", () => {
+        if (playing) {
+          stop()
+        } else {
+          start()
+        }
+      })
+
+      update()
+    </script>
+  </body>
+</html>

@@ -4,7 +4,7 @@ import { diagnosticJson } from "../../../../lib/diagnostics"
 import { publicEnv } from "../../../../lib/env"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createServerClient } from "../../../../lib/supabase/server"
-import { isConfiguredStripePrice, stripe } from "../../../../lib/stripe"
+import { isConfiguredStripePrice, PLANS, stripe } from "../../../../lib/stripe"
 
 type ApiResponse<T> = {
   data: T | null
@@ -17,7 +17,7 @@ type CheckoutRouteData = {
 }
 
 const requestSchema = z.object({
-  priceId: z.string().min(1),
+  priceId: z.string().min(1).optional(),
   returnUrl: z.string().url()
 })
 
@@ -105,7 +105,9 @@ export async function POST(
 
     const body = requestSchema.parse(await request.json())
 
-    if (!isConfiguredStripePrice(body.priceId)) {
+    const priceId = body.priceId ?? PLANS.pro_monthly.priceId
+
+    if (!isConfiguredStripePrice(priceId)) {
       return diagnosticJson({
         area: "billing",
         code: "billing.checkout.price.invalid",
@@ -126,7 +128,7 @@ export async function POST(
       client_reference_id: user.id,
       line_items: [
         {
-          price: body.priceId,
+          price: priceId,
           quantity: 1
         }
       ],

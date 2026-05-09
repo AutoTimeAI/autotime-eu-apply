@@ -27,5 +27,6 @@ pytest-cache-files-*
 *.sqlite
 *.db
 _tmp_*
+docs/demo-video/generated/
 
 .vercel

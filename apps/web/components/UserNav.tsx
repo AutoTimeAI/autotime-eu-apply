@@ -98,7 +98,24 @@ export function UserNav({ email, plan }: UserNavProps) {
       setStatus(null)
 
       if (plan !== "pro") {
-        window.location.href = "/pricing"
+        const response = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            returnUrl: `${window.location.origin}/dashboard`
+          })
+        })
+        const payload = (await response.json()) as {
+          data: { url: string } | null
+          error: string | null
+        }
+
+        if (!response.ok || !payload.data) {
+          setStatus(payload.error ?? "Checkout is not available yet.")
+          return
+        }
+
+        window.location.href = payload.data.url
         return
       }
 
@@ -193,7 +210,7 @@ export function UserNav({ email, plan }: UserNavProps) {
             type="button"
             onClick={openBillingPortal}
           >
-            {plan === "pro" ? "Billing &amp; Plan" : "Upgrade plan"}
+            {plan === "pro" ? "Billing & Plan" : "Upgrade plan"}
           </button>
           <button className="secondary-button" type="button" onClick={signOut}>
             Sign out
