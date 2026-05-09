@@ -274,12 +274,21 @@ h4 {
   padding-left: 12px;
 }
 
-.tab-bar {
+.dashboard-page-nav {
   display: flex;
+  align-items: end;
   flex-wrap: wrap;
+  justify-content: space-between;
   gap: 8px;
   margin-bottom: 14px;
   border-bottom: 1px solid var(--border);
+}
+
+.tab-bar,
+.page-arrow-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .tab-button {
@@ -306,6 +315,35 @@ h4 {
   border-bottom-color: #ffffff;
   background: #ffffff;
   color: var(--accent-strong);
+}
+
+.page-arrow-nav {
+  justify-content: flex-end;
+  padding-bottom: 6px;
+}
+
+.page-arrow-button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 7px 11px;
+  text-decoration: none;
+}
+
+.page-arrow-button:hover {
+  background: var(--surface-muted);
+}
+
+.page-arrow-button.disabled {
+  cursor: not-allowed;
+  opacity: 0.44;
 }
 
 .status-banner {
@@ -2747,6 +2785,16 @@ h4 {
   .header-actions,
   .header-actions button {
     width: 100%;
+  }
+
+  .dashboard-page-nav,
+  .tab-bar,
+  .page-arrow-nav {
+    width: 100%;
+  }
+
+  .page-arrow-nav {
+    justify-content: space-between;
   }
 
   .dashboard-topbar,

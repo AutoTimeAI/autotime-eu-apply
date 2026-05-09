@@ -1830,6 +1830,15 @@ export default function HomePage({
   )
   const currentTab: DashboardTab = view === "overview" ? "profile" : view
   const isOverview = view === "overview"
+  const currentRouteIndex = dashboardRoutes.findIndex(
+    (route) => route.id === view
+  )
+  const previousRoute =
+    currentRouteIndex > 0 ? dashboardRoutes[currentRouteIndex - 1] : null
+  const nextRoute =
+    currentRouteIndex >= 0 && currentRouteIndex < dashboardRoutes.length - 1
+      ? dashboardRoutes[currentRouteIndex + 1]
+      : null
 
   useEffect(() => {
     setState(getStoredState())
@@ -2879,18 +2888,44 @@ export default function HomePage({
       </section>
       )}
 
-      <nav className="tab-bar" aria-label="Dashboard sections">
-        {dashboardRoutes.map((route) => (
-          <a
-            aria-current={view === route.id ? "page" : undefined}
-            className={view === route.id ? "tab-button active" : "tab-button"}
-            href={route.href}
-            key={route.id}
-          >
-            {route.label}
-          </a>
-        ))}
-      </nav>
+      <div className="dashboard-page-nav">
+        <nav className="tab-bar" aria-label="Dashboard sections">
+          {dashboardRoutes.map((route) => (
+            <a
+              aria-current={view === route.id ? "page" : undefined}
+              className={view === route.id ? "tab-button active" : "tab-button"}
+              href={route.href}
+              key={route.id}
+            >
+              {route.label}
+            </a>
+          ))}
+        </nav>
+        <nav className="page-arrow-nav" aria-label="Page step controls">
+          {previousRoute ? (
+            <a className="page-arrow-button" href={previousRoute.href}>
+              <span aria-hidden="true">←</span>
+              Back
+            </a>
+          ) : (
+            <span className="page-arrow-button disabled">
+              <span aria-hidden="true">←</span>
+              Back
+            </span>
+          )}
+          {nextRoute ? (
+            <a className="page-arrow-button" href={nextRoute.href}>
+              Next
+              <span aria-hidden="true">→</span>
+            </a>
+          ) : (
+            <span className="page-arrow-button disabled">
+              Next
+              <span aria-hidden="true">→</span>
+            </span>
+          )}
+        </nav>
+      </div>
 
       {status && <p className="status-banner">{status}</p>}
 
