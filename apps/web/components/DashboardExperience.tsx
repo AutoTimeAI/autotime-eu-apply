@@ -2004,6 +2004,7 @@ export default function HomePage({
     activeFocus === "application-tracker" || activeFocus === "insights"
   const showApplicationList = activeFocus !== "insights"
   const showInterviewPrepPacks = activeFocus === "interview-prep"
+  const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const commandCentreCards = [
     {
       title: "Today's Action Plan",
@@ -2050,6 +2051,34 @@ export default function HomePage({
       title: "Weekly Progress",
       value: `${state.interviewPrepPacks.length} prep packs`,
       body: `${state.applications.length} saved jobs and ${interviewApplications.length} interviews.`
+    }
+  ]
+  const commandQuickActions = [
+    {
+      href: "/dashboard/inbox",
+      label: "Open Job Inbox",
+      title: "Review saved roles",
+      body: "Check which roles need a decision, status update or next action."
+    },
+    {
+      href: "/dashboard/match-score",
+      label: "Check Match Score",
+      title: canSaveCheckedJob ? "Save this checked job" : "Analyse a role",
+      body: canSaveCheckedJob
+        ? "A role is ready to save into your tracker with evidence attached."
+        : "Paste a job description to see fit, missing proof and limits."
+    },
+    {
+      href: "/dashboard/follow-ups",
+      label: "Open Follow-ups",
+      title:
+        activeActionCount > 0
+          ? `${activeActionCount} follow-up${activeActionCount === 1 ? "" : "s"} due`
+          : "Follow-ups are clear",
+      body:
+        activeActionCount > 0
+          ? "Move the next action forward before it gets buried."
+          : "No urgent follow-up is waiting from saved applications."
     }
   ]
 
@@ -2562,7 +2591,6 @@ export default function HomePage({
       )
     }
   }
-  const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const activeInterviewQuestion =
     customInterviewQuestion.trim() || interviewQuestion
   const interviewDisclaimer = getInterviewBuddyDisclaimer(activeInterviewQuestion)
@@ -2651,6 +2679,9 @@ export default function HomePage({
             <div className="profile-completion-meter">
               <small>User Profile Completion</small>
               <strong>{readinessScore}%</strong>
+              <span aria-hidden="true">
+                <i style={{ width: `${readinessScore}%` }} />
+              </span>
             </div>
           </div>
           {currentTab === "jobs" ? (
@@ -3158,6 +3189,15 @@ export default function HomePage({
               </article>
             ))}
           </div>
+          <div className="command-action-dock" aria-label="Recommended actions">
+            {commandQuickActions.map((action) => (
+              <a href={action.href} key={action.href}>
+                <span>{action.label}</span>
+                <strong>{action.title}</strong>
+                <p>{action.body}</p>
+              </a>
+            ))}
+          </div>
         </section>
       )}
 
@@ -3167,6 +3207,7 @@ export default function HomePage({
             <a className="dashboard-route-card" href={route.href} key={route.id}>
               <strong>{route.label}</strong>
               <span>{route.summary}</span>
+              <small>Open workspace</small>
             </a>
           ))}
           {!filteredDashboardRoutes.length && (

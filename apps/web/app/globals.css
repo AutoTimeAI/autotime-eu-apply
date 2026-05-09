@@ -245,11 +245,13 @@ h4 {
 
 .command-search input {
   min-height: 42px;
+  border-color: var(--border-strong);
+  background: #ffffff;
 }
 
 .profile-completion-meter {
   display: grid;
-  gap: 2px;
+  gap: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-raised);
@@ -266,6 +268,20 @@ h4 {
 .profile-completion-meter strong {
   color: var(--blue);
   line-height: 1;
+}
+
+.profile-completion-meter span {
+  overflow: hidden;
+  height: 6px;
+  border-radius: 999px;
+  background: #e7edf5;
+}
+
+.profile-completion-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
 }
 
 .eyebrow {
@@ -395,6 +411,7 @@ h4 {
 
 .page-arrow-button:hover {
   background: var(--surface-muted);
+  transform: translateY(-1px);
 }
 
 .page-arrow-button.disabled {
@@ -471,6 +488,7 @@ h4 {
 }
 
 .command-sidebar a {
+  position: relative;
   border-radius: 6px;
   color: var(--muted);
   font-size: 0.9rem;
@@ -484,6 +502,18 @@ h4 {
 .command-sidebar a[aria-current="page"] {
   background: var(--surface-muted);
   color: var(--accent-strong);
+}
+
+.command-sidebar a.active::before,
+.command-sidebar a[aria-current="page"]::before {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  content: "";
 }
 
 .command-content {
@@ -503,6 +533,8 @@ h4 {
 }
 
 .command-centre-card {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 8px;
   min-height: 138px;
@@ -512,6 +544,22 @@ h4 {
   background: var(--surface);
   box-shadow: var(--shadow-tight);
   padding: 14px;
+}
+
+.command-centre-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+  content: "";
+}
+
+.command-centre-card:hover,
+.dashboard-route-card:hover,
+.command-action-dock a:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
 }
 
 .command-centre-card span {
@@ -527,6 +575,43 @@ h4 {
 }
 
 .command-centre-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.command-action-dock {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.command-action-dock a {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow-tight);
+  color: inherit;
+  padding: 14px;
+  text-decoration: none;
+}
+
+.command-action-dock span,
+.dashboard-route-card small {
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.command-action-dock strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.command-action-dock p {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
@@ -551,11 +636,6 @@ h4 {
   color: inherit;
   padding: 16px;
   text-decoration: none;
-}
-
-.dashboard-route-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
 }
 
 .dashboard-route-card strong {
@@ -2839,6 +2919,7 @@ h4 {
   .strategy-card-grid,
   .decision-columns,
   .command-centre-grid,
+  .command-action-dock,
   .readiness-roadmap,
   .dashboard-route-grid,
   .analytics-grid,
@@ -2948,6 +3029,7 @@ h4 {
   .executive-panel,
   .command-header-tools,
   .command-centre-grid,
+  .command-action-dock,
   .interview-buddy-layout,
   .dashboard-route-grid,
   .extension-distribution-grid,
