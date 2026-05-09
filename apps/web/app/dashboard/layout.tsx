@@ -4,6 +4,7 @@ import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate"
 import { createServerClient } from "../../lib/supabase/server"
 import {
   DashboardPlanProvider,
+  DashboardTopNav,
   UserNav
 } from "../../components/UserNav"
 import { UpgradeBanner } from "../../components/UpgradeBanner"
@@ -37,15 +38,7 @@ export default async function DashboardLayout({
               <span>AutoTime</span>
               <strong>EU Apply</strong>
             </a>
-            <nav className="dashboard-topnav" aria-label="Dashboard">
-              <a href="/dashboard">Workspace</a>
-              <a href="/dashboard/profile">Profile</a>
-              <a href="/dashboard/jobs">Job Check</a>
-              <a href="/dashboard/applications">Applications</a>
-              <a href="/dashboard/interview">Interview</a>
-              <a href="/dashboard/extension">Extension</a>
-              <a href="/pricing">Pricing</a>
-            </nav>
+            <DashboardTopNav />
             <UserNav email={email} plan={plan} />
           </header>
           {plan === "free" ? (

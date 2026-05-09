@@ -1906,9 +1906,17 @@ h4 {
 }
 
 .dashboard-topnav a:hover,
+.dashboard-topnav a.active,
+.dashboard-topnav a[aria-current="page"],
 .product-nav a:hover {
   background: var(--surface-muted);
   color: var(--ink);
+}
+
+.dashboard-topnav a.active,
+.dashboard-topnav a[aria-current="page"] {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
 }
 
 .dashboard-brand {

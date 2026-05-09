@@ -229,7 +229,7 @@ const commandSidebarItems: Array<{
     href: "/dashboard/application-answers",
     focus: "application-answers",
     label: "Application Answers",
-    routeId: "interview"
+    routeId: "profile"
   },
   {
     href: "/dashboard/autofill-profile",
@@ -2198,8 +2198,11 @@ export default function HomePage({
     saveTrustState(next)
   }
 
-  const openDashboardView = (nextView: DashboardTab) => {
-    window.location.assign(`/dashboard/${nextView}`)
+  const openDashboardView = (nextView: DashboardTab | "overview") => {
+    const nextRoute =
+      nextView === "overview" ? "/dashboard" : `/dashboard/${nextView}`
+
+    window.location.assign(nextRoute)
   }
 
   const updateProductContext = <K extends keyof ProductContext>(
@@ -2795,11 +2798,13 @@ export default function HomePage({
           <div className="command-header-tools">
             {showHeaderJobActions ? (
               <>
+                {currentTab !== "jobs" ? (
                 <a className="secondary-button" href="/dashboard/jobs">
                   Import Job
                 </a>
-                <a className="secondary-button" href="/dashboard/jobs">
-                  Analyse Current Page
+                ) : null}
+                <a className="secondary-button" href="/dashboard/inbox">
+                  Job Inbox
                 </a>
               </>
             ) : null}
@@ -2845,7 +2850,8 @@ export default function HomePage({
         <nav className="page-arrow-nav" aria-label="Page step controls">
           {activeFocus !== "dashboard" ? (
             <a className="page-arrow-button" href="/dashboard">
-              Dashboard
+              <span aria-hidden="true">{"\u2302"}</span>
+              <span>Dashboard</span>
             </a>
           ) : null}
           {previousCommandItem ? (

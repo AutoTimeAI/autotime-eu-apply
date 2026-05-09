@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, type ReactNode, useContext, useState } from "react"
+import { usePathname } from "next/navigation"
 import { createBrowserClient } from "../lib/supabase/client"
 import type { SubscriptionPlan } from "../lib/supabase/types"
 
@@ -42,6 +43,47 @@ export function DashboardPlanProvider({
 
 function getInitial(email: string): string {
   return email.trim().charAt(0).toUpperCase() || "A"
+}
+
+const dashboardTopNavItems = [
+  { href: "/dashboard", label: "Workspace" },
+  { href: "/dashboard/profile", label: "Profile" },
+  { href: "/dashboard/jobs", label: "Job Check" },
+  { href: "/dashboard/applications", label: "Applications" },
+  { href: "/dashboard/interview", label: "Interview" },
+  { href: "/dashboard/extension", label: "Extension" },
+  { href: "/pricing", label: "Pricing" }
+]
+
+function isActiveTopNavItem(pathname: string, href: string) {
+  if (href === "/dashboard") {
+    return pathname === href
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+export function DashboardTopNav() {
+  const pathname = usePathname()
+
+  return (
+    <nav className="dashboard-topnav" aria-label="Dashboard">
+      {dashboardTopNavItems.map((item) => {
+        const isActive = isActiveTopNavItem(pathname, item.href)
+
+        return (
+          <a
+            aria-current={isActive ? "page" : undefined}
+            className={isActive ? "active" : undefined}
+            href={item.href}
+            key={item.href}
+          >
+            {item.label}
+          </a>
+        )
+      })}
+    </nav>
+  )
 }
 
 export function UserNav({ email, plan }: UserNavProps) {
