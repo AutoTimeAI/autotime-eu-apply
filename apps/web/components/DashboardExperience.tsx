@@ -887,6 +887,63 @@ function normaliseSentence(value: string) {
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`
 }
 
+function getMeaningfulTokens(value: string) {
+  return value
+    .toLowerCase()
+    .match(/[a-z][a-z'-]{2,}/g) ?? []
+}
+
+function hasLikelyKeyboardNoise(value: string) {
+  const compact = value.toLowerCase().replace(/[^a-z]/g, "")
+
+  if (!compact) {
+    return true
+  }
+
+  const uniqueLetters = new Set(compact).size
+  const vowelCount = compact.match(/[aeiou]/g)?.length ?? 0
+  const vowelRatio = vowelCount / compact.length
+  const repeatedRuns = /(.)\1{2,}/.test(compact)
+
+  return (
+    compact.length < 8 ||
+    uniqueLetters <= 3 ||
+    vowelRatio < 0.18 ||
+    repeatedRuns
+  )
+}
+
+function validateInterviewBuddyInput({
+  draft,
+  question
+}: {
+  draft: string
+  question: string
+}): string | null {
+  const cleanQuestion = question.trim()
+  const cleanDraft = draft.trim()
+  const questionTokens = getMeaningfulTokens(cleanQuestion)
+  const draftTokens = getMeaningfulTokens(cleanDraft)
+
+  if (cleanQuestion.length < 12 || questionTokens.length < 3) {
+    return "Please enter a real interview question before generating answers."
+  }
+
+  if (hasLikelyKeyboardNoise(cleanQuestion)) {
+    return "The question looks like random text. Add a clear interview question."
+  }
+
+  if (cleanDraft.length < 30 || draftTokens.length < 6) {
+    return "Please add a rough but meaningful answer with at least one real example, skill, or situation."
+  }
+
+  if (hasLikelyKeyboardNoise(cleanDraft)) {
+    return "The draft looks like random text. Add honest notes about what you did, learned, or achieved."
+  }
+
+  return null
+}
+
 function getProfileContextForInterview(profile: CandidateProfile) {
   return [
     profile.targetRoles && `Target roles: ${profile.targetRoles}`,
@@ -967,6 +1024,10 @@ function createInterviewBuddyOutputs({
 }): InterviewBuddyOutputs {
   const cleanQuestion = question.trim()
   const cleanDraft = normaliseSentence(draft)
+  const validationError = validateInterviewBuddyInput({
+    draft,
+    question
+  })
   const profileContext = getProfileContextForInterview(profile)
   const evidenceLine = profileContext
     ? `I would connect that to my profile evidence: ${normaliseSentence(profileContext)}`
@@ -974,7 +1035,7 @@ function createInterviewBuddyOutputs({
   const limitLine =
     "I would avoid adding claims that are not already in my draft or saved profile."
 
-  if (!cleanDraft) {
+  if (validationError || !cleanDraft) {
     return emptyInterviewBuddyOutputs
   }
 
@@ -2655,6 +2716,17 @@ export default function HomePage({
 
     if (!interviewDraftAnswer.trim()) {
       setStatus("Add your rough draft answer first")
+      return
+    }
+
+    const validationError = validateInterviewBuddyInput({
+      draft: interviewDraftAnswer,
+      question: activeInterviewQuestion
+    })
+
+    if (validationError) {
+      setInterviewBuddyOutputs(emptyInterviewBuddyOutputs)
+      setStatus(validationError)
       return
     }
 
