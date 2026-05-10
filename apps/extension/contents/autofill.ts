@@ -42,6 +42,7 @@ type JobPageResponse = JobPageDetails & {
 
 type TextControl = HTMLInputElement | HTMLTextAreaElement
 type StoredWidgetPlacement = {
+  closed?: boolean
   height?: number
   left?: number
   top?: number
@@ -164,7 +165,8 @@ function getStoredWidgetPosition() {
       typeof parsed.left === "number" ||
       typeof parsed.top === "number" ||
       typeof parsed.width === "number" ||
-      typeof parsed.height === "number"
+      typeof parsed.height === "number" ||
+      typeof parsed.closed === "boolean"
     ) {
       return parsed
     }
@@ -1552,7 +1554,7 @@ function initializeMovableJobWidget() {
   let details = detectJobPage()
   let accountSession: AccountSession | null = null
   let isMinimized = false
-  let isClosed = false
+  let isClosed = storedPosition?.closed === true
   let status = ""
   host.dataset.autotimeMinimized = String(isMinimized)
   host.dataset.autotimeClosed = String(isClosed)
@@ -1572,6 +1574,7 @@ function initializeMovableJobWidget() {
     isClosed = false
     host.dataset.autotimeMinimized = String(isMinimized)
     host.dataset.autotimeClosed = String(isClosed)
+    saveWidgetPlacement({ closed: isClosed })
     const current = host.getBoundingClientRect()
     const currentSize = getCurrentWidgetSize()
     const nextPosition = clampWidgetPosition(
@@ -1590,6 +1593,7 @@ function initializeMovableJobWidget() {
     isMinimized = false
     host.dataset.autotimeClosed = String(isClosed)
     host.dataset.autotimeMinimized = String(isMinimized)
+    saveWidgetPlacement({ closed: isClosed })
     const current = host.getBoundingClientRect()
     const currentSize = getCurrentWidgetSize()
     const nextPosition = clampWidgetPosition(
@@ -1659,6 +1663,7 @@ function initializeMovableJobWidget() {
     isMinimized = false
     host.dataset.autotimeClosed = String(isClosed)
     host.dataset.autotimeMinimized = String(isMinimized)
+    saveWidgetPlacement({ closed: isClosed })
   })
 
   void getAccountSession().then((session) => {
