@@ -580,8 +580,8 @@ function getWidgetMarkup({
       }
 
       .handle img {
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         border: 1px solid #c9d4e6;
         border-radius: 6px;
         background: #ffffff;
@@ -788,7 +788,7 @@ function getWidgetMarkup({
     </style>
     <section class="widget" aria-label="AutoTime job tracker">
       <div class="handle" data-autotime-drag-handle>
-        <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/48.png")}" />
+        <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
         <strong>AutoTime EU Apply</strong>
         <span>Drag to move</span>
       </div>
