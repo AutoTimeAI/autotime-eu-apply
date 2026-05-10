@@ -264,7 +264,7 @@ async function syncTrackedApplicationsToDashboard(
   const session = await getAccountSession()
 
   if (!session?.authToken.trim()) {
-    return "Connect the extension to your dashboard to sync jobs."
+    return "Dashboard not connected."
   }
 
   try {
@@ -1000,9 +1000,9 @@ function getWidgetMarkup({
     : normalizedStatus.includes("synced to dashboard")
       ? "Saved roles appear in the AutoTime dashboard tracker."
       : normalizedStatus.includes("saved locally") ||
-          normalizedStatus.includes("tracked in extension") ||
+        normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
-        ? "Connect from the dashboard extension page to sync this job."
+        ? "Open Dashboard > Extension to sync this job."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
           : "Check the visible job page and try again."
@@ -1505,7 +1505,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
 
   return syncStatus === "Synced to dashboard."
     ? "Job tracked and synced to dashboard."
-    : "Job saved locally."
+    : "Job saved locally"
 }
 
 function initializeMovableJobWidget() {

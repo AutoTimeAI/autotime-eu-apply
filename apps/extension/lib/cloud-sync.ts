@@ -112,7 +112,7 @@ export async function syncApplicationsToDashboard({
   session: AccountSession | null
 }) {
   if (!session?.authToken.trim()) {
-    throw new Error("Connect the extension to your dashboard to sync jobs.")
+    throw new Error("Dashboard not connected.")
   }
 
   const headers = {
