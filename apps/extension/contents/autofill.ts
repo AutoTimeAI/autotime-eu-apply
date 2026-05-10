@@ -1453,6 +1453,7 @@ function bindWidgetEvents(
     "[data-autotime-open-dashboard]"
   )
   let didDragWidget = false
+  let suppressNextLauncherClick = false
 
   const findWidgetControl = (event: Event) =>
     event
@@ -1484,17 +1485,35 @@ function bindWidgetEvents(
       }
     })
 
+    control.addEventListener("pointerup", (event) => {
+      if (control.closest("[data-autotime-launcher]")) {
+        suppressNextLauncherClick = true
+        activateWidgetControl(event, true)
+      }
+    })
+
     control.addEventListener("click", (event) => {
+      const isLauncherControl = Boolean(control.closest("[data-autotime-launcher]"))
+
+      if (isLauncherControl && suppressNextLauncherClick) {
+        event.preventDefault()
+        event.stopPropagation()
+        suppressNextLauncherClick = false
+        return
+      }
+
       activateWidgetControl(
         event,
-        Boolean(control.closest("[data-autotime-launcher]"))
+        isLauncherControl
       )
     })
   })
 
   const bindDragSurface = (dragSurface: HTMLElement, skipControls: boolean) => {
     dragSurface.addEventListener("pointerdown", (event) => {
-      if (skipControls && findWidgetControl(event)) {
+      const startedOnControl = Boolean(findWidgetControl(event))
+
+      if (skipControls && startedOnControl) {
         return
       }
 
@@ -1533,8 +1552,15 @@ function bindWidgetEvents(
         dragSurface.removeEventListener("pointerup", onPointerUp)
         const nextRect = host.getBoundingClientRect()
         saveWidgetPosition(nextRect.left, nextRect.top)
+        const wasDragged = didDragWidget
 
-        if (didDragWidget) {
+        if (!skipControls && startedOnControl && !wasDragged) {
+          suppressNextLauncherClick = true
+          shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
+          return
+        }
+
+        if (wasDragged) {
           window.setTimeout(() => {
             didDragWidget = false
           }, 0)
