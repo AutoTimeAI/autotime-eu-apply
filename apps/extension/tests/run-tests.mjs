@@ -270,15 +270,15 @@ test("fills only empty visible enabled supported inputs", () => {
   assert.equal(canFillInput({ ...fillable, type: "password" }), false)
 })
 
-test("infers job page details from common page text", () => {
+test("reads explicit job page fields without title fallbacks", () => {
   assert.deepEqual(
     inferJobPageDetails({
       title: "Senior Frontend Engineer at Example Co - Careers",
       url: "https://example.com/jobs/frontend"
     }),
     {
-      roleTitle: "Senior Frontend Engineer",
-      company: "Example Co",
+      roleTitle: "",
+      company: "",
       location: "",
       jobDescription: "",
       url: "https://example.com/jobs/frontend",
@@ -313,6 +313,8 @@ test("cleans job page descriptions and infers missing location", () => {
   assert.deepEqual(
     inferJobPageDetails({
       title: "Product Analyst at Example Co",
+      heading: "Product Analyst",
+      company: "Example Co",
       description:
         "<p>Location: Dublin, Ireland</p><p>Analyse payments workflows, APIs and dashboards for European teams.</p>",
       url: "https://example.com/jobs/product-analyst"
@@ -369,8 +371,8 @@ test("ignores scraped paragraph text in explicit job fields", () => {
     url: "https://example.com/jobs/product-analyst"
   })
 
-  assert.equal(details.roleTitle, "Senior Product Analyst")
-  assert.equal(details.company, "Example Co")
+  assert.equal(details.roleTitle, "")
+  assert.equal(details.company, "")
   assert.equal(details.location, "Dublin, Ireland")
   assert.equal(
     details.jobDescription,
@@ -404,15 +406,15 @@ test("marks LinkedIn as visible import with manual application boundary", () => 
   assert.match(getLinkedInManualInputMessage(), /will not auto-submit/i)
 })
 
-test("cleans priority platform job page titles", () => {
+test("does not split priority platform page titles into guessed fields", () => {
   assert.deepEqual(
     inferJobPageDetails({
       title: "Job Application for Product Analyst at Example Co",
       url: "https://boards.greenhouse.io/example/jobs/123"
     }),
     {
-      roleTitle: "Product Analyst",
-      company: "Example Co",
+      roleTitle: "",
+      company: "",
       location: "",
       jobDescription: "",
       url: "https://boards.greenhouse.io/example/jobs/123",
@@ -428,8 +430,8 @@ test("cleans priority platform job page titles", () => {
       url: "https://jobs.lever.co/example/123"
     }),
     {
-      roleTitle: "Senior Product Analyst",
-      company: "Example Co",
+      roleTitle: "",
+      company: "",
       location: "",
       jobDescription: "",
       url: "https://jobs.lever.co/example/123",
@@ -442,12 +444,11 @@ test("cleans priority platform job page titles", () => {
   assert.deepEqual(
     inferJobPageDetails({
       title: "Job Description - Business Systems Analyst",
-      company: "Example Co",
       url: "https://example.wd3.myworkdayjobs.com/jobs/job/123"
     }),
     {
-      roleTitle: "Business Systems Analyst",
-      company: "Example Co",
+      roleTitle: "",
+      company: "",
       location: "",
       jobDescription: "",
       url: "https://example.wd3.myworkdayjobs.com/jobs/job/123",
@@ -458,11 +459,13 @@ test("cleans priority platform job page titles", () => {
   )
 })
 
-test("infers priority ATS details from realistic titles and explicit metadata", () => {
+test("reads priority ATS details from explicit metadata only", () => {
   const cases = [
     {
       input: {
         title: "Senior Data Analyst - Example Co",
+        heading: "Senior Data Analyst",
+        company: "Example Co",
         location: "Berlin, Germany",
         url: "https://jobs.ashbyhq.com/example/abc123"
       },
@@ -476,6 +479,8 @@ test("infers priority ATS details from realistic titles and explicit metadata", 
     {
       input: {
         title: "Product Operations Analyst | Example Co",
+        heading: "Product Operations Analyst",
+        company: "Example Co",
         url: "https://jobs.smartrecruiters.com/example/123"
       },
       expected: {
@@ -488,6 +493,8 @@ test("infers priority ATS details from realistic titles and explicit metadata", 
     {
       input: {
         title: "Business Analyst - Example Co Careers",
+        heading: "Business Analyst",
+        company: "Example Co Careers",
         url: "https://careers.icims.com/jobs/123/business-analyst"
       },
       expected: {
@@ -500,6 +507,8 @@ test("infers priority ATS details from realistic titles and explicit metadata", 
     {
       input: {
         title: "Application Support Analyst at Example Co",
+        heading: "Application Support Analyst",
+        company: "Example Co",
         url: "https://example.bamboohr.com/careers/123"
       },
       expected: {
@@ -512,6 +521,8 @@ test("infers priority ATS details from realistic titles and explicit metadata", 
     {
       input: {
         title: "Systems Analyst - Example Co - Teamtailor",
+        heading: "Systems Analyst",
+        company: "Example Co",
         url: "https://jobs.teamtailor.com/example/123"
       },
       expected: {
@@ -524,6 +535,8 @@ test("infers priority ATS details from realistic titles and explicit metadata", 
     {
       input: {
         title: "Implementation Analyst - Example Co - Recruitee",
+        heading: "Implementation Analyst",
+        company: "Example Co",
         url: "https://example.recruitee.com/o/implementation-analyst"
       },
       expected: {
@@ -536,6 +549,8 @@ test("infers priority ATS details from realistic titles and explicit metadata", 
     {
       input: {
         title: "Technical Business Analyst | Example Co | Jobvite",
+        heading: "Technical Business Analyst",
+        company: "Example Co",
         url: "https://jobs.jobvite.com/example/job/123"
       },
       expected: {
@@ -548,6 +563,7 @@ test("infers priority ATS details from realistic titles and explicit metadata", 
     {
       input: {
         title: "Revenue Operations Analyst - Example Co",
+        heading: "Revenue Operations Analyst",
         company: "Example Co",
         url: "https://example.jobs.personio.com/job/123"
       },

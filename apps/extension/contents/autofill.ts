@@ -813,17 +813,19 @@ function detectJobPage(): JobPageResponse {
     (getJsonLdText(jsonLdPosting?.jobLocationType) === "TELECOMMUTE"
       ? "Remote"
       : getJsonLdText(jsonLdPosting?.jobLocationType))
+  const jsonLdTitle =
+    typeof jsonLdPosting?.title === "string" ? jsonLdPosting.title : ""
   const jsonLdDescription =
     typeof jsonLdPosting?.description === "string"
       ? getHtmlText(jsonLdPosting.description)
       : ""
 
-  // These selectors cover common job-board conventions while title parsing
-  // provides a fallback for pages without structured job metadata.
+  // These selectors cover common job-board conventions. Page titles are kept
+  // for notes only and are not split into guessed job fields.
   const pageTitle =
-    (typeof jsonLdPosting?.title === "string" ? jsonLdPosting.title : "") ||
     getMetaContent(["og:title", "twitter:title"]) ||
-    document.title
+    document.title ||
+    jsonLdTitle
   const company =
     (typeof jsonLdHiringOrganization?.name === "string"
       ? jsonLdHiringOrganization.name
@@ -877,22 +879,24 @@ function detectJobPage(): JobPageResponse {
 
   const details = inferJobPageDetails({
     title: pageTitle,
-    heading: getFirstText([
-      ".job-details-jobs-unified-top-card__job-title h1",
-      ".jobs-unified-top-card__job-title",
-      ".job-details-jobs-unified-top-card__job-title",
-      ".jobs-unified-top-card__job-title h1",
-      ".jobs-unified-top-card__job-title a",
-      ".job-details-jobs-unified-top-card__job-title a",
-      ".topcard__title",
-      ".posting-headline h2",
-      ".app-title",
-      "h1",
-      "[data-testid='job-title']",
-      "[data-testid='jobTitle']",
-      "[data-ui='job-title']",
-      "[data-automation-id='jobPostingHeader']"
-    ], isLikelyVisibleTitle),
+    heading:
+      jsonLdTitle ||
+      getFirstText([
+        ".job-details-jobs-unified-top-card__job-title h1",
+        ".jobs-unified-top-card__job-title",
+        ".job-details-jobs-unified-top-card__job-title",
+        ".jobs-unified-top-card__job-title h1",
+        ".jobs-unified-top-card__job-title a",
+        ".job-details-jobs-unified-top-card__job-title a",
+        ".topcard__title",
+        ".posting-headline h2",
+        ".app-title",
+        "h1",
+        "[data-testid='job-title']",
+        "[data-testid='jobTitle']",
+        "[data-ui='job-title']",
+        "[data-automation-id='jobPostingHeader']"
+      ], isLikelyVisibleTitle),
     company,
     location,
     description:

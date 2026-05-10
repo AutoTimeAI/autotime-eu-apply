@@ -34,27 +34,6 @@ type JobPageTextInput = {
   source?: string
 }
 
-const fillerTitleParts = [
-  "apply",
-  "careers",
-  "job",
-  "job application",
-  "jobs",
-  "job description",
-  "job details",
-  "job opening",
-  "job openings",
-  "greenhouse",
-  "jobvite",
-  "lever",
-  "linkedin",
-  "personio",
-  "recruitee",
-  "smartrecruiters",
-  "teamtailor",
-  "workday"
-]
-
 function cleanText(value = "") {
   return value
     .replace(/<[^>]*>/g, " ")
@@ -140,12 +119,6 @@ export function isLinkedInUrl(url = "") {
 
 export function getLinkedInManualInputMessage() {
   return "LinkedIn stays manual: AutoTime can import visible job details, but will not auto-submit or fill applications."
-}
-
-function isUsefulTitlePart(value: string) {
-  const text = cleanText(value).toLowerCase()
-
-  return text !== "" && !fillerTitleParts.includes(text)
 }
 
 function cleanRoleTitle(value = "") {
@@ -271,54 +244,15 @@ export function inferLocationSignalFromText(description = "") {
   return ""
 }
 
-function parseTitle(title = "", platform: JobPlatform = "Generic") {
-  const cleanTitle = cleanRoleTitle(title)
-  const atMatch = cleanTitle.match(/^(.+?)\s+at\s+(.+?)(?:\s*[|-]\s*.+)?$/i)
-
-  if (atMatch) {
-    return {
-      roleTitle: cleanRoleTitle(atMatch[1]),
-      company: cleanText(atMatch[2])
-    }
-  }
-
-  const parts = cleanTitle
-    .split(/\s+[|-]\s+/)
-    .map(cleanText)
-    .filter(isUsefulTitlePart)
-
-  if (platform === "Lever" && parts.length >= 2) {
-    return {
-      roleTitle: cleanRoleTitle(parts[1]),
-      company: parts[0]
-    }
-  }
-
-  if (parts.length >= 2) {
-    return {
-      roleTitle: cleanRoleTitle(parts[0]),
-      company: parts[1]
-    }
-  }
-
-  return {
-    roleTitle: cleanRoleTitle(cleanTitle),
-    company: ""
-  }
-}
-
 export function inferJobPageDetails(
   input: JobPageTextInput
 ): JobPageDetails {
-  // Prefer explicit page text over title parsing because job-board titles often
-  // include branding, location, or generic words such as "Careers".
+  // Use actual structured or visible job fields only. Page titles are kept as
+  // notes, but not split into guessed role/company values.
   const url = cleanText(input.url)
   const platform = getJobPlatform(url)
-  const parsedTitle = parseTitle(input.title, platform)
-  const roleTitle =
-    getLikelyRoleTitle(input.heading) || getLikelyRoleTitle(parsedTitle.roleTitle)
-  const company =
-    getLikelyCompany(input.company) || getLikelyCompany(parsedTitle.company)
+  const roleTitle = getLikelyRoleTitle(input.heading)
+  const company = getLikelyCompany(input.company)
   const jobDescription = cleanText(input.description)
   const location =
     getLikelyLocation(input.location) || inferLocationSignalFromText(input.description)
