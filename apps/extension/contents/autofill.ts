@@ -45,9 +45,10 @@ type TextControl = HTMLInputElement | HTMLTextAreaElement
 const widgetHostId = "autotime-draggable-job-widget"
 const widgetPositionKey = "autotime-draggable-job-widget-position"
 const widgetToggleEventName = "autotime-toggle-widget"
+const widgetCloseEventName = "autotime-close-widget"
 const widgetRightOffset = 12
 const fullWidgetWidth = 480
-const fullWidgetHeight = 420
+const fullWidgetHeight = 360
 const minWidgetWidth = 64
 const minWidgetHeight = 64
 const noJobDescriptionMessage =
@@ -958,7 +959,10 @@ function getWidgetMarkup({
       }
 
       .widget {
+        display: grid;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
         width: min(${fullWidgetWidth}px, calc(100vw - 24px));
+        height: min(${fullWidgetHeight}px, calc(100vh - 24px));
         border: 1px solid #bdd4dc;
         border-left: 4px solid #007c78;
         border-radius: 8px;
@@ -1069,8 +1073,9 @@ function getWidgetMarkup({
       .status-alert {
         display: grid;
         gap: 3px;
-        margin: 10px 12px 0;
-        padding: 10px 12px;
+        max-height: 86px;
+        margin: 8px 10px 0;
+        padding: 9px 10px;
         border: 1px solid #8bcfc8;
         border-left: 4px solid #007c78;
         border-radius: 8px;
@@ -1079,18 +1084,25 @@ function getWidgetMarkup({
         color: #064e4a;
         font-size: 12.5px;
         font-weight: 700;
+        line-height: 1.35;
+        overflow-y: auto;
+        overflow-wrap: anywhere;
       }
 
       .status-alert small {
         color: #47716e;
         font-size: 11px;
         font-weight: 600;
+        line-height: 1.3;
       }
 
       .grid {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 10px;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
         padding: 12px;
       }
 
@@ -1213,7 +1225,9 @@ function getWidgetMarkup({
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: end;
         gap: 5px;
-        padding: 0 12px 12px;
+        padding: 8px 12px 12px;
+        border-top: 1px solid #bdd4dc;
+        background: rgba(255, 255, 255, 0.92);
       }
 
       button {
@@ -1230,6 +1244,7 @@ function getWidgetMarkup({
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0;
+        white-space: nowrap;
       }
 
       button:hover {
@@ -1285,6 +1300,22 @@ function getWidgetMarkup({
         justify-self: end;
         justify-items: end;
         gap: 5px;
+      }
+
+      @media (max-width: 420px) {
+        .grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .action {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .action button {
+          width: 100%;
+          min-width: 0;
+          padding: 0 10px;
+        }
       }
     </style>
     <section class="widget" aria-label="AutoTime job tracker">
@@ -1354,7 +1385,7 @@ function getWidgetMarkup({
       </div>
     </section>
     <section class="launcher" data-autotime-launcher aria-label="AutoTime widget minimized">
-      <button class="launcher-logo" data-autotime-toggle-widget type="button" aria-label="Open AutoTime widget">
+      <button class="launcher-logo" data-autotime-toggle-widget type="button" title="Open AutoTime widget. Triple click to close it." aria-label="Open AutoTime widget. Triple click to close it.">
         <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
       </button>
     </section>
@@ -1450,14 +1481,7 @@ function initializeMovableJobWidget() {
     toggleWidget()
   })
 
-  void getAccountSession().then((session) => {
-    accountSession = session
-    render()
-  })
-
-  render()
-
-  window.addEventListener("resize", () => {
+  const handleResize = () => {
     const current = host.getBoundingClientRect()
     const nextPosition = clampWidgetPosition(
       current.left,
@@ -1467,9 +1491,9 @@ function initializeMovableJobWidget() {
     )
     host.style.left = `${nextPosition.left}px`
     host.style.top = `${nextPosition.top}px`
-  })
+  }
 
-  setInterval(() => {
+  const refreshInterval = window.setInterval(() => {
     const nextDetails = detectJobPage()
 
     if (
@@ -1483,6 +1507,22 @@ function initializeMovableJobWidget() {
       render()
     }
   }, 2500)
+
+  shadow.addEventListener(widgetCloseEventName, (event) => {
+    event.stopPropagation()
+    window.clearInterval(refreshInterval)
+    window.removeEventListener("resize", handleResize)
+    host.remove()
+  })
+
+  void getAccountSession().then((session) => {
+    accountSession = session
+    render()
+  })
+
+  render()
+
+  window.addEventListener("resize", handleResize)
 }
 
 function bindWidgetEvents(
@@ -1585,6 +1625,15 @@ function bindWidgetEvents(
     let offsetY = 0
     let startWidth = minWidgetWidth
     let startHeight = minWidgetHeight
+    let launcherClickCount = 0
+    let launcherClickTimer: number | null = null
+
+    const clearLauncherClickTimer = () => {
+      if (launcherClickTimer !== null) {
+        window.clearTimeout(launcherClickTimer)
+        launcherClickTimer = null
+      }
+    }
 
     dragSurface.addEventListener("pointerdown", (event) => {
       event.stopPropagation()
@@ -1656,10 +1705,24 @@ function bindWidgetEvents(
 
       if (launcherWasDragged) {
         launcherWasDragged = false
+        launcherClickCount = 0
+        clearLauncherClickTimer()
         return
       }
 
-      shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
+      launcherClickCount += 1
+      clearLauncherClickTimer()
+
+      if (launcherClickCount >= 3) {
+        launcherClickCount = 0
+        shadow.dispatchEvent(new CustomEvent(widgetCloseEventName))
+        return
+      }
+
+      launcherClickTimer = window.setTimeout(() => {
+        launcherClickCount = 0
+        shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
+      }, 260)
     })
   }
 
