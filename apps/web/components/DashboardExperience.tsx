@@ -2137,10 +2137,19 @@ export default function HomePage({
   const showApplicationList = activeFocus !== "insights" && !selectedApplication
   const showInterviewPrepPacks = activeFocus === "interview-prep"
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
+  const decisionTone =
+    decisionBrief.contentGate === "ready"
+      ? "good"
+      : decisionBrief.contentGate === "stretch"
+        ? "warn"
+        : "blocked"
+  const followUpTone = activeActionCount > 0 ? "warn" : "good"
   const commandCentreCards = [
     {
       title: "Next Actions",
       value: activeActionCount > 0 ? `${activeActionCount} actions` : "Clear",
+      tone: followUpTone,
+      progress: activeActionCount > 0 ? 66 : 100,
       body:
         activeActionCount > 0
           ? "Open follow-ups and deadlines that need attention."
@@ -2149,11 +2158,15 @@ export default function HomePage({
     {
       title: "Current Job Decision",
       value: `${fitEvaluation.overallScore}/100`,
+      tone: decisionTone,
+      progress: fitEvaluation.overallScore,
       body: fitEvaluation.decision
     },
     {
       title: "Profile Evidence",
       value: `${readinessScore}%`,
+      tone: readinessScore >= 80 ? "good" : readinessScore >= 50 ? "warn" : "blocked",
+      progress: readinessScore,
       body:
         decisionBrief.missingInputs.length > 0
           ? `${decisionBrief.missingInputs.length} missing input${decisionBrief.missingInputs.length === 1 ? "" : "s"}`
@@ -2162,6 +2175,13 @@ export default function HomePage({
     {
       title: "Decision Gate",
       value: riskLabel,
+      tone: decisionTone,
+      progress:
+        decisionBrief.contentGate === "ready"
+          ? 100
+          : decisionBrief.contentGate === "stretch"
+            ? 62
+            : 28,
       body:
         decisionBrief.contentGate === "ready"
           ? "No content blocker detected."
@@ -2172,16 +2192,22 @@ export default function HomePage({
     {
       title: "Saved Applications",
       value: `${state.applications.length} jobs`,
+      tone: state.applications.length > 0 ? "good" : "neutral",
+      progress: Math.min(100, state.applications.length * 24),
       body: `${statusCounts.Applied + statusCounts.Interview} progressed beyond saved.`
     },
     {
       title: "Follow-ups",
       value: `${activeActionCount}`,
+      tone: followUpTone,
+      progress: activeActionCount > 0 ? 45 : 100,
       body: "Next actions across saved applications."
     },
     {
       title: "Interview Prep",
       value: `${state.interviewPrepPacks.length} prep packs`,
+      tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral",
+      progress: Math.min(100, state.interviewPrepPacks.length * 34),
       body: `${state.applications.length} saved jobs and ${interviewApplications.length} interviews.`
     }
   ]
@@ -2189,6 +2215,7 @@ export default function HomePage({
     {
       label: "Storage",
       value: cloudSyncReadiness.configured ? "Sync gated" : "Local only",
+      tone: cloudSyncReadiness.configured ? "warn" : "good",
       body: cloudSyncReadiness.configured
         ? "Uploads require consent, a signed-in account and plan checks."
         : "No remote upload is enabled from this browser session."
@@ -2196,6 +2223,7 @@ export default function HomePage({
     {
       label: "Profile bridge",
       value: profileBridgeReady ? "Ready" : "Incomplete",
+      tone: profileBridgeReady ? "good" : "warn",
       body: profileBridgeReady
         ? "Required profile evidence is present for stronger job checks."
         : `${profileBridgeIssues.length} required profile field${profileBridgeIssues.length === 1 ? "" : "s"} missing.`
@@ -2203,12 +2231,46 @@ export default function HomePage({
     {
       label: "Decision output",
       value: "Index only",
+      tone: "neutral",
       body: "Scores are decision indexes, not predictions or guarantees."
     },
     {
       label: "Application boundary",
       value: "Manual apply",
+      tone: "good",
       body: "No auto-submit, hidden form action or LinkedIn automation."
+    }
+  ]
+  const overviewWorkflowItems = [
+    {
+      href: "/dashboard/autofill-profile",
+      label: "Profile",
+      value: `${readinessScore}%`,
+      detail: profileBridgeReady
+        ? "Evidence ready"
+        : `${profileBridgeIssues.length} missing`,
+      tone: readinessScore >= 80 ? "good" : readinessScore >= 50 ? "warn" : "blocked"
+    },
+    {
+      href: "/dashboard/match-score",
+      label: "Job Check",
+      value: `${fitEvaluation.overallScore}/100`,
+      detail: fitEvaluation.decision,
+      tone: decisionTone
+    },
+    {
+      href: "/dashboard/applications",
+      label: "Applications",
+      value: `${state.applications.length}`,
+      detail: `${statusCounts.Applied + statusCounts.Interview} progressed`,
+      tone: state.applications.length > 0 ? "good" : "neutral"
+    },
+    {
+      href: "/dashboard/interview",
+      label: "Interview Prep",
+      value: `${state.interviewPrepPacks.length}`,
+      detail: `${interviewApplications.length} interview roles`,
+      tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral"
     }
   ]
   const commandQuickActions = [
@@ -3128,7 +3190,7 @@ export default function HomePage({
           </div>
         </div>
         {showExecutivePanel ? (
-        <div className="executive-panel" aria-label="Dashboard evidence summary">
+        <div className={`executive-panel tone-${decisionTone}`} aria-label="Dashboard evidence summary">
           <div>
             <small>Profile evidence</small>
             <strong>{readinessScore}</strong>
@@ -3137,7 +3199,10 @@ export default function HomePage({
             <small>Decision index</small>
             <strong>{fitEvaluation.overallScore}</strong>
           </div>
-          <p>{fitEvaluation.decision}</p>
+          <p>
+            <small>Decision status</small>
+            <span>{fitEvaluation.decision}</span>
+          </p>
         </div>
         ) : null}
       </header>
@@ -3212,7 +3277,7 @@ export default function HomePage({
               </div>
               <div className="integrity-grid">
                 {workspaceIntegrityItems.map((item) => (
-                  <article key={item.label}>
+                  <article className={`tone-${item.tone}`} key={item.label}>
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
                     <p>{item.body}</p>
@@ -3539,14 +3604,29 @@ export default function HomePage({
         <section className="command-centre-overview" aria-label="Homepage sections">
           <div className="section-intro">
             <p className="eyebrow">Dashboard</p>
-            <h2>Today's Action Plan</h2>
-            <p>Clear next steps, fit signals and application movement.</p>
+            <h2>Workflow at a glance</h2>
+            <p>See what is ready, what needs evidence, and where to go next.</p>
+          </div>
+          <div className="overview-workflow-map" aria-label="Application workflow">
+            {overviewWorkflowItems.map((item) => (
+              <a className={`tone-${item.tone}`} href={item.href} key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </a>
+            ))}
           </div>
           <div className="command-centre-grid">
             {commandCentreCards.map((card) => (
-              <article className="command-centre-card" key={card.title}>
-                <span>{card.title}</span>
+              <article className={`command-centre-card tone-${card.tone}`} key={card.title}>
+                <div className="dashboard-card-topline">
+                  <span>{card.title}</span>
+                  <i aria-hidden="true" />
+                </div>
                 <strong>{card.value}</strong>
+                <div className="dashboard-card-meter" aria-hidden="true">
+                  <i style={{ width: `${card.progress}%` }} />
+                </div>
                 <p>{card.body}</p>
               </article>
             ))}
