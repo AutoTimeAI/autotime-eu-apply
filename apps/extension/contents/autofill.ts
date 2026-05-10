@@ -962,8 +962,9 @@ function getWidgetMarkup({
   const location = details?.location || "Not detected"
   const platform = details?.platform || "Waiting"
   const source = details?.source || "Waiting"
-  const description = details?.jobDescription
-    ? `${getWordCount(details.jobDescription)} words parsed`
+  const descriptionText = details?.jobDescription.trim() ?? ""
+  const description = descriptionText
+    ? `${getWordCount(descriptionText)} words parsed`
     : "Not parsed yet"
   const shouldShowDeepInsightList = hasParsedDescription || isProCustomer
   const normalizedStatus = status.toLowerCase()
@@ -1262,6 +1263,26 @@ function getWidgetMarkup({
         overflow-wrap: anywhere;
       }
 
+      .description-row dd {
+        display: grid;
+        gap: 7px;
+      }
+
+      .description-body {
+        max-height: min(220px, calc(var(--autotime-widget-height, ${fullWidgetHeight}px) * 0.46));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 8px;
+        border: 1px solid #d6deeb;
+        border-radius: 7px;
+        background: #f8fbfc;
+        color: #253149;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
       .action {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -1435,7 +1456,7 @@ function getWidgetMarkup({
             <div class="detail-row"><dt>Location</dt><dd>${escapeHtml(location)}</dd></div>
             <div class="detail-row"><dt>Platform</dt><dd>${escapeHtml(platform)}</dd></div>
             <div class="detail-row"><dt>Source</dt><dd>${escapeHtml(source)}</dd></div>
-            <div class="detail-row"><dt>Description</dt><dd>${escapeHtml(description)}</dd></div>
+            <div class="detail-row description-row"><dt>Description</dt><dd><span>${escapeHtml(description)}</span>${descriptionText ? `<div class="description-body">${escapeHtml(descriptionText)}</div>` : ""}</dd></div>
           </dl>
         </aside>
       </div>
