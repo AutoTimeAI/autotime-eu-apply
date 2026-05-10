@@ -576,6 +576,14 @@ function SidePanelApp() {
         return
       }
 
+      if (accountSession.plan !== "pro") {
+        setApplicationsStatus(
+          "This job is already saved locally. Pro is required for dashboard sync."
+        )
+        setTimeout(() => setApplicationsStatus(""), 4500)
+        return
+      }
+
       try {
         await syncApplicationsToDashboard({
           applications,
@@ -618,6 +626,14 @@ function SidePanelApp() {
 
     if (!accountSession?.authToken.trim()) {
       setApplicationsStatus("Job saved locally")
+      setTimeout(() => setApplicationsStatus(""), 4500)
+      return
+    }
+
+    if (accountSession.plan !== "pro") {
+      setApplicationsStatus(
+        "Job saved locally. Pro is required for dashboard sync."
+      )
       setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }

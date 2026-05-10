@@ -267,6 +267,10 @@ async function syncTrackedApplicationsToDashboard(
     return "Dashboard not connected."
   }
 
+  if (session.plan !== "pro") {
+    return "Pro sync required."
+  }
+
   try {
     await syncApplicationsToDashboard({
       applications,
@@ -999,8 +1003,10 @@ function getWidgetMarkup({
     ? "Please wait while AutoTime saves this role."
     : normalizedStatus.includes("synced to dashboard")
       ? "Saved roles appear in the AutoTime dashboard tracker."
+      : normalizedStatus.includes("pro sync required")
+        ? "Upgrade to Pro to sync this job to the dashboard."
       : normalizedStatus.includes("saved locally") ||
-        normalizedStatus.includes("tracked in extension") ||
+          normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
         ? "Open Dashboard > Extension to sync this job."
         : normalizedStatus.includes("already tracked")
@@ -1492,6 +1498,8 @@ async function saveDetectedJob(details: JobPageResponse | null) {
     const syncStatus = await syncTrackedApplicationsToDashboard(applications)
     return syncStatus === "Synced to dashboard."
       ? "This job is already tracked and synced to dashboard."
+      : syncStatus === "Pro sync required."
+        ? "This job is already saved locally (Pro sync required)"
       : "This job is already saved locally."
   }
 
@@ -1505,6 +1513,8 @@ async function saveDetectedJob(details: JobPageResponse | null) {
 
   return syncStatus === "Synced to dashboard."
     ? "Job tracked and synced to dashboard."
+    : syncStatus === "Pro sync required."
+      ? "Job saved locally (Pro sync required)"
     : "Job saved locally"
 }
 
