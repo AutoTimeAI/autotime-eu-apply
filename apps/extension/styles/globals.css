@@ -1,16 +1,3 @@
-@import "tailwindcss";
-
-@theme {
-  --color-accent: #4f46e5;
-  --color-gray-soft: #f8fafc;
-  --color-gray-line: #e2e8f0;
-  --color-gray-text: #475569;
-  --color-status-info: #0284c7;
-  --color-status-success: #059669;
-  --color-status-warning: #d97706;
-  --color-status-danger: #dc2626;
-}
-
 html,
 body {
   margin: 0;
