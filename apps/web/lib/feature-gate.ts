@@ -1,5 +1,6 @@
 import { createAdminClient } from "./supabase/admin"
 import type { SubscriptionPlan, SubscriptionStatus } from "./supabase/types"
+import { getTestAuthPlan, isTestAuthUserId } from "./test-auth"
 
 export const FREE_AI_CALLS_PER_MONTH = 5
 
@@ -25,6 +26,10 @@ function isEntitledStatus(status: SubscriptionStatus | null | undefined) {
 export async function getUserPlan(
   userId: string
 ): Promise<SubscriptionPlan> {
+  if (isTestAuthUserId(userId)) {
+    return getTestAuthPlan()
+  }
+
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase
@@ -65,6 +70,10 @@ export async function isProUser(userId: string): Promise<boolean> {
 }
 
 async function getMonthlyAiCallCount(userId: string): Promise<number> {
+  if (isTestAuthUserId(userId)) {
+    return 0
+  }
+
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase.rpc("get_monthly_ai_calls", {
@@ -116,6 +125,10 @@ export async function trackAiCall(
     costUsd: number
   }
 ): Promise<void> {
+  if (isTestAuthUserId(userId)) {
+    return
+  }
+
   try {
     const supabase = createAdminClient()
     const { error } = await supabase.from("ai_usage").insert({

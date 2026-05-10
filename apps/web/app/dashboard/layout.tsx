@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import type { ReactNode } from "react"
 import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate"
 import { createServerClient } from "../../lib/supabase/server"
+import { getTestAuthUser } from "../../lib/test-auth"
 import {
   DashboardPlanProvider,
   DashboardTopNav,
@@ -15,14 +16,21 @@ export default async function DashboardLayout({
   children: ReactNode
 }) {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error
-    } = await supabase.auth.getUser()
+    const testUser = getTestAuthUser()
+    let user = testUser
 
-    if (error || !user) {
-      redirect("/login")
+    if (!user) {
+      const supabase = await createServerClient()
+      const {
+        data: { user: sessionUser },
+        error
+      } = await supabase.auth.getUser()
+
+      if (error || !sessionUser) {
+        redirect("/login")
+      }
+
+      user = sessionUser
     }
 
     const plan = await getUserPlan(user.id)

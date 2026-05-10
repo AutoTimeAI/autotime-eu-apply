@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js"
 import { publicEnv } from "./env"
 import { createServerClient } from "./supabase/server"
 import type { Database } from "./supabase/types"
+import { getTestAuthUser } from "./test-auth"
 
 type AuthResult = {
   error: string | null
@@ -66,6 +67,12 @@ async function getBearerUser(token: string): Promise<AuthResult> {
 }
 
 export async function getRequestUser(request: Request): Promise<AuthResult> {
+  const testUser = getTestAuthUser()
+
+  if (testUser) {
+    return { error: null, user: testUser }
+  }
+
   const cookieUser = await getCookieUser()
 
   if (cookieUser.user) {

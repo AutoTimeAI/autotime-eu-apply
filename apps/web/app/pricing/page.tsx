@@ -4,6 +4,7 @@ import { getServerEnv } from "../../lib/env"
 import { getUserPlan } from "../../lib/feature-gate"
 import { createServerClient } from "../../lib/supabase/server"
 import type { SubscriptionPlan } from "../../lib/supabase/types"
+import { getTestAuthUser } from "../../lib/test-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -14,6 +15,15 @@ type PricingAccount = {
 
 async function getPricingAccount(): Promise<PricingAccount | null> {
   try {
+    const testUser = getTestAuthUser()
+
+    if (testUser) {
+      return {
+        email: testUser.email ?? "account",
+        plan: await getUserPlan(testUser.id)
+      }
+    }
+
     const supabase = await createServerClient()
     const {
       data: { user },

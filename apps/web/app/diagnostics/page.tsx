@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { isAdminUser } from "../../lib/admin-access"
 import { getEnvReadiness } from "../../lib/diagnostics"
 import { createServerClient } from "../../lib/supabase/server"
+import { getTestAuthUser } from "../../lib/test-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -39,14 +40,21 @@ const scenarioChecks = [
 ]
 
 export default async function DiagnosticsPage() {
-  const supabase = await createServerClient()
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser()
+  const testUser = getTestAuthUser()
+  let user = testUser
 
-  if (error || !user) {
-    redirect("/login?redirectTo=/diagnostics")
+  if (!user) {
+    const supabase = await createServerClient()
+    const {
+      data: { user: sessionUser },
+      error
+    } = await supabase.auth.getUser()
+
+    if (error || !sessionUser) {
+      redirect("/login?redirectTo=/diagnostics")
+    }
+
+    user = sessionUser
   }
 
   if (!isAdminUser(user)) {

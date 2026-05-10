@@ -5,6 +5,7 @@ import { publicEnv } from "../../../../lib/env"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createServerClient } from "../../../../lib/supabase/server"
 import { stripe } from "../../../../lib/stripe"
+import { getTestAuthUser } from "../../../../lib/test-auth"
 
 type ApiResponse<T> = {
   data: T | null
@@ -54,21 +55,28 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<PortalRouteData>>> {
   try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error: userError
-    } = await supabase.auth.getUser()
+    const testUser = getTestAuthUser()
+    let user = testUser
 
-    if (userError || !user) {
-      return diagnosticJson({
-        area: "billing",
-        code: "billing.portal.auth.missing-user",
-        data: null,
-        error: "Unauthorised",
-        request,
-        status: 401
-      })
+    if (!user) {
+      const supabase = await createServerClient()
+      const {
+        data: { user: sessionUser },
+        error: userError
+      } = await supabase.auth.getUser()
+
+      if (userError || !sessionUser) {
+        return diagnosticJson({
+          area: "billing",
+          code: "billing.portal.auth.missing-user",
+          data: null,
+          error: "Unauthorised",
+          request,
+          status: 401
+        })
+      }
+
+      user = sessionUser
     }
 
     const body = requestSchema.parse(await request.json())

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { isAdminUser } from "../../../../lib/admin-access"
 import { getEnvReadiness } from "../../../../lib/diagnostics"
 import { createServerClient } from "../../../../lib/supabase/server"
+import { getTestAuthUser } from "../../../../lib/test-auth"
 
 type ProviderHealth = {
   configured: boolean
@@ -69,21 +70,28 @@ function providerHealth(): ProviderHealth[] {
 }
 
 export async function GET() {
-  const supabase = await createServerClient()
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser()
+  const testUser = getTestAuthUser()
+  let user = testUser
 
-  if (error || !user) {
-    return NextResponse.json(
-      {
-        data: null,
-        error: "Unauthorised",
-        status: 401
-      },
-      { status: 401 }
-    )
+  if (!user) {
+    const supabase = await createServerClient()
+    const {
+      data: { user: sessionUser },
+      error
+    } = await supabase.auth.getUser()
+
+    if (error || !sessionUser) {
+      return NextResponse.json(
+        {
+          data: null,
+          error: "Unauthorised",
+          status: 401
+        },
+        { status: 401 }
+      )
+    }
+
+    user = sessionUser
   }
 
   if (!isAdminUser(user)) {

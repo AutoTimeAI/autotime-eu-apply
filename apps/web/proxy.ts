@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createDiagnostic, logDiagnostic } from "./lib/diagnostics"
 import { publicEnv } from "./lib/env"
 import type { Database } from "./lib/supabase/types"
+import { getTestAuthUser } from "./lib/test-auth"
 
 const protectedRoutePrefixes = [
   "/dashboard",
@@ -65,6 +66,12 @@ function applyAuthCookies({
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   try {
+    const pathname = request.nextUrl.pathname
+
+    if (isProtectedPath(pathname) && getTestAuthUser()) {
+      return NextResponse.next({ request })
+    }
+
     const cookiesToSet: CookieToSet[] = []
     const headersToSet: Record<string, string> = {}
     let response = NextResponse.next({ request })
@@ -97,8 +104,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const {
       data: { user }
     } = await supabase.auth.getUser()
-    const pathname = request.nextUrl.pathname
-
     if (isProtectedPath(pathname) && !user) {
       const loginUrl = new URL("/login", request.url)
       loginUrl.searchParams.set(

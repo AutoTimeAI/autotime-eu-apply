@@ -3063,7 +3063,9 @@ export default function HomePage({
     interviewBuddyOutputs.strongFinalAnswer.trim()
   )
   const actionPanelTitle =
-    currentTab === "jobs"
+    isOverview
+      ? "Start with the next visible step in your workflow."
+      : currentTab === "jobs"
       ? "Check this role for work-right, skill and location risk."
       : currentTab === "profile"
         ? "Complete profile evidence and review CV context."
@@ -3071,7 +3073,11 @@ export default function HomePage({
           ? "Review roles that need a next action."
           : "Turn a rough interview answer into saved, reusable versions."
   const actionPanelStateLabel =
-    currentTab === "jobs"
+    isOverview
+      ? profileBridgeReady
+        ? "Profile evidence ready; job checks can use saved context"
+        : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing before stronger checks`
+      : currentTab === "jobs"
       ? hasJobDraft(state.jobAnalysis)
         ? "Ready to analyse current role"
         : "Waiting for role details"
@@ -3089,7 +3095,9 @@ export default function HomePage({
   const actionPanelStatus =
     isCopilotThinking
       ? "Working"
-      : currentTab === "jobs" && !hasJobDraft(state.jobAnalysis)
+      : isOverview && !profileBridgeReady
+        ? "Start here"
+        : currentTab === "jobs" && !hasJobDraft(state.jobAnalysis)
         ? "Input needed"
         : currentTab === "profile" && !profileBridgeReady
           ? "Incomplete"
@@ -3299,7 +3307,19 @@ export default function HomePage({
               <span>{actionPanelStatus}</span>
             </div>
             <div className="ai-action-row">
-              {currentTab === "jobs" ? (
+              {isOverview ? (
+                <>
+                  <a className="secondary-button" href="/dashboard/autofill-profile">
+                    Complete profile evidence
+                  </a>
+                  <a className="secondary-button" href="/dashboard/jobs">
+                    Check a job
+                  </a>
+                  <a className="secondary-button" href="/dashboard/applications">
+                    Review applications
+                  </a>
+                </>
+              ) : currentTab === "jobs" ? (
                 <button
                   disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
                   type="button"
