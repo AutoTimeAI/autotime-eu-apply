@@ -999,12 +999,13 @@ function getWidgetMarkup({
     ? "Please wait while AutoTime saves this role."
     : normalizedStatus.includes("synced to dashboard")
       ? "Saved roles appear in the AutoTime dashboard tracker."
-      : normalizedStatus.includes("tracked in extension") ||
+      : normalizedStatus.includes("saved locally") ||
+          normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
-        ? "Saved locally in the extension. Connect it from the dashboard extension page to sync."
+        ? "Connect from the dashboard extension page to sync this job."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
-      : "Check the visible job page and try again."
+          : "Check the visible job page and try again."
 
   return `
     <style>
@@ -1491,7 +1492,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
     const syncStatus = await syncTrackedApplicationsToDashboard(applications)
     return syncStatus === "Synced to dashboard."
       ? "This job is already tracked and synced to dashboard."
-      : `This job is already tracked. ${syncStatus}`
+      : "This job is already saved locally."
   }
 
   const record = createApplicationRecord(details)
@@ -1504,7 +1505,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
 
   return syncStatus === "Synced to dashboard."
     ? "Job tracked and synced to dashboard."
-    : `Job tracked in extension. ${syncStatus}`
+    : "Job saved locally."
 }
 
 function initializeMovableJobWidget() {

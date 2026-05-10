@@ -571,9 +571,7 @@ function SidePanelApp() {
     if (hasApplicationWithUrl(applications, details.url)) {
       setTrackedJobDetails(details)
       if (!accountSession?.authToken.trim()) {
-        setApplicationsStatus(
-          "This job is already tracked. Connect dashboard to sync jobs."
-        )
+        setApplicationsStatus("This job is already saved locally")
         setTimeout(() => setApplicationsStatus(""), 4500)
         return
       }
@@ -588,7 +586,7 @@ function SidePanelApp() {
       } catch (error: unknown) {
         setApplicationsStatus(
           error instanceof Error
-            ? `This job is already tracked. ${error.message}`
+            ? "This job is already saved locally. Dashboard sync failed."
             : "This job is already tracked. Dashboard sync failed."
         )
       }
@@ -619,9 +617,7 @@ function SidePanelApp() {
     setApplications((current) => [record, ...current])
 
     if (!accountSession?.authToken.trim()) {
-      setApplicationsStatus(
-        "Job tracked in extension. Connect dashboard to sync jobs."
-      )
+      setApplicationsStatus("Job saved locally")
       setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }
@@ -636,7 +632,7 @@ function SidePanelApp() {
     } catch (error: unknown) {
       setApplicationsStatus(
         error instanceof Error
-          ? `Job tracked in extension. ${error.message}`
+          ? "Job saved locally. Dashboard sync failed."
           : "Job tracked in extension. Dashboard sync failed."
       )
     }
