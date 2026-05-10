@@ -104,11 +104,17 @@ section {
 .section-nav {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 10px;
   padding: 8px;
   border: 1px solid #c9d4e6;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.section-nav-primary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .section-nav-group {
@@ -136,6 +142,10 @@ section {
   font: inherit;
 }
 
+.dashboard-link-button {
+  width: 100%;
+}
+
 .form-grid button:first-of-type,
 .application-actions button:first-of-type {
   border-color: #003399;
@@ -157,6 +167,13 @@ section {
   gap: 8px;
   padding: 8px 10px;
   text-align: left;
+}
+
+.section-nav-primary button {
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 6px;
+  text-align: center;
 }
 
 .section-nav button span:first-child {
@@ -184,10 +201,127 @@ section {
   font-weight: 700;
 }
 
+.section-nav-more {
+  display: grid;
+  gap: 8px;
+}
+
+.section-nav-more summary {
+  cursor: pointer;
+  color: #5b6475;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .panel-section {
   display: grid;
   gap: 14px;
   margin-top: 0;
+}
+
+.panel-eyebrow {
+  margin: 0 0 4px;
+  color: #006c67;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.job-workspace {
+  gap: 12px;
+}
+
+.job-hero {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #bdd4dc;
+  border-left: 4px solid #007c78;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
+}
+
+.job-hero h2 {
+  margin: 0;
+  color: #06162f;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.job-meta {
+  margin: 6px 0 0;
+  color: #4d5768;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.job-hero-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.job-hero-actions button {
+  min-height: 40px;
+  border: 1px solid #007c78;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #075c59;
+  font: inherit;
+  font-weight: 800;
+}
+
+.job-hero-actions button:last-child {
+  background: #007c78;
+  color: #ffffff;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.insight-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d6deeb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.insight-card span,
+.insight-card small {
+  color: #5b6475;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.insight-card strong {
+  min-width: 0;
+  color: #0b2762;
+  font-size: 16px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.keyword-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.keyword-panel span {
+  border: 1px solid #c9d4e6;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
 }
 
 .form-grid {

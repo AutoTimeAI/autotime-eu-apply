@@ -14,8 +14,70 @@ type JobAnalysisSectionProps = {
   onImportCurrentJobPage: () => void
   onSave: () => void
   saveAttempted: boolean
+  savedDraft: JobAnalysisDraft | null
   status: string
   statusRef: Ref<HTMLParagraphElement>
+}
+
+const keywordFallbacks = [
+  "python",
+  "openai",
+  "anthropic",
+  "llm",
+  "rag",
+  "nlp",
+  "api",
+  "document",
+  "financial",
+  "dashboard",
+  "data",
+  "analysis",
+  "modelling",
+  "legal",
+  "risk"
+]
+
+function getWorkModeLabel(workMode: JobAnalysisDraft["workMode"]) {
+  if (workMode === "onsite") {
+    return "On-site"
+  }
+
+  if (workMode === "hybrid") {
+    return "Hybrid"
+  }
+
+  if (workMode === "remote") {
+    return "Remote"
+  }
+
+  return "Work mode unknown"
+}
+
+function getKeywords(draft: JobAnalysisDraft) {
+  if (draft.skills?.length) {
+    return draft.skills.slice(0, 8)
+  }
+
+  const description = draft.jobDescription.toLowerCase()
+
+  return keywordFallbacks
+    .filter((keyword) => description.includes(keyword))
+    .slice(0, 8)
+}
+
+function getDescriptionStats(description: string) {
+  const text = description.trim()
+
+  if (!text) {
+    return { label: "No description", value: "0 words" }
+  }
+
+  const wordCount = text.split(/\s+/).filter(Boolean).length
+
+  return {
+    label: wordCount > 350 ? "Detailed post" : "Short post",
+    value: `${wordCount} words`
+  }
 }
 
 export function JobAnalysisSection({
@@ -25,12 +87,46 @@ export function JobAnalysisSection({
   onImportCurrentJobPage,
   onSave,
   saveAttempted,
+  savedDraft,
   status,
   statusRef
 }: JobAnalysisSectionProps) {
+  const displayDraft =
+    draft.jobTitle.trim() ||
+    draft.company.trim() ||
+    draft.jobDescription.trim() ||
+    draft.jobUrl.trim()
+      ? draft
+      : (savedDraft ?? draft)
+  const keywords = getKeywords(displayDraft)
+  const descriptionStats = getDescriptionStats(displayDraft.jobDescription)
+  const hasSavedInsights = Boolean(savedDraft?.summary || savedDraft?.fitScore)
+
   return (
-    <section className="panel-section">
-      <h2>Job Analysis</h2>
+    <section className="panel-section job-workspace">
+      <div className="job-hero">
+        <div>
+          <p className="panel-eyebrow">Job details</p>
+          <h2>{displayDraft.jobTitle || "Current job"}</h2>
+          <p className="job-meta">
+            {[
+              displayDraft.company,
+              displayDraft.location,
+              getWorkModeLabel(displayDraft.workMode)
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
+        <div className="job-hero-actions">
+          <button type="button" onClick={onImportCurrentJobPage}>
+            Import Page
+          </button>
+          <button type="button" onClick={onSave}>
+            Analyse
+          </button>
+        </div>
+      </div>
 
       <div className="form-grid">
         {saveAttempted && issues.length > 0 && (
@@ -38,13 +134,46 @@ export function JobAnalysisSection({
             <strong>Job Analysis needs attention</strong>
             <ul>
               {issues.map((issue) => (
-                <li key={`${issue.field}-${issue.message}`}>
-                  {issue.message}
-                </li>
+                <li key={`${issue.field}-${issue.message}`}>{issue.message}</li>
               ))}
             </ul>
           </div>
         )}
+
+        <div className="insight-grid" aria-label="Job snapshot">
+          <div className="insight-card">
+            <span>Fit score</span>
+            <strong>
+              {typeof savedDraft?.fitScore === "number"
+                ? `${savedDraft.fitScore}/100`
+                : "Pending"}
+            </strong>
+          </div>
+          <div className="insight-card">
+            <span>Recommendation</span>
+            <strong>{savedDraft?.recommendation || "Not scored"}</strong>
+          </div>
+          <div className="insight-card">
+            <span>Description</span>
+            <strong>{descriptionStats.value}</strong>
+            <small>{descriptionStats.label}</small>
+          </div>
+        </div>
+
+        {keywords.length > 0 ? (
+          <div className="keyword-panel" aria-label="Detected keywords">
+            {keywords.map((keyword) => (
+              <span key={keyword}>{keyword}</span>
+            ))}
+          </div>
+        ) : null}
+
+        {hasSavedInsights && savedDraft?.summary ? (
+          <div className="summary-card">
+            <h3>Latest insight</h3>
+            <p>{savedDraft.summary}</p>
+          </div>
+        ) : null}
 
         <label>
           Job title
@@ -154,14 +283,6 @@ export function JobAnalysisSection({
             onChange={(event) => onFieldChange("notes", event.target.value)}
           />
         </label>
-
-        <button type="button" onClick={onSave}>
-          Save Job Analysis
-        </button>
-
-        <button type="button" onClick={onImportCurrentJobPage}>
-          Import Current Job Page
-        </button>
 
         {status && (
           <p

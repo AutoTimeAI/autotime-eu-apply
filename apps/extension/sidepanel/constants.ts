@@ -32,18 +32,18 @@ export const onboardingSteps: Array<{
   title: string
 }> = [
   {
-    ctaLabel: "Add essentials",
+    ctaLabel: "Import job",
     description:
-      "Save only the profile evidence the extension needs for job checks. Full setup lives in the web dashboard.",
-    section: "profile",
-    title: "Save profile essentials"
+      "Bring the visible job post into the extension before reviewing fit.",
+    section: "job-analysis",
+    title: "Capture the current job"
   },
   {
-    ctaLabel: "Go to Job Analysis",
+    ctaLabel: "Connect account",
     description:
-      "Import visible job details from LinkedIn or supported job boards before tailoring an application.",
-    section: "job-analysis",
-    title: "Import a job page or paste a description"
+      "Use the dashboard for profile, documents, applications and deeper workflow.",
+    section: "account",
+    title: "Keep the extension focused"
   }
 ]
 
@@ -128,18 +128,18 @@ export const noticePeriodOptions = [
 ]
 
 export const sections: Array<{ group: string; id: Section; label: string }> = [
-  { group: "Setup", id: "profile", label: "Profile Essentials" },
+  { group: "Job", id: "job-analysis", label: "Job Details" },
+  { group: "Job", id: "job-analysis-view", label: "Insights" },
+  { group: "Account", id: "account", label: "Account" },
+  { group: "Local tools", id: "profile", label: "Profile Essentials" },
   { group: "Setup", id: "profile-view", label: "View Essentials" },
   { group: "Setup", id: "reusable-answers", label: "Optional Answers" },
   { group: "Setup", id: "reusable-answers-view", label: "View Answers" },
-  { group: "Apply", id: "job-analysis", label: "Job Analysis" },
-  { group: "Apply", id: "job-analysis-view", label: "View Job Analysis" },
   { group: "Apply", id: "application-content", label: "Application Content" },
   { group: "Apply", id: "application-content-view", label: "View Content" },
   { group: "Track", id: "tracker", label: "Tracker" },
   { group: "Track", id: "tracker-view", label: "View Tracker" },
   { group: "Track", id: "applications", label: "Applications" },
   { group: "Review", id: "usage-log", label: "Usage Log" },
-  { group: "Review", id: "validation-metrics", label: "Validation Metrics" },
-  { group: "Review", id: "account", label: "Account" }
+  { group: "Review", id: "validation-metrics", label: "Validation Metrics" }
 ]

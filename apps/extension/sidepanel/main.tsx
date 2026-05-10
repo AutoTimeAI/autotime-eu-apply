@@ -101,7 +101,7 @@ import {
 } from "../lib/validation"
 
 function SidePanelApp() {
-  const [activeSection, setActiveSection] = useState<Section>("profile")
+  const [activeSection, setActiveSection] = useState<Section>("job-analysis")
   const [saveAttempts, setSaveAttempts] = useState<SaveAttempts>({
     profile: false,
     "profile-view": false,
@@ -1042,6 +1042,7 @@ function SidePanelApp() {
           onImportCurrentJobPage={handleImportCurrentJobPageForAnalysis}
           onSave={handleSaveJobAnalysis}
           saveAttempted={saveAttempts["job-analysis"]}
+          savedDraft={savedJobAnalysisDraft}
           status={jobStatus}
           statusRef={jobStatusRef}
         />

@@ -166,11 +166,57 @@ export function JobAnalysisView({
   onClear
 }: SavedViewProps<JobAnalysisDraft>) {
   return (
-    <section className="panel-section">
-      <h2>View Job Analysis</h2>
+    <section className="panel-section job-workspace">
+      <div className="job-hero">
+        <div>
+          <p className="panel-eyebrow">Insights</p>
+          <h2>{draft?.jobTitle || "No saved job"}</h2>
+          {draft ? (
+            <p className="job-meta">
+              {[draft.company, draft.location, draft.workMode]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      </div>
 
       {draft ? (
         <>
+          <div className="insight-grid">
+            <div className="insight-card">
+              <span>Fit score</span>
+              <strong>
+                {typeof draft.fitScore === "number"
+                  ? `${draft.fitScore}/100`
+                  : "Not scored"}
+              </strong>
+            </div>
+            <div className="insight-card">
+              <span>Recommendation</span>
+              <strong>{draft.recommendation || "Not scored"}</strong>
+            </div>
+            <div className="insight-card">
+              <span>Seniority</span>
+              <strong>{draft.seniority || "Unknown"}</strong>
+            </div>
+          </div>
+
+          {draft.summary ? (
+            <div className="summary-card">
+              <h3>Summary</h3>
+              <p>{draft.summary}</p>
+            </div>
+          ) : null}
+
+          {draft.skills?.length ? (
+            <div className="keyword-panel" aria-label="Detected skills">
+              {draft.skills.slice(0, 10).map((skill) => (
+                <span key={skill}>{skill}</span>
+              ))}
+            </div>
+          ) : null}
+
           <dl className="profile-summary">
             <div>
               <dt>Job title</dt>

@@ -1,4 +1,5 @@
 import { sections, type Section } from "./constants"
+import { appUrl } from "../lib/openai"
 import type { SaveAttempts } from "./types"
 
 type SectionNavProps = {
@@ -20,6 +21,16 @@ function NavAlert({ label }: { label: string }) {
   )
 }
 
+const primarySectionIds: Section[] = [
+  "job-analysis",
+  "job-analysis-view",
+  "account"
+]
+
+function openDashboard() {
+  chrome.tabs.create({ url: `${appUrl}/dashboard` })
+}
+
 export function SectionNav({
   activeSection,
   applicationContentIssueCount,
@@ -30,26 +41,46 @@ export function SectionNav({
   saveAttempts,
   trackerIssueCount
 }: SectionNavProps) {
-  const groupedSections = sections.reduce<
-    Array<{ group: string; sections: typeof sections }>
-  >((groups, section) => {
-    const existingGroup = groups.find((group) => group.group === section.group)
-
-    if (existingGroup) {
-      existingGroup.sections.push(section)
-    } else {
-      groups.push({ group: section.group, sections: [section] })
-    }
-
-    return groups
-  }, [])
+  const primarySections = sections.filter((section) =>
+    primarySectionIds.includes(section.id)
+  )
+  const localSections = sections.filter(
+    (section) => !primarySectionIds.includes(section.id)
+  )
 
   return (
     <nav className="section-nav" aria-label="AutoTime sections">
-      {groupedSections.map((group) => (
-        <div className="section-nav-group" key={group.group}>
-          <h2>{group.group}</h2>
-          {group.sections.map((section) => (
+      <div className="section-nav-primary">
+        {primarySections.map((section) => (
+          <button
+            aria-current={activeSection === section.id ? "page" : undefined}
+            className={activeSection === section.id ? "active" : ""}
+            key={section.id}
+            onClick={() => onSectionChange(section.id)}
+            type="button"
+          >
+            {section.label}
+            {section.id === "job-analysis" &&
+              saveAttempts["job-analysis"] &&
+              jobAnalysisIssueCount > 0 && (
+                <NavAlert label="Job details need attention" />
+              )}
+          </button>
+        ))}
+      </div>
+
+      <button
+        className="dashboard-link-button"
+        type="button"
+        onClick={openDashboard}
+      >
+        Open Dashboard
+      </button>
+
+      <details className="section-nav-more">
+        <summary>Local tools</summary>
+        <div className="section-nav-group">
+          {localSections.map((section) => (
             <button
               aria-current={activeSection === section.id ? "page" : undefined}
               className={activeSection === section.id ? "active" : ""}
@@ -62,11 +93,6 @@ export function SectionNav({
                 saveAttempts.profile &&
                 profileIssueCount > 0 && (
                   <NavAlert label="Profile needs attention" />
-                )}
-              {section.id === "job-analysis" &&
-                saveAttempts["job-analysis"] &&
-                jobAnalysisIssueCount > 0 && (
-                  <NavAlert label="Job Analysis needs attention" />
                 )}
               {section.id === "application-content" &&
                 saveAttempts["application-content"] &&
@@ -86,7 +112,7 @@ export function SectionNav({
             </button>
           ))}
         </div>
-      ))}
+      </details>
     </nav>
   )
 }
