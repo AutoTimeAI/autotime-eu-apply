@@ -43,13 +43,6 @@ function parseAccountSession(message: ExternalMessage): AccountSession | null {
 }
 
 export default defineBackground(() => {
-  // Let the extension toolbar button open the side panel directly.
-  chrome.sidePanel
-    ?.setPanelBehavior({ openPanelOnActionClick: true })
-    .catch((error) => {
-      console.error("Failed to enable side panel action click", error)
-    })
-
   chrome.runtime.onMessageExternal.addListener(
     (
       message: ExternalMessage,

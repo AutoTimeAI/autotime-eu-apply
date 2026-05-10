@@ -5,7 +5,7 @@ export default defineConfig({
   manifest: {
     name: "AutoTime EU Apply",
     description: "Cross-border job application copilot for Europe",
-    permissions: ["activeTab", "scripting", "sidePanel", "storage"],
+    permissions: ["activeTab", "scripting", "storage"],
     host_permissions: ["https://autotime-eu-apply.vercel.app/*"],
     externally_connectable: {
       matches: ["https://autotime-eu-apply.vercel.app/*"]
