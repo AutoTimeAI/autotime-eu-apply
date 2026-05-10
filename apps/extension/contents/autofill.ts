@@ -43,6 +43,8 @@ type TextControl = HTMLInputElement | HTMLTextAreaElement
 
 const widgetHostId = "autotime-draggable-job-widget"
 const widgetPositionKey = "autotime-draggable-job-widget-position"
+const minWidgetWidth = 64
+const minWidgetHeight = 64
 const noJobDescriptionMessage =
   "No job description found. Update your description and click the button below to retrieve insights."
 const insightKeywords = [
@@ -255,6 +257,47 @@ function getMetaContent(names: string[]) {
   return ""
 }
 
+function cleanVisibleText(value = "") {
+  return value.replace(/\s+/g, " ").trim()
+}
+
+function getHtmlText(value = "") {
+  if (!/<[a-z][\s\S]*>/i.test(value)) {
+    return cleanVisibleText(value)
+  }
+
+  const template = document.createElement("template")
+  template.innerHTML = value
+
+  return cleanVisibleText(template.content.textContent ?? value)
+}
+
+function getJsonLdNodes(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) {
+    return value.flatMap(getJsonLdNodes)
+  }
+
+  if (!value || typeof value !== "object") {
+    return []
+  }
+
+  const item = value as Record<string, unknown>
+
+  return [
+    item,
+    ...getJsonLdNodes(item["@graph"]),
+    ...getJsonLdNodes(item.itemListElement)
+  ]
+}
+
+function hasJsonLdType(item: Record<string, unknown>, type: string) {
+  const itemType = item["@type"]
+
+  return Array.isArray(itemType)
+    ? itemType.includes(type)
+    : itemType === type
+}
+
 function getJsonLdJobPosting() {
   const scripts = Array.from(
     document.querySelectorAll<HTMLScriptElement>(
@@ -264,11 +307,10 @@ function getJsonLdJobPosting() {
 
   for (const script of scripts) {
     try {
-      const parsed = JSON.parse(script.textContent ?? "") as
-        | Record<string, unknown>
-        | Record<string, unknown>[]
-      const items = Array.isArray(parsed) ? parsed : [parsed]
-      const posting = items.find((item) => item["@type"] === "JobPosting")
+      const parsed = JSON.parse(script.textContent ?? "") as unknown
+      const posting = getJsonLdNodes(parsed).find((item) =>
+        hasJsonLdType(item, "JobPosting")
+      )
 
       if (posting) {
         return posting
@@ -292,20 +334,69 @@ function getFirstText(selectors: string[]) {
   return ""
 }
 
+function getLongestText(selectors: string[]) {
+  const texts = selectors.flatMap((selector) =>
+    Array.from(document.querySelectorAll(selector))
+      .map((element) => cleanVisibleText(element.textContent ?? ""))
+      .filter(Boolean)
+  )
+
+  return texts.sort((a, b) => b.length - a.length)[0] ?? ""
+}
+
 function getJobDescription() {
-  return getFirstText([
+  const selectedDescription = getLongestText([
     ".jobs-description__content",
     ".jobs-box__html-content",
     ".jobs-description-content__text",
     ".show-more-less-html__markup",
     "[data-test-job-description]",
     "[data-testid='job-description']",
+    "[data-testid='description']",
+    "[data-qa='job-description']",
+    "[data-ph-at-id='description-text']",
     "[data-ui='job-description']",
     "[data-automation-id='jobPostingDescription']",
+    "[data-automation-id='jobDescription']",
+    "[itemprop='description']",
+    "#job-description",
+    "#jobDescription",
     ".posting-description",
     ".job-description",
+    ".jobsearch-JobComponent-description",
+    ".description__text",
+    ".ats-description",
+    ".job-posting-description",
     "section.description"
   ])
+
+  if (getWordCount(selectedDescription) >= 20) {
+    return selectedDescription
+  }
+
+  const descriptionContainers = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "article, main, section, div[id], div[class], section[id], section[class]"
+    )
+  )
+    .filter((element) => {
+      const signature = [
+        element.id,
+        element.className,
+        element.getAttribute("data-testid"),
+        element.getAttribute("data-automation-id"),
+        element.getAttribute("aria-label")
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+
+      return /description|details|posting|job-content|jobcontent/.test(signature)
+    })
+    .map((element) => cleanVisibleText(element.innerText || element.textContent || ""))
+    .filter((text) => getWordCount(text) >= 20)
+
+  return descriptionContainers.sort((a, b) => b.length - a.length)[0] ?? selectedDescription
 }
 
 function getLocationFromLinkedInDescription() {
@@ -320,24 +411,60 @@ function getLocationFromLinkedInDescription() {
   return parts.length > 1 ? parts[1] : ""
 }
 
+function getJsonLdText(value: unknown): string {
+  if (typeof value === "string") {
+    return cleanVisibleText(value)
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const item = value as Record<string, unknown>
+  return getJsonLdText(item.name) || getJsonLdText(item.value)
+}
+
+function getJsonLdAddressText(value: unknown): string {
+  const item = Array.isArray(value) ? value[0] : value
+
+  if (typeof item === "string") {
+    return cleanVisibleText(item)
+  }
+
+  if (!item || typeof item !== "object") {
+    return ""
+  }
+
+  const record = item as Record<string, unknown>
+  const address =
+    record.address && typeof record.address === "object"
+      ? (record.address as Record<string, unknown>)
+      : record
+
+  return [
+    getJsonLdText(address.addressLocality),
+    getJsonLdText(address.addressRegion),
+    getJsonLdText(address.addressCountry)
+  ]
+    .filter(Boolean)
+    .join(", ")
+}
+
 function detectJobPage(): JobPageResponse {
   const jsonLdPosting = getJsonLdJobPosting()
   const jsonLdHiringOrganization = jsonLdPosting?.hiringOrganization as
     | { name?: string }
     | undefined
-  const jsonLdLocation = jsonLdPosting?.jobLocation as
-    | { address?: { addressLocality?: string; addressCountry?: string } }
-    | { address?: { addressLocality?: string; addressCountry?: string } }[]
-    | undefined
-  const jsonLdAddress = Array.isArray(jsonLdLocation)
-    ? jsonLdLocation[0]?.address
-    : jsonLdLocation?.address
-  const jsonLdLocationText = [
-    jsonLdAddress?.addressLocality,
-    jsonLdAddress?.addressCountry
-  ]
-    .filter(Boolean)
-    .join(", ")
+  const jsonLdLocationText =
+    getJsonLdAddressText(jsonLdPosting?.jobLocation) ||
+    getJsonLdAddressText(jsonLdPosting?.applicantLocationRequirements) ||
+    (getJsonLdText(jsonLdPosting?.jobLocationType) === "TELECOMMUTE"
+      ? "Remote"
+      : getJsonLdText(jsonLdPosting?.jobLocationType))
+  const jsonLdDescription =
+    typeof jsonLdPosting?.description === "string"
+      ? getHtmlText(jsonLdPosting.description)
+      : ""
 
   // These selectors cover common job-board conventions while title parsing
   // provides a fallback for pages without structured job metadata.
@@ -396,9 +523,7 @@ function detectJobPage(): JobPageResponse {
     company,
     location,
     description:
-      (typeof jsonLdPosting?.description === "string"
-        ? jsonLdPosting.description
-        : "") || getJobDescription(),
+      jsonLdDescription || getJobDescription(),
     url: window.location.href
   })
 
@@ -579,13 +704,33 @@ function getWidgetMarkup({
         user-select: none;
       }
 
-      .handle img {
+      .brand-logo,
+      .launcher-logo img {
         width: 28px;
         height: 28px;
         border: 1px solid #c9d4e6;
         border-radius: 6px;
         background: #ffffff;
         object-fit: contain;
+      }
+
+      .logo-toggle,
+      .launcher-logo {
+        display: inline-grid;
+        place-items: center;
+        min-width: 32px;
+        min-height: 32px;
+        padding: 0;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        box-shadow: none;
+        cursor: pointer;
+      }
+
+      .logo-toggle:hover,
+      .launcher-logo:hover {
+        background: #dff2f0;
       }
 
       .handle strong {
@@ -788,7 +933,9 @@ function getWidgetMarkup({
     </style>
     <section class="widget" aria-label="AutoTime job tracker">
       <div class="handle" data-autotime-drag-handle>
-        <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
+        <button class="logo-toggle" data-autotime-toggle-widget type="button" aria-label="Minimize AutoTime widget">
+          <img class="brand-logo" alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
+        </button>
         <strong>AutoTime EU Apply</strong>
         <span>Drag to move</span>
       </div>
@@ -844,6 +991,63 @@ function getWidgetMarkup({
   `
 }
 
+function getMinimizedWidgetMarkup() {
+  return `
+    <style>
+      :host {
+        color: #172033;
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      .launcher {
+        display: grid;
+        place-items: center;
+        width: 56px;
+        height: 56px;
+        border: 1px solid #bdd4dc;
+        border-left: 4px solid #007c78;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
+        box-shadow: 0 14px 34px rgba(6, 22, 47, 0.2);
+      }
+
+      .launcher-logo {
+        display: inline-grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .launcher-logo:hover {
+        background: #dff2f0;
+      }
+
+      img {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #c9d4e6;
+        border-radius: 6px;
+        background: #ffffff;
+        object-fit: contain;
+      }
+    </style>
+    <section class="launcher" aria-label="AutoTime widget minimized">
+      <button class="launcher-logo" data-autotime-toggle-widget type="button" aria-label="Open AutoTime widget">
+        <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
+      </button>
+    </section>
+  `
+}
+
 async function saveDetectedJob(details: JobPageResponse | null) {
   if (!details?.url) {
     return "Open a visible job page, then try again."
@@ -882,14 +1086,36 @@ function initializeMovableJobWidget() {
 
   let details = detectJobPage()
   let accountSession: AccountSession | null = null
+  let isMinimized = false
   let status = ""
 
   const render = () => {
-    shadow.innerHTML = getWidgetMarkup({ accountSession, details, status })
-    bindWidgetEvents(host, shadow, () => details, (nextStatus) => {
-      status = nextStatus
-      render()
-    })
+    shadow.innerHTML = isMinimized
+      ? getMinimizedWidgetMarkup()
+      : getWidgetMarkup({ accountSession, details, status })
+    bindWidgetEvents(
+      host,
+      shadow,
+      () => details,
+      (nextStatus) => {
+        status = nextStatus
+        render()
+      },
+      () => {
+        isMinimized = !isMinimized
+        const current = host.getBoundingClientRect()
+        const nextPosition = clampWidgetPosition(
+          current.left,
+          current.top,
+          isMinimized ? minWidgetWidth : 520,
+          isMinimized ? minWidgetHeight : 420
+        )
+        host.style.left = `${nextPosition.left}px`
+        host.style.top = `${nextPosition.top}px`
+        saveWidgetPosition(nextPosition.left, nextPosition.top)
+        render()
+      }
+    )
   }
 
   void getAccountSession().then((session) => {
@@ -901,7 +1127,12 @@ function initializeMovableJobWidget() {
 
   window.addEventListener("resize", () => {
     const current = host.getBoundingClientRect()
-    const nextPosition = clampWidgetPosition(current.left, current.top)
+    const nextPosition = clampWidgetPosition(
+      current.left,
+      current.top,
+      isMinimized ? minWidgetWidth : 520,
+      isMinimized ? minWidgetHeight : 420
+    )
     host.style.left = `${nextPosition.left}px`
     host.style.top = `${nextPosition.top}px`
   })
@@ -909,7 +1140,13 @@ function initializeMovableJobWidget() {
   setInterval(() => {
     const nextDetails = detectJobPage()
 
-    if (nextDetails.url !== details.url || nextDetails.jobDescription !== details.jobDescription) {
+    if (
+      nextDetails.url !== details.url ||
+      nextDetails.roleTitle !== details.roleTitle ||
+      nextDetails.company !== details.company ||
+      nextDetails.location !== details.location ||
+      nextDetails.jobDescription !== details.jobDescription
+    ) {
       details = nextDetails
       render()
     }
@@ -920,15 +1157,29 @@ function bindWidgetEvents(
   host: HTMLDivElement,
   shadow: ShadowRoot,
   getDetails: () => JobPageResponse | null,
-  setStatus: (status: string) => void
+  setStatus: (status: string) => void,
+  toggleWidget: () => void
 ) {
   const handle = shadow.querySelector<HTMLElement>("[data-autotime-drag-handle]")
+  const toggleButton = shadow.querySelector<HTMLButtonElement>(
+    "[data-autotime-toggle-widget]"
+  )
   const trackButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-track-job]"
   )
   const dashboardButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-open-dashboard]"
   )
+
+  toggleButton?.addEventListener("pointerdown", (event) => {
+    event.stopPropagation()
+  })
+
+  toggleButton?.addEventListener("click", (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    toggleWidget()
+  })
 
   handle?.addEventListener("pointerdown", (event) => {
     event.preventDefault()

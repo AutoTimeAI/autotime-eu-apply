@@ -56,7 +56,16 @@ const fillerTitleParts = [
 ]
 
 function cleanText(value = "") {
-  return value.replace(/\s+/g, " ").trim()
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 function getHostname(url = "") {
@@ -148,6 +157,42 @@ function cleanRoleTitle(value = "") {
     .trim()
 }
 
+function cleanDetectedLocation(value = "") {
+  return cleanText(value).replace(/[.;,:\-\s]+$/, "").trim()
+}
+
+export function inferLocationSignalFromText(description = "") {
+  const text = description.replace(/\r\n/g, "\n")
+  const patterns = [
+    /\bLocation\s*[:|-]\s*([^\n<]+)/i,
+    /\bJob location\s*[:|-]\s*([^\n<]+)/i,
+    /\bOffice\s*[:|-]\s*([^\n<]+)/i,
+    /\bWorkplace\s*[:|-]\s*([^\n<]+)/i,
+    /\bBase(?:d)?\s*[:|-]\s*([^\n<]+)/i,
+    /\bBased in\s+([A-Z][A-Za-z .'-]+(?:,\s*[A-Z][A-Za-z .'-]+)?)/i,
+    /\b(?:Hybrid|Remote|On-site|Onsite)\s*(?:role|working)?\s*(?:in|from|-\s*)\s*([A-Z][A-Za-z .'-]+(?:,\s*[A-Z][A-Za-z .'-]+)?)/i
+  ]
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    const location = cleanDetectedLocation(match?.[1])
+
+    if (location) {
+      return location
+    }
+  }
+
+  if (/\bremote\b/i.test(text) && /\b(?:uk|united kingdom)\b/i.test(text)) {
+    return "United Kingdom"
+  }
+
+  if (/\bremote\b/i.test(text) && /\b(?:eu|europe|european union)\b/i.test(text)) {
+    return "Europe"
+  }
+
+  return ""
+}
+
 function parseTitle(title = "", platform: JobPlatform = "Generic") {
   const cleanTitle = cleanRoleTitle(title)
   const atMatch = cleanTitle.match(/^(.+?)\s+at\s+(.+?)(?:\s*[|-]\s*.+)?$/i)
@@ -194,12 +239,14 @@ export function inferJobPageDetails(
   const parsedTitle = parseTitle(input.title, platform)
   const roleTitle = cleanText(input.heading) || parsedTitle.roleTitle
   const company = cleanText(input.company) || parsedTitle.company
+  const jobDescription = cleanText(input.description)
 
   return {
     roleTitle,
     company,
-    location: cleanText(input.location),
-    jobDescription: cleanText(input.description),
+    location:
+      cleanText(input.location) || inferLocationSignalFromText(input.description),
+    jobDescription,
     url,
     source: cleanText(input.source) || getHostname(url),
     platform,

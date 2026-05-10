@@ -308,6 +308,28 @@ test("infers job page details from common page text", () => {
   )
 })
 
+test("cleans job page descriptions and infers missing location", () => {
+  assert.deepEqual(
+    inferJobPageDetails({
+      title: "Product Analyst at Example Co",
+      description:
+        "<p>Location: Dublin, Ireland</p><p>Analyse payments workflows, APIs and dashboards for European teams.</p>",
+      url: "https://example.com/jobs/product-analyst"
+    }),
+    {
+      roleTitle: "Product Analyst",
+      company: "Example Co",
+      location: "Dublin, Ireland",
+      jobDescription:
+        "Location: Dublin, Ireland Analyse payments workflows, APIs and dashboards for European teams.",
+      url: "https://example.com/jobs/product-analyst",
+      source: "example.com",
+      platform: "Generic",
+      pageTitle: "Product Analyst at Example Co"
+    }
+  )
+})
+
 test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://www.linkedin.com/jobs/view/123"), "LinkedIn")
   assert.equal(getJobPlatform("https://jobs.linkedin.com/view/123"), "LinkedIn")
