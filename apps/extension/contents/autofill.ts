@@ -45,6 +45,8 @@ const widgetHostId = "autotime-draggable-job-widget"
 const widgetPositionKey = "autotime-draggable-job-widget-position"
 const widgetToggleEventName = "autotime-toggle-widget"
 const widgetRightOffset = 12
+const fullWidgetWidth = 480
+const fullWidgetHeight = 420
 const minWidgetWidth = 64
 const minWidgetHeight = 64
 const noJobDescriptionMessage =
@@ -157,7 +159,12 @@ function getStoredWidgetPosition() {
   return null
 }
 
-function clampWidgetPosition(left: number, top: number, width = 520, height = 420) {
+function clampWidgetPosition(
+  left: number,
+  top: number,
+  width = fullWidgetWidth,
+  height = fullWidgetHeight
+) {
   const margin = 12
   const maxLeft = Math.max(margin, window.innerWidth - width - margin)
   const maxTop = Math.max(margin, window.innerHeight - height - margin)
@@ -925,7 +932,7 @@ function getWidgetMarkup({
       }
 
       .widget {
-        width: min(520px, calc(100vw - 24px));
+        width: min(${fullWidgetWidth}px, calc(100vw - 24px));
         border: 1px solid #bdd4dc;
         border-left: 4px solid #007c78;
         border-radius: 8px;
@@ -975,7 +982,14 @@ function getWidgetMarkup({
         object-fit: contain;
       }
 
-      .logo-toggle,
+      .brand-mark {
+        display: inline-grid;
+        flex: 0 0 auto;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+      }
+
       .launcher-logo,
       .icon-button {
         display: inline-grid;
@@ -991,7 +1005,6 @@ function getWidgetMarkup({
         cursor: pointer;
       }
 
-      .logo-toggle:hover,
       .launcher-logo:hover,
       .icon-button:hover {
         background: #dff2f0;
@@ -1203,7 +1216,6 @@ function getWidgetMarkup({
         opacity: 0.72;
       }
 
-      button.logo-toggle,
       button.icon-button,
       button.launcher-logo {
         min-width: 32px;
@@ -1221,7 +1233,6 @@ function getWidgetMarkup({
         font-weight: 700;
       }
 
-      button.logo-toggle:hover,
       button.icon-button:hover,
       button.launcher-logo:hover {
         border: 0;
@@ -1252,15 +1263,14 @@ function getWidgetMarkup({
     </style>
     <section class="widget" aria-label="AutoTime job tracker">
       <div class="handle" data-autotime-drag-handle>
-        <button class="logo-toggle" data-autotime-collapse-widget type="button" title="Minimize" aria-label="Minimize AutoTime widget">
+        <div class="brand-mark" aria-hidden="true">
           <img class="brand-logo" alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
-        </button>
+        </div>
         <div class="title-block">
           <strong>AutoTime EU Apply</strong>
           <span>Drag to move</span>
         </div>
         <div class="window-controls" aria-label="Widget controls">
-          <button class="icon-button" data-autotime-collapse-widget type="button" title="Minimize" aria-label="Minimize AutoTime widget">-</button>
           <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
         </div>
       </div>
@@ -1352,7 +1362,8 @@ function initializeMovableJobWidget() {
 
   const storedPosition = getStoredWidgetPosition()
   const initialPosition = clampWidgetPosition(
-    storedPosition?.left ?? window.innerWidth - 520 - widgetRightOffset,
+    storedPosition?.left ??
+      window.innerWidth - fullWidgetWidth - widgetRightOffset,
     storedPosition?.top ?? 92
   )
   host.style.left = `${initialPosition.left}px`
@@ -1374,8 +1385,8 @@ function initializeMovableJobWidget() {
     const nextPosition = clampWidgetPosition(
       current.left,
       current.top,
-      isMinimized ? minWidgetWidth : 520,
-      isMinimized ? minWidgetHeight : 420
+      isMinimized ? minWidgetWidth : fullWidgetWidth,
+      isMinimized ? minWidgetHeight : fullWidgetHeight
     )
     host.style.left = `${nextPosition.left}px`
     host.style.top = `${nextPosition.top}px`
@@ -1413,8 +1424,8 @@ function initializeMovableJobWidget() {
     const nextPosition = clampWidgetPosition(
       current.left,
       current.top,
-      isMinimized ? minWidgetWidth : 520,
-      isMinimized ? minWidgetHeight : 420
+      isMinimized ? minWidgetWidth : fullWidgetWidth,
+      isMinimized ? minWidgetHeight : fullWidgetHeight
     )
     host.style.left = `${nextPosition.left}px`
     host.style.top = `${nextPosition.top}px`
