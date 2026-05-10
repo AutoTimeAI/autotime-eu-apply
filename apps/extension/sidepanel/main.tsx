@@ -1111,20 +1111,7 @@ function SidePanelApp() {
           <div className="deep-insight-shell">
             <div>
               <p className="panel-eyebrow">Deep insight</p>
-              <h3>
-                {isProCustomer ? (
-                  "Pro analysis"
-                ) : (
-                  <a
-                    className="upgrade-heading-link"
-                    href={pricingUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    Upgrade to unlock
-                  </a>
-                )}
-              </h3>
+              {isProCustomer ? <h3>Pro analysis</h3> : null}
             </div>
             {shouldShowDeepInsightList ? (
               <ul className={isProCustomer ? "" : "blurred-insights"}>
@@ -1187,6 +1174,14 @@ function SidePanelApp() {
         </aside>
 
         <div className="track-action-bar">
+          <button
+            className="dashboard-panel-button"
+            type="button"
+            onClick={openProfileSetup}
+          >
+            OPEN DASHBOARD
+          </button>
+
           <div className="track-action-copy">
             <button
               className="track-job-button"
@@ -1196,7 +1191,6 @@ function SidePanelApp() {
             >
               TRACK JOB
             </button>
-            <p>Save this job. Everything else stays in the dashboard.</p>
           </div>
 
           {applicationsStatus && (

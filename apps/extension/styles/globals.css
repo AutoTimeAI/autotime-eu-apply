@@ -3,7 +3,10 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  font-family: Arial, sans-serif;
+  font-family:
+    Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
   background: #f4f7fb;
   color: #172033;
 }
@@ -78,7 +81,10 @@ section {
 }
 
 .side-panel-shell h1 {
-  font-size: 22px;
+  color: #06162f;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .side-panel-shell h2 {
@@ -128,19 +134,21 @@ section {
 
 .track-job-panel h2 {
   color: #06162f;
-  font-size: 24px;
-  line-height: 1.15;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .track-job-panel h3 {
   color: #06162f;
-  font-size: 16px;
-  line-height: 1.25;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .track-job-panel p {
   color: #4d5768;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .track-action-rail,
@@ -155,7 +163,8 @@ section {
 
 .track-action-bar {
   grid-area: action;
-  justify-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   padding-top: 14px;
   border-top: 1px solid #bdd4dc;
 }
@@ -166,17 +175,10 @@ section {
 
 .track-action-copy {
   display: grid;
+  justify-self: end;
   justify-items: end;
   gap: 6px;
   min-width: 0;
-}
-
-.track-action-copy p {
-  max-width: 260px;
-  color: #5b6475;
-  font-size: 12px;
-  line-height: 1.35;
-  text-align: right;
 }
 
 .track-job-button {
@@ -189,9 +191,28 @@ section {
   box-shadow: 0 6px 14px rgba(0, 108, 103, 0.18);
   color: #ffffff;
   font: inherit;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0;
+}
+
+.dashboard-panel-button {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #bdd4dc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #075c59;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.dashboard-panel-button:hover {
+  border-color: #007c78;
+  background: #edf8f7;
 }
 
 .track-job-button:hover {
@@ -211,6 +232,12 @@ section {
   opacity: 0.72;
 }
 
+.track-action-bar > .status-message,
+.track-action-bar > .status-message-error {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+}
+
 .job-insights-panel ul,
 .deep-insight-shell ul {
   display: grid;
@@ -222,6 +249,7 @@ section {
 .job-insights-panel li,
 .deep-insight-shell li {
   color: #172033;
+  font-size: 12.5px;
   line-height: 1.45;
 }
 
@@ -236,7 +264,7 @@ section {
   border-radius: 8px;
   background: #ffffff;
   color: #4d5768;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .deep-insight-shell {
@@ -262,18 +290,17 @@ section {
   border-radius: 6px;
   background: #edf8f7;
   color: #075c59;
-  font-weight: 800;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
-.upgrade-heading-link,
 .upgrade-note a {
   color: #005f5a;
-  font-weight: 900;
+  font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.upgrade-heading-link:hover,
 .upgrade-note a:hover {
   color: #004f4b;
 }
@@ -301,8 +328,8 @@ section {
 
 .job-details-list dt {
   color: #5b6475;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -310,7 +337,8 @@ section {
   margin: 0;
   min-width: 0;
   color: #172033;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
@@ -335,16 +363,13 @@ section {
   }
 
   .track-action-bar {
+    grid-template-columns: 1fr;
     justify-items: start;
   }
 
   .track-action-copy {
     justify-self: start;
     justify-items: start;
-  }
-
-  .track-action-copy p {
-    text-align: left;
   }
 
   .job-details-list,
@@ -472,7 +497,7 @@ section {
   margin: 0 0 4px;
   color: #006c67;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
 }
