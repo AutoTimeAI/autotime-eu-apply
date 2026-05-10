@@ -1322,64 +1322,6 @@ function getWidgetMarkup({
   `
 }
 
-function getMinimizedWidgetMarkup() {
-  return `
-    <style>
-      :host {
-        color: #172033;
-        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      .launcher {
-        display: grid;
-        place-items: center;
-        width: 56px;
-        height: 56px;
-        border: 1px solid #bdd4dc;
-        border-left: 4px solid #007c78;
-        border-radius: 8px;
-        background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
-        box-shadow: 0 14px 34px rgba(6, 22, 47, 0.2);
-        cursor: move;
-      }
-
-      .launcher-logo {
-        display: inline-grid;
-        place-items: center;
-        width: 44px;
-        height: 44px;
-        padding: 0;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
-        cursor: pointer;
-      }
-
-      .launcher-logo:hover {
-        background: #dff2f0;
-      }
-
-      img {
-        width: 32px;
-        height: 32px;
-        border: 1px solid #c9d4e6;
-        border-radius: 6px;
-        background: #ffffff;
-        object-fit: contain;
-      }
-    </style>
-    <section class="launcher" data-autotime-launcher aria-label="AutoTime widget minimized">
-      <button class="launcher-logo" data-autotime-toggle-widget type="button" aria-label="Open AutoTime widget">
-        <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
-      </button>
-    </section>
-  `
-}
-
 async function saveDetectedJob(details: JobPageResponse | null) {
   if (!details?.url) {
     return "Open a visible job page, then try again."
@@ -1420,6 +1362,7 @@ function initializeMovableJobWidget() {
   let accountSession: AccountSession | null = null
   let isMinimized = false
   let status = ""
+  host.dataset.autotimeMinimized = String(isMinimized)
 
   function toggleWidget() {
     isMinimized = !isMinimized
@@ -1434,24 +1377,11 @@ function initializeMovableJobWidget() {
     host.style.left = `${nextPosition.left}px`
     host.style.top = `${nextPosition.top}px`
     saveWidgetPosition(nextPosition.left, nextPosition.top)
-    shadow.innerHTML = isMinimized
-      ? getMinimizedWidgetMarkup()
-      : getWidgetMarkup({ accountSession, details, status })
-    bindWidgetEvents(
-      host,
-      shadow,
-      () => details,
-      (nextStatus) => {
-        status = nextStatus
-        render()
-      }
-    )
   }
 
   function render() {
-    shadow.innerHTML = isMinimized
-      ? getMinimizedWidgetMarkup()
-      : getWidgetMarkup({ accountSession, details, status })
+    host.dataset.autotimeMinimized = String(isMinimized)
+    shadow.innerHTML = getWidgetMarkup({ accountSession, details, status })
     bindWidgetEvents(
       host,
       shadow,
@@ -1465,7 +1395,7 @@ function initializeMovableJobWidget() {
 
   shadow.addEventListener(widgetToggleEventName, (event) => {
     event.stopPropagation()
-    window.setTimeout(toggleWidget, 0)
+    toggleWidget()
   })
 
   void getAccountSession().then((session) => {
@@ -1535,9 +1465,14 @@ function bindWidgetEvents(
           )
       )
 
-  const activateWidgetControl = (event: Event) => {
+  const activateWidgetControl = (event: Event, ignoreAfterDrag = false) => {
     event.preventDefault()
     event.stopPropagation()
+
+    if (ignoreAfterDrag && didDragWidget) {
+      didDragWidget = false
+      return
+    }
 
     shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
   }
@@ -1550,7 +1485,10 @@ function bindWidgetEvents(
     })
 
     control.addEventListener("click", (event) => {
-      activateWidgetControl(event)
+      activateWidgetControl(
+        event,
+        Boolean(control.closest("[data-autotime-launcher]"))
+      )
     })
   })
 
