@@ -42,7 +42,33 @@ function parseAccountSession(message: ExternalMessage): AccountSession | null {
   }
 }
 
+async function showWidgetInTab(tab: chrome.tabs.Tab) {
+  if (!tab.id || !tab.url || !/^https?:\/\//i.test(tab.url)) {
+    return
+  }
+
+  try {
+    await chrome.tabs.sendMessage(tab.id, {
+      type: "AUTOTIME_SHOW_WIDGET"
+    })
+    return
+  } catch {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content-scripts/autotime.js"]
+    })
+  }
+
+  await chrome.tabs.sendMessage(tab.id, {
+    type: "AUTOTIME_SHOW_WIDGET"
+  })
+}
+
 export default defineBackground(() => {
+  chrome.action.onClicked.addListener((tab) => {
+    void showWidgetInTab(tab)
+  })
+
   chrome.runtime.onMessageExternal.addListener(
     (
       message: ExternalMessage,

@@ -1616,6 +1616,28 @@ async function saveDetectedJob(details: JobPageResponse | null) {
     : "Job saved locally"
 }
 
+function isLikelyJobUrl(url = window.location.href) {
+  try {
+    const parsed = new URL(url)
+
+    return /\b(?:job|jobs|career|careers|position|positions|vacancy|vacancies|opening|openings|recruit|recruiting|apply)\b/i.test(
+      `${parsed.hostname} ${parsed.pathname}`
+    )
+  } catch {
+    return false
+  }
+}
+
+function shouldAutoShowJobWidget() {
+  const details = detectJobPage()
+
+  return (
+    details.platform !== "Generic" ||
+    Boolean(details.roleTitle || details.company) ||
+    Boolean(details.jobDescription && isLikelyJobUrl(details.url))
+  )
+}
+
 function initializeMovableJobWidget() {
   if (document.getElementById(widgetHostId)) {
     showAutotimeWidget?.()
@@ -2074,7 +2096,9 @@ function bindWidgetEvents(
 }
 
 export function registerAutotimeContentScript() {
-  initializeMovableJobWidget()
+  if (shouldAutoShowJobWidget()) {
+    initializeMovableJobWidget()
+  }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "AUTOTIME_AUTOFILL_PROFILE") {

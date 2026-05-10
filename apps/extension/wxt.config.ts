@@ -1,24 +1,5 @@
 import { defineConfig } from "wxt"
 
-const supportedAtsMatches = [
-  "*://*.linkedin.com/*",
-  "*://*.greenhouse.io/*",
-  "*://boards.greenhouse.io/*",
-  "*://*.lever.co/*",
-  "*://jobs.lever.co/*",
-  "*://*.myworkdayjobs.com/*",
-  "*://*.ashbyhq.com/*",
-  "*://jobs.ashbyhq.com/*",
-  "*://*.smartrecruiters.com/*",
-  "*://*.icims.com/*",
-  "*://*.bamboohr.com/*",
-  "*://*.teamtailor.com/*",
-  "*://*.recruitee.com/*",
-  "*://*.jobvite.com/*",
-  "*://*.personio.de/*",
-  "*://*.personio.com/*"
-]
-
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
@@ -52,7 +33,7 @@ export default defineConfig({
           "icons/48.png",
           "icons/128.png"
         ],
-        matches: supportedAtsMatches
+        matches: ["*://*/*"]
       }
     ]
   }
