@@ -627,11 +627,10 @@ h4 {
   display: grid;
   gap: 12px;
   margin-bottom: 16px;
-  border: 1px solid rgba(15, 118, 110, 0.24);
-  border-radius: 10px;
-  background:
-    linear-gradient(135deg, rgba(237, 247, 245, 0.94), rgba(249, 251, 255, 0.94)),
-    var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
   box-shadow: var(--shadow-tight);
   padding: 16px;
 }
@@ -655,9 +654,9 @@ h4 {
 
 .ai-copilot-header > span {
   flex: 0 0 auto;
-  border: 1px solid #b9dbd6;
-  border-radius: 999px;
-  background: #ffffff;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-raised);
   color: var(--accent-strong);
   font-size: 0.76rem;
   font-weight: 750;
@@ -665,58 +664,64 @@ h4 {
   text-transform: uppercase;
 }
 
-.ai-prompt-row,
 .ai-action-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.ai-prompt-row button {
-  min-height: 34px;
-  border-color: var(--border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--text);
-  box-shadow: none;
-  font-size: 0.86rem;
-  padding: 7px 11px;
-}
-
-.ai-prompt-row button:hover,
-.ai-prompt-row button.active {
-  border-color: var(--accent);
-  background: #e6f5f2;
-  color: var(--accent-strong);
-}
-
-.dashboard-demo-panel {
+.workspace-integrity-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
   gap: 16px;
-  align-items: center;
+  align-items: start;
   margin-bottom: 16px;
-  border: 1px solid rgba(49, 95, 186, 0.2);
-  border-radius: 10px;
-  background:
-    linear-gradient(135deg, rgba(248, 251, 255, 0.96), rgba(237, 247, 245, 0.9)),
-    var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface);
   box-shadow: var(--shadow-tight);
   padding: 16px;
 }
 
-.dashboard-demo-panel .section-heading p:not(.eyebrow) {
+.workspace-integrity-panel .section-heading p:not(.eyebrow) {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
 }
 
-.dashboard-demo-panel video {
-  width: 100%;
+.integrity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.integrity-grid article {
+  display: grid;
+  gap: 7px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #000000;
-  box-shadow: var(--shadow-tight);
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.integrity-grid span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.integrity-grid strong {
+  color: var(--ink);
+  font-size: 1.02rem;
+}
+
+.integrity-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .command-centre-overview {
@@ -741,7 +746,6 @@ h4 {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: var(--shadow-tight);
   padding: 14px;
 }
 
@@ -755,9 +759,7 @@ h4 {
 
 .command-centre-card:hover,
 .command-action-dock a:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow);
-  transform: translateY(-2px);
+  border-color: var(--border-strong);
 }
 
 .command-centre-card span {
@@ -790,7 +792,6 @@ h4 {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #ffffff;
-  box-shadow: var(--shadow-tight);
   color: inherit;
   padding: 14px;
   text-decoration: none;
@@ -3163,7 +3164,7 @@ h4 {
   .context-grid,
   .auth-shell,
   .auth-demo-panel,
-  .dashboard-demo-panel,
+  .workspace-integrity-panel,
   .pricing-demo-panel,
   .decision-brief-panel,
   .trust-grid,
@@ -3179,6 +3180,7 @@ h4 {
 
   .metrics-strip,
   .decision-columns,
+  .integrity-grid,
   .command-centre-grid,
   .command-action-dock,
   .analytics-grid,
@@ -3308,6 +3310,7 @@ h4 {
   .command-header-tools,
   .command-centre-grid,
   .command-action-dock,
+  .integrity-grid,
   .interview-buddy-layout,
   .extension-distribution-grid,
   .job-check-field-grid,

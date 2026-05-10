@@ -41,7 +41,6 @@ type DashboardFocus =
   | "follow-ups"
   | "interview-prep"
   | "insights"
-  | "documents"
   | "settings"
 type MetricTone = "neutral" | "good" | "warn"
 type RoleMarket =
@@ -237,7 +236,7 @@ const commandSidebarItems: Array<{
     routeId: "applications"
   },
   { href: "/dashboard/match-score", focus: "match-score", label: "Match Score", routeId: "jobs" },
-  { href: "/dashboard/cv-tailor", focus: "cv-tailor", label: "CV Tailor", routeId: "profile" },
+  { href: "/dashboard/cv-tailor", focus: "cv-tailor", label: "CV Evidence", routeId: "profile" },
   {
     href: "/dashboard/application-answers",
     focus: "application-answers",
@@ -247,7 +246,7 @@ const commandSidebarItems: Array<{
   {
     href: "/dashboard/autofill-profile",
     focus: "autofill-profile",
-    label: "Autofill Profile",
+    label: "Profile Evidence",
     routeId: "profile"
   },
   {
@@ -259,7 +258,6 @@ const commandSidebarItems: Array<{
   { href: "/dashboard/follow-ups", focus: "follow-ups", label: "Follow-ups", routeId: "applications" },
   { href: "/dashboard/interview", focus: "interview-prep", label: "Interview Prep", routeId: "interview" },
   { href: "/dashboard/insights", focus: "insights", label: "Insights", routeId: "applications" },
-  { href: "/dashboard/documents", focus: "documents", label: "Documents", routeId: "profile" },
   { href: "/dashboard/settings", focus: "settings", label: "Settings", routeId: "profile" }
 ]
 
@@ -269,8 +267,8 @@ const dashboardFocusCopy: Record<
 > = {
   dashboard: {
     eyebrow: "Dashboard",
-    title: "Job Search Command Centre",
-    body: "Profile, job inbox, match score, applications and interview prep in one workspace."
+    title: "Evidence Workspace",
+    body: "Profile evidence, job decisions, applications and interview prep with clear limits."
   },
   "job-inbox": {
     eyebrow: "Job Inbox",
@@ -283,9 +281,9 @@ const dashboardFocusCopy: Record<
     body: "Evidence, missing inputs and clear limits behind the score."
   },
   "cv-tailor": {
-    eyebrow: "CV Tailor",
-    title: "CV Tailor",
-    body: "Profile evidence and CV proof used to tailor applications honestly."
+    eyebrow: "CV Evidence",
+    title: "CV Evidence",
+    body: "Saved CV proof used to score roles and keep application claims honest."
   },
   "application-answers": {
     eyebrow: "Application Answers",
@@ -293,9 +291,9 @@ const dashboardFocusCopy: Record<
     body: "Reusable, truthful answers based only on your draft and profile context."
   },
   "autofill-profile": {
-    eyebrow: "Autofill Profile",
-    title: "Autofill Profile",
-    body: "Mandatory profile details and reusable evidence for extension sync."
+    eyebrow: "Profile Evidence",
+    title: "Profile Evidence",
+    body: "Mandatory profile details and reusable evidence for job checks."
   },
   "application-tracker": {
     eyebrow: "Application Tracker",
@@ -316,11 +314,6 @@ const dashboardFocusCopy: Record<
     eyebrow: "Insights",
     title: "Search Insights",
     body: "Evidence analytics, outcomes and learning readiness without inflated claims."
-  },
-  documents: {
-    eyebrow: "Documents",
-    title: "Documents",
-    body: "CV text, evidence notes and reusable application material."
   },
   settings: {
     eyebrow: "Settings",
@@ -1976,7 +1969,6 @@ export default function HomePage({
   const [interviewBuddyOutputs, setInterviewBuddyOutputs] =
     useState<InterviewBuddyOutputs>(emptyInterviewBuddyOutputs)
   const [isCopilotThinking, setIsCopilotThinking] = useState(false)
-  const [selectedCopilotPrompt, setSelectedCopilotPrompt] = useState("")
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
@@ -2123,14 +2115,13 @@ export default function HomePage({
     dashboard: "Dashboard",
     "job-inbox": "Job Inbox",
     "match-score": "Match Score",
-    "cv-tailor": "CV Tailor",
+    "cv-tailor": "CV Evidence",
     "application-answers": "Application Answers",
-    "autofill-profile": "Autofill Profile",
+    "autofill-profile": "Profile Evidence",
     "application-tracker": "Application Tracker",
     "follow-ups": "Follow-ups",
     "interview-prep": "Interview Prep",
     insights: "Insights",
-    documents: "Documents",
     settings: "Settings"
   }[activeFocus]
   const showHeaderJobActions =
@@ -2148,7 +2139,7 @@ export default function HomePage({
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const commandCentreCards = [
     {
-      title: "Today's Action Plan",
+      title: "Next Actions",
       value: activeActionCount > 0 ? `${activeActionCount} actions` : "Clear",
       body:
         activeActionCount > 0
@@ -2156,12 +2147,12 @@ export default function HomePage({
           : "No urgent follow-up is due from saved applications."
     },
     {
-      title: "Best Job Matches",
+      title: "Current Job Decision",
       value: `${fitEvaluation.overallScore}/100`,
       body: fitEvaluation.decision
     },
     {
-      title: "Application Readiness",
+      title: "Profile Evidence",
       value: `${readinessScore}%`,
       body:
         decisionBrief.missingInputs.length > 0
@@ -2169,29 +2160,55 @@ export default function HomePage({
           : "Profile evidence is ready for scoring."
     },
     {
-      title: "Jobs Needing Action",
+      title: "Decision Gate",
       value: riskLabel,
       body:
         decisionBrief.contentGate === "ready"
-          ? "Ready to Apply"
+          ? "No content blocker detected."
           : decisionBrief.contentGate === "stretch"
-            ? "Needs Tailoring"
-            : "Missing Keywords"
+            ? "Stretch risk must stay visible."
+            : "Resolve blockers before writing."
     },
     {
-      title: "Application Pipeline",
+      title: "Saved Applications",
       value: `${state.applications.length} jobs`,
       body: `${statusCounts.Applied + statusCounts.Interview} progressed beyond saved.`
     },
     {
-      title: "Follow-ups & Deadlines",
+      title: "Follow-ups",
       value: `${activeActionCount}`,
-      body: "Follow-up Queue across live applications."
+      body: "Next actions across saved applications."
     },
     {
-      title: "Weekly Progress",
+      title: "Interview Prep",
       value: `${state.interviewPrepPacks.length} prep packs`,
       body: `${state.applications.length} saved jobs and ${interviewApplications.length} interviews.`
+    }
+  ]
+  const workspaceIntegrityItems = [
+    {
+      label: "Storage",
+      value: cloudSyncReadiness.configured ? "Sync gated" : "Local only",
+      body: cloudSyncReadiness.configured
+        ? "Uploads require consent, a signed-in account and plan checks."
+        : "No remote upload is enabled from this browser session."
+    },
+    {
+      label: "Profile bridge",
+      value: profileBridgeReady ? "Ready" : "Incomplete",
+      body: profileBridgeReady
+        ? "Required profile evidence is present for stronger job checks."
+        : `${profileBridgeIssues.length} required profile field${profileBridgeIssues.length === 1 ? "" : "s"} missing.`
+    },
+    {
+      label: "Decision output",
+      value: "Index only",
+      body: "Scores are decision indexes, not predictions or guarantees."
+    },
+    {
+      label: "Application boundary",
+      value: "Manual apply",
+      body: "No auto-submit, hidden form action or LinkedIn automation."
     }
   ]
   const commandQuickActions = [
@@ -2666,9 +2683,6 @@ export default function HomePage({
       }
 
       persist(next, "AI Copilot updated the role analysis")
-      setSelectedCopilotPrompt(
-        "Review the AI fit summary, then save this checked job with its evidence."
-      )
     } catch (error: unknown) {
       setStatus(error instanceof Error ? error.message : "AI role analysis failed")
     } finally {
@@ -2986,32 +3000,15 @@ export default function HomePage({
   const hasInterviewBuddyOutputs = Boolean(
     interviewBuddyOutputs.strongFinalAnswer.trim()
   )
-  const copilotPrompts =
+  const actionPanelTitle =
     currentTab === "jobs"
-      ? [
-          "Check this role for work-right, skill and location risk.",
-          "Summarise the strongest positioning angle before I apply.",
-          "Tell me what evidence is missing before saving this role."
-        ]
+      ? "Check this role for work-right, skill and location risk."
       : currentTab === "profile"
-        ? [
-            "Help me complete the minimum profile evidence.",
-            "Turn my CV notes into target-role evidence.",
-            "Check whether my work-right details are clear enough."
-          ]
+        ? "Complete profile evidence and review CV context."
         : currentTab === "applications"
-          ? [
-              "Show the roles that need a next action.",
-              "Help me prioritise applications by evidence and risk.",
-              "Find applications that are ready for interview prep."
-            ]
-          : [
-              "Help me turn my rough answer into a stronger interview answer.",
-              "Check whether this answer invents any unsupported claims.",
-              "Build a concise STAR structure from my saved evidence."
-            ]
-  const activeCopilotPrompt = selectedCopilotPrompt || copilotPrompts[0]
-  const copilotStateLabel =
+          ? "Review roles that need a next action."
+          : "Turn a rough interview answer into saved, reusable versions."
+  const actionPanelStateLabel =
     currentTab === "jobs"
       ? hasJobDraft(state.jobAnalysis)
         ? "Ready to analyse current role"
@@ -3027,6 +3024,14 @@ export default function HomePage({
           : hasInterviewBuddyOutputs
             ? "Answer draft ready"
             : "Waiting for your rough answer"
+  const actionPanelStatus =
+    isCopilotThinking
+      ? "Working"
+      : currentTab === "jobs" && !hasJobDraft(state.jobAnalysis)
+        ? "Input needed"
+        : currentTab === "profile" && !profileBridgeReady
+          ? "Incomplete"
+          : "Ready"
 
   const generateInterviewBuddyAnswers = () => {
     if (!activeInterviewQuestion.trim()) {
@@ -3105,7 +3110,7 @@ export default function HomePage({
               <>
                 {currentTab !== "jobs" ? (
                 <a className="secondary-button" href="/dashboard/jobs">
-                  Import Job
+                  Check job
                 </a>
                 ) : null}
                 <a className="secondary-button" href="/dashboard/inbox">
@@ -3121,20 +3126,6 @@ export default function HomePage({
               </span>
             </div>
           </div>
-          {currentTab === "jobs" ? (
-            <div
-              className="header-actions"
-              aria-label="Primary job scoring actions"
-            >
-              <button
-                disabled={!canSaveCheckedJob}
-                type="button"
-                onClick={saveApplicationFromJob}
-              >
-                Save checked job
-              </button>
-            </div>
-          ) : null}
         </div>
         {showExecutivePanel ? (
         <div className="executive-panel" aria-label="Dashboard evidence summary">
@@ -3208,70 +3199,49 @@ export default function HomePage({
         <div className="command-content">
           {isOverview ? (
             <section
-              className="dashboard-demo-panel"
-              aria-labelledby="dashboard-demo-title"
+              className="workspace-integrity-panel"
+              aria-labelledby="workspace-integrity-title"
             >
               <div className="section-heading">
-                <p className="eyebrow">Start here</p>
-                <h2 id="dashboard-demo-title">Watch the product walkthrough</h2>
+                <p className="eyebrow">Workspace status</p>
+                <h2 id="workspace-integrity-title">Evidence and boundaries</h2>
                 <p>
-                  See profile evidence, Job Check, extension import,
-                  application content, tracking, interview prep and Pro in one
-                  quick tour.
+                  The dashboard stores what you provide, explains every job
+                  decision, and keeps application actions under your control.
                 </p>
               </div>
-              <video
-                controls
-                preload="metadata"
-                src="/demo/autotime-first-user-demo.mp4"
-              >
-                Your browser does not support embedded video.
-              </video>
+              <div className="integrity-grid">
+                {workspaceIntegrityItems.map((item) => (
+                  <article key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <p>{item.body}</p>
+                  </article>
+                ))}
+              </div>
             </section>
           ) : null}
 
-          <section className="ai-copilot-panel" aria-label="AI Copilot">
+          <section className="ai-copilot-panel" aria-label="Guided actions">
             <div className="ai-copilot-header">
               <div>
-                <p className="eyebrow">AI Copilot</p>
-                <h2>{activeCopilotPrompt}</h2>
-                <p>{copilotStateLabel}</p>
+                <p className="eyebrow">
+                  {currentTab === "jobs" ? "AI Role Check" : "Guided Actions"}
+                </p>
+                <h2>{actionPanelTitle}</h2>
+                <p>{actionPanelStateLabel}</p>
               </div>
-              <span>{isCopilotThinking ? "Thinking" : "Ready"}</span>
-            </div>
-            <div className="ai-prompt-row" aria-label="Suggested prompts">
-              {copilotPrompts.map((prompt) => (
-                <button
-                  className={
-                    activeCopilotPrompt === prompt ? "active" : undefined
-                  }
-                  key={prompt}
-                  type="button"
-                  onClick={() => setSelectedCopilotPrompt(prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
+              <span>{actionPanelStatus}</span>
             </div>
             <div className="ai-action-row">
               {currentTab === "jobs" ? (
-                <>
-                  <button
-                    disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
-                    type="button"
-                    onClick={runAiJobAnalysis}
-                  >
-                    {isCopilotThinking ? "Checking role" : "Ask AI to check role"}
-                  </button>
-                  <button
-                    className="secondary-button"
-                    disabled={!canSaveCheckedJob}
-                    type="button"
-                    onClick={saveApplicationFromJob}
-                  >
-                    Save checked job
-                  </button>
-                </>
+                <button
+                  disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
+                  type="button"
+                  onClick={runAiJobAnalysis}
+                >
+                  {isCopilotThinking ? "Checking role" : "Ask AI to check role"}
+                </button>
               ) : currentTab === "profile" ? (
                 <>
                   <button
@@ -3696,7 +3666,7 @@ export default function HomePage({
             type="button"
             onClick={syncProfileToCloud}
           >
-            Sync profile
+            Sync profile evidence
           </button>
           <button
             className="secondary-button"
@@ -3712,14 +3682,14 @@ export default function HomePage({
             type="button"
             onClick={deleteProfileForAccount}
           >
-            Delete profile
+            Delete synced profile
           </button>
           <button
             disabled={!cloudSyncReadiness.configured}
             type="button"
             onClick={syncDashboardToCloud}
           >
-            Sync dashboard
+            Sync saved workflow
           </button>
           <button
             className="secondary-button"
@@ -3727,7 +3697,7 @@ export default function HomePage({
             type="button"
             onClick={loadDashboardFromCloud}
           >
-            Load dashboard
+            Load synced workflow
           </button>
         </div>
       </section>

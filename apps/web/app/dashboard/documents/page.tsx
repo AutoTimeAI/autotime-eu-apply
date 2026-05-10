@@ -1,5 +1,5 @@
-import DashboardExperience from "../../../components/DashboardExperience"
+import { redirect } from "next/navigation"
 
 export default function DashboardDocumentsPage() {
-  return <DashboardExperience focus="documents" view="profile" />
+  redirect("/dashboard/cv-tailor")
 }
