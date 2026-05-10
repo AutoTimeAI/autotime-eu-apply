@@ -66,7 +66,7 @@ export function Onboarding({ onNavigate }: OnboardingProps) {
       <p className="empty-state">{currentStep.description}</p>
       <div className="form-grid">
         <button type="button" onClick={handleStepCta}>
-          {isFinalStep ? "Got it, start applying" : currentStep.ctaLabel}
+          {isFinalStep ? "Got it" : currentStep.ctaLabel}
         </button>
       </div>
     </section>

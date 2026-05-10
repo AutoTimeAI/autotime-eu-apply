@@ -130,7 +130,7 @@ export function isLinkedInUrl(url = "") {
 }
 
 export function getLinkedInManualInputMessage() {
-  return "LinkedIn form filling stays manual. AutoTime can import visible job details, but it will not auto-submit or fill LinkedIn applications."
+  return "LinkedIn stays manual: AutoTime can import visible job details, but will not auto-submit or fill applications."
 }
 
 function isUsefulTitlePart(value: string) {

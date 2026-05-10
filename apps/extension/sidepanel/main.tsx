@@ -92,7 +92,7 @@ import { UsageLogSection } from "./UsageLogSection"
 import { ValidationMetricsSection } from "./ValidationMetricsSection"
 import type { AutofillResponse, JobPageResponse, SaveAttempts } from "./types"
 import { useJobAnalysis } from "./useJobAnalysis"
-import { getHostname, normalizeApplicationUrl } from "./utils"
+import { getHostname, getStatusClassName, normalizeApplicationUrl } from "./utils"
 import {
   validateApplicationContentDraft,
   validateProfile,
@@ -100,8 +100,89 @@ import {
   validateTrackerDraft
 } from "../lib/validation"
 
+const insightKeywords = [
+  "python",
+  "openai",
+  "anthropic",
+  "llm",
+  "rag",
+  "nlp",
+  "api",
+  "document",
+  "financial",
+  "dashboard",
+  "data",
+  "analysis",
+  "modelling",
+  "legal",
+  "risk",
+  "market"
+]
+
+function getWordCount(text = "") {
+  return text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0
+}
+
+function getDetectedKeywords(description = "") {
+  const normalized = description.toLowerCase()
+
+  return insightKeywords
+    .filter((keyword) => normalized.includes(keyword))
+    .slice(0, 6)
+}
+
+function getBasicInsights(details: JobPageResponse | null) {
+  if (!details) {
+    return [
+      "Track a visible job post to generate basic insights.",
+      "AutoTime will read job title, company, location and description when available."
+    ]
+  }
+
+  const wordCount = getWordCount(details.jobDescription)
+  const keywords = getDetectedKeywords(details.jobDescription)
+
+  return [
+    details.platform !== "Generic"
+      ? `Detected from ${details.platform}.`
+      : "Detected from the current job page.",
+    wordCount > 0
+      ? `${wordCount} words in the visible job description.`
+      : "No full job description detected yet.",
+    details.location
+      ? `Location signal: ${details.location}.`
+      : "Location was not clearly detected.",
+    keywords.length > 0
+      ? `Core signals: ${keywords.join(", ")}.`
+      : "Track a richer post for keyword signals."
+  ]
+}
+
+function getDeepInsights(details: JobPageResponse | null) {
+  if (!details) {
+    return [
+      "Role positioning angle",
+      "Evidence gaps against the job description",
+      "Application risk and priority recommendation"
+    ]
+  }
+
+  const keywords = getDetectedKeywords(details.jobDescription)
+  const role = details.roleTitle || "this role"
+  const company = details.company || "the company"
+
+  return [
+    `Position ${role} around ${keywords[0] ?? "the strongest repeated job signal"}.`,
+    `Prepare evidence for ${keywords.slice(0, 3).join(", ") || "the top requirements"} before applying.`,
+    `Review ${company} fit, location and work-right risk in the dashboard before sending materials.`
+  ]
+}
+
 function SidePanelApp() {
-  const [activeSection, setActiveSection] = useState<Section>("job-analysis")
+  const [activeSection, setActiveSection] = useState<Section>("applications")
+  const [isTrackingJob, setIsTrackingJob] = useState(false)
+  const [trackedJobDetails, setTrackedJobDetails] =
+    useState<JobPageResponse | null>(null)
   const [saveAttempts, setSaveAttempts] = useState<SaveAttempts>({
     profile: false,
     "profile-view": false,
@@ -476,15 +557,17 @@ function SidePanelApp() {
       : null
 
     if (!details?.url) {
+      setTrackedJobDetails(null)
       setApplicationsStatus(
-        "Could not read current tab. Open a visible job page, then try again."
+        "Could not track this tab. Open a visible job page, then try again."
       )
       setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }
 
     if (hasApplicationWithUrl(applications, details.url)) {
-      setApplicationsStatus("This application is already saved")
+      setTrackedJobDetails(details)
+      setApplicationsStatus("This job is already tracked")
       setTimeout(() => setApplicationsStatus(""), 2500)
       return
     }
@@ -508,8 +591,9 @@ function SidePanelApp() {
     }
 
     await saveApplication(record)
+    setTrackedJobDetails(details)
     setApplications((current) => [record, ...current])
-    setApplicationsStatus("Application saved")
+    setApplicationsStatus("Job tracked")
     setTimeout(() => setApplicationsStatus(""), 2500)
   }
 
@@ -985,27 +1069,145 @@ function SidePanelApp() {
     setTimeout(() => setAccountStatus(""), 5000)
   }
 
+  const handleTrackJob = async () => {
+    if (isTrackingJob) {
+      return
+    }
+
+    setIsTrackingJob(true)
+
+    try {
+      await saveCurrentTabAsApplication()
+    } finally {
+      setIsTrackingJob(false)
+    }
+  }
+
+  const renderLegacyTools = false
+  const isProCustomer = accountSession?.plan === "pro"
+  const basicInsights = getBasicInsights(trackedJobDetails)
+  const deepInsights = getDeepInsights(trackedJobDetails)
+
   return (
-    <main className="side-panel-shell">
+    <main className="side-panel-shell track-only-shell">
       <header className="side-panel-brand">
         <img alt="" aria-hidden="true" src="/icons/128.png" />
         <h1>AutoTime EU Apply</h1>
       </header>
 
-      <Onboarding onNavigate={goToSection} />
+      <section className="track-job-panel" aria-labelledby="track-job-title">
+        <div className="track-action-rail">
+          <div>
+            <p className="panel-eyebrow">LinkedIn and job boards</p>
+            <h2 id="track-job-title">Track this job</h2>
+            <p>
+              Save the visible job post here. Profile, documents and application
+              workflow stay in the dashboard.
+            </p>
+          </div>
 
-      <SectionNav
-        activeSection={activeSection}
-        applicationContentIssueCount={applicationContentIssues.length}
-        jobAnalysisIssueCount={jobAnalysisIssues.length}
-        onSectionChange={goToSection}
-        profileIssueCount={profileIssues.length}
-        reusableAnswerIssueCount={reusableAnswerIssues.length}
-        saveAttempts={saveAttempts}
-        trackerIssueCount={trackerIssues.length}
-      />
+          <button
+            className="track-job-button"
+            disabled={isTrackingJob}
+            type="button"
+            onClick={handleTrackJob}
+          >
+            TRACK JOB
+          </button>
 
-      {activeSection === "profile" ? (
+          {applicationsStatus && (
+            <p
+              className={getStatusClassName(applicationsStatus)}
+              ref={applicationsStatusRef}
+              role="status"
+              tabIndex={-1}
+            >
+              {applicationsStatus}
+            </p>
+          )}
+        </div>
+
+        <div className="job-insights-panel">
+          <div>
+            <p className="panel-eyebrow">Job insights</p>
+            <h3>Basic insight</h3>
+          </div>
+          <ul>
+            {basicInsights.map((insight) => (
+              <li key={insight}>{insight}</li>
+            ))}
+          </ul>
+
+          <div className="deep-insight-shell">
+            <div>
+              <p className="panel-eyebrow">Deep insight</p>
+              <h3>{isProCustomer ? "Pro analysis" : "Upgrade to unlock"}</h3>
+            </div>
+            <ul className={isProCustomer ? "" : "blurred-insights"}>
+              {deepInsights.map((insight) => (
+                <li key={insight}>{insight}</li>
+              ))}
+            </ul>
+            {!isProCustomer ? (
+              <p className="upgrade-note">
+                Deep matching, gaps and priority guidance are available after
+                upgrading.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <dl className="job-details-panel">
+          <div>
+            <dt>Job title</dt>
+            <dd>{trackedJobDetails?.roleTitle || "Not tracked yet"}</dd>
+          </div>
+          <div>
+            <dt>Company</dt>
+            <dd>{trackedJobDetails?.company || "Not detected"}</dd>
+          </div>
+          <div>
+            <dt>Location</dt>
+            <dd>{trackedJobDetails?.location || "Not detected"}</dd>
+          </div>
+          <div>
+            <dt>Platform</dt>
+            <dd>{trackedJobDetails?.platform || "Waiting"}</dd>
+          </div>
+          <div>
+            <dt>Source</dt>
+            <dd>{trackedJobDetails?.source || "Waiting"}</dd>
+          </div>
+          <div>
+            <dt>Description</dt>
+            <dd>
+              {trackedJobDetails?.jobDescription
+                ? `${getWordCount(trackedJobDetails.jobDescription)} words parsed`
+                : "Not parsed yet"}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {renderLegacyTools ? (
+        <>
+          <Onboarding onNavigate={goToSection} />
+
+          <SectionNav
+            activeSection={activeSection}
+            applicationContentIssueCount={applicationContentIssues.length}
+            jobAnalysisIssueCount={jobAnalysisIssues.length}
+            onSectionChange={goToSection}
+            profileIssueCount={profileIssues.length}
+            reusableAnswerIssueCount={reusableAnswerIssues.length}
+            saveAttempts={saveAttempts}
+            trackerIssueCount={trackerIssues.length}
+          />
+        </>
+      ) : null}
+
+      {renderLegacyTools ? (
+        activeSection === "profile" ? (
         <ProfileSection
           issues={profileIssues}
           onAutofillCurrentPage={handleAutofillCurrentPage}
@@ -1123,7 +1325,8 @@ function SidePanelApp() {
         <section className="panel-section">
           <h2>AutoTime EU Apply</h2>
         </section>
-      )}
+        )
+      ) : null}
     </main>
   )
 }
