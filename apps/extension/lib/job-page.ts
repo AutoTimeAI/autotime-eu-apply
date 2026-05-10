@@ -233,14 +233,6 @@ export function inferLocationSignalFromText(description = "") {
     }
   }
 
-  if (/\bremote\b/i.test(text) && /\b(?:uk|united kingdom)\b/i.test(text)) {
-    return "United Kingdom"
-  }
-
-  if (/\bremote\b/i.test(text) && /\b(?:eu|europe|european union)\b/i.test(text)) {
-    return "Europe"
-  }
-
   return ""
 }
 

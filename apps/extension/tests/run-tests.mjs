@@ -738,7 +738,7 @@ test("infers location from pasted job descriptions", () => {
     inferLocationFromJobDescription(
       "Remote role open to candidates across the UK."
     ),
-    "United Kingdom"
+    ""
   )
   assert.equal(
     inferLocationFromJobDescription("No location is listed in this posting."),

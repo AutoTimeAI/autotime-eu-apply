@@ -691,78 +691,6 @@ function cleanLinkedInLocation(value = "") {
   return parts[0] ?? ""
 }
 
-function parseLinkedInVisibleLocation() {
-  const lines = getPageVisibleText()
-    .split("\n")
-    .map((line) => cleanLinkedInLocation(line))
-    .filter(Boolean)
-    .slice(0, 80)
-  const location = lines.find(
-    (line) =>
-      isLikelyVisibleLocation(line) &&
-      /,/.test(line) &&
-      !/\b(?:connections|followers|applicant|message|search|notification|home|jobs)\b/i.test(
-        line
-      )
-  )
-
-  return location ?? ""
-}
-
-function getLinkedInWorkplaceType() {
-  const explicit = getFirstText([
-    ".jobs-unified-top-card__workplace-type",
-    ".job-details-jobs-unified-top-card__workplace-type",
-    ".jobs-unified-top-card__job-insight span",
-    ".job-details-jobs-unified-top-card__job-insight span"
-  ])
-
-  if (/\bremote\b/i.test(explicit)) {
-    return "Remote"
-  }
-
-  if (/\bhybrid\b/i.test(explicit)) {
-    return "Hybrid"
-  }
-
-  if (/\b(?:on-site|onsite)\b/i.test(explicit)) {
-    return "On-site"
-  }
-
-  const topCardText = getLinkedInTopCardText()
-
-  if (/\bremote\b/i.test(topCardText)) {
-    return "Remote"
-  }
-
-  if (/\bhybrid\b/i.test(topCardText)) {
-    return "Hybrid"
-  }
-
-  if (/\b(?:on-site|onsite)\b/i.test(topCardText)) {
-    return "On-site"
-  }
-
-  return ""
-}
-
-function formatLinkedInLocation(location: string, workplaceType: string) {
-  const cleanLocation = cleanLinkedInLocation(location)
-
-  if (!cleanLocation) {
-    return workplaceType
-  }
-
-  if (
-    !workplaceType ||
-    cleanLocation.toLowerCase().includes(workplaceType.toLowerCase())
-  ) {
-    return cleanLocation
-  }
-
-  return `${cleanLocation} (${workplaceType})`
-}
-
 function getJsonLdText(value: unknown): string {
   if (typeof value === "string") {
     return cleanVisibleText(value)
@@ -843,28 +771,21 @@ function detectJobPage(): JobPageResponse {
       "[data-testid='job-company-name']",
       "[data-testid='company']",
       "[data-ui='company-name']",
-      "[class*='company']",
       "[data-automation-id='jobPostingCompany']",
       "[data-automation-id='company']"
     ], isLikelyVisibleCompany) ||
-    (isLinkedInUrl(window.location.href) ? parseLinkedInTopCardCompany() : "") ||
-    getMetaContent(["og:site_name", "application-name"])
-  const linkedInWorkplaceType = isLinkedInUrl(window.location.href)
-    ? getLinkedInWorkplaceType()
-    : ""
+    (isLinkedInUrl(window.location.href) ? parseLinkedInTopCardCompany() : "")
   const location =
     jsonLdLocationText ||
     (isLinkedInUrl(window.location.href)
-      ? formatLinkedInLocation(
+      ? cleanLinkedInLocation(
           getFirstText([
             ".jobs-unified-top-card__bullet",
             ".job-details-jobs-unified-top-card__bullet",
             ".topcard__flavor--bullet",
             "[data-automation-id='job-details-location']"
           ], isLikelyVisibleLocation) ||
-            parseLinkedInTopCardLocation() ||
-            parseLinkedInVisibleLocation(),
-          linkedInWorkplaceType
+            parseLinkedInTopCardLocation()
         )
       : getFirstText([
           ".posting-categories .location",
@@ -872,7 +793,6 @@ function detectJobPage(): JobPageResponse {
           "[data-testid='job-location']",
           "[data-testid='location']",
           "[data-ui='job-location']",
-          "[class*='location']",
           "[data-automation-id='locations']",
           "[data-automation-id='job-details-location']"
         ], isLikelyVisibleLocation))
@@ -891,7 +811,6 @@ function detectJobPage(): JobPageResponse {
         ".topcard__title",
         ".posting-headline h2",
         ".app-title",
-        "h1",
         "[data-testid='job-title']",
         "[data-testid='jobTitle']",
         "[data-ui='job-title']",
