@@ -356,6 +356,28 @@ test("rejects job description paragraphs as location values", () => {
   assert.ok(details.jobDescription.includes("Requirements Excellent"))
 })
 
+test("ignores scraped paragraph text in explicit job fields", () => {
+  const badScrape =
+    "Location We are working with a profitable company to hire an operator who will own projects across sales, marketing and support. Requirements Excellent communication skills. Application Send your CV."
+  const details = inferJobPageDetails({
+    title: "Senior Product Analyst at Example Co - Careers",
+    heading: badScrape,
+    company: badScrape,
+    location: badScrape,
+    description:
+      "Location: Dublin, Ireland Analyse payments workflows, APIs and dashboards for European teams.",
+    url: "https://example.com/jobs/product-analyst"
+  })
+
+  assert.equal(details.roleTitle, "Senior Product Analyst")
+  assert.equal(details.company, "Example Co")
+  assert.equal(details.location, "Dublin, Ireland")
+  assert.equal(
+    details.jobDescription,
+    "Location: Dublin, Ireland Analyse payments workflows, APIs and dashboards for European teams."
+  )
+})
+
 test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://www.linkedin.com/jobs/view/123"), "LinkedIn")
   assert.equal(getJobPlatform("https://jobs.linkedin.com/view/123"), "LinkedIn")

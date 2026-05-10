@@ -420,16 +420,56 @@ function getJsonLdJobPosting() {
   return null
 }
 
-function getFirstText(selectors: string[]) {
+function getFirstText(
+  selectors: string[],
+  isAcceptable: (text: string) => boolean = () => true
+) {
   for (const selector of selectors) {
     const element = document.querySelector<HTMLElement>(selector)
     const text = cleanVisibleText(element?.innerText || element?.textContent || "")
-    if (text) {
+    if (text && isAcceptable(text)) {
       return text
     }
   }
 
   return ""
+}
+
+function isShortVisibleField(text = "", maxWords = 12, maxLength = 120) {
+  const cleanText = cleanVisibleText(text)
+  const words = cleanText.split(/\s+/).filter(Boolean)
+
+  return (
+    cleanText.length > 0 &&
+    cleanText.length <= maxLength &&
+    words.length <= maxWords &&
+    !/\b(?:salary|compensation|equity|responsibilities|requirements|send|cv|video|about the|working with|you will|we are|job description|key responsibilities)\b/i.test(
+      cleanText
+    )
+  )
+}
+
+function isLikelyVisibleTitle(text = "") {
+  return isShortVisibleField(text, 12, 120)
+}
+
+function isLikelyVisibleCompany(text = "") {
+  return isShortVisibleField(text, 8, 100)
+}
+
+function isLikelyVisibleLocation(text = "") {
+  const cleanText = cleanLinkedInLocation(text)
+  const words = cleanText.split(/\s+/).filter(Boolean)
+
+  return (
+    cleanText.length > 0 &&
+    cleanText.length <= 90 &&
+    words.length <= 10 &&
+    !/\b(?:salary|compensation|equity|opportunity|company|business|role|responsibilities|requirements|experience|application|apply|send|cv|video|about|working|supporting|generated|revenue|students|organisations|organization)\b/i.test(
+      cleanText
+    ) &&
+    !/[Â£$â‚¬]\s*\d|\b\d{2,3},\d{3}\b/.test(cleanText)
+  )
 }
 
 function getLongestText(selectors: string[]) {
@@ -607,6 +647,7 @@ function parseLinkedInTopCardCompany() {
   const parts = getLinkedInTopCardParts()
   const company = parts.find(
     (part) =>
+      isLikelyVisibleCompany(part) &&
       !/\b(?:applicant|reposted|posted|remote|hybrid|on-site|onsite|full-time|part-time|contract)\b/i.test(
         part
       )
@@ -620,6 +661,7 @@ function parseLinkedInTopCardLocation() {
   const location = parts.find(
     (part, index) =>
       index > 0 &&
+      isLikelyVisibleLocation(part) &&
       !/\b(?:applicant|reposted|posted|actively recruiting|promoted|remote|hybrid|on-site|onsite|full-time|part-time|contract)\b/i.test(
         part
       )
@@ -657,6 +699,7 @@ function parseLinkedInVisibleLocation() {
     .slice(0, 80)
   const location = lines.find(
     (line) =>
+      isLikelyVisibleLocation(line) &&
       /,/.test(line) &&
       !/\b(?:connections|followers|applicant|message|search|notification|home|jobs)\b/i.test(
         line
@@ -801,7 +844,7 @@ function detectJobPage(): JobPageResponse {
       "[class*='company']",
       "[data-automation-id='jobPostingCompany']",
       "[data-automation-id='company']"
-    ]) ||
+    ], isLikelyVisibleCompany) ||
     (isLinkedInUrl(window.location.href) ? parseLinkedInTopCardCompany() : "") ||
     getMetaContent(["og:site_name", "application-name"])
   const linkedInWorkplaceType = isLinkedInUrl(window.location.href)
@@ -816,7 +859,7 @@ function detectJobPage(): JobPageResponse {
             ".job-details-jobs-unified-top-card__bullet",
             ".topcard__flavor--bullet",
             "[data-automation-id='job-details-location']"
-          ]) ||
+          ], isLikelyVisibleLocation) ||
             parseLinkedInTopCardLocation() ||
             parseLinkedInVisibleLocation(),
           linkedInWorkplaceType
@@ -830,7 +873,7 @@ function detectJobPage(): JobPageResponse {
           "[class*='location']",
           "[data-automation-id='locations']",
           "[data-automation-id='job-details-location']"
-        ]))
+        ], isLikelyVisibleLocation))
 
   const details = inferJobPageDetails({
     title: pageTitle,
@@ -849,7 +892,7 @@ function detectJobPage(): JobPageResponse {
       "[data-testid='jobTitle']",
       "[data-ui='job-title']",
       "[data-automation-id='jobPostingHeader']"
-    ]),
+    ], isLikelyVisibleTitle),
     company,
     location,
     description:

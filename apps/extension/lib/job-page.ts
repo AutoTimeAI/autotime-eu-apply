@@ -167,6 +167,30 @@ function cleanDetectedLocation(value = "") {
     .trim()
 }
 
+function isLikelyShortFieldValue(value = "", maxWords = 12, maxLength = 120) {
+  const text = cleanText(value)
+
+  if (!text) {
+    return false
+  }
+
+  const words = text.split(/\s+/).filter(Boolean)
+
+  if (words.length > maxWords || text.length > maxLength) {
+    return false
+  }
+
+  if (
+    /\b(?:salary|compensation|equity|responsibilities|requirements|send|cv|video|about the|working with|you will|we are|job description|key responsibilities)\b/i.test(
+      text
+    )
+  ) {
+    return false
+  }
+
+  return true
+}
+
 function isLikelyLocationValue(value = "") {
   const text = cleanDetectedLocation(value)
 
@@ -195,9 +219,28 @@ function isLikelyLocationValue(value = "") {
   return true
 }
 
+function getLikelyRoleTitle(value = "") {
+  const roleTitle = cleanRoleTitle(value)
+
+  return isLikelyShortFieldValue(roleTitle, 12, 120) ? roleTitle : ""
+}
+
+function getLikelyCompany(value = "") {
+  const company = cleanText(value)
+
+  return isLikelyShortFieldValue(company, 8, 100) ? company : ""
+}
+
+function getLikelyLocation(value = "") {
+  const location = cleanDetectedLocation(value)
+
+  return isLikelyLocationValue(location) ? location : ""
+}
+
 export function inferLocationSignalFromText(description = "") {
   const text = description.replace(/\r\n/g, "\n")
   const patterns = [
+    /\bLocation\s*[:|-]\s*([A-Z][A-Za-z .'-]+,\s*(?:United Kingdom|UK|Ireland|Germany|France|Spain|Portugal|Italy|Netherlands|Belgium|Switzerland|Austria|Poland|Sweden|Norway|Denmark|Finland|Europe))(?:\s|$)/i,
     /\bLocation\s*[:|-]\s*([^\n<]+)/i,
     /\b[Ll]ocation\s+([A-Z][A-Za-z .'-]+(?:\s*\([^)]{2,80}\))?)/,
     /\bJob location\s*[:|-]\s*([^\n<]+)/i,
@@ -272,15 +315,18 @@ export function inferJobPageDetails(
   const url = cleanText(input.url)
   const platform = getJobPlatform(url)
   const parsedTitle = parseTitle(input.title, platform)
-  const roleTitle = cleanText(input.heading) || parsedTitle.roleTitle
-  const company = cleanText(input.company) || parsedTitle.company
+  const roleTitle =
+    getLikelyRoleTitle(input.heading) || getLikelyRoleTitle(parsedTitle.roleTitle)
+  const company =
+    getLikelyCompany(input.company) || getLikelyCompany(parsedTitle.company)
   const jobDescription = cleanText(input.description)
+  const location =
+    getLikelyLocation(input.location) || inferLocationSignalFromText(input.description)
 
   return {
     roleTitle,
     company,
-    location:
-      cleanText(input.location) || inferLocationSignalFromText(input.description),
+    location,
     jobDescription,
     url,
     source: cleanText(input.source) || getHostname(url),
