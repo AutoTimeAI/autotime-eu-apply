@@ -44,6 +44,7 @@ type TextControl = HTMLInputElement | HTMLTextAreaElement
 const widgetHostId = "autotime-draggable-job-widget"
 const widgetPositionKey = "autotime-draggable-job-widget-position"
 const widgetRightOffset = 12
+const minWidgetWidth = 64
 const minWidgetHeight = 64
 const noJobDescriptionMessage =
   "No job description found. Update your description and click the button below to retrieve insights."
@@ -145,8 +146,8 @@ function getStoredWidgetPosition() {
     const parsed = JSON.parse(localStorage.getItem(widgetPositionKey) ?? "{}") as
       Partial<{ left: number; top: number }>
 
-    if (typeof parsed.top === "number") {
-      return { top: parsed.top }
+    if (typeof parsed.left === "number" && typeof parsed.top === "number") {
+      return parsed
     }
   } catch {
     // Ignore invalid page storage and fall back to the default position.
@@ -155,15 +156,19 @@ function getStoredWidgetPosition() {
   return null
 }
 
-function clampWidgetTop(top: number, height = 420) {
+function clampWidgetPosition(left: number, top: number, width = 520, height = 420) {
   const margin = 12
+  const maxLeft = Math.max(margin, window.innerWidth - width - margin)
   const maxTop = Math.max(margin, window.innerHeight - height - margin)
 
-  return Math.min(Math.max(margin, top), maxTop)
+  return {
+    left: Math.min(Math.max(margin, left), maxLeft),
+    top: Math.min(Math.max(margin, top), maxTop)
+  }
 }
 
-function saveWidgetPosition(top: number) {
-  localStorage.setItem(widgetPositionKey, JSON.stringify({ top }))
+function saveWidgetPosition(left: number, top: number) {
+  localStorage.setItem(widgetPositionKey, JSON.stringify({ left, top }))
 }
 
 function createApplicationRecord(details: JobPageResponse): ApplicationRecord {
@@ -344,9 +349,65 @@ function getLongestText(selectors: string[]) {
 function cleanLinkedInDescription(value = "") {
   return cleanVisibleText(value)
     .replace(/^About the job\s*/i, "")
+    .replace(/^About the role\s*/i, "")
     .replace(/\bShow more\b|\bShow less\b/gi, "")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+function getPageVisibleText() {
+  return (document.body?.innerText || document.body?.textContent || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
+function getTextAfterMarker(
+  text: string,
+  markers: string[],
+  endMarkers: string[]
+) {
+  const lowerText = text.toLowerCase()
+
+  for (const marker of markers) {
+    const markerIndex = lowerText.indexOf(marker.toLowerCase())
+
+    if (markerIndex === -1) {
+      continue
+    }
+
+    const start = markerIndex + marker.length
+    const end = endMarkers.reduce((nearest, endMarker) => {
+      const endIndex = lowerText.indexOf(endMarker.toLowerCase(), start)
+
+      return endIndex !== -1 && endIndex < nearest ? endIndex : nearest
+    }, text.length)
+
+    return text.slice(start, end)
+  }
+
+  return ""
+}
+
+function getLinkedInJobDescriptionFromVisibleText() {
+  const description = getTextAfterMarker(
+    getPageVisibleText(),
+    ["About the job", "About the role", "Job description", "Description"],
+    [
+      "\nSeniority level",
+      "\nEmployment type",
+      "\nJob function",
+      "\nIndustries",
+      "\nReferrals increase",
+      "\nSee who",
+      "\nShow more jobs",
+      "\nSimilar jobs"
+    ]
+  )
+
+  return getWordCount(description) >= 10
+    ? cleanLinkedInDescription(description)
+    : ""
 }
 
 function getLinkedInJobDescription() {
@@ -363,7 +424,7 @@ function getLinkedInJobDescription() {
 
   return getWordCount(description) >= 10
     ? cleanLinkedInDescription(description)
-    : ""
+    : getLinkedInJobDescriptionFromVisibleText()
 }
 
 function getJobDescription() {
@@ -471,6 +532,44 @@ function parseLinkedInTopCardLocation() {
   return location ?? ""
 }
 
+function cleanLinkedInLocation(value = "") {
+  const withoutStatus = cleanVisibleText(value)
+    .replace(/\b(?:reposted|posted)\s+\d+\s+(?:minute|hour|day|week|month)s?\s+ago\b.*$/i, "")
+    .replace(/\b\d+\s+(?:minute|hour|day|week|month)s?\s+ago\b.*$/i, "")
+    .replace(/\b\d+\s+applicants?.*$/i, "")
+    .replace(/\bActively recruiting\b.*$/i, "")
+    .trim()
+  const parts = withoutStatus
+    .split(/(?:\s*[·•]\s*|\s+\u00c2\u00b7\s+|\n+)/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter(
+      (part) =>
+        !/\b(?:applicant|reposted|posted|promoted|actively recruiting)\b/i.test(
+          part
+        )
+    )
+
+  return parts[0] ?? ""
+}
+
+function parseLinkedInVisibleLocation() {
+  const lines = getPageVisibleText()
+    .split("\n")
+    .map((line) => cleanLinkedInLocation(line))
+    .filter(Boolean)
+    .slice(0, 80)
+  const location = lines.find(
+    (line) =>
+      /,/.test(line) &&
+      !/\b(?:connections|followers|applicant|message|search|notification|home|jobs)\b/i.test(
+        line
+      )
+  )
+
+  return location ?? ""
+}
+
 function getLinkedInWorkplaceType() {
   const explicit = getFirstText([
     ".jobs-unified-top-card__workplace-type",
@@ -509,15 +608,20 @@ function getLinkedInWorkplaceType() {
 }
 
 function formatLinkedInLocation(location: string, workplaceType: string) {
-  if (!location) {
+  const cleanLocation = cleanLinkedInLocation(location)
+
+  if (!cleanLocation) {
     return workplaceType
   }
 
-  if (!workplaceType || location.toLowerCase().includes(workplaceType.toLowerCase())) {
-    return location
+  if (
+    !workplaceType ||
+    cleanLocation.toLowerCase().includes(workplaceType.toLowerCase())
+  ) {
+    return cleanLocation
   }
 
-  return `${location} (${workplaceType})`
+  return `${cleanLocation} (${workplaceType})`
 }
 
 function getJsonLdText(value: unknown): string {
@@ -613,9 +717,12 @@ function detectJobPage(): JobPageResponse {
       ? formatLinkedInLocation(
           getFirstText([
             ".jobs-unified-top-card__bullet",
+            ".job-details-jobs-unified-top-card__bullet",
             ".topcard__flavor--bullet",
             "[data-automation-id='job-details-location']"
-          ]) || parseLinkedInTopCardLocation(),
+          ]) ||
+            parseLinkedInTopCardLocation() ||
+            parseLinkedInVisibleLocation(),
           linkedInWorkplaceType
         )
       : getFirstText([
@@ -827,7 +934,7 @@ function getWidgetMarkup({
         gap: 8px;
         padding: 10px 12px;
         border-bottom: 1px solid #bdd4dc;
-        cursor: ns-resize;
+        cursor: move;
         user-select: none;
       }
 
@@ -1108,7 +1215,7 @@ function getWidgetMarkup({
         </button>
         <div class="title-block">
           <strong>AutoTime EU Apply</strong>
-          <span>Drag vertically</span>
+          <span>Drag to move</span>
         </div>
         <div class="window-controls" aria-label="Widget controls">
           <button class="icon-button" data-autotime-collapse-widget type="button" title="Minimize" aria-label="Minimize AutoTime widget">-</button>
@@ -1189,7 +1296,7 @@ function getMinimizedWidgetMarkup() {
         border-radius: 8px;
         background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
         box-shadow: 0 14px 34px rgba(6, 22, 47, 0.2);
-        cursor: ns-resize;
+        cursor: move;
       }
 
       .launcher-logo {
@@ -1249,11 +1356,14 @@ function initializeMovableJobWidget() {
   host.id = widgetHostId
   host.style.position = "fixed"
   host.style.zIndex = "2147483647"
-  host.style.right = `${widgetRightOffset}px`
 
   const storedPosition = getStoredWidgetPosition()
-  const initialTop = clampWidgetTop(storedPosition?.top ?? 92)
-  host.style.top = `${initialTop}px`
+  const initialPosition = clampWidgetPosition(
+    storedPosition?.left ?? window.innerWidth - 520 - widgetRightOffset,
+    storedPosition?.top ?? 92
+  )
+  host.style.left = `${initialPosition.left}px`
+  host.style.top = `${initialPosition.top}px`
 
   const shadow = host.attachShadow({ mode: "open" })
   document.documentElement.append(host)
@@ -1278,14 +1388,15 @@ function initializeMovableJobWidget() {
       () => {
         isMinimized = !isMinimized
         const current = host.getBoundingClientRect()
-        const nextTop = clampWidgetTop(
+        const nextPosition = clampWidgetPosition(
+          current.left,
           current.top,
+          isMinimized ? minWidgetWidth : 520,
           isMinimized ? minWidgetHeight : 420
         )
-        host.style.right = `${widgetRightOffset}px`
-        host.style.left = ""
-        host.style.top = `${nextTop}px`
-        saveWidgetPosition(nextTop)
+        host.style.left = `${nextPosition.left}px`
+        host.style.top = `${nextPosition.top}px`
+        saveWidgetPosition(nextPosition.left, nextPosition.top)
         render()
       }
     )
@@ -1300,13 +1411,14 @@ function initializeMovableJobWidget() {
 
   window.addEventListener("resize", () => {
     const current = host.getBoundingClientRect()
-    const nextTop = clampWidgetTop(
+    const nextPosition = clampWidgetPosition(
+      current.left,
       current.top,
+      isMinimized ? minWidgetWidth : 520,
       isMinimized ? minWidgetHeight : 420
     )
-    host.style.right = `${widgetRightOffset}px`
-    host.style.left = ""
-    host.style.top = `${nextTop}px`
+    host.style.left = `${nextPosition.left}px`
+    host.style.top = `${nextPosition.top}px`
   })
 
   setInterval(() => {
@@ -1377,17 +1489,19 @@ function bindWidgetEvents(
     dragSurface.setPointerCapture(event.pointerId)
 
     const startRect = host.getBoundingClientRect()
+    const offsetX = event.clientX - startRect.left
     const offsetY = event.clientY - startRect.top
 
     const onPointerMove = (moveEvent: PointerEvent) => {
       didDragWidget = true
-      const nextTop = clampWidgetTop(
+      const nextPosition = clampWidgetPosition(
+        moveEvent.clientX - offsetX,
         moveEvent.clientY - offsetY,
+        startRect.width,
         startRect.height
       )
-      host.style.right = `${widgetRightOffset}px`
-      host.style.left = ""
-      host.style.top = `${nextTop}px`
+      host.style.left = `${nextPosition.left}px`
+      host.style.top = `${nextPosition.top}px`
     }
 
     const onPointerUp = (upEvent: PointerEvent) => {
@@ -1395,7 +1509,7 @@ function bindWidgetEvents(
       dragSurface.removeEventListener("pointermove", onPointerMove)
       dragSurface.removeEventListener("pointerup", onPointerUp)
       const nextRect = host.getBoundingClientRect()
-      saveWidgetPosition(nextRect.top)
+      saveWidgetPosition(nextRect.left, nextRect.top)
     }
 
     dragSurface.addEventListener("pointermove", onPointerMove)
