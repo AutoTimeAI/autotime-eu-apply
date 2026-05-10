@@ -43,7 +43,7 @@ type TextControl = HTMLInputElement | HTMLTextAreaElement
 
 const widgetHostId = "autotime-draggable-job-widget"
 const widgetPositionKey = "autotime-draggable-job-widget-position"
-const minWidgetWidth = 64
+const widgetRightOffset = 12
 const minWidgetHeight = 64
 const noJobDescriptionMessage =
   "No job description found. Update your description and click the button below to retrieve insights."
@@ -145,8 +145,8 @@ function getStoredWidgetPosition() {
     const parsed = JSON.parse(localStorage.getItem(widgetPositionKey) ?? "{}") as
       Partial<{ left: number; top: number }>
 
-    if (typeof parsed.left === "number" && typeof parsed.top === "number") {
-      return parsed
+    if (typeof parsed.top === "number") {
+      return { top: parsed.top }
     }
   } catch {
     // Ignore invalid page storage and fall back to the default position.
@@ -155,19 +155,15 @@ function getStoredWidgetPosition() {
   return null
 }
 
-function clampWidgetPosition(left: number, top: number, width = 520, height = 420) {
+function clampWidgetTop(top: number, height = 420) {
   const margin = 12
-  const maxLeft = Math.max(margin, window.innerWidth - width - margin)
   const maxTop = Math.max(margin, window.innerHeight - height - margin)
 
-  return {
-    left: Math.min(Math.max(margin, left), maxLeft),
-    top: Math.min(Math.max(margin, top), maxTop)
-  }
+  return Math.min(Math.max(margin, top), maxTop)
 }
 
-function saveWidgetPosition(left: number, top: number) {
-  localStorage.setItem(widgetPositionKey, JSON.stringify({ left, top }))
+function saveWidgetPosition(top: number) {
+  localStorage.setItem(widgetPositionKey, JSON.stringify({ top }))
 }
 
 function createApplicationRecord(details: JobPageResponse): ApplicationRecord {
@@ -325,7 +321,8 @@ function getJsonLdJobPosting() {
 
 function getFirstText(selectors: string[]) {
   for (const selector of selectors) {
-    const text = document.querySelector(selector)?.textContent?.trim()
+    const element = document.querySelector<HTMLElement>(selector)
+    const text = cleanVisibleText(element?.innerText || element?.textContent || "")
     if (text) {
       return text
     }
@@ -336,15 +333,48 @@ function getFirstText(selectors: string[]) {
 
 function getLongestText(selectors: string[]) {
   const texts = selectors.flatMap((selector) =>
-    Array.from(document.querySelectorAll(selector))
-      .map((element) => cleanVisibleText(element.textContent ?? ""))
+    Array.from(document.querySelectorAll<HTMLElement>(selector))
+      .map((element) => cleanVisibleText(element.innerText || element.textContent || ""))
       .filter(Boolean)
   )
 
   return texts.sort((a, b) => b.length - a.length)[0] ?? ""
 }
 
+function cleanLinkedInDescription(value = "") {
+  return cleanVisibleText(value)
+    .replace(/^About the job\s*/i, "")
+    .replace(/\bShow more\b|\bShow less\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function getLinkedInJobDescription() {
+  const description = getLongestText([
+    "#job-details",
+    ".jobs-description",
+    ".jobs-description__container",
+    ".jobs-description__content",
+    ".jobs-box__html-content",
+    ".jobs-description-content__text",
+    ".show-more-less-html__markup",
+    "[class*='jobs-description']"
+  ])
+
+  return getWordCount(description) >= 10
+    ? cleanLinkedInDescription(description)
+    : ""
+}
+
 function getJobDescription() {
+  if (isLinkedInUrl(window.location.href)) {
+    const linkedInDescription = getLinkedInJobDescription()
+
+    if (linkedInDescription) {
+      return linkedInDescription
+    }
+  }
+
   const selectedDescription = getLongestText([
     ".jobs-description__content",
     ".jobs-box__html-content",
@@ -399,16 +429,95 @@ function getJobDescription() {
   return descriptionContainers.sort((a, b) => b.length - a.length)[0] ?? selectedDescription
 }
 
-function getLocationFromLinkedInDescription() {
-  const description = getFirstText([
+function getLinkedInTopCardText() {
+  return getFirstText([
+    ".job-details-jobs-unified-top-card__primary-description-container",
     ".jobs-unified-top-card__primary-description-container",
+    ".jobs-unified-top-card__subtitle-primary-grouping",
     ".topcard__flavor-row"
   ])
-  const parts = description
-    .split(/(?:\s+\u00b7\s+|\s+\u00c2\u00b7\s+)/)
-    .map((part) => part.trim())
+}
 
-  return parts.length > 1 ? parts[1] : ""
+function getLinkedInTopCardParts() {
+  return getLinkedInTopCardText()
+    .split(/(?:\s*[·•]\s*|\s+\u00c2\u00b7\s+|\n+)/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/^(verified|follow|promoted)$/i.test(part))
+}
+
+function parseLinkedInTopCardCompany() {
+  const parts = getLinkedInTopCardParts()
+  const company = parts.find(
+    (part) =>
+      !/\b(?:applicant|reposted|posted|remote|hybrid|on-site|onsite|full-time|part-time|contract)\b/i.test(
+        part
+      )
+  )
+
+  return company ?? ""
+}
+
+function parseLinkedInTopCardLocation() {
+  const parts = getLinkedInTopCardParts()
+  const location = parts.find(
+    (part, index) =>
+      index > 0 &&
+      !/\b(?:applicant|reposted|posted|actively recruiting|promoted|remote|hybrid|on-site|onsite|full-time|part-time|contract)\b/i.test(
+        part
+      )
+  )
+
+  return location ?? ""
+}
+
+function getLinkedInWorkplaceType() {
+  const explicit = getFirstText([
+    ".jobs-unified-top-card__workplace-type",
+    ".job-details-jobs-unified-top-card__workplace-type",
+    ".jobs-unified-top-card__job-insight span",
+    ".job-details-jobs-unified-top-card__job-insight span"
+  ])
+
+  if (/\bremote\b/i.test(explicit)) {
+    return "Remote"
+  }
+
+  if (/\bhybrid\b/i.test(explicit)) {
+    return "Hybrid"
+  }
+
+  if (/\b(?:on-site|onsite)\b/i.test(explicit)) {
+    return "On-site"
+  }
+
+  const topCardText = getLinkedInTopCardText()
+
+  if (/\bremote\b/i.test(topCardText)) {
+    return "Remote"
+  }
+
+  if (/\bhybrid\b/i.test(topCardText)) {
+    return "Hybrid"
+  }
+
+  if (/\b(?:on-site|onsite)\b/i.test(topCardText)) {
+    return "On-site"
+  }
+
+  return ""
+}
+
+function formatLinkedInLocation(location: string, workplaceType: string) {
+  if (!location) {
+    return workplaceType
+  }
+
+  if (!workplaceType || location.toLowerCase().includes(workplaceType.toLowerCase())) {
+    return location
+  }
+
+  return `${location} (${workplaceType})`
 }
 
 function getJsonLdText(value: unknown): string {
@@ -477,8 +586,11 @@ function detectJobPage(): JobPageResponse {
       ? jsonLdHiringOrganization.name
       : "") ||
     getFirstText([
+      ".jobs-unified-top-card__company-name a",
       ".jobs-unified-top-card__company-name",
+      ".job-details-jobs-unified-top-card__company-name a",
       ".job-details-jobs-unified-top-card__company-name",
+      ".job-details-jobs-unified-top-card__primary-description-container a",
       ".topcard__org-name-link",
       ".posting-headline .company",
       ".company-name",
@@ -489,28 +601,43 @@ function detectJobPage(): JobPageResponse {
       "[class*='company']",
       "[data-automation-id='jobPostingCompany']",
       "[data-automation-id='company']"
-    ]) || getMetaContent(["og:site_name", "application-name"])
+    ]) ||
+    (isLinkedInUrl(window.location.href) ? parseLinkedInTopCardCompany() : "") ||
+    getMetaContent(["og:site_name", "application-name"])
+  const linkedInWorkplaceType = isLinkedInUrl(window.location.href)
+    ? getLinkedInWorkplaceType()
+    : ""
   const location =
     jsonLdLocationText ||
-    getFirstText([
-      ".jobs-unified-top-card__bullet",
-      ".job-details-jobs-unified-top-card__primary-description-container",
-      ".topcard__flavor--bullet",
-      ".posting-categories .location",
-      ".location",
-      "[data-testid='job-location']",
-      "[data-testid='location']",
-      "[data-ui='job-location']",
-      "[class*='location']",
-      "[data-automation-id='locations']",
-      "[data-automation-id='job-details-location']"
-    ]) || getLocationFromLinkedInDescription()
+    (isLinkedInUrl(window.location.href)
+      ? formatLinkedInLocation(
+          getFirstText([
+            ".jobs-unified-top-card__bullet",
+            ".topcard__flavor--bullet",
+            "[data-automation-id='job-details-location']"
+          ]) || parseLinkedInTopCardLocation(),
+          linkedInWorkplaceType
+        )
+      : getFirstText([
+          ".posting-categories .location",
+          ".location",
+          "[data-testid='job-location']",
+          "[data-testid='location']",
+          "[data-ui='job-location']",
+          "[class*='location']",
+          "[data-automation-id='locations']",
+          "[data-automation-id='job-details-location']"
+        ]))
 
   const details = inferJobPageDetails({
     title: pageTitle,
     heading: getFirstText([
+      ".job-details-jobs-unified-top-card__job-title h1",
       ".jobs-unified-top-card__job-title",
       ".job-details-jobs-unified-top-card__job-title",
+      ".jobs-unified-top-card__job-title h1",
+      ".jobs-unified-top-card__job-title a",
+      ".job-details-jobs-unified-top-card__job-title a",
       ".topcard__title",
       ".posting-headline h2",
       ".app-title",
@@ -700,7 +827,7 @@ function getWidgetMarkup({
         gap: 8px;
         padding: 10px 12px;
         border-bottom: 1px solid #bdd4dc;
-        cursor: move;
+        cursor: ns-resize;
         user-select: none;
       }
 
@@ -715,11 +842,12 @@ function getWidgetMarkup({
       }
 
       .logo-toggle,
-      .launcher-logo {
+      .launcher-logo,
+      .icon-button {
         display: inline-grid;
         place-items: center;
-        min-width: 32px;
-        min-height: 32px;
+        width: 32px;
+        height: 32px;
         padding: 0;
         border: 0;
         border-radius: 7px;
@@ -729,21 +857,37 @@ function getWidgetMarkup({
       }
 
       .logo-toggle:hover,
-      .launcher-logo:hover {
+      .launcher-logo:hover,
+      .icon-button:hover {
         background: #dff2f0;
+      }
+
+      .title-block {
+        display: grid;
+        min-width: 0;
+        gap: 1px;
       }
 
       .handle strong {
         color: #06162f;
         font-size: 13px;
         font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .handle span {
         color: #5b6475;
-        margin-left: auto;
         font-size: 11px;
         font-weight: 600;
+      }
+
+      .window-controls {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
       }
 
       .grid {
@@ -901,6 +1045,32 @@ function getWidgetMarkup({
         opacity: 0.72;
       }
 
+      button.logo-toggle,
+      button.icon-button,
+      button.launcher-logo {
+        min-width: 32px;
+        min-height: 32px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        color: #324054;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      button.icon-button {
+        font-weight: 700;
+      }
+
+      button.logo-toggle:hover,
+      button.icon-button:hover,
+      button.launcher-logo:hover {
+        border: 0;
+        background: #dff2f0;
+        color: #06162f;
+      }
+
       .dashboard-button {
         justify-self: start;
         min-height: 34px;
@@ -933,11 +1103,17 @@ function getWidgetMarkup({
     </style>
     <section class="widget" aria-label="AutoTime job tracker">
       <div class="handle" data-autotime-drag-handle>
-        <button class="logo-toggle" data-autotime-toggle-widget type="button" aria-label="Minimize AutoTime widget">
+        <button class="logo-toggle" data-autotime-collapse-widget type="button" title="Minimize" aria-label="Minimize AutoTime widget">
           <img class="brand-logo" alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
         </button>
-        <strong>AutoTime EU Apply</strong>
-        <span>Drag to move</span>
+        <div class="title-block">
+          <strong>AutoTime EU Apply</strong>
+          <span>Drag vertically</span>
+        </div>
+        <div class="window-controls" aria-label="Widget controls">
+          <button class="icon-button" data-autotime-collapse-widget type="button" title="Minimize" aria-label="Minimize AutoTime widget">-</button>
+          <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
+        </div>
       </div>
       <div class="grid">
         <div class="panel">
@@ -1013,6 +1189,7 @@ function getMinimizedWidgetMarkup() {
         border-radius: 8px;
         background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
         box-shadow: 0 14px 34px rgba(6, 22, 47, 0.2);
+        cursor: ns-resize;
       }
 
       .launcher-logo {
@@ -1040,7 +1217,7 @@ function getMinimizedWidgetMarkup() {
         object-fit: contain;
       }
     </style>
-    <section class="launcher" aria-label="AutoTime widget minimized">
+    <section class="launcher" data-autotime-launcher aria-label="AutoTime widget minimized">
       <button class="launcher-logo" data-autotime-toggle-widget type="button" aria-label="Open AutoTime widget">
         <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
       </button>
@@ -1072,14 +1249,11 @@ function initializeMovableJobWidget() {
   host.id = widgetHostId
   host.style.position = "fixed"
   host.style.zIndex = "2147483647"
+  host.style.right = `${widgetRightOffset}px`
 
   const storedPosition = getStoredWidgetPosition()
-  const initialPosition = clampWidgetPosition(
-    storedPosition?.left ?? window.innerWidth - 548,
-    storedPosition?.top ?? 92
-  )
-  host.style.left = `${initialPosition.left}px`
-  host.style.top = `${initialPosition.top}px`
+  const initialTop = clampWidgetTop(storedPosition?.top ?? 92)
+  host.style.top = `${initialTop}px`
 
   const shadow = host.attachShadow({ mode: "open" })
   document.documentElement.append(host)
@@ -1104,15 +1278,14 @@ function initializeMovableJobWidget() {
       () => {
         isMinimized = !isMinimized
         const current = host.getBoundingClientRect()
-        const nextPosition = clampWidgetPosition(
-          current.left,
+        const nextTop = clampWidgetTop(
           current.top,
-          isMinimized ? minWidgetWidth : 520,
           isMinimized ? minWidgetHeight : 420
         )
-        host.style.left = `${nextPosition.left}px`
-        host.style.top = `${nextPosition.top}px`
-        saveWidgetPosition(nextPosition.left, nextPosition.top)
+        host.style.right = `${widgetRightOffset}px`
+        host.style.left = ""
+        host.style.top = `${nextTop}px`
+        saveWidgetPosition(nextTop)
         render()
       }
     )
@@ -1127,14 +1300,13 @@ function initializeMovableJobWidget() {
 
   window.addEventListener("resize", () => {
     const current = host.getBoundingClientRect()
-    const nextPosition = clampWidgetPosition(
-      current.left,
+    const nextTop = clampWidgetTop(
       current.top,
-      isMinimized ? minWidgetWidth : 520,
       isMinimized ? minWidgetHeight : 420
     )
-    host.style.left = `${nextPosition.left}px`
-    host.style.top = `${nextPosition.top}px`
+    host.style.right = `${widgetRightOffset}px`
+    host.style.left = ""
+    host.style.top = `${nextTop}px`
   })
 
   setInterval(() => {
@@ -1161,8 +1333,12 @@ function bindWidgetEvents(
   toggleWidget: () => void
 ) {
   const handle = shadow.querySelector<HTMLElement>("[data-autotime-drag-handle]")
+  const launcher = shadow.querySelector<HTMLElement>("[data-autotime-launcher]")
   const toggleButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-toggle-widget]"
+  )
+  const collapseButtons = Array.from(
+    shadow.querySelectorAll<HTMLButtonElement>("[data-autotime-collapse-widget]")
   )
   const trackButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-track-job]"
@@ -1170,46 +1346,60 @@ function bindWidgetEvents(
   const dashboardButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-open-dashboard]"
   )
-
-  toggleButton?.addEventListener("pointerdown", (event) => {
-    event.stopPropagation()
-  })
+  let didDragWidget = false
 
   toggleButton?.addEventListener("click", (event) => {
     event.preventDefault()
     event.stopPropagation()
+    if (didDragWidget) {
+      didDragWidget = false
+      return
+    }
     toggleWidget()
   })
 
-  handle?.addEventListener("pointerdown", (event) => {
+  collapseButtons.forEach((button) => {
+    button.addEventListener("pointerdown", (event) => {
+      event.stopPropagation()
+    })
+
+    button.addEventListener("click", (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      toggleWidget()
+    })
+  })
+
+  const dragSurface = handle ?? launcher
+
+  dragSurface?.addEventListener("pointerdown", (event) => {
     event.preventDefault()
-    handle.setPointerCapture(event.pointerId)
+    dragSurface.setPointerCapture(event.pointerId)
 
     const startRect = host.getBoundingClientRect()
-    const offsetX = event.clientX - startRect.left
     const offsetY = event.clientY - startRect.top
 
     const onPointerMove = (moveEvent: PointerEvent) => {
-      const next = clampWidgetPosition(
-        moveEvent.clientX - offsetX,
+      didDragWidget = true
+      const nextTop = clampWidgetTop(
         moveEvent.clientY - offsetY,
-        startRect.width,
         startRect.height
       )
-      host.style.left = `${next.left}px`
-      host.style.top = `${next.top}px`
+      host.style.right = `${widgetRightOffset}px`
+      host.style.left = ""
+      host.style.top = `${nextTop}px`
     }
 
     const onPointerUp = (upEvent: PointerEvent) => {
-      handle.releasePointerCapture(upEvent.pointerId)
-      handle.removeEventListener("pointermove", onPointerMove)
-      handle.removeEventListener("pointerup", onPointerUp)
+      dragSurface.releasePointerCapture(upEvent.pointerId)
+      dragSurface.removeEventListener("pointermove", onPointerMove)
+      dragSurface.removeEventListener("pointerup", onPointerUp)
       const nextRect = host.getBoundingClientRect()
-      saveWidgetPosition(nextRect.left, nextRect.top)
+      saveWidgetPosition(nextRect.top)
     }
 
-    handle.addEventListener("pointermove", onPointerMove)
-    handle.addEventListener("pointerup", onPointerUp)
+    dragSurface.addEventListener("pointermove", onPointerMove)
+    dragSurface.addEventListener("pointerup", onPointerUp)
   })
 
   trackButton?.addEventListener("click", () => {
