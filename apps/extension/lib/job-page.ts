@@ -158,17 +158,24 @@ function cleanRoleTitle(value = "") {
 }
 
 function cleanDetectedLocation(value = "") {
-  return cleanText(value).replace(/[.;,:\-\s]+$/, "").trim()
+  return cleanText(value)
+    .replace(
+      /\s+(?:salary|compensation|about(?:\s+the\s+(?:opportunity|role|company))?|the\s+role|role|key\s+responsibilities|responsibilities|requirements|profile|what(?:'|’)s\s+on\s+offer|benefits|application|how\s+to\s+apply)\b.*$/i,
+      ""
+    )
+    .replace(/[.;,:\-\s]+$/, "")
+    .trim()
 }
 
 export function inferLocationSignalFromText(description = "") {
   const text = description.replace(/\r\n/g, "\n")
   const patterns = [
     /\bLocation\s*[:|-]\s*([^\n<]+)/i,
+    /\b[Ll]ocation\s+([A-Z][A-Za-z .'-]+(?:\s*\([^)]{2,80}\))?)/,
     /\bJob location\s*[:|-]\s*([^\n<]+)/i,
-    /\bOffice\s*[:|-]\s*([^\n<]+)/i,
+    /\bOffice\s*:\s*([^\n<]+)/i,
     /\bWorkplace\s*[:|-]\s*([^\n<]+)/i,
-    /\bBase(?:d)?\s*[:|-]\s*([^\n<]+)/i,
+    /\bBase(?:d)?\s*:\s*([^\n<]+)/i,
     /\bBased in\s+([A-Z][A-Za-z .'-]+(?:,\s*[A-Z][A-Za-z .'-]+)?)/i,
     /\b(?:Hybrid|Remote|On-site|Onsite)\s*(?:role|working)?\s*(?:in|from|-\s*)\s*([A-Z][A-Za-z .'-]+(?:,\s*[A-Z][A-Za-z .'-]+)?)/i
   ]

@@ -331,6 +331,19 @@ test("cleans job page descriptions and infers missing location", () => {
   )
 })
 
+test("stops flattened location parsing at following job sections", () => {
+  const details = inferJobPageDetails({
+    title: "Founder's Associate",
+    description:
+      "Location London (Full-time, office-based) Salary: £60,000 – £80,000 + Equity (2–5%) About the Opportunity We are working with a high-growth business. The Role This is a highly dynamic role. Requirements 1–3 years experience.",
+    url: "https://example.com/jobs/founders-associate"
+  })
+
+  assert.equal(details.location, "London (Full-time, office-based)")
+  assert.ok(details.jobDescription.includes("Salary: £60,000"))
+  assert.ok(details.jobDescription.includes("Requirements 1–3 years"))
+})
+
 test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://www.linkedin.com/jobs/view/123"), "LinkedIn")
   assert.equal(getJobPlatform("https://jobs.linkedin.com/view/123"), "LinkedIn")
