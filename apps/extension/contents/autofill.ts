@@ -1441,10 +1441,8 @@ function bindWidgetEvents(
 ) {
   const handle = shadow.querySelector<HTMLElement>("[data-autotime-drag-handle]")
   const launcher = shadow.querySelector<HTMLElement>("[data-autotime-launcher]")
-  const widgetControls = Array.from(
-    shadow.querySelectorAll<HTMLElement>(
-      "[data-autotime-collapse-widget], [data-autotime-toggle-widget]"
-    )
+  const collapseControls = Array.from(
+    shadow.querySelectorAll<HTMLElement>("[data-autotime-collapse-widget]")
   )
   const trackButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-track-job]"
@@ -1452,8 +1450,6 @@ function bindWidgetEvents(
   const dashboardButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-open-dashboard]"
   )
-  let didDragWidget = false
-  let suppressNextLauncherClick = false
 
   const findWidgetControl = (event: Event) =>
     event
@@ -1461,59 +1457,29 @@ function bindWidgetEvents(
       .find(
         (element): element is Element =>
           typeof (element as Element).matches === "function" &&
-          (element as Element).matches(
-            "[data-autotime-collapse-widget], [data-autotime-toggle-widget]"
-          )
+          (element as Element).matches("[data-autotime-collapse-widget]")
       )
 
-  const activateWidgetControl = (event: Event, ignoreAfterDrag = false) => {
+  const activateWidgetControl = (event: Event) => {
     event.preventDefault()
     event.stopPropagation()
-
-    if (ignoreAfterDrag && didDragWidget) {
-      didDragWidget = false
-      return
-    }
 
     shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
   }
 
-  widgetControls.forEach((control) => {
+  collapseControls.forEach((control) => {
     control.addEventListener("pointerdown", (event) => {
-      if (!control.closest("[data-autotime-launcher]")) {
-        event.stopPropagation()
-      }
-    })
-
-    control.addEventListener("pointerup", (event) => {
-      if (control.closest("[data-autotime-launcher]")) {
-        suppressNextLauncherClick = true
-        activateWidgetControl(event, true)
-      }
+      event.stopPropagation()
     })
 
     control.addEventListener("click", (event) => {
-      const isLauncherControl = Boolean(control.closest("[data-autotime-launcher]"))
-
-      if (isLauncherControl && suppressNextLauncherClick) {
-        event.preventDefault()
-        event.stopPropagation()
-        suppressNextLauncherClick = false
-        return
-      }
-
-      activateWidgetControl(
-        event,
-        isLauncherControl
-      )
+      activateWidgetControl(event)
     })
   })
 
-  const bindDragSurface = (dragSurface: HTMLElement, skipControls: boolean) => {
+  const bindHandleDrag = (dragSurface: HTMLElement) => {
     dragSurface.addEventListener("pointerdown", (event) => {
-      const startedOnControl = Boolean(findWidgetControl(event))
-
-      if (skipControls && startedOnControl) {
+      if (findWidgetControl(event)) {
         return
       }
 
@@ -1530,7 +1496,6 @@ function bindWidgetEvents(
         const hasMoved =
           Math.abs(moveEvent.clientX - startX) > 3 ||
           Math.abs(moveEvent.clientY - startY) > 3
-        didDragWidget = didDragWidget || hasMoved
 
         if (!hasMoved) {
           return
@@ -1552,19 +1517,6 @@ function bindWidgetEvents(
         dragSurface.removeEventListener("pointerup", onPointerUp)
         const nextRect = host.getBoundingClientRect()
         saveWidgetPosition(nextRect.left, nextRect.top)
-        const wasDragged = didDragWidget
-
-        if (!skipControls && startedOnControl && !wasDragged) {
-          suppressNextLauncherClick = true
-          shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
-          return
-        }
-
-        if (wasDragged) {
-          window.setTimeout(() => {
-            didDragWidget = false
-          }, 0)
-        }
       }
 
       dragSurface.addEventListener("pointermove", onPointerMove)
@@ -1572,12 +1524,99 @@ function bindWidgetEvents(
     })
   }
 
+  const bindLauncherControl = (dragSurface: HTMLElement) => {
+    let activePointerId: number | null = null
+    let launcherWasDragged = false
+    let startX = 0
+    let startY = 0
+    let offsetX = 0
+    let offsetY = 0
+    let startWidth = minWidgetWidth
+    let startHeight = minWidgetHeight
+
+    dragSurface.addEventListener("pointerdown", (event) => {
+      event.stopPropagation()
+
+      activePointerId = event.pointerId
+      launcherWasDragged = false
+      const startRect = host.getBoundingClientRect()
+      startX = event.clientX
+      startY = event.clientY
+      offsetX = event.clientX - startRect.left
+      offsetY = event.clientY - startRect.top
+      startWidth = startRect.width
+      startHeight = startRect.height
+
+      try {
+        dragSurface.setPointerCapture(event.pointerId)
+      } catch {
+        // Pointer capture can fail for synthetic events; normal clicks still work.
+      }
+    })
+
+    dragSurface.addEventListener("pointermove", (moveEvent) => {
+      if (activePointerId !== moveEvent.pointerId) {
+        return
+      }
+
+      const hasMoved =
+        Math.abs(moveEvent.clientX - startX) > 3 ||
+        Math.abs(moveEvent.clientY - startY) > 3
+
+      if (!hasMoved) {
+        return
+      }
+
+      launcherWasDragged = true
+      const nextPosition = clampWidgetPosition(
+        moveEvent.clientX - offsetX,
+        moveEvent.clientY - offsetY,
+        startWidth,
+        startHeight
+      )
+      host.style.left = `${nextPosition.left}px`
+      host.style.top = `${nextPosition.top}px`
+    })
+
+    dragSurface.addEventListener("pointerup", (upEvent) => {
+      if (activePointerId !== upEvent.pointerId) {
+        return
+      }
+
+      try {
+        dragSurface.releasePointerCapture(upEvent.pointerId)
+      } catch {
+        // Ignore capture release failures from non-browser-generated events.
+      }
+
+      const nextRect = host.getBoundingClientRect()
+      saveWidgetPosition(nextRect.left, nextRect.top)
+      activePointerId = null
+    })
+
+    dragSurface.addEventListener("pointercancel", () => {
+      activePointerId = null
+    })
+
+    dragSurface.addEventListener("click", (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (launcherWasDragged) {
+        launcherWasDragged = false
+        return
+      }
+
+      shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
+    })
+  }
+
   if (handle) {
-    bindDragSurface(handle, true)
+    bindHandleDrag(handle)
   }
 
   if (launcher) {
-    bindDragSurface(launcher, false)
+    bindLauncherControl(launcher)
   }
 
   trackButton?.addEventListener("click", () => {
