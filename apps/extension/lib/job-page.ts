@@ -167,6 +167,34 @@ function cleanDetectedLocation(value = "") {
     .trim()
 }
 
+function isLikelyLocationValue(value = "") {
+  const text = cleanDetectedLocation(value)
+
+  if (!text) {
+    return false
+  }
+
+  const words = text.split(/\s+/).filter(Boolean)
+
+  if (words.length > 10 || text.length > 90) {
+    return false
+  }
+
+  if (
+    /\b(?:salary|compensation|equity|opportunity|company|business|role|responsibilities|requirements|experience|application|apply|send|cv|video|about|working|supporting|generated|revenue|students|organisations|organization)\b/i.test(
+      text
+    )
+  ) {
+    return false
+  }
+
+  if (/[£$€]\s*\d|\b\d{2,3},\d{3}\b/.test(text)) {
+    return false
+  }
+
+  return true
+}
+
 export function inferLocationSignalFromText(description = "") {
   const text = description.replace(/\r\n/g, "\n")
   const patterns = [
@@ -184,7 +212,7 @@ export function inferLocationSignalFromText(description = "") {
     const match = text.match(pattern)
     const location = cleanDetectedLocation(match?.[1])
 
-    if (location) {
+    if (isLikelyLocationValue(location)) {
       return location
     }
   }

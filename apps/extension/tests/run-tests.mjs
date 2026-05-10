@@ -344,6 +344,18 @@ test("stops flattened location parsing at following job sections", () => {
   assert.ok(details.jobDescription.includes("Requirements 1–3 years"))
 })
 
+test("rejects job description paragraphs as location values", () => {
+  const details = inferJobPageDetails({
+    title: "Operations Associate",
+    description:
+      "Location We are working with a profitable company to hire an operator who will own projects across sales, marketing and support. Requirements Excellent communication skills. Application Send your CV.",
+    url: "https://example.com/jobs/operations-associate"
+  })
+
+  assert.equal(details.location, "")
+  assert.ok(details.jobDescription.includes("Requirements Excellent"))
+})
+
 test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://www.linkedin.com/jobs/view/123"), "LinkedIn")
   assert.equal(getJobPlatform("https://jobs.linkedin.com/view/123"), "LinkedIn")
