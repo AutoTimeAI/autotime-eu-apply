@@ -98,7 +98,7 @@ section {
   border: 1px solid #c9d4e6;
   border-radius: 10px;
   background: #ffffff;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .track-only-shell {
@@ -107,7 +107,10 @@ section {
 
 .track-job-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  grid-template-areas:
+    "insights details"
+    "action action";
+  grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
   gap: 16px;
   align-items: stretch;
   padding: 18px;
@@ -151,32 +154,56 @@ section {
 }
 
 .track-action-bar {
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.35fr);
-  align-items: center;
+  grid-area: action;
+  justify-items: end;
   padding-top: 14px;
   border-top: 1px solid #bdd4dc;
 }
 
-.track-action-bar h2 {
-  font-size: 20px;
+.job-insights-panel {
+  grid-area: insights;
+}
+
+.track-action-copy {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.track-action-copy p {
+  max-width: 260px;
+  color: #5b6475;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
 }
 
 .track-job-button {
-  min-height: 54px;
+  min-width: 124px;
+  min-height: 40px;
+  padding: 0 16px;
   border: 1px solid #006c67;
   border-radius: 8px;
   background: #007c78;
+  box-shadow: 0 6px 14px rgba(0, 108, 103, 0.18);
   color: #ffffff;
   font: inherit;
-  font-size: 16px;
-  font-weight: 900;
+  font-size: 13px;
+  font-weight: 800;
   letter-spacing: 0;
 }
 
 .track-job-button:hover {
   border-color: #004f4b;
   background: #006c67;
+  box-shadow: 0 8px 18px rgba(0, 79, 75, 0.22);
+  transform: translateY(-1px);
+}
+
+.track-job-button:active {
+  box-shadow: 0 3px 8px rgba(0, 79, 75, 0.18);
+  transform: translateY(0);
 }
 
 .track-job-button:disabled {
@@ -196,6 +223,20 @@ section {
 .deep-insight-shell li {
   color: #172033;
   line-height: 1.45;
+}
+
+.job-insights-panel .empty-insight-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.job-insights-panel .empty-insight-list li {
+  padding: 12px;
+  border: 1px solid #d6deeb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4d5768;
+  font-weight: 700;
 }
 
 .deep-insight-shell {
@@ -224,11 +265,31 @@ section {
   font-weight: 800;
 }
 
+.upgrade-heading-link,
+.upgrade-note a {
+  color: #005f5a;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.upgrade-heading-link:hover,
+.upgrade-note a:hover {
+  color: #004f4b;
+}
+
 .job-details-panel {
+  grid-area: details;
   margin: 0;
 }
 
-.job-details-panel div {
+.job-details-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.job-details-list div {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -238,14 +299,14 @@ section {
   background: #ffffff;
 }
 
-.job-details-panel dt {
+.job-details-list dt {
   color: #5b6475;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.job-details-panel dd {
+.job-details-list dd {
   margin: 0;
   min-width: 0;
   color: #172033;
@@ -265,11 +326,24 @@ section {
 
 @media (max-width: 560px) {
   .track-job-panel {
+    grid-template-areas:
+      "insights"
+      "details"
+      "action";
     grid-template-columns: 1fr;
   }
 
   .track-action-bar {
-    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .track-action-copy {
+    justify-self: start;
+    justify-items: start;
+  }
+
+  .track-action-copy p {
+    text-align: left;
   }
 }
 

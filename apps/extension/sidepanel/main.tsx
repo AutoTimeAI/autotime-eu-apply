@@ -119,6 +119,9 @@ const insightKeywords = [
   "market"
 ]
 
+const noJobDescriptionMessage =
+  "No job description found. Update your description and click the button below to retrieve insights."
+
 function getWordCount(text = "") {
   return text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0
 }
@@ -132,11 +135,8 @@ function getDetectedKeywords(description = "") {
 }
 
 function getBasicInsights(details: JobPageResponse | null) {
-  if (!details) {
-    return [
-      "Track a visible job post to generate basic insights.",
-      "AutoTime will read job title, company, location and description when available."
-    ]
+  if (!details?.jobDescription.trim()) {
+    return [noJobDescriptionMessage]
   }
 
   const wordCount = getWordCount(details.jobDescription)
@@ -146,15 +146,13 @@ function getBasicInsights(details: JobPageResponse | null) {
     details.platform !== "Generic"
       ? `Detected from ${details.platform}.`
       : "Detected from the current job page.",
-    wordCount > 0
-      ? `${wordCount} words in the visible job description.`
-      : "No full job description detected yet.",
+    `${wordCount} words in the visible job description.`,
     details.location
       ? `Location signal: ${details.location}.`
       : "Location was not clearly detected.",
     keywords.length > 0
       ? `Core signals: ${keywords.join(", ")}.`
-      : "Track a richer post for keyword signals."
+      : "No keyword signals detected yet."
   ]
 }
 
@@ -1085,6 +1083,9 @@ function SidePanelApp() {
 
   const renderLegacyTools = false
   const isProCustomer = accountSession?.plan === "pro"
+  const hasParsedDescription = Boolean(trackedJobDetails?.jobDescription.trim())
+  const shouldShowDeepInsightList = hasParsedDescription || isProCustomer
+  const pricingUrl = `${appUrl}/pricing`
   const basicInsights = getBasicInsights(trackedJobDetails)
   const deepInsights = getDeepInsights(trackedJobDetails)
 
@@ -1095,13 +1096,13 @@ function SidePanelApp() {
         <h1>AutoTime EU Apply</h1>
       </header>
 
-      <section className="track-job-panel" aria-labelledby="track-job-title">
+      <section className="track-job-panel" aria-label="Track job">
         <div className="job-insights-panel">
           <div>
             <p className="panel-eyebrow">Job insights</p>
             <h3>Basic insight</h3>
           </div>
-          <ul>
+          <ul className={hasParsedDescription ? "" : "empty-insight-list"}>
             {basicInsights.map((insight) => (
               <li key={insight}>{insight}</li>
             ))}
@@ -1110,67 +1111,93 @@ function SidePanelApp() {
           <div className="deep-insight-shell">
             <div>
               <p className="panel-eyebrow">Deep insight</p>
-              <h3>{isProCustomer ? "Pro analysis" : "Upgrade to unlock"}</h3>
+              <h3>
+                {isProCustomer ? (
+                  "Pro analysis"
+                ) : (
+                  <a
+                    className="upgrade-heading-link"
+                    href={pricingUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Upgrade to unlock
+                  </a>
+                )}
+              </h3>
             </div>
-            <ul className={isProCustomer ? "" : "blurred-insights"}>
-              {deepInsights.map((insight) => (
-                <li key={insight}>{insight}</li>
-              ))}
-            </ul>
+            {shouldShowDeepInsightList ? (
+              <ul className={isProCustomer ? "" : "blurred-insights"}>
+                {deepInsights.map((insight) => (
+                  <li key={insight}>{insight}</li>
+                ))}
+              </ul>
+            ) : null}
             {!isProCustomer ? (
               <p className="upgrade-note">
                 Deep matching, gaps and priority guidance are available after
-                upgrading.
+                upgrading.{" "}
+                <a href={pricingUrl} rel="noreferrer" target="_blank">
+                  Upgrade to Pro
+                </a>
+              </p>
+            ) : !hasParsedDescription ? (
+              <p className="upgrade-note">
+                Deep analysis appears after a job description is parsed.
               </p>
             ) : null}
           </div>
         </div>
 
-        <dl className="job-details-panel">
+        <aside className="job-details-panel" aria-labelledby="job-details-title">
           <div>
-            <dt>Job title</dt>
-            <dd>{trackedJobDetails?.roleTitle || "Not tracked yet"}</dd>
+            <p className="panel-eyebrow">Job details</p>
+            <h3 id="job-details-title">Parsed from job board</h3>
           </div>
-          <div>
-            <dt>Company</dt>
-            <dd>{trackedJobDetails?.company || "Not detected"}</dd>
-          </div>
-          <div>
-            <dt>Location</dt>
-            <dd>{trackedJobDetails?.location || "Not detected"}</dd>
-          </div>
-          <div>
-            <dt>Platform</dt>
-            <dd>{trackedJobDetails?.platform || "Waiting"}</dd>
-          </div>
-          <div>
-            <dt>Source</dt>
-            <dd>{trackedJobDetails?.source || "Waiting"}</dd>
-          </div>
-          <div>
-            <dt>Description</dt>
-            <dd>
-              {trackedJobDetails?.jobDescription
-                ? `${getWordCount(trackedJobDetails.jobDescription)} words parsed`
-                : "Not parsed yet"}
-            </dd>
-          </div>
-        </dl>
+          <dl className="job-details-list">
+            <div>
+              <dt>Job title</dt>
+              <dd>{trackedJobDetails?.roleTitle || "Not tracked yet"}</dd>
+            </div>
+            <div>
+              <dt>Company</dt>
+              <dd>{trackedJobDetails?.company || "Not detected"}</dd>
+            </div>
+            <div>
+              <dt>Location</dt>
+              <dd>{trackedJobDetails?.location || "Not detected"}</dd>
+            </div>
+            <div>
+              <dt>Platform</dt>
+              <dd>{trackedJobDetails?.platform || "Waiting"}</dd>
+            </div>
+            <div>
+              <dt>Source</dt>
+              <dd>{trackedJobDetails?.source || "Waiting"}</dd>
+            </div>
+            <div>
+              <dt>Description</dt>
+              <dd>
+                {trackedJobDetails?.jobDescription
+                  ? `${getWordCount(trackedJobDetails.jobDescription)} words parsed`
+                  : "Not parsed yet"}
+              </dd>
+            </div>
+          </dl>
+        </aside>
 
         <div className="track-action-bar">
-          <div>
-            <h2 id="track-job-title">Track this job</h2>
+          <div className="track-action-copy">
+            <button
+              className="track-job-button"
+              disabled={isTrackingJob}
+              type="button"
+              onClick={handleTrackJob}
+            >
+              TRACK JOB
+            </button>
             <p>Save this job. Everything else stays in the dashboard.</p>
           </div>
-
-          <button
-            className="track-job-button"
-            disabled={isTrackingJob}
-            type="button"
-            onClick={handleTrackJob}
-          >
-            TRACK JOB
-          </button>
 
           {applicationsStatus && (
             <p
