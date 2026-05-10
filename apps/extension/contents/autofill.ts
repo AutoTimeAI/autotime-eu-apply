@@ -43,6 +43,7 @@ type TextControl = HTMLInputElement | HTMLTextAreaElement
 
 const widgetHostId = "autotime-draggable-job-widget"
 const widgetPositionKey = "autotime-draggable-job-widget-position"
+const widgetToggleEventName = "autotime-toggle-widget"
 const widgetRightOffset = 12
 const minWidgetWidth = 64
 const minWidgetHeight = 64
@@ -904,6 +905,11 @@ function getWidgetMarkup({
     ? `${getWordCount(details.jobDescription)} words parsed`
     : "Not parsed yet"
   const shouldShowDeepInsightList = hasParsedDescription || isProCustomer
+  const statusHelp = /^tracking/i.test(status)
+    ? "Please wait while AutoTime saves this role."
+    : /tracked/i.test(status)
+      ? "Saved roles appear in the AutoTime dashboard tracker."
+      : "Check the visible job page and try again."
 
   return `
     <style>
@@ -926,6 +932,27 @@ function getWidgetMarkup({
         background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
         box-shadow: 0 18px 45px rgba(6, 22, 47, 0.18);
         overflow: hidden;
+      }
+
+      .launcher {
+        display: none;
+        place-items: center;
+        width: 56px;
+        height: 56px;
+        border: 1px solid #bdd4dc;
+        border-left: 4px solid #007c78;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
+        box-shadow: 0 14px 34px rgba(6, 22, 47, 0.2);
+        cursor: move;
+      }
+
+      :host([data-autotime-minimized="true"]) .widget {
+        display: none;
+      }
+
+      :host([data-autotime-minimized="true"]) .launcher {
+        display: grid;
       }
 
       .handle {
@@ -995,6 +1022,27 @@ function getWidgetMarkup({
         align-items: center;
         gap: 4px;
         margin-left: auto;
+      }
+
+      .status-alert {
+        display: grid;
+        gap: 3px;
+        margin: 10px 12px 0;
+        padding: 10px 12px;
+        border: 1px solid #8bcfc8;
+        border-left: 4px solid #007c78;
+        border-radius: 8px;
+        background: #ecfffb;
+        box-shadow: 0 8px 18px rgba(0, 108, 103, 0.16);
+        color: #064e4a;
+        font-size: 12.5px;
+        font-weight: 700;
+      }
+
+      .status-alert small {
+        color: #47716e;
+        font-size: 11px;
+        font-weight: 600;
       }
 
       .grid {
@@ -1198,15 +1246,6 @@ function getWidgetMarkup({
         justify-items: end;
         gap: 5px;
       }
-
-      .status {
-        grid-column: 1 / -1;
-        justify-self: stretch;
-        margin: 0;
-        color: #14532d;
-        font-size: 12px;
-        font-weight: 700;
-      }
     </style>
     <section class="widget" aria-label="AutoTime job tracker">
       <div class="handle" data-autotime-drag-handle>
@@ -1222,6 +1261,11 @@ function getWidgetMarkup({
           <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
         </div>
       </div>
+      ${
+        status
+          ? `<div class="status-alert" role="alert" aria-live="assertive">${escapeHtml(status)}<small>${escapeHtml(statusHelp)}</small></div>`
+          : ""
+      }
       <div class="grid">
         <div class="panel">
           <div>
@@ -1268,8 +1312,12 @@ function getWidgetMarkup({
         <div class="track-copy">
           <button data-autotime-track-job type="button">TRACK JOB</button>
         </div>
-        ${status ? `<p class="status" role="status">${escapeHtml(status)}</p>` : ""}
       </div>
+    </section>
+    <section class="launcher" data-autotime-launcher aria-label="AutoTime widget minimized">
+      <button class="launcher-logo" data-autotime-toggle-widget type="button" aria-label="Open AutoTime widget">
+        <img alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
+      </button>
     </section>
   `
 }
@@ -1344,7 +1392,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
   }
 
   await saveApplication(createApplicationRecord(details))
-  return "Job tracked."
+  return "Job tracked successfully."
 }
 
 function initializeMovableJobWidget() {
@@ -1373,7 +1421,19 @@ function initializeMovableJobWidget() {
   let isMinimized = false
   let status = ""
 
-  const render = () => {
+  function toggleWidget() {
+    isMinimized = !isMinimized
+    host.dataset.autotimeMinimized = String(isMinimized)
+    const current = host.getBoundingClientRect()
+    const nextPosition = clampWidgetPosition(
+      current.left,
+      current.top,
+      isMinimized ? minWidgetWidth : 520,
+      isMinimized ? minWidgetHeight : 420
+    )
+    host.style.left = `${nextPosition.left}px`
+    host.style.top = `${nextPosition.top}px`
+    saveWidgetPosition(nextPosition.left, nextPosition.top)
     shadow.innerHTML = isMinimized
       ? getMinimizedWidgetMarkup()
       : getWidgetMarkup({ accountSession, details, status })
@@ -1384,23 +1444,29 @@ function initializeMovableJobWidget() {
       (nextStatus) => {
         status = nextStatus
         render()
-      },
-      () => {
-        isMinimized = !isMinimized
-        const current = host.getBoundingClientRect()
-        const nextPosition = clampWidgetPosition(
-          current.left,
-          current.top,
-          isMinimized ? minWidgetWidth : 520,
-          isMinimized ? minWidgetHeight : 420
-        )
-        host.style.left = `${nextPosition.left}px`
-        host.style.top = `${nextPosition.top}px`
-        saveWidgetPosition(nextPosition.left, nextPosition.top)
+      }
+    )
+  }
+
+  function render() {
+    shadow.innerHTML = isMinimized
+      ? getMinimizedWidgetMarkup()
+      : getWidgetMarkup({ accountSession, details, status })
+    bindWidgetEvents(
+      host,
+      shadow,
+      () => details,
+      (nextStatus) => {
+        status = nextStatus
         render()
       }
     )
   }
+
+  shadow.addEventListener(widgetToggleEventName, (event) => {
+    event.stopPropagation()
+    window.setTimeout(toggleWidget, 0)
+  })
 
   void getAccountSession().then((session) => {
     accountSession = session
@@ -1441,16 +1507,14 @@ function bindWidgetEvents(
   host: HTMLDivElement,
   shadow: ShadowRoot,
   getDetails: () => JobPageResponse | null,
-  setStatus: (status: string) => void,
-  toggleWidget: () => void
+  setStatus: (status: string) => void
 ) {
   const handle = shadow.querySelector<HTMLElement>("[data-autotime-drag-handle]")
   const launcher = shadow.querySelector<HTMLElement>("[data-autotime-launcher]")
-  const toggleButton = shadow.querySelector<HTMLButtonElement>(
-    "[data-autotime-toggle-widget]"
-  )
-  const collapseButtons = Array.from(
-    shadow.querySelectorAll<HTMLButtonElement>("[data-autotime-collapse-widget]")
+  const widgetControls = Array.from(
+    shadow.querySelectorAll<HTMLElement>(
+      "[data-autotime-collapse-widget], [data-autotime-toggle-widget]"
+    )
   )
   const trackButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-track-job]"
@@ -1460,61 +1524,97 @@ function bindWidgetEvents(
   )
   let didDragWidget = false
 
-  toggleButton?.addEventListener("click", (event) => {
+  const findWidgetControl = (event: Event) =>
+    event
+      .composedPath()
+      .find(
+        (element): element is Element =>
+          typeof (element as Element).matches === "function" &&
+          (element as Element).matches(
+            "[data-autotime-collapse-widget], [data-autotime-toggle-widget]"
+          )
+      )
+
+  const activateWidgetControl = (event: Event) => {
     event.preventDefault()
     event.stopPropagation()
-    if (didDragWidget) {
-      didDragWidget = false
-      return
-    }
-    toggleWidget()
-  })
 
-  collapseButtons.forEach((button) => {
-    button.addEventListener("pointerdown", (event) => {
-      event.stopPropagation()
+    shadow.dispatchEvent(new CustomEvent(widgetToggleEventName))
+  }
+
+  widgetControls.forEach((control) => {
+    control.addEventListener("pointerdown", (event) => {
+      if (!control.closest("[data-autotime-launcher]")) {
+        event.stopPropagation()
+      }
     })
 
-    button.addEventListener("click", (event) => {
+    control.addEventListener("click", (event) => {
+      activateWidgetControl(event)
+    })
+  })
+
+  const bindDragSurface = (dragSurface: HTMLElement, skipControls: boolean) => {
+    dragSurface.addEventListener("pointerdown", (event) => {
+      if (skipControls && findWidgetControl(event)) {
+        return
+      }
+
       event.preventDefault()
-      event.stopPropagation()
-      toggleWidget()
+      dragSurface.setPointerCapture(event.pointerId)
+
+      const startRect = host.getBoundingClientRect()
+      const startX = event.clientX
+      const startY = event.clientY
+      const offsetX = event.clientX - startRect.left
+      const offsetY = event.clientY - startRect.top
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const hasMoved =
+          Math.abs(moveEvent.clientX - startX) > 3 ||
+          Math.abs(moveEvent.clientY - startY) > 3
+        didDragWidget = didDragWidget || hasMoved
+
+        if (!hasMoved) {
+          return
+        }
+
+        const nextPosition = clampWidgetPosition(
+          moveEvent.clientX - offsetX,
+          moveEvent.clientY - offsetY,
+          startRect.width,
+          startRect.height
+        )
+        host.style.left = `${nextPosition.left}px`
+        host.style.top = `${nextPosition.top}px`
+      }
+
+      const onPointerUp = (upEvent: PointerEvent) => {
+        dragSurface.releasePointerCapture(upEvent.pointerId)
+        dragSurface.removeEventListener("pointermove", onPointerMove)
+        dragSurface.removeEventListener("pointerup", onPointerUp)
+        const nextRect = host.getBoundingClientRect()
+        saveWidgetPosition(nextRect.left, nextRect.top)
+
+        if (didDragWidget) {
+          window.setTimeout(() => {
+            didDragWidget = false
+          }, 0)
+        }
+      }
+
+      dragSurface.addEventListener("pointermove", onPointerMove)
+      dragSurface.addEventListener("pointerup", onPointerUp)
     })
-  })
+  }
 
-  const dragSurface = handle ?? launcher
+  if (handle) {
+    bindDragSurface(handle, true)
+  }
 
-  dragSurface?.addEventListener("pointerdown", (event) => {
-    event.preventDefault()
-    dragSurface.setPointerCapture(event.pointerId)
-
-    const startRect = host.getBoundingClientRect()
-    const offsetX = event.clientX - startRect.left
-    const offsetY = event.clientY - startRect.top
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      didDragWidget = true
-      const nextPosition = clampWidgetPosition(
-        moveEvent.clientX - offsetX,
-        moveEvent.clientY - offsetY,
-        startRect.width,
-        startRect.height
-      )
-      host.style.left = `${nextPosition.left}px`
-      host.style.top = `${nextPosition.top}px`
-    }
-
-    const onPointerUp = (upEvent: PointerEvent) => {
-      dragSurface.releasePointerCapture(upEvent.pointerId)
-      dragSurface.removeEventListener("pointermove", onPointerMove)
-      dragSurface.removeEventListener("pointerup", onPointerUp)
-      const nextRect = host.getBoundingClientRect()
-      saveWidgetPosition(nextRect.left, nextRect.top)
-    }
-
-    dragSurface.addEventListener("pointermove", onPointerMove)
-    dragSurface.addEventListener("pointerup", onPointerUp)
-  })
+  if (launcher) {
+    bindDragSurface(launcher, false)
+  }
 
   trackButton?.addEventListener("click", () => {
     trackButton.disabled = true
