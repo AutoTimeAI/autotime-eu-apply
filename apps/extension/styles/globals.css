@@ -107,7 +107,7 @@ section {
 
 .track-job-panel {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 0.95fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
   gap: 16px;
   align-items: stretch;
   padding: 18px;
@@ -141,12 +141,25 @@ section {
 }
 
 .track-action-rail,
+.track-action-bar,
 .job-insights-panel,
 .job-details-panel {
   display: grid;
   align-content: start;
   gap: 12px;
   min-width: 0;
+}
+
+.track-action-bar {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.35fr);
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px solid #bdd4dc;
+}
+
+.track-action-bar h2 {
+  font-size: 20px;
 }
 
 .track-job-button {
@@ -252,6 +265,10 @@ section {
 
 @media (max-width: 560px) {
   .track-job-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .track-action-bar {
     grid-template-columns: 1fr;
   }
 }

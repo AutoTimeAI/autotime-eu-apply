@@ -1096,37 +1096,6 @@ function SidePanelApp() {
       </header>
 
       <section className="track-job-panel" aria-labelledby="track-job-title">
-        <div className="track-action-rail">
-          <div>
-            <p className="panel-eyebrow">LinkedIn and job boards</p>
-            <h2 id="track-job-title">Track this job</h2>
-            <p>
-              Save the visible job post here. Profile, documents and application
-              workflow stay in the dashboard.
-            </p>
-          </div>
-
-          <button
-            className="track-job-button"
-            disabled={isTrackingJob}
-            type="button"
-            onClick={handleTrackJob}
-          >
-            TRACK JOB
-          </button>
-
-          {applicationsStatus && (
-            <p
-              className={getStatusClassName(applicationsStatus)}
-              ref={applicationsStatusRef}
-              role="status"
-              tabIndex={-1}
-            >
-              {applicationsStatus}
-            </p>
-          )}
-        </div>
-
         <div className="job-insights-panel">
           <div>
             <p className="panel-eyebrow">Job insights</p>
@@ -1187,6 +1156,33 @@ function SidePanelApp() {
             </dd>
           </div>
         </dl>
+
+        <div className="track-action-bar">
+          <div>
+            <h2 id="track-job-title">Track this job</h2>
+            <p>Save this job. Everything else stays in the dashboard.</p>
+          </div>
+
+          <button
+            className="track-job-button"
+            disabled={isTrackingJob}
+            type="button"
+            onClick={handleTrackJob}
+          >
+            TRACK JOB
+          </button>
+
+          {applicationsStatus && (
+            <p
+              className={getStatusClassName(applicationsStatus)}
+              ref={applicationsStatusRef}
+              role="status"
+              tabIndex={-1}
+            >
+              {applicationsStatus}
+            </p>
+          )}
+        </div>
       </section>
 
       {renderLegacyTools ? (
