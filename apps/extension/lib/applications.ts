@@ -69,6 +69,36 @@ export function hasApplicationWithUrl(
   )
 }
 
+export function mergeDashboardApplications(
+  localApplications: ApplicationRecord[],
+  dashboardApplications: ApplicationRecord[]
+) {
+  const dashboardByUrl = new Map(
+    dashboardApplications.map((application) => [
+      normalizeApplicationUrl(application.url || application.id),
+      application
+    ])
+  )
+  const seen = new Set<string>()
+
+  return [
+    ...localApplications.map((application) => {
+      const key = normalizeApplicationUrl(application.url || application.id)
+      return dashboardByUrl.get(key) ?? application
+    }),
+    ...dashboardApplications
+  ].filter((application) => {
+    const key = normalizeApplicationUrl(application.url || application.id)
+
+    if (seen.has(key)) {
+      return false
+    }
+
+    seen.add(key)
+    return true
+  })
+}
+
 function escapeCsvValue(value: string | undefined) {
   const text = value ?? ""
   return `"${text.replace(/"/g, '""')}"`

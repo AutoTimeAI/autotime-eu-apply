@@ -16,6 +16,7 @@ import {
   type JobPageDetails
 } from "../lib/job-page"
 import { hasApplicationWithUrl } from "../lib/applications"
+import { syncApplicationsToDashboard } from "../lib/cloud-sync"
 import { appUrl } from "../lib/openai"
 import {
   canFillInput,
@@ -194,6 +195,31 @@ function createApplicationRecord(details: JobPageResponse): ApplicationRecord {
     notes: [details.jobDescription, formatJobPageNotes(details)]
       .filter(Boolean)
       .join("\n\n")
+  }
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Dashboard sync failed."
+}
+
+async function syncTrackedApplicationsToDashboard(
+  applications: ApplicationRecord[]
+) {
+  const session = await getAccountSession()
+
+  if (!session?.authToken.trim()) {
+    return "Connect the extension to your dashboard to sync jobs."
+  }
+
+  try {
+    await syncApplicationsToDashboard({
+      applications,
+      reusableAnswers: await getReusableAnswers(),
+      session
+    })
+    return "Synced to dashboard."
+  } catch (error: unknown) {
+    return getErrorMessage(error)
   }
 }
 
@@ -1343,11 +1369,23 @@ async function saveDetectedJob(details: JobPageResponse | null) {
   const applications = await getApplications()
 
   if (hasApplicationWithUrl(applications, details.url)) {
-    return "This job is already tracked."
+    const syncStatus = await syncTrackedApplicationsToDashboard(applications)
+    return syncStatus === "Synced to dashboard."
+      ? "This job is already tracked and synced to dashboard."
+      : `This job is already tracked. ${syncStatus}`
   }
 
-  await saveApplication(createApplicationRecord(details))
-  return "Job tracked successfully."
+  const record = createApplicationRecord(details)
+  const updatedApplications = [record, ...applications]
+
+  await saveApplication(record)
+
+  const syncStatus =
+    await syncTrackedApplicationsToDashboard(updatedApplications)
+
+  return syncStatus === "Synced to dashboard."
+    ? "Job tracked and synced to dashboard."
+    : `Job tracked in extension. ${syncStatus}`
 }
 
 function initializeMovableJobWidget() {

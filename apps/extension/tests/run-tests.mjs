@@ -4,6 +4,7 @@ import {
   filterApplications,
   getApplicationValidationMetrics,
   hasApplicationWithUrl,
+  mergeDashboardApplications,
   validationMetricsToCsv
 } from "../lib/applications.ts"
 import {
@@ -1481,6 +1482,41 @@ test("updates application tracker fields", async () => {
       notes: "Recruiter screen booked."
     }
   ])
+})
+
+test("merges extension tracked jobs into dashboard applications without duplicates", () => {
+  const localApplications = [
+    {
+      id: "local",
+      title: "Local role",
+      url: "https://Example.com/jobs/123#details",
+      createdAt: "2026-04-03T00:00:00.000Z",
+      status: "Saved"
+    }
+  ]
+  const dashboardApplications = [
+    {
+      id: "remote-duplicate",
+      title: "Remote duplicate role",
+      url: "https://example.com/jobs/123",
+      createdAt: "2026-04-02T00:00:00.000Z",
+      status: "Saved"
+    },
+    {
+      id: "remote",
+      title: "Remote role",
+      url: "https://example.com/jobs/456",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "Applied"
+    }
+  ]
+
+  assert.deepEqual(
+    mergeDashboardApplications(localApplications, dashboardApplications).map(
+      (application) => application.id
+    ),
+    ["remote-duplicate", "remote"]
+  )
 })
 
 test("filters applications by query and status", () => {

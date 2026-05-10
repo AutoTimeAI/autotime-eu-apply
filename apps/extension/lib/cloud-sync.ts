@@ -1,5 +1,11 @@
+import { mergeDashboardApplications } from "./applications"
 import { appUrl } from "./openai"
-import type { AccountSession, CandidateProfile } from "./storage"
+import type {
+  AccountSession,
+  ApplicationRecord,
+  CandidateProfile,
+  ReusableAnswers
+} from "./storage"
 
 type ApiEnvelope<T> = {
   data: T | null
@@ -13,6 +19,33 @@ type ProfileSyncResponse = {
 
 type ProfileReadResponse = {
   profile: CandidateProfile | null
+}
+
+type DashboardWorkflow = {
+  applications: ApplicationRecord[]
+  evidenceRecords: unknown[]
+  interviewPrepPacks: unknown[]
+  outcomeRecords: unknown[]
+  reusableAnswers: ReusableAnswers
+}
+
+type DashboardReadResponse = {
+  dashboard: DashboardWorkflow | null
+}
+
+type DashboardSyncResponse = {
+  synced: true
+}
+
+const emptyReusableAnswers: ReusableAnswers = {
+  sponsorshipAnswer: "",
+  relocationAnswer: "",
+  workAuthorisationAnswer: "",
+  noticePeriodAnswer: "",
+  salaryExpectationAnswer: "",
+  motivationAnswer: "",
+  strengthsAnswer: "",
+  availabilityAnswer: ""
 }
 
 async function parseSyncResponse<T>(response: Response): Promise<T> {
@@ -67,4 +100,50 @@ export async function loadProfileFromDashboard(session: AccountSession | null) {
   const data = await parseSyncResponse<ProfileReadResponse>(response)
 
   return data.profile
+}
+
+export async function syncApplicationsToDashboard({
+  applications,
+  reusableAnswers,
+  session
+}: {
+  applications: ApplicationRecord[]
+  reusableAnswers: ReusableAnswers | null
+  session: AccountSession | null
+}) {
+  if (!session?.authToken.trim()) {
+    throw new Error("Connect the extension to your dashboard to sync jobs.")
+  }
+
+  const headers = {
+    Authorization: `Bearer ${session.authToken}`,
+    "Content-Type": "application/json",
+    "x-autotime-source": "extension"
+  }
+
+  const readResponse = await fetch(`${appUrl}/api/sync/dashboard`, {
+    headers
+  })
+  const readData = await parseSyncResponse<DashboardReadResponse>(readResponse)
+  const dashboard = readData.dashboard
+
+  const payload: DashboardWorkflow = {
+    applications: mergeDashboardApplications(
+      applications,
+      dashboard?.applications ?? []
+    ),
+    evidenceRecords: dashboard?.evidenceRecords ?? [],
+    interviewPrepPacks: dashboard?.interviewPrepPacks ?? [],
+    outcomeRecords: dashboard?.outcomeRecords ?? [],
+    reusableAnswers:
+      dashboard?.reusableAnswers ?? reusableAnswers ?? emptyReusableAnswers
+  }
+
+  const writeResponse = await fetch(`${appUrl}/api/sync/dashboard`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  })
+
+  await parseSyncResponse<DashboardSyncResponse>(writeResponse)
 }

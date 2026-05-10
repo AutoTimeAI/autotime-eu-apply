@@ -57,6 +57,7 @@ import {
 } from "../lib/openai"
 import {
   loadProfileFromDashboard,
+  syncApplicationsToDashboard,
   syncProfileToDashboard
 } from "../lib/cloud-sync"
 import {
@@ -565,8 +566,29 @@ function SidePanelApp() {
 
     if (hasApplicationWithUrl(applications, details.url)) {
       setTrackedJobDetails(details)
-      setApplicationsStatus("This job is already tracked")
-      setTimeout(() => setApplicationsStatus(""), 2500)
+      if (!accountSession?.authToken.trim()) {
+        setApplicationsStatus(
+          "This job is already tracked. Connect dashboard to sync jobs."
+        )
+        setTimeout(() => setApplicationsStatus(""), 4500)
+        return
+      }
+
+      try {
+        await syncApplicationsToDashboard({
+          applications,
+          reusableAnswers: savedReusableAnswers ?? reusableAnswers,
+          session: accountSession
+        })
+        setApplicationsStatus("This job is already tracked and synced")
+      } catch (error: unknown) {
+        setApplicationsStatus(
+          error instanceof Error
+            ? `This job is already tracked. ${error.message}`
+            : "This job is already tracked. Dashboard sync failed."
+        )
+      }
+      setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }
 
@@ -591,8 +613,31 @@ function SidePanelApp() {
     await saveApplication(record)
     setTrackedJobDetails(details)
     setApplications((current) => [record, ...current])
-    setApplicationsStatus("Job tracked")
-    setTimeout(() => setApplicationsStatus(""), 2500)
+
+    if (!accountSession?.authToken.trim()) {
+      setApplicationsStatus(
+        "Job tracked in extension. Connect dashboard to sync jobs."
+      )
+      setTimeout(() => setApplicationsStatus(""), 4500)
+      return
+    }
+
+    try {
+      await syncApplicationsToDashboard({
+        applications: [record, ...applications],
+        reusableAnswers: savedReusableAnswers ?? reusableAnswers,
+        session: accountSession
+      })
+      setApplicationsStatus("Job tracked and synced to dashboard")
+    } catch (error: unknown) {
+      setApplicationsStatus(
+        error instanceof Error
+          ? `Job tracked in extension. ${error.message}`
+          : "Job tracked in extension. Dashboard sync failed."
+      )
+    }
+
+    setTimeout(() => setApplicationsStatus(""), 4500)
   }
 
   const exportApplications = () => {
