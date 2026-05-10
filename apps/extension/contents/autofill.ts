@@ -435,6 +435,81 @@ function getFirstText(
   return ""
 }
 
+function getDirectText(element: Element | null) {
+  if (!element) {
+    return ""
+  }
+
+  return cleanVisibleText(
+    Array.from(element.childNodes)
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent ?? "")
+      .join(" ")
+  )
+}
+
+function normalizeFieldLabel(value = "") {
+  return cleanVisibleText(value)
+    .replace(/[*:：\-\s]+$/g, "")
+    .toLowerCase()
+}
+
+function getExactLabeledText(
+  labels: string[],
+  isAcceptable: (text: string) => boolean
+) {
+  const normalizedLabels = new Set(labels.map(normalizeFieldLabel))
+
+  for (const term of document.querySelectorAll<HTMLElement>("dt")) {
+    if (!normalizedLabels.has(normalizeFieldLabel(term.innerText || term.textContent || ""))) {
+      continue
+    }
+
+    const value =
+      cleanVisibleText(term.parentElement?.querySelector("dd")?.textContent || "") ||
+      cleanVisibleText(term.nextElementSibling?.textContent || "")
+
+    if (value && isAcceptable(value)) {
+      return value
+    }
+  }
+
+  for (const term of document.querySelectorAll<HTMLElement>("th")) {
+    if (!normalizedLabels.has(normalizeFieldLabel(term.innerText || term.textContent || ""))) {
+      continue
+    }
+
+    const value = cleanVisibleText(
+      term.nextElementSibling?.textContent ||
+        term.parentElement?.querySelector("td")?.textContent ||
+        ""
+    )
+
+    if (value && isAcceptable(value)) {
+      return value
+    }
+  }
+
+  const inlinePattern = new RegExp(
+    `^(${labels
+      .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|")})\\s*[:：-]\\s*(.+)$`,
+    "i"
+  )
+
+  for (const element of document.querySelectorAll<HTMLElement>("li, p, span, div")) {
+    const text = getDirectText(element)
+    const match = text.match(inlinePattern)
+    const value = cleanVisibleText(match?.[2] || "")
+
+    if (value && isAcceptable(value)) {
+      return value
+    }
+  }
+
+  return ""
+}
+
 function isShortVisibleField(text = "", maxWords = 12, maxLength = 120) {
   const cleanText = cleanVisibleText(text)
   const words = cleanText.split(/\s+/).filter(Boolean)
@@ -635,6 +710,13 @@ function getLinkedInTopCardText() {
   ])
 }
 
+function splitLinkedInParts(value = "") {
+  return value
+    .split(/(?:\s*(?:\u00b7|\u2022|\u00c2\u00b7)\s*|\n+)/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
 function getLinkedInTopCardParts() {
   return getLinkedInTopCardText()
     .split(/(?:\s*[·•]\s*|\s+\u00c2\u00b7\s+|\n+)/)
@@ -644,7 +726,9 @@ function getLinkedInTopCardParts() {
 }
 
 function parseLinkedInTopCardCompany() {
-  const parts = getLinkedInTopCardParts()
+  const parts = splitLinkedInParts(getLinkedInTopCardText()).filter(
+    (part) => !/^(verified|follow|promoted)$/i.test(part)
+  )
   const company = parts.find(
     (part) =>
       isLikelyVisibleCompany(part) &&
@@ -657,7 +741,9 @@ function parseLinkedInTopCardCompany() {
 }
 
 function parseLinkedInTopCardLocation() {
-  const parts = getLinkedInTopCardParts()
+  const parts = splitLinkedInParts(getLinkedInTopCardText()).filter(
+    (part) => !/^(verified|follow|promoted)$/i.test(part)
+  )
   const location = parts.find(
     (part, index) =>
       index > 0 &&
@@ -677,6 +763,17 @@ function cleanLinkedInLocation(value = "") {
     .replace(/\b\d+\s+applicants?.*$/i, "")
     .replace(/\bActively recruiting\b.*$/i, "")
     .trim()
+  const normalizedParts = splitLinkedInParts(withoutStatus).filter(
+    (part) =>
+      !/\b(?:applicant|reposted|posted|promoted|actively recruiting)\b/i.test(
+        part
+      )
+  )
+
+  if (normalizedParts.length > 0) {
+    return normalizedParts[0]
+  }
+
   const parts = withoutStatus
     .split(/(?:\s*[·•]\s*|\s+\u00c2\u00b7\s+|\n+)/)
     .map((part) => part.trim())
@@ -692,6 +789,10 @@ function cleanLinkedInLocation(value = "") {
 }
 
 function getJsonLdText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(getJsonLdText).find(Boolean) ?? ""
+  }
+
   if (typeof value === "string") {
     return cleanVisibleText(value)
   }
@@ -732,9 +833,7 @@ function getJsonLdAddressText(value: unknown): string {
 
 function detectJobPage(): JobPageResponse {
   const jsonLdPosting = getJsonLdJobPosting()
-  const jsonLdHiringOrganization = jsonLdPosting?.hiringOrganization as
-    | { name?: string }
-    | undefined
+  const jsonLdHiringOrganization = jsonLdPosting?.hiringOrganization
   const jsonLdLocationText =
     getJsonLdAddressText(jsonLdPosting?.jobLocation) ||
     getJsonLdAddressText(jsonLdPosting?.applicantLocationRequirements) ||
@@ -755,9 +854,7 @@ function detectJobPage(): JobPageResponse {
     document.title ||
     jsonLdTitle
   const company =
-    (typeof jsonLdHiringOrganization?.name === "string"
-      ? jsonLdHiringOrganization.name
-      : "") ||
+    getJsonLdText(jsonLdHiringOrganization) ||
     getFirstText([
       ".jobs-unified-top-card__company-name a",
       ".jobs-unified-top-card__company-name",
@@ -774,6 +871,10 @@ function detectJobPage(): JobPageResponse {
       "[data-automation-id='jobPostingCompany']",
       "[data-automation-id='company']"
     ], isLikelyVisibleCompany) ||
+    getExactLabeledText(
+      ["Company", "Organization", "Organisation", "Employer"],
+      isLikelyVisibleCompany
+    ) ||
     (isLinkedInUrl(window.location.href) ? parseLinkedInTopCardCompany() : "")
   const location =
     jsonLdLocationText ||
@@ -795,7 +896,11 @@ function detectJobPage(): JobPageResponse {
           "[data-ui='job-location']",
           "[data-automation-id='locations']",
           "[data-automation-id='job-details-location']"
-        ], isLikelyVisibleLocation))
+        ], isLikelyVisibleLocation) ||
+        getExactLabeledText(
+          ["Location", "Job location", "Office", "Workplace", "Base"],
+          isLikelyVisibleLocation
+        ))
 
   const details = inferJobPageDetails({
     title: pageTitle,
@@ -815,7 +920,11 @@ function detectJobPage(): JobPageResponse {
         "[data-testid='jobTitle']",
         "[data-ui='job-title']",
         "[data-automation-id='jobPostingHeader']"
-      ], isLikelyVisibleTitle),
+      ], isLikelyVisibleTitle) ||
+      getExactLabeledText(
+        ["Job title", "Role title", "Position", "Title"],
+        isLikelyVisibleTitle
+      ),
     company,
     location,
     description:
