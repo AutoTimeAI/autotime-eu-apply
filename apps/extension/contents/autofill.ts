@@ -994,10 +994,16 @@ function getWidgetMarkup({
     ? `${getWordCount(details.jobDescription)} words parsed`
     : "Not parsed yet"
   const shouldShowDeepInsightList = hasParsedDescription || isProCustomer
+  const normalizedStatus = status.toLowerCase()
   const statusHelp = /^tracking/i.test(status)
     ? "Please wait while AutoTime saves this role."
-    : /tracked/i.test(status)
+    : normalizedStatus.includes("synced to dashboard")
       ? "Saved roles appear in the AutoTime dashboard tracker."
+      : normalizedStatus.includes("tracked in extension") ||
+          normalizedStatus.includes("connect the extension")
+        ? "Saved locally in the extension. Connect it from the dashboard extension page to sync."
+        : normalizedStatus.includes("already tracked")
+          ? "This role is already saved locally in the extension."
       : "Check the visible job page and try again."
 
   return `
