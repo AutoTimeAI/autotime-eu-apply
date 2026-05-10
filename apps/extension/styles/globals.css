@@ -327,10 +327,11 @@ section {
 @media (max-width: 560px) {
   .track-job-panel {
     grid-template-areas:
-      "insights"
-      "details"
-      "action";
-    grid-template-columns: 1fr;
+      "insights details"
+      "action action";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
   }
 
   .track-action-bar {
@@ -344,6 +345,18 @@ section {
 
   .track-action-copy p {
     text-align: left;
+  }
+
+  .job-details-list,
+  .job-insights-panel,
+  .deep-insight-shell {
+    gap: 8px;
+  }
+
+  .job-details-list div,
+  .job-insights-panel .empty-insight-list li,
+  .deep-insight-shell {
+    padding: 9px;
   }
 }
 
