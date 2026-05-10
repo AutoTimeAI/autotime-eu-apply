@@ -979,6 +979,7 @@ function getWidgetMarkup({
       .launcher-logo,
       .icon-button {
         display: inline-grid;
+        flex: 0 0 auto;
         place-items: center;
         width: 32px;
         height: 32px;
@@ -998,6 +999,7 @@ function getWidgetMarkup({
 
       .title-block {
         display: grid;
+        flex: 1 1 auto;
         min-width: 0;
         gap: 1px;
       }
@@ -1019,6 +1021,7 @@ function getWidgetMarkup({
 
       .window-controls {
         display: flex;
+        flex: 0 0 auto;
         align-items: center;
         gap: 4px;
         margin-left: auto;
