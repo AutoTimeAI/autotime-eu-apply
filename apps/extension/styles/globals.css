@@ -85,6 +85,22 @@ section {
   font-size: 18px;
 }
 
+.side-panel-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.side-panel-brand img {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid #c9d4e6;
+  border-radius: 10px;
+  background: #ffffff;
+  object-fit: cover;
+}
+
 .section-nav {
   display: grid;
   grid-template-columns: 1fr;

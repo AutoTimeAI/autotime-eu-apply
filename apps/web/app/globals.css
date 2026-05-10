@@ -2399,15 +2399,31 @@ h4 {
 
 .dashboard-brand {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   flex: 0 0 auto;
-  gap: 6px;
+  gap: 8px;
   color: var(--ink);
   font-weight: 700;
   text-decoration: none;
 }
 
-.dashboard-brand span {
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(174, 188, 204, 0.72);
+  border-radius: 9px;
+  background: #ffffff;
+  object-fit: cover;
+}
+
+.brand-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.dashboard-brand .brand-name {
   color: var(--accent);
 }
 

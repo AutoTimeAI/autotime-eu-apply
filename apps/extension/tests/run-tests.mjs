@@ -279,6 +279,7 @@ test("infers job page details from common page text", () => {
       roleTitle: "Senior Frontend Engineer",
       company: "Example Co",
       location: "",
+      jobDescription: "",
       url: "https://example.com/jobs/frontend",
       source: "example.com",
       platform: "Generic",
@@ -298,6 +299,7 @@ test("infers job page details from common page text", () => {
       roleTitle: "Staff Backend Engineer",
       company: "Example Co",
       location: "London, United Kingdom",
+      jobDescription: "",
       url: "https://jobs.example.co/backend",
       source: "jobs.example.co",
       platform: "Generic",
@@ -324,11 +326,12 @@ test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://notlinkedin.com/jobs/123"), "Generic")
 })
 
-test("marks LinkedIn as manual input only", () => {
+test("marks LinkedIn as visible import with manual application boundary", () => {
   assert.equal(isLinkedInUrl("https://www.linkedin.com/jobs/view/123"), true)
   assert.equal(isLinkedInUrl("https://uk.linkedin.com/jobs/view/123"), true)
   assert.equal(isLinkedInUrl("https://jobs.lever.co/acme/123"), false)
-  assert.match(getLinkedInManualInputMessage(), /manual copy\/paste only/i)
+  assert.match(getLinkedInManualInputMessage(), /import visible job details/i)
+  assert.match(getLinkedInManualInputMessage(), /will not auto-submit/i)
 })
 
 test("cleans priority platform job page titles", () => {
@@ -341,6 +344,7 @@ test("cleans priority platform job page titles", () => {
       roleTitle: "Product Analyst",
       company: "Example Co",
       location: "",
+      jobDescription: "",
       url: "https://boards.greenhouse.io/example/jobs/123",
       source: "boards.greenhouse.io",
       platform: "Greenhouse",
@@ -357,6 +361,7 @@ test("cleans priority platform job page titles", () => {
       roleTitle: "Senior Product Analyst",
       company: "Example Co",
       location: "",
+      jobDescription: "",
       url: "https://jobs.lever.co/example/123",
       source: "jobs.lever.co",
       platform: "Lever",
@@ -374,6 +379,7 @@ test("cleans priority platform job page titles", () => {
       roleTitle: "Business Systems Analyst",
       company: "Example Co",
       location: "",
+      jobDescription: "",
       url: "https://example.wd3.myworkdayjobs.com/jobs/job/123",
       source: "example.wd3.myworkdayjobs.com",
       platform: "Workday",
@@ -501,6 +507,7 @@ test("formats imported job page notes from detected metadata", () => {
       roleTitle: "Staff Backend Engineer",
       company: "Example Co",
       location: "London, United Kingdom",
+      jobDescription: "",
       url: "https://jobs.example.co/backend",
       source: "jobs.example.co",
       platform: "Generic",
@@ -518,6 +525,7 @@ test("formats imported job page notes from detected metadata", () => {
       roleTitle: "Senior Frontend Engineer",
       company: "Example Co",
       location: "",
+      jobDescription: "",
       url: "https://example.com/jobs/frontend",
       source: "example.com",
       platform: "Generic",
@@ -536,6 +544,7 @@ test("formats priority platform in job page notes", () => {
       roleTitle: "Product Analyst",
       company: "Example Co",
       location: "London",
+      jobDescription: "",
       url: "https://www.linkedin.com/jobs/view/123",
       source: "linkedin.com",
       platform: "LinkedIn",

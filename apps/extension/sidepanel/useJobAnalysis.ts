@@ -5,9 +5,7 @@ import {
 } from "../lib/job-analysis"
 import {
   formatJobPageNotes,
-  getLinkedInManualInputMessage,
   inferJobPageDetails,
-  isLinkedInUrl
 } from "../lib/job-page"
 import {
   generateAIJobAnalysis,
@@ -187,11 +185,6 @@ export function useJobAnalysis({
       return
     }
 
-    if (isLinkedInUrl(activeTab.url)) {
-      setJobStatus(getLinkedInManualInputMessage())
-      return
-    }
-
     const details = await detectJobPageFromTab(activeTab)
 
     if (!details) {
@@ -210,6 +203,7 @@ export function useJobAnalysis({
       company: current.company || details.company,
       jobUrl: current.jobUrl || details.url,
       location: current.location || details.location,
+      jobDescription: current.jobDescription || details.jobDescription,
       notes: current.notes || formatJobPageNotes(details)
     }))
     clearSaveAttempt("job-analysis")

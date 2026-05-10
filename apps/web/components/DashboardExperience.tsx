@@ -2236,9 +2236,9 @@ export default function HomePage({
     },
     {
       label: "Application boundary",
-      value: "Manual apply",
+      value: "Import only",
       tone: "good",
-      body: "No auto-submit, hidden form action or LinkedIn automation."
+      body: "Visible job details can be imported; applications stay manual."
     }
   ]
   const overviewWorkflowItems = [

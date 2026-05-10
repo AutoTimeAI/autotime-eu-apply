@@ -2,6 +2,7 @@ export type JobPageDetails = {
   roleTitle: string
   company: string
   location: string
+  jobDescription: string
   url: string
   source: string
   platform: JobPlatform
@@ -28,6 +29,7 @@ type JobPageTextInput = {
   heading?: string
   company?: string
   location?: string
+  description?: string
   url?: string
   source?: string
 }
@@ -128,7 +130,7 @@ export function isLinkedInUrl(url = "") {
 }
 
 export function getLinkedInManualInputMessage() {
-  return "LinkedIn is manual copy/paste only. Copy the job details yourself, then paste them into AutoTime."
+  return "LinkedIn form filling stays manual. AutoTime can import visible job details, but it will not auto-submit or fill LinkedIn applications."
 }
 
 function isUsefulTitlePart(value: string) {
@@ -197,6 +199,7 @@ export function inferJobPageDetails(
     roleTitle,
     company,
     location: cleanText(input.location),
+    jobDescription: cleanText(input.description),
     url,
     source: cleanText(input.source) || getHostname(url),
     platform,

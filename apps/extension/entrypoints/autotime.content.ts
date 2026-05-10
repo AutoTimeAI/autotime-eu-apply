@@ -2,6 +2,7 @@ import { defineContentScript } from "wxt/utils/define-content-script"
 import { registerAutotimeContentScript } from "../contents/autofill"
 
 const supportedAtsMatches = [
+  "*://*.linkedin.com/*",
   "*://*.greenhouse.io/*",
   "*://boards.greenhouse.io/*",
   "*://*.lever.co/*",
@@ -21,7 +22,6 @@ const supportedAtsMatches = [
 
 export default defineContentScript({
   matches: supportedAtsMatches,
-  excludeMatches: ["*://*.linkedin.com/*"],
   main() {
     // Register page-level message handlers used by the side panel.
     registerAutotimeContentScript()

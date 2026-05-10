@@ -122,6 +122,32 @@ function getMetaContent(names: string[]) {
   return ""
 }
 
+function getJsonLdJobPosting() {
+  const scripts = Array.from(
+    document.querySelectorAll<HTMLScriptElement>(
+      'script[type="application/ld+json"]'
+    )
+  )
+
+  for (const script of scripts) {
+    try {
+      const parsed = JSON.parse(script.textContent ?? "") as
+        | Record<string, unknown>
+        | Record<string, unknown>[]
+      const items = Array.isArray(parsed) ? parsed : [parsed]
+      const posting = items.find((item) => item["@type"] === "JobPosting")
+
+      if (posting) {
+        return posting
+      }
+    } catch {
+      // Ignore invalid third-party JSON-LD and fall back to visible text.
+    }
+  }
+
+  return null
+}
+
 function getFirstText(selectors: string[]) {
   for (const selector of selectors) {
     const text = document.querySelector(selector)?.textContent?.trim()
@@ -131,6 +157,22 @@ function getFirstText(selectors: string[]) {
   }
 
   return ""
+}
+
+function getJobDescription() {
+  return getFirstText([
+    ".jobs-description__content",
+    ".jobs-box__html-content",
+    ".jobs-description-content__text",
+    ".show-more-less-html__markup",
+    "[data-test-job-description]",
+    "[data-testid='job-description']",
+    "[data-ui='job-description']",
+    "[data-automation-id='jobPostingDescription']",
+    ".posting-description",
+    ".job-description",
+    "section.description"
+  ])
 }
 
 function getLocationFromLinkedInDescription() {
@@ -146,26 +188,37 @@ function getLocationFromLinkedInDescription() {
 }
 
 function detectJobPage(): JobPageResponse {
-  if (isLinkedInUrl(window.location.href)) {
-    return {
-      roleTitle: "",
-      company: "",
-      location: "",
-      url: window.location.href,
-      source: "linkedin.com",
-      platform: "LinkedIn",
-      pageTitle: document.title,
-      message: getLinkedInManualInputMessage()
-    }
-  }
+  const jsonLdPosting = getJsonLdJobPosting()
+  const jsonLdHiringOrganization = jsonLdPosting?.hiringOrganization as
+    | { name?: string }
+    | undefined
+  const jsonLdLocation = jsonLdPosting?.jobLocation as
+    | { address?: { addressLocality?: string; addressCountry?: string } }
+    | { address?: { addressLocality?: string; addressCountry?: string } }[]
+    | undefined
+  const jsonLdAddress = Array.isArray(jsonLdLocation)
+    ? jsonLdLocation[0]?.address
+    : jsonLdLocation?.address
+  const jsonLdLocationText = [
+    jsonLdAddress?.addressLocality,
+    jsonLdAddress?.addressCountry
+  ]
+    .filter(Boolean)
+    .join(", ")
 
   // These selectors cover common job-board conventions while title parsing
   // provides a fallback for pages without structured job metadata.
   const pageTitle =
-    getMetaContent(["og:title", "twitter:title"]) || document.title
+    (typeof jsonLdPosting?.title === "string" ? jsonLdPosting.title : "") ||
+    getMetaContent(["og:title", "twitter:title"]) ||
+    document.title
   const company =
+    (typeof jsonLdHiringOrganization?.name === "string"
+      ? jsonLdHiringOrganization.name
+      : "") ||
     getFirstText([
       ".jobs-unified-top-card__company-name",
+      ".job-details-jobs-unified-top-card__company-name",
       ".topcard__org-name-link",
       ".posting-headline .company",
       ".company-name",
@@ -178,8 +231,10 @@ function detectJobPage(): JobPageResponse {
       "[data-automation-id='company']"
     ]) || getMetaContent(["og:site_name", "application-name"])
   const location =
+    jsonLdLocationText ||
     getFirstText([
       ".jobs-unified-top-card__bullet",
+      ".job-details-jobs-unified-top-card__primary-description-container",
       ".topcard__flavor--bullet",
       ".posting-categories .location",
       ".location",
@@ -195,6 +250,7 @@ function detectJobPage(): JobPageResponse {
     title: pageTitle,
     heading: getFirstText([
       ".jobs-unified-top-card__job-title",
+      ".job-details-jobs-unified-top-card__job-title",
       ".topcard__title",
       ".posting-headline h2",
       ".app-title",
@@ -206,6 +262,10 @@ function detectJobPage(): JobPageResponse {
     ]),
     company,
     location,
+    description:
+      (typeof jsonLdPosting?.description === "string"
+        ? jsonLdPosting.description
+        : "") || getJobDescription(),
     url: window.location.href
   })
 

@@ -65,7 +65,7 @@ const faqs = [
   {
     question: "What ATS platforms does it support?",
     answer:
-      "Greenhouse, Lever, Workday, Ashby, SmartRecruiters, iCIMS, BambooHR, Teamtailor, Recruitee, Jobvite and Personio."
+      "LinkedIn visible job posts plus Greenhouse, Lever, Workday, Ashby, SmartRecruiters, iCIMS, BambooHR, Teamtailor, Recruitee, Jobvite and Personio."
   }
 ]
 
@@ -74,7 +74,7 @@ const freeFeatures = [
   { label: "5 AI job analyses per month", included: true },
   { label: "Application tracking (unlimited)", included: true },
   { label: "Work-right and country fit scoring", included: true },
-  { label: "LinkedIn manual copy/paste workflow", included: true },
+  { label: "Visible LinkedIn and job-board import", included: true },
   { label: "CSV export", included: true },
   { label: "Cloud sync across devices", included: false },
   { label: "AI application content generation", included: false },

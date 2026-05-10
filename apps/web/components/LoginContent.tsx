@@ -70,7 +70,7 @@ function LoginForm() {
           </div>
           <div>
             <strong>ATS-aware</strong>
-            <span>Supports priority job boards with LinkedIn kept manual.</span>
+            <span>Imports visible job details; applications stay manual.</span>
           </div>
         </div>
       </section>

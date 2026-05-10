@@ -2,7 +2,7 @@ import { PublicNav } from "../../components/PublicNav"
 
 const acceptableUse = [
   "Do not use AutoTime to automate job applications.",
-  "Do not scrape LinkedIn, ATS platforms or employer websites through AutoTime.",
+  "Do not use AutoTime for bulk scraping. User-triggered import of visible job details from pages you open is allowed.",
   "Do not upload unlawful, misleading, discriminatory or malicious content.",
   "Do not attempt to bypass plan limits, rate limits, authentication or security controls."
 ]

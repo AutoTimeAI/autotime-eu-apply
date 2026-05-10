@@ -5,7 +5,11 @@ import PostHogProvider from "../components/PostHogProvider"
 
 export const metadata = {
   title: "AutoTime EU Apply",
-  description: "Cross-border job application copilot for Europe"
+  description: "Cross-border job application copilot for Europe",
+  icons: {
+    icon: "/icon.png",
+    apple: "/brand/autotime-mark.png"
+  }
 }
 
 export default function RootLayout({

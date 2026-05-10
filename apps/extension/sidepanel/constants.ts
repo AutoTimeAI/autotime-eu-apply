@@ -41,7 +41,7 @@ export const onboardingSteps: Array<{
   {
     ctaLabel: "Go to Job Analysis",
     description:
-      "Import a non-LinkedIn job page or paste a job description before tailoring an application.",
+      "Import visible job details from LinkedIn or supported job boards before tailoring an application.",
     section: "job-analysis",
     title: "Import a job page or paste a description"
   }

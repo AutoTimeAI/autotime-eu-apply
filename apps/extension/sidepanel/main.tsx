@@ -477,15 +477,9 @@ function SidePanelApp() {
 
     if (!details?.url) {
       setApplicationsStatus(
-        "Could not read current tab. Open a normal non-LinkedIn job page, then try again."
+        "Could not read current tab. Open a visible job page, then try again."
       )
       setTimeout(() => setApplicationsStatus(""), 4500)
-      return
-    }
-
-    if (isLinkedInUrl(details.url)) {
-      setApplicationsStatus(getLinkedInManualInputMessage())
-      setTimeout(() => setApplicationsStatus(""), 3500)
       return
     }
 
@@ -504,7 +498,13 @@ function SidePanelApp() {
       url: details.url,
       source: details.source || getHostname(details.url),
       createdAt: new Date().toISOString(),
-      status: "Saved"
+      status: "Saved",
+      notes: [
+        details.jobDescription,
+        formatJobPageNotes(details)
+      ]
+        .filter(Boolean)
+        .join("\n\n")
     }
 
     await saveApplication(record)
@@ -863,11 +863,6 @@ function SidePanelApp() {
       return
     }
 
-    if (isLinkedInUrl(activeTab.url)) {
-      setTrackerStatus(getLinkedInManualInputMessage())
-      return
-    }
-
     const details = await detectJobPageFromTab(activeTab)
 
     if (!details) {
@@ -886,7 +881,11 @@ function SidePanelApp() {
       company: current.company || details.company,
       applicationUrl: current.applicationUrl || details.url,
       nextAction: current.nextAction || "Tailor application",
-      notes: current.notes || formatJobPageNotes(details)
+      notes:
+        current.notes ||
+        [details.jobDescription, formatJobPageNotes(details)]
+          .filter(Boolean)
+          .join("\n\n")
     }))
     clearSaveAttempt("tracker")
     setTrackerStatus(
@@ -988,7 +987,8 @@ function SidePanelApp() {
 
   return (
     <main className="side-panel-shell">
-      <header>
+      <header className="side-panel-brand">
+        <img alt="" aria-hidden="true" src="/icons/128.png" />
         <h1>AutoTime EU Apply</h1>
       </header>
 

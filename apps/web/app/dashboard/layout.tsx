@@ -43,8 +43,16 @@ export default async function DashboardLayout({
         <div className="dashboard-app-shell">
           <header className="dashboard-topbar">
             <a className="dashboard-brand" href="/dashboard">
-              <span>AutoTime</span>
-              <strong>EU Apply</strong>
+              <img
+                alt=""
+                aria-hidden="true"
+                className="brand-mark"
+                src="/brand/autotime-mark.png"
+              />
+              <span className="brand-text">
+                <span className="brand-name">AutoTime</span>
+                <strong>EU Apply</strong>
+              </span>
             </a>
             <DashboardTopNav />
             <UserNav email={email} plan={plan} />

@@ -23,8 +23,16 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
   return (
     <nav className="product-nav" aria-label="Primary">
       <Link className="dashboard-brand" href={user ? "/dashboard" : "/"}>
-        <span>AutoTime</span>
-        <strong>EU Apply</strong>
+        <img
+          alt=""
+          aria-hidden="true"
+          className="brand-mark"
+          src="/brand/autotime-mark.png"
+        />
+        <span className="brand-text">
+          <span className="brand-name">AutoTime</span>
+          <strong>EU Apply</strong>
+        </span>
       </Link>
       <div className="product-nav-links">
         {user ? (
