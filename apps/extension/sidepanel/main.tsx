@@ -508,6 +508,10 @@ function SidePanelApp() {
         files: ["content-scripts/autotime.js"]
       })
     }
+
+    await chrome.tabs.sendMessage(tabId, {
+      type: "AUTOTIME_SHOW_WIDGET"
+    })
   }
 
   const detectJobPageFromTab = async (

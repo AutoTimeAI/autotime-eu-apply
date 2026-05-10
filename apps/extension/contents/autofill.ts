@@ -41,6 +41,12 @@ type JobPageResponse = JobPageDetails & {
 }
 
 type TextControl = HTMLInputElement | HTMLTextAreaElement
+type StoredWidgetPlacement = {
+  height?: number
+  left?: number
+  top?: number
+  width?: number
+}
 
 const widgetHostId = "autotime-draggable-job-widget"
 const widgetPositionKey = "autotime-draggable-job-widget-position"
@@ -49,8 +55,11 @@ const widgetCloseEventName = "autotime-close-widget"
 const widgetRightOffset = 12
 const fullWidgetWidth = 480
 const fullWidgetHeight = 360
+const minFullWidgetWidth = 360
+const minFullWidgetHeight = 300
 const minWidgetWidth = 64
 const minWidgetHeight = 64
+let showAutotimeWidget: (() => void) | null = null
 const noJobDescriptionMessage =
   "No job description found. Update your description and click the button below to retrieve insights."
 const insightKeywords = [
@@ -149,9 +158,14 @@ function getDeepInsights(details: JobPageResponse | null) {
 function getStoredWidgetPosition() {
   try {
     const parsed = JSON.parse(localStorage.getItem(widgetPositionKey) ?? "{}") as
-      Partial<{ left: number; top: number }>
+      StoredWidgetPlacement
 
-    if (typeof parsed.left === "number" && typeof parsed.top === "number") {
+    if (
+      typeof parsed.left === "number" ||
+      typeof parsed.top === "number" ||
+      typeof parsed.width === "number" ||
+      typeof parsed.height === "number"
+    ) {
       return parsed
     }
   } catch {
@@ -159,6 +173,23 @@ function getStoredWidgetPosition() {
   }
 
   return null
+}
+
+function clampWidgetSize(width: number, height: number) {
+  const margin = 12
+  const maxWidth = Math.max(
+    minFullWidgetWidth,
+    window.innerWidth - margin * 2
+  )
+  const maxHeight = Math.max(
+    minFullWidgetHeight,
+    window.innerHeight - margin * 2
+  )
+
+  return {
+    width: Math.min(Math.max(minFullWidgetWidth, width), maxWidth),
+    height: Math.min(Math.max(minFullWidgetHeight, height), maxHeight)
+  }
 }
 
 function clampWidgetPosition(
@@ -177,8 +208,32 @@ function clampWidgetPosition(
   }
 }
 
+function getStoredWidgetPlacement() {
+  try {
+    return JSON.parse(
+      localStorage.getItem(widgetPositionKey) ?? "{}"
+    ) as StoredWidgetPlacement
+  } catch {
+    return {}
+  }
+}
+
+function saveWidgetPlacement(nextPlacement: StoredWidgetPlacement) {
+  localStorage.setItem(
+    widgetPositionKey,
+    JSON.stringify({
+      ...getStoredWidgetPlacement(),
+      ...nextPlacement
+    })
+  )
+}
+
 function saveWidgetPosition(left: number, top: number) {
-  localStorage.setItem(widgetPositionKey, JSON.stringify({ left, top }))
+  saveWidgetPlacement({ left, top })
+}
+
+function saveWidgetSize(width: number, height: number) {
+  saveWidgetPlacement({ height, width })
 }
 
 function createApplicationRecord(details: JobPageResponse): ApplicationRecord {
@@ -961,8 +1016,9 @@ function getWidgetMarkup({
       .widget {
         display: grid;
         grid-template-rows: auto auto minmax(0, 1fr) auto;
-        width: min(${fullWidgetWidth}px, calc(100vw - 24px));
-        height: min(${fullWidgetHeight}px, calc(100vh - 24px));
+        position: relative;
+        width: min(var(--autotime-widget-width, ${fullWidgetWidth}px), calc(100vw - 24px));
+        height: min(var(--autotime-widget-height, ${fullWidgetHeight}px), calc(100vh - 24px));
         border: 1px solid #bdd4dc;
         border-left: 4px solid #007c78;
         border-radius: 8px;
@@ -990,6 +1046,11 @@ function getWidgetMarkup({
 
       :host([data-autotime-minimized="true"]) .launcher {
         display: grid;
+      }
+
+      :host([data-autotime-closed="true"]) .widget,
+      :host([data-autotime-closed="true"]) .launcher {
+        display: none;
       }
 
       .handle {
@@ -1302,6 +1363,26 @@ function getWidgetMarkup({
         gap: 5px;
       }
 
+      .resize-handle {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        min-height: 18px;
+        padding: 0;
+        border: 0;
+        background: linear-gradient(135deg, transparent 50%, #007c78 51%);
+        box-shadow: none;
+        cursor: nwse-resize;
+        opacity: 0.75;
+      }
+
+      .resize-handle:hover {
+        opacity: 1;
+      }
+
       @media (max-width: 420px) {
         .grid {
           grid-template-columns: minmax(0, 1fr);
@@ -1383,6 +1464,7 @@ function getWidgetMarkup({
           <button data-autotime-track-job type="button">TRACK JOB</button>
         </div>
       </div>
+      <button class="resize-handle" data-autotime-resize-widget type="button" title="Resize widget" aria-label="Resize widget"></button>
     </section>
     <section class="launcher" data-autotime-launcher aria-label="AutoTime widget minimized">
       <button class="launcher-logo" data-autotime-toggle-widget type="button" title="Open AutoTime widget. Triple click to close it." aria-label="Open AutoTime widget. Triple click to close it.">
@@ -1421,6 +1503,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
 
 function initializeMovableJobWidget() {
   if (document.getElementById(widgetHostId)) {
+    showAutotimeWidget?.()
     return
   }
 
@@ -1430,13 +1513,21 @@ function initializeMovableJobWidget() {
   host.style.zIndex = "2147483647"
 
   const storedPosition = getStoredWidgetPosition()
+  const storedSize = clampWidgetSize(
+    storedPosition?.width ?? fullWidgetWidth,
+    storedPosition?.height ?? fullWidgetHeight
+  )
   const initialPosition = clampWidgetPosition(
     storedPosition?.left ??
-      window.innerWidth - fullWidgetWidth - widgetRightOffset,
-    storedPosition?.top ?? 92
+      window.innerWidth - storedSize.width - widgetRightOffset,
+    storedPosition?.top ?? 92,
+    storedSize.width,
+    storedSize.height
   )
   host.style.left = `${initialPosition.left}px`
   host.style.top = `${initialPosition.top}px`
+  host.style.setProperty("--autotime-widget-width", `${storedSize.width}px`)
+  host.style.setProperty("--autotime-widget-height", `${storedSize.height}px`)
 
   const shadow = host.attachShadow({ mode: "open" })
   document.documentElement.append(host)
@@ -1444,26 +1535,62 @@ function initializeMovableJobWidget() {
   let details = detectJobPage()
   let accountSession: AccountSession | null = null
   let isMinimized = false
+  let isClosed = false
   let status = ""
   host.dataset.autotimeMinimized = String(isMinimized)
+  host.dataset.autotimeClosed = String(isClosed)
+
+  const getCurrentWidgetSize = () => {
+    const current = host.getBoundingClientRect()
+    const fallback = clampWidgetSize(fullWidgetWidth, fullWidgetHeight)
+
+    return clampWidgetSize(
+      isMinimized ? minWidgetWidth : current.width || fallback.width,
+      isMinimized ? minWidgetHeight : current.height || fallback.height
+    )
+  }
 
   function toggleWidget() {
     isMinimized = !isMinimized
+    isClosed = false
     host.dataset.autotimeMinimized = String(isMinimized)
+    host.dataset.autotimeClosed = String(isClosed)
     const current = host.getBoundingClientRect()
+    const currentSize = getCurrentWidgetSize()
     const nextPosition = clampWidgetPosition(
       current.left,
       current.top,
-      isMinimized ? minWidgetWidth : fullWidgetWidth,
-      isMinimized ? minWidgetHeight : fullWidgetHeight
+      isMinimized ? minWidgetWidth : currentSize.width,
+      isMinimized ? minWidgetHeight : currentSize.height
     )
     host.style.left = `${nextPosition.left}px`
     host.style.top = `${nextPosition.top}px`
     saveWidgetPosition(nextPosition.left, nextPosition.top)
   }
 
+  function showWidget() {
+    isClosed = false
+    isMinimized = false
+    host.dataset.autotimeClosed = String(isClosed)
+    host.dataset.autotimeMinimized = String(isMinimized)
+    const current = host.getBoundingClientRect()
+    const currentSize = getCurrentWidgetSize()
+    const nextPosition = clampWidgetPosition(
+      current.left || window.innerWidth - currentSize.width - widgetRightOffset,
+      current.top || 92,
+      currentSize.width,
+      currentSize.height
+    )
+    host.style.left = `${nextPosition.left}px`
+    host.style.top = `${nextPosition.top}px`
+    saveWidgetPosition(nextPosition.left, nextPosition.top)
+  }
+
+  showAutotimeWidget = showWidget
+
   function render() {
     host.dataset.autotimeMinimized = String(isMinimized)
+    host.dataset.autotimeClosed = String(isClosed)
     shadow.innerHTML = getWidgetMarkup({ accountSession, details, status })
     bindWidgetEvents(
       host,
@@ -1483,11 +1610,12 @@ function initializeMovableJobWidget() {
 
   const handleResize = () => {
     const current = host.getBoundingClientRect()
+    const currentSize = getCurrentWidgetSize()
     const nextPosition = clampWidgetPosition(
       current.left,
       current.top,
-      isMinimized ? minWidgetWidth : fullWidgetWidth,
-      isMinimized ? minWidgetHeight : fullWidgetHeight
+      isMinimized ? minWidgetWidth : currentSize.width,
+      isMinimized ? minWidgetHeight : currentSize.height
     )
     host.style.left = `${nextPosition.left}px`
     host.style.top = `${nextPosition.top}px`
@@ -1510,9 +1638,10 @@ function initializeMovableJobWidget() {
 
   shadow.addEventListener(widgetCloseEventName, (event) => {
     event.stopPropagation()
-    window.clearInterval(refreshInterval)
-    window.removeEventListener("resize", handleResize)
-    host.remove()
+    isClosed = true
+    isMinimized = false
+    host.dataset.autotimeClosed = String(isClosed)
+    host.dataset.autotimeMinimized = String(isMinimized)
   })
 
   void getAccountSession().then((session) => {
@@ -1542,6 +1671,9 @@ function bindWidgetEvents(
   const dashboardButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-open-dashboard]"
   )
+  const resizeHandle = shadow.querySelector<HTMLElement>(
+    "[data-autotime-resize-widget]"
+  )
 
   const findWidgetControl = (event: Event) =>
     event
@@ -1549,7 +1681,9 @@ function bindWidgetEvents(
       .find(
         (element): element is Element =>
           typeof (element as Element).matches === "function" &&
-          (element as Element).matches("[data-autotime-collapse-widget]")
+          (element as Element).matches(
+            "[data-autotime-collapse-widget], [data-autotime-resize-widget]"
+          )
       )
 
   const activateWidgetControl = (event: Event) => {
@@ -1726,12 +1860,85 @@ function bindWidgetEvents(
     })
   }
 
+  const bindResizeHandle = (resizeSurface: HTMLElement) => {
+    resizeSurface.addEventListener("pointerdown", (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+
+      const widget = shadow.querySelector<HTMLElement>(".widget")
+      const widgetRect = widget?.getBoundingClientRect()
+
+      if (!widgetRect) {
+        return
+      }
+
+      const startX = event.clientX
+      const startY = event.clientY
+      const startWidth = widgetRect.width
+      const startHeight = widgetRect.height
+
+      try {
+        resizeSurface.setPointerCapture(event.pointerId)
+      } catch {
+        // Synthetic pointer events may not support capture.
+      }
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const nextSize = clampWidgetSize(
+          startWidth + moveEvent.clientX - startX,
+          startHeight + moveEvent.clientY - startY
+        )
+        host.style.setProperty(
+          "--autotime-widget-width",
+          `${nextSize.width}px`
+        )
+        host.style.setProperty(
+          "--autotime-widget-height",
+          `${nextSize.height}px`
+        )
+
+        const current = host.getBoundingClientRect()
+        const nextPosition = clampWidgetPosition(
+          current.left,
+          current.top,
+          nextSize.width,
+          nextSize.height
+        )
+        host.style.left = `${nextPosition.left}px`
+        host.style.top = `${nextPosition.top}px`
+      }
+
+      const onPointerUp = (upEvent: PointerEvent) => {
+        try {
+          resizeSurface.releasePointerCapture(upEvent.pointerId)
+        } catch {
+          // Ignore capture release failures from non-browser-generated events.
+        }
+
+        resizeSurface.removeEventListener("pointermove", onPointerMove)
+        resizeSurface.removeEventListener("pointerup", onPointerUp)
+
+        const nextRect = host.getBoundingClientRect()
+        const nextSize = clampWidgetSize(nextRect.width, nextRect.height)
+        saveWidgetSize(nextSize.width, nextSize.height)
+        saveWidgetPosition(nextRect.left, nextRect.top)
+      }
+
+      resizeSurface.addEventListener("pointermove", onPointerMove)
+      resizeSurface.addEventListener("pointerup", onPointerUp)
+    })
+  }
+
   if (handle) {
     bindHandleDrag(handle)
   }
 
   if (launcher) {
     bindLauncherControl(launcher)
+  }
+
+  if (resizeHandle) {
+    bindResizeHandle(resizeHandle)
   }
 
   trackButton?.addEventListener("click", () => {
@@ -1764,6 +1971,16 @@ export function registerAutotimeContentScript() {
 
     if (message?.type === "AUTOTIME_DETECT_JOB_PAGE") {
       sendResponse(detectJobPage())
+      return false
+    }
+
+    if (message?.type === "AUTOTIME_SHOW_WIDGET") {
+      if (showAutotimeWidget) {
+        showAutotimeWidget()
+      } else {
+        initializeMovableJobWidget()
+      }
+      sendResponse({ ok: true })
       return false
     }
 
