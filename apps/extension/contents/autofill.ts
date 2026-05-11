@@ -278,7 +278,11 @@ function createApplicationRecord(details: JobPageResponse): ApplicationRecord {
 }
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Dashboard sync failed."
+  return error instanceof Error ? error.message : "Dashboard sync failed"
+}
+
+function formatSyncFailureMessage(reason: string) {
+  return `Dashboard sync failed: ${reason}`
 }
 
 async function syncTrackedApplicationsToDashboard(
@@ -287,7 +291,10 @@ async function syncTrackedApplicationsToDashboard(
   const session = await getAccountSession()
 
   if (!session?.authToken.trim()) {
-    return "Dashboard not connected."
+    return {
+      reason: "Connect extension to sync to dashboard",
+      synced: false
+    }
   }
 
   try {
@@ -296,9 +303,12 @@ async function syncTrackedApplicationsToDashboard(
       reusableAnswers: await getReusableAnswers(),
       session
     })
-    return "Synced to dashboard."
+    return { synced: true }
   } catch (error: unknown) {
-    return getErrorMessage(error)
+    return {
+      reason: formatSyncFailureMessage(getErrorMessage(error)),
+      synced: false
+    }
   }
 }
 
@@ -1770,9 +1780,9 @@ async function saveDetectedJob(details: JobPageResponse | null) {
 
   if (hasApplicationWithUrl(applications, details.url)) {
     const syncStatus = await syncTrackedApplicationsToDashboard(applications)
-    return syncStatus === "Synced to dashboard."
+    return syncStatus.synced
       ? "This job is already tracked and synced to dashboard"
-      : "This job is already saved locally. Connect extension to sync to dashboard"
+      : `This job is already saved locally. ${syncStatus.reason}`
   }
 
   const record = createApplicationRecord(details)
@@ -1783,9 +1793,9 @@ async function saveDetectedJob(details: JobPageResponse | null) {
   const syncStatus =
     await syncTrackedApplicationsToDashboard(updatedApplications)
 
-  return syncStatus === "Synced to dashboard."
+  return syncStatus.synced
     ? "Job tracked and synced to dashboard"
-    : "Job saved locally. Connect extension to sync to dashboard"
+    : `Job saved locally. ${syncStatus.reason}`
 }
 
 function isLikelyJobUrl(url = window.location.href) {

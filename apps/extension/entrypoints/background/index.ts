@@ -18,6 +18,7 @@ type ExternalMessage = {
 type ExternalResponse = {
   error?: string
   ok: boolean
+  syncError?: string
 }
 
 function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
@@ -46,6 +47,10 @@ function parseAccountSession(message: ExternalMessage): AccountSession | null {
     email: message.email,
     plan: message.plan === "pro" ? "pro" : "free"
   }
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Dashboard sync failed"
 }
 
 async function showWidgetInTab(tab: chrome.tabs.Tab) {
@@ -96,6 +101,7 @@ export default defineBackground(() => {
       void saveAccountSession(session)
         .then(async () => {
           const applications = await getApplications()
+          let syncError: string | undefined
 
           if (applications.length > 0) {
             try {
@@ -104,12 +110,12 @@ export default defineBackground(() => {
                 reusableAnswers: await getReusableAnswers(),
                 session
               })
-            } catch {
-              // Keep account connection successful; saved jobs can retry sync later.
+            } catch (error: unknown) {
+              syncError = getErrorMessage(error)
             }
           }
 
-          sendResponse({ ok: true })
+          sendResponse({ ok: true, syncError })
         })
         .catch(() =>
           sendResponse({ error: "Could not save account session", ok: false })

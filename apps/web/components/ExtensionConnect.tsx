@@ -23,6 +23,7 @@ type ExtensionConnectMessage = {
 type ExtensionResponse = {
   error?: string
   ok?: boolean
+  syncError?: string
 }
 
 type ExtensionRuntime = {
@@ -81,7 +82,7 @@ async function recordExtensionConnection(
 function sendToExtension(
   extensionId: string,
   message: ExtensionConnectMessage
-): Promise<void> {
+): Promise<ExtensionResponse> {
   return new Promise((resolve, reject) => {
     const runtime = getChromeRuntime()
 
@@ -103,7 +104,7 @@ function sendToExtension(
         return
       }
 
-      resolve()
+      resolve(response)
     })
   })
 }
@@ -148,14 +149,18 @@ export default function ExtensionConnect() {
 
       await recordExtensionConnection(session.access_token, extensionId)
 
-      await sendToExtension(extensionId, {
+      const extensionResponse = await sendToExtension(extensionId, {
         authToken: session.access_token,
         email: account.data.email,
         plan: account.data.plan,
         type: "AUTOTIME_CONNECT_ACCOUNT"
       })
 
-      setStatus("Extension connected. You can return to the side panel.")
+      setStatus(
+        extensionResponse.syncError
+          ? `Extension connected. Saved jobs will retry sync from Track Job. Reason: ${extensionResponse.syncError}`
+          : "Extension connected. You can return to the side panel."
+      )
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Extension connection failed."
