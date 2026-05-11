@@ -422,12 +422,35 @@ test("canonicalizes LinkedIn currentJobId search urls", () => {
   )
   assert.equal(
     getLinkedInCanonicalJobUrl("https://www.linkedin.com/jobs/view/123"),
-    "https://www.linkedin.com/jobs/view/123"
+    "https://www.linkedin.com/jobs/view/123/"
   )
   assert.equal(
     getLinkedInCanonicalJobUrl("https://jobs.lever.co/acme/123"),
     "https://jobs.lever.co/acme/123"
   )
+  assert.equal(
+    getLinkedInCanonicalJobUrl(
+      "https://www.linkedin.com/jobs/search-results/?currentJobId=https://www.linkedin.com/jobs/search-results/?currentJobId=4411361553&keywords=application%20support"
+    ),
+    "https://www.linkedin.com/jobs/view/4411361553/"
+  )
+})
+
+test("rejects widget fallback text and urls as job details", () => {
+  const noisyUrl =
+    "https://www.linkedin.com/jobs/search-results/?currentJobId=https://www.linkedin.com/jobs/search-results/?currentJobId=4411361553&keywords=application%20support"
+  const details = inferJobPageDetails({
+    heading: "Not tracked yet",
+    company: "wide",
+    location: noisyUrl.repeat(2),
+    description: "",
+    url: noisyUrl
+  })
+
+  assert.equal(details.roleTitle, "")
+  assert.equal(details.company, "")
+  assert.equal(details.location, "")
+  assert.equal(details.url, noisyUrl)
 })
 
 test("does not split priority platform page titles into guessed fields", () => {

@@ -59,6 +59,13 @@ function isHostname(hostname: string, domain: string) {
   return hostname === domain || hostname.endsWith(`.${domain}`)
 }
 
+function getLinkedInJobId(url = "") {
+  const directMatch = url.match(/\/jobs\/view\/(\d+)/i)
+  const currentJobIdMatch = url.match(/[?&]currentJobId=(\d+)/i)
+
+  return directMatch?.[1] ?? currentJobIdMatch?.[1] ?? ""
+}
+
 export function getJobPlatform(url = ""): JobPlatform {
   const hostname = getHostname(url)
 
@@ -124,10 +131,10 @@ export function getLinkedInCanonicalJobUrl(url = "") {
 
   try {
     const parsed = new URL(url)
-    const currentJobId = parsed.searchParams.get("currentJobId")?.trim()
+    const linkedInJobId = getLinkedInJobId(url)
 
-    if (/^\d+$/.test(currentJobId ?? "")) {
-      return `${parsed.origin}/jobs/view/${currentJobId}/`
+    if (linkedInJobId) {
+      return `${parsed.origin}/jobs/view/${linkedInJobId}/`
     }
   } catch {
     return cleanText(url)
@@ -150,6 +157,10 @@ function cleanRoleTitle(value = "") {
 }
 
 function cleanDetectedLocation(value = "") {
+  if (isLikelyUrlNoise(value)) {
+    return ""
+  }
+
   return cleanText(value)
     .replace(
       /\s+(?:salary|compensation|about(?:\s+the\s+(?:opportunity|role|company))?|the\s+role|role|key\s+responsibilities|responsibilities|requirements|profile|what(?:'|’)s\s+on\s+offer|benefits|application|how\s+to\s+apply)\b.*$/i,
@@ -159,10 +170,26 @@ function cleanDetectedLocation(value = "") {
     .trim()
 }
 
+function isLikelyUrlNoise(value = "") {
+  return /https?:\/\/|www\.|linkedin\.com|currentJobId=|%2f|%3a/i.test(value)
+}
+
+function isBlockedJobDetailValue(value = "") {
+  const text = cleanText(value).toLowerCase()
+
+  return (
+    !text ||
+    isLikelyUrlNoise(text) ||
+    /^(not tracked yet|not detected|waiting|parsed from job board|job details|wide)$/i.test(
+      text
+    )
+  )
+}
+
 function isLikelyShortFieldValue(value = "", maxWords = 12, maxLength = 120) {
   const text = cleanText(value)
 
-  if (!text) {
+  if (isBlockedJobDetailValue(text)) {
     return false
   }
 
@@ -186,7 +213,7 @@ function isLikelyShortFieldValue(value = "", maxWords = 12, maxLength = 120) {
 function isLikelyLocationValue(value = "") {
   const text = cleanDetectedLocation(value)
 
-  if (!text) {
+  if (isBlockedJobDetailValue(text)) {
     return false
   }
 
