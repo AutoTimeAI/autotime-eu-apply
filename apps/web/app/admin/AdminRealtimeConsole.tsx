@@ -46,10 +46,6 @@ function getCount(overview: AdminOverview, label: string) {
 }
 
 function getSeverityLabel(severity: AdminOverview["logs"][number]["severity"]) {
-  if (severity === "healthy") {
-    return "success"
-  }
-
   return severity
 }
 
@@ -73,6 +69,7 @@ export function AdminRealtimeConsole({
     overview.recentExtensionConnections[0]?.lastConnectedAt ?? null
   const latestAi = overview.recentAiUsage[0]?.createdAt ?? null
   const config = overview.config.extensionConnection
+  const logging = overview.config.logging
 
   const refresh = useCallback(async () => {
     try {
@@ -379,6 +376,16 @@ export function AdminRealtimeConsole({
             <span>{config.logStore.maxEntries} local log entries</span>
           </div>
           <div className="admin-config-grid">
+            <article className="admin-config-card">
+              <strong>Log levels</strong>
+              <ul>
+                {Object.entries(logging.levels).map(([level, value]) => (
+                  <li key={level}>
+                    {level}: {value.description}
+                  </li>
+                ))}
+              </ul>
+            </article>
             <article className="admin-config-card">
               <strong>Expected flows</strong>
               <ul>

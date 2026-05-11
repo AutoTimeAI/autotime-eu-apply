@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
+import loggingConfig from "../../../config/monitoring/logging.json"
+
+export type DiagnosticLevel = "severe" | "warn" | "info"
 
 export type DiagnosticArea =
   | "account"
@@ -16,6 +19,7 @@ export type DiagnosticPayload = {
   area: DiagnosticArea
   code: string
   id: string
+  level: DiagnosticLevel
   message: string
   method?: string
   path?: string
@@ -40,6 +44,37 @@ function getRequestPath(request: Request | NextRequest | undefined) {
   } catch {
     return undefined
   }
+}
+
+function getDiagnosticLevel(status: number | undefined): DiagnosticLevel {
+  if (typeof status !== "number") {
+    return "info"
+  }
+
+  if (status >= 500) {
+    return loggingConfig.rules.httpStatus["500-599"] as DiagnosticLevel
+  }
+
+  if (status >= 400) {
+    return loggingConfig.rules.httpStatus["400-499"] as DiagnosticLevel
+  }
+
+  return loggingConfig.rules.httpStatus["200-399"] as DiagnosticLevel
+}
+
+function sanitizeDetails(details: Record<string, unknown> | undefined) {
+  if (!details) {
+    return undefined
+  }
+
+  const blocked = new Set(loggingConfig.privacy.doNotLog.map((item) => item.toLowerCase()))
+
+  return Object.fromEntries(
+    Object.entries(details).map(([key, value]) => [
+      key,
+      blocked.has(key.toLowerCase()) ? "[redacted]" : value
+    ])
+  )
 }
 
 export function createDiagnosticId(): string {
@@ -74,6 +109,7 @@ export function createDiagnostic({
     area,
     code,
     id: createDiagnosticId(),
+    level: getDiagnosticLevel(status),
     message,
     method: request?.method,
     path: getRequestPath(request),
@@ -86,10 +122,23 @@ export function logDiagnostic(
   diagnostic: DiagnosticPayload,
   details?: Record<string, unknown>
 ): void {
-  console.error("autotime_diagnostic", {
+  const payload = {
     ...diagnostic,
-    details
-  })
+    details: sanitizeDetails(details),
+    diagnosticId: diagnostic.id
+  }
+
+  if (diagnostic.level === "severe") {
+    console.error("autotime_diagnostic", payload)
+    return
+  }
+
+  if (diagnostic.level === "warn") {
+    console.warn("autotime_diagnostic", payload)
+    return
+  }
+
+  console.info("autotime_diagnostic", payload)
 }
 
 export function diagnosticJson<T>({
@@ -117,7 +166,7 @@ export function diagnosticJson<T>({
     status
   })
 
-  if (log || status >= 500) {
+  if (log || status >= 400) {
     logDiagnostic(diagnostic)
   }
 

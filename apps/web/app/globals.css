@@ -3764,19 +3764,19 @@ h4 {
   text-transform: uppercase;
 }
 
-.admin-log-severity.healthy {
+.admin-log-severity.info {
   border-color: #b7ddca;
   background: #edf8f2;
   color: var(--green);
 }
 
-.admin-log-severity.warning {
+.admin-log-severity.warn {
   border-color: #efd1a3;
   background: #fff6e8;
   color: var(--amber);
 }
 
-.admin-log-severity.critical {
+.admin-log-severity.severe {
   border-color: #edc2c8;
   background: #fff1f3;
   color: var(--red);

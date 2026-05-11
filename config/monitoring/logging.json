@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "levels": {
+    "severe": {
+      "consoleMethod": "error",
+      "description": "User flow failed, data write failed, auth failed, provider failed, or fallback could not recover."
+    },
+    "warn": {
+      "consoleMethod": "warn",
+      "description": "Fallback was used, optional provider failed, partial data was missing, or a recoverable issue occurred."
+    },
+    "info": {
+      "consoleMethod": "info",
+      "description": "Normal flow event, successful health check, sync event, or diagnostic breadcrumb."
+    }
+  },
+  "rules": {
+    "httpStatus": {
+      "500-599": "severe",
+      "400-499": "warn",
+      "200-399": "info"
+    },
+    "fallback": "warn",
+    "adminAccessDenied": "warn"
+  },
+  "requiredFields": [
+    "timestamp",
+    "level",
+    "area",
+    "code",
+    "message",
+    "diagnosticId"
+  ],
+  "privacy": {
+    "doNotLog": [
+      "email",
+      "access_token",
+      "refresh_token",
+      "authorization",
+      "password",
+      "secret",
+      "service_role"
+    ],
+    "publicAdminAlerts": "Admin access only."
+  }
+}

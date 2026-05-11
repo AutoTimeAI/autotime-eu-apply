@@ -1,4 +1,5 @@
 import extensionConnectionConfig from "../../../config/monitoring/extension-connection-flow.json"
+import loggingConfig from "../../../config/monitoring/logging.json"
 import { getEnvReadiness } from "./diagnostics"
 import { createAdminClient } from "./supabase/admin"
 
@@ -25,6 +26,7 @@ export type AdminOverview = {
   checkedAt: string
   config: {
     extensionConnection: typeof extensionConnectionConfig
+    logging: typeof loggingConfig
   }
   counts: CountCard[]
   health: HealthCard[]
@@ -56,7 +58,7 @@ export type AdminOverview = {
     area: string
     event: string
     message: string
-    severity: StatusTone | "info"
+    severity: "severe" | "warn" | "info"
     timestamp: string
   }>
   warnings: string[]
@@ -96,6 +98,18 @@ function formatLatency(startedAt: number): string {
   return `${Date.now() - startedAt}ms`
 }
 
+function mapStatusToLogSeverity(status: StatusTone): AdminOverview["logs"][number]["severity"] {
+  if (status === "critical") {
+    return "severe"
+  }
+
+  if (status === "warning") {
+    return "warn"
+  }
+
+  return "info"
+}
+
 function buildAdminLogs({
   checkedAt,
   health,
@@ -115,14 +129,14 @@ function buildAdminLogs({
     area: "admin",
     event: "admin-query-warning",
     message: warning,
-    severity: "warning" as const,
+    severity: loggingConfig.rules.fallback as AdminOverview["logs"][number]["severity"],
     timestamp: new Date(Date.now() - index).toISOString()
   }))
   const healthLogs = health.map((item, index) => ({
     area: "health",
     event: item.label,
     message: item.detail,
-    severity: item.status,
+    severity: mapStatusToLogSeverity(item.status),
     timestamp: new Date(Date.parse(checkedAt) - index).toISOString()
   }))
   const extensionLogs = recentExtensionConnections.map((item) => ({
@@ -133,7 +147,7 @@ function buildAdminLogs({
       : item.lastSyncedAt
         ? "Extension connected and sync timestamp exists."
         : "Extension connected; no sync timestamp yet.",
-    severity: item.revokedAt ? ("warning" as const) : ("healthy" as const),
+    severity: item.revokedAt ? ("warn" as const) : ("info" as const),
     timestamp: item.revokedAt ?? item.lastSyncedAt ?? item.lastConnectedAt
   }))
   const syncLogs = recentSyncEvents.map((item) => ({
@@ -330,7 +344,8 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   return {
     checkedAt,
     config: {
-      extensionConnection: extensionConnectionConfig
+      extensionConnection: extensionConnectionConfig,
+      logging: loggingConfig
     },
     counts: counts.data,
     health,
