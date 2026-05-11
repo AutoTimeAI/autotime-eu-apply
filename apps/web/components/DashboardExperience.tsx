@@ -1118,6 +1118,27 @@ function getHostname(url: string) {
   }
 }
 
+function formatDashboardDate(value?: string) {
+  if (!value) {
+    return "Not set"
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return "Needs review"
+  }
+
+  return date.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  })
+}
+
+function getApplicationSourceLabel(application: ApplicationRecord) {
+  return application.source || getHostname(application.url) || "Manual entry"
+}
+
 function hasJobDraft(job: JobAnalysisDraft) {
   return Boolean(
     job.jobTitle.trim() || job.company.trim() || job.jobDescription.trim() ||
@@ -4655,8 +4676,16 @@ export default function HomePage({
                     <dd>{selectedApplication.contentGate ?? "Not checked"}</dd>
                   </div>
                   <div>
+                    <dt>Saved</dt>
+                    <dd>{formatDashboardDate(selectedApplication.createdAt)}</dd>
+                  </div>
+                  <div>
                     <dt>Source</dt>
-                    <dd>{selectedApplication.source || selectedApplication.url}</dd>
+                    <dd>{getApplicationSourceLabel(selectedApplication)}</dd>
+                  </div>
+                  <div>
+                    <dt>URL</dt>
+                    <dd>{selectedApplication.url}</dd>
                   </div>
                 </dl>
               </article>
@@ -4892,6 +4921,11 @@ export default function HomePage({
                       </span>
                     </div>
                     <span>{application.company || "Unknown company"}</span>
+                    <div className="application-meta-strip">
+                      <span>{getApplicationSourceLabel(application)}</span>
+                      <span>Saved {formatDashboardDate(application.createdAt)}</span>
+                      <span>{application.status}</span>
+                    </div>
                     <small>{application.url}</small>
                     {application.fitDecision ? (
                       <small>
