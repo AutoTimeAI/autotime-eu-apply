@@ -3031,7 +3031,7 @@ export default function HomePage({
   const exportDecisionAudit = () => {
     const audit = {
       productPrinciple:
-        "No claim without evidence. No score without explanation. No application advice without clear limits.",
+        "Evidence first. Scores and next steps stay explainable.",
       exportedAt: new Date().toISOString(),
       targetContext: productContext,
       trustState,
@@ -3783,8 +3783,7 @@ export default function HomePage({
           </section>
         </div>
         <p className="decision-integrity-note">
-          No claim without evidence. No score without explanation. No
-          application advice without clear limits.
+          Evidence first. Scores and next steps stay explainable.
         </p>
       </section>
       )}
@@ -4550,8 +4549,7 @@ export default function HomePage({
               <p className="eyebrow">Python analytics</p>
               <h2>Online evidence and outcome report</h2>
               <p>
-                Descriptive analytics only: observed outcomes from saved records,
-                not a promise or probability claim.
+                Descriptive analytics from saved records only.
               </p>
             </div>
             <button
@@ -4833,8 +4831,7 @@ export default function HomePage({
                 <p className="eyebrow">Ready to Apply</p>
                 <h3>Evidence gate</h3>
                 <p>
-                  No claim without evidence. Resolve blocked items before using
-                  this job as application-ready.
+                  Resolve blocked items before using this job as ready.
                 </p>
               </div>
               <div className="ready-checklist-grid">
@@ -5140,9 +5137,7 @@ export default function HomePage({
             <p className="eyebrow">Interview Buddy</p>
             <h2>Shape a rough answer into interview-ready versions</h2>
             <p>
-              Interview Buddy rewrites only what you provide and what is saved
-              in your profile. It does not invent experience, claims or legal
-              advice.
+              Rewrite your draft using saved profile evidence.
             </p>
           </div>
 
@@ -5156,8 +5151,7 @@ export default function HomePage({
                 <div>
                   <strong>Buddy check</strong>
                   <p>
-                    Keep it honest, specific and calm. A rough draft is enough
-                    to start.
+                    Keep it specific. A rough draft is enough.
                   </p>
                 </div>
               </div>
@@ -5193,7 +5187,7 @@ export default function HomePage({
               <label>
                 Rough draft answer
                 <textarea
-                  placeholder="Write the honest version first. Include only facts, examples and outcomes you can explain."
+                  placeholder="Write the factual version first."
                   value={interviewDraftAnswer}
                   onChange={(event) =>
                     setInterviewDraftAnswer(event.target.value)
