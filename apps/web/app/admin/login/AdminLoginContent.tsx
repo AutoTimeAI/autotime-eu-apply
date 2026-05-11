@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
+import { OWNER_ADMIN_EMAIL } from "../../../lib/admin-access"
 import { publicEnv } from "../../../lib/env"
 import { createBrowserClient } from "../../../lib/supabase/client"
 
@@ -77,8 +78,8 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
             <span className="admin-live-pill">Protected</span>
             <h2>Admin credentials</h2>
             <p>
-              Use Google with raj.analystdata@gmail.com. Other accounts are
-              rejected before the admin console opens.
+              Use Google with {OWNER_ADMIN_EMAIL}. Other accounts are rejected
+              before the admin console opens.
             </p>
           </div>
 
