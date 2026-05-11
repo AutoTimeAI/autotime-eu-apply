@@ -3458,14 +3458,20 @@ export default function HomePage({
         return
       }
 
+      if (profileSyncTimeoutRef.current) {
+        clearTimeout(profileSyncTimeoutRef.current)
+        profileSyncTimeoutRef.current = null
+      }
+
       const nextState = {
         ...state,
         profile: emptyProfile
       }
 
+      setProfileAccountSyncEnabled(false)
       setState(nextState)
       saveState(nextState, userId)
-      setStatus("Profile deleted for this account")
+      setStatus("Profile deleted for this account. Account sync is off.")
     } catch (error: unknown) {
       setStatus(
         error instanceof Error ? error.message : "Could not delete profile"
