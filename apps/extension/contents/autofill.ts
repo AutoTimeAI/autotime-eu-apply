@@ -290,10 +290,6 @@ async function syncTrackedApplicationsToDashboard(
     return "Dashboard not connected."
   }
 
-  if (session.plan !== "pro") {
-    return "Pro sync required."
-  }
-
   try {
     await syncApplicationsToDashboard({
       applications,
@@ -1261,12 +1257,10 @@ function getWidgetMarkup({
     ? "Please wait while AutoTime saves this role."
     : normalizedStatus.includes("synced to dashboard")
       ? "Saved roles appear in the AutoTime dashboard tracker."
-      : normalizedStatus.includes("pro sync required")
-        ? "Upgrade to Pro to sync this job to the dashboard."
       : normalizedStatus.includes("saved locally") ||
           normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
-        ? "Open Dashboard > Extension to sync this job."
+        ? "Sign in from the dashboard to sync this job."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
           : "Check the visible job page and try again."
@@ -1771,10 +1765,8 @@ async function saveDetectedJob(details: JobPageResponse | null) {
   if (hasApplicationWithUrl(applications, details.url)) {
     const syncStatus = await syncTrackedApplicationsToDashboard(applications)
     return syncStatus === "Synced to dashboard."
-      ? "This job is already tracked and synced to dashboard."
-      : syncStatus === "Pro sync required."
-        ? "This job is already saved locally (Pro sync required)"
-      : "This job is already saved locally."
+      ? "This job is already tracked and synced to dashboard"
+      : "This job is already saved locally. Sign in to sync to dashboard"
   }
 
   const record = createApplicationRecord(details)
@@ -1786,10 +1778,8 @@ async function saveDetectedJob(details: JobPageResponse | null) {
     await syncTrackedApplicationsToDashboard(updatedApplications)
 
   return syncStatus === "Synced to dashboard."
-    ? "Job tracked and synced to dashboard."
-    : syncStatus === "Pro sync required."
-      ? "Job saved locally (Pro sync required)"
-    : "Job saved locally"
+    ? "Job tracked and synced to dashboard"
+    : "Job saved locally. Sign in to sync to dashboard"
 }
 
 function isLikelyJobUrl(url = window.location.href) {

@@ -115,10 +115,6 @@ export async function syncApplicationsToDashboard({
     throw new Error("Dashboard not connected.")
   }
 
-  if (session.plan !== "pro") {
-    throw new Error("Pro sync required.")
-  }
-
   const headers = {
     Authorization: `Bearer ${session.authToken}`,
     "Content-Type": "application/json",
