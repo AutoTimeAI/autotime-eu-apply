@@ -38,6 +38,15 @@ type JobPageTextInput = {
   source?: string
 }
 
+type StructuredJobPostingData = {
+  company: string
+  description: string
+  employmentType: string
+  location: string
+  roleTitle: string
+  salary: string
+}
+
 function cleanText(value = "") {
   return value
     .replace(/<[^>]*>/g, " ")
@@ -49,6 +58,145 @@ function cleanText(value = "") {
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/\s+/g, " ")
     .trim()
+}
+
+function getStructuredText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(getStructuredText).find(Boolean) ?? ""
+  }
+
+  if (typeof value === "number") {
+    return String(value)
+  }
+
+  if (typeof value === "string") {
+    return cleanText(value)
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const item = value as Record<string, unknown>
+  return getStructuredText(item.name) || getStructuredText(item.value)
+}
+
+function getStructuredNodes(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) {
+    return value.flatMap(getStructuredNodes)
+  }
+
+  if (!value || typeof value !== "object") {
+    return []
+  }
+
+  const item = value as Record<string, unknown>
+
+  return [
+    item,
+    ...getStructuredNodes(item["@graph"]),
+    ...getStructuredNodes(item.itemListElement)
+  ]
+}
+
+function hasStructuredType(item: Record<string, unknown>, type: string) {
+  const itemType = item["@type"]
+
+  return Array.isArray(itemType)
+    ? itemType.includes(type)
+    : itemType === type
+}
+
+function getStructuredAddressText(value: unknown): string {
+  const item = Array.isArray(value) ? value[0] : value
+
+  if (typeof item === "string") {
+    return cleanText(item)
+  }
+
+  if (!item || typeof item !== "object") {
+    return ""
+  }
+
+  const record = item as Record<string, unknown>
+  const address =
+    record.address && typeof record.address === "object"
+      ? (record.address as Record<string, unknown>)
+      : record
+
+  return [
+    getStructuredText(address.addressLocality),
+    getStructuredText(address.addressRegion),
+    getStructuredText(address.addressCountry)
+  ]
+    .filter(Boolean)
+    .join(", ")
+}
+
+function getStructuredEmploymentType(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(getStructuredEmploymentType).filter(Boolean).join(", ")
+  }
+
+  return getStructuredText(value)
+}
+
+function getStructuredSalaryText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(getStructuredSalaryText).find(Boolean) ?? ""
+  }
+
+  if (typeof value === "number" || typeof value === "string") {
+    return getStructuredText(value)
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const item = value as Record<string, unknown>
+  const nestedValue = item.value
+  const valueRecord =
+    typeof nestedValue === "object" && nestedValue !== null
+      ? (nestedValue as Record<string, unknown>)
+      : null
+  const minValue = getStructuredText(valueRecord?.minValue ?? item.minValue)
+  const maxValue = getStructuredText(valueRecord?.maxValue ?? item.maxValue)
+  const directValue = getStructuredText(valueRecord?.value ?? nestedValue)
+  const valueText =
+    minValue && maxValue
+      ? `${minValue}-${maxValue}`
+      : directValue || minValue || maxValue
+  const currency = getStructuredText(item.currency ?? valueRecord?.currency)
+  const unitText = getStructuredText(valueRecord?.unitText ?? item.unitText)
+
+  return [currency, valueText, unitText].filter(Boolean).join(" ")
+}
+
+export function extractJobPostingFromJsonLd(
+  value: unknown
+): StructuredJobPostingData | null {
+  const posting = getStructuredNodes(value).find((item) =>
+    hasStructuredType(item, "JobPosting")
+  )
+
+  if (!posting) {
+    return null
+  }
+
+  return {
+    roleTitle: getStructuredText(posting.title),
+    company: getStructuredText(posting.hiringOrganization),
+    location:
+      getStructuredAddressText(posting.jobLocation) ||
+      getStructuredAddressText(posting.applicantLocationRequirements) ||
+      (getStructuredText(posting.jobLocationType) === "TELECOMMUTE"
+        ? "Remote"
+        : getStructuredText(posting.jobLocationType)),
+    salary: getStructuredSalaryText(posting.baseSalary),
+    employmentType: getStructuredEmploymentType(posting.employmentType),
+    description: getStructuredText(posting.description)
+  }
 }
 
 function getHostname(url = "") {

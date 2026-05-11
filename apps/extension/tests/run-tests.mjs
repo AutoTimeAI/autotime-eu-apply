@@ -18,6 +18,7 @@ import {
   getReusableAnswerValues
 } from "../lib/autofill.ts"
 import {
+  extractJobPostingFromJsonLd,
   formatJobPageNotes,
   getLinkedInCanonicalJobUrl,
   getLinkedInManualInputMessage,
@@ -652,6 +653,53 @@ test("reads priority ATS details from explicit metadata only", () => {
     assert.equal(details.location, expected.location)
     assert.equal(details.platform, expected.platform)
     assert.equal(details.url, input.url)
+  })
+})
+
+test("extracts JSON-LD JobPosting enrichment from ATS schemas", () => {
+  const structured = extractJobPostingFromJsonLd({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "Example Co"
+      },
+      {
+        "@type": "JobPosting",
+        title: "Application Support Analyst",
+        hiringOrganization: { name: "Example Co" },
+        jobLocation: {
+          "@type": "Place",
+          address: {
+            addressLocality: "London",
+            addressCountry: "United Kingdom"
+          }
+        },
+        baseSalary: {
+          "@type": "MonetaryAmount",
+          currency: "GBP",
+          value: {
+            "@type": "QuantitativeValue",
+            minValue: 50000,
+            maxValue: 65000,
+            unitText: "YEAR"
+          }
+        },
+        employmentType: ["FULL_TIME", "CONTRACTOR"],
+        description:
+          "<p>Own EU application support for production systems.</p><p>Partner with engineering and operations teams.</p>"
+      }
+    ]
+  })
+
+  assert.deepEqual(structured, {
+    roleTitle: "Application Support Analyst",
+    company: "Example Co",
+    location: "London, United Kingdom",
+    salary: "GBP 50000-65000 YEAR",
+    employmentType: "FULL_TIME, CONTRACTOR",
+    description:
+      "Own EU application support for production systems. Partner with engineering and operations teams."
   })
 })
 

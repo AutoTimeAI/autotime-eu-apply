@@ -9,6 +9,7 @@ import {
   type ApplicationRecord
 } from "../lib/storage"
 import {
+  extractJobPostingFromJsonLd,
   formatJobPageNotes,
   getLinkedInCanonicalJobUrl,
   inferJobPageDetails,
@@ -362,17 +363,6 @@ function getMetaContent(names: string[]) {
 
 function cleanVisibleText(value = "") {
   return value.replace(/\s+/g, " ").trim()
-}
-
-function getHtmlText(value = "") {
-  if (!/<[a-z][\s\S]*>/i.test(value)) {
-    return cleanVisibleText(value)
-  }
-
-  const template = document.createElement("template")
-  template.innerHTML = value
-
-  return cleanVisibleText(template.content.textContent ?? value)
 }
 
 function getJsonLdNodes(value: unknown): Record<string, unknown>[] {
@@ -812,121 +802,15 @@ function cleanLinkedInLocation(value = "") {
   return parts[0] ?? ""
 }
 
-function getJsonLdText(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.map(getJsonLdText).find(Boolean) ?? ""
-  }
-
-  if (typeof value === "string") {
-    return cleanVisibleText(value)
-  }
-
-  if (!value || typeof value !== "object") {
-    return ""
-  }
-
-  const item = value as Record<string, unknown>
-  return getJsonLdText(item.name) || getJsonLdText(item.value)
-}
-
-function getJsonLdAddressText(value: unknown): string {
-  const item = Array.isArray(value) ? value[0] : value
-
-  if (typeof item === "string") {
-    return cleanVisibleText(item)
-  }
-
-  if (!item || typeof item !== "object") {
-    return ""
-  }
-
-  const record = item as Record<string, unknown>
-  const address =
-    record.address && typeof record.address === "object"
-      ? (record.address as Record<string, unknown>)
-      : record
-
-  return [
-    getJsonLdText(address.addressLocality),
-    getJsonLdText(address.addressRegion),
-    getJsonLdText(address.addressCountry)
-  ]
-    .filter(Boolean)
-    .join(", ")
-}
-
-function getJsonLdEmploymentType(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.map(getJsonLdEmploymentType).filter(Boolean).join(", ")
-  }
-
-  return getJsonLdText(value)
-}
-
-function getJsonLdScalarText(value: unknown) {
-  if (typeof value === "number") {
-    return String(value)
-  }
-
-  return getJsonLdText(value)
-}
-
-function getJsonLdSalaryText(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.map(getJsonLdSalaryText).find(Boolean) ?? ""
-  }
-
-  if (typeof value === "number") {
-    return String(value)
-  }
-
-  if (typeof value === "string") {
-    return cleanVisibleText(value)
-  }
-
-  if (!value || typeof value !== "object") {
-    return ""
-  }
-
-  const item = value as Record<string, unknown>
-  const nestedValue = item.value
-  const valueRecord =
-    typeof nestedValue === "object" && nestedValue !== null
-      ? (nestedValue as Record<string, unknown>)
-      : null
-  const minValue = getJsonLdScalarText(valueRecord?.minValue ?? item.minValue)
-  const maxValue = getJsonLdScalarText(valueRecord?.maxValue ?? item.maxValue)
-  const directValue = getJsonLdScalarText(valueRecord?.value ?? nestedValue)
-  const valueText =
-    minValue && maxValue
-      ? `${minValue}-${maxValue}`
-      : directValue || minValue || maxValue
-  const currency = getJsonLdScalarText(item.currency ?? valueRecord?.currency)
-  const unitText = getJsonLdScalarText(valueRecord?.unitText ?? item.unitText)
-
-  return [currency, valueText, unitText].filter(Boolean).join(" ")
-}
-
 function detectJobPage(): JobPageResponse {
   const jsonLdPosting = getJsonLdJobPosting()
+  const jsonLdDetails = extractJobPostingFromJsonLd(jsonLdPosting)
   const isLinkedInPage = isLinkedInUrl(window.location.href)
-  const jsonLdHiringOrganization = jsonLdPosting?.hiringOrganization
-  const jsonLdLocationText =
-    getJsonLdAddressText(jsonLdPosting?.jobLocation) ||
-    getJsonLdAddressText(jsonLdPosting?.applicantLocationRequirements) ||
-    (getJsonLdText(jsonLdPosting?.jobLocationType) === "TELECOMMUTE"
-      ? "Remote"
-      : getJsonLdText(jsonLdPosting?.jobLocationType))
-  const jsonLdTitle =
-    typeof jsonLdPosting?.title === "string" ? jsonLdPosting.title : ""
-  const jsonLdDescription =
-    typeof jsonLdPosting?.description === "string"
-      ? getHtmlText(jsonLdPosting.description)
-      : ""
-  const jsonLdSalary = getJsonLdSalaryText(jsonLdPosting?.baseSalary)
-  const jsonLdEmploymentType = getJsonLdEmploymentType(
-    jsonLdPosting?.employmentType
-  )
+  const jsonLdLocationText = jsonLdDetails?.location ?? ""
+  const jsonLdTitle = jsonLdDetails?.roleTitle ?? ""
+  const jsonLdDescription = jsonLdDetails?.description ?? ""
+  const jsonLdSalary = jsonLdDetails?.salary ?? ""
+  const jsonLdEmploymentType = jsonLdDetails?.employmentType ?? ""
 
   // These selectors cover common job-board conventions. Page titles are kept
   // for notes only and are not split into guessed job fields.
@@ -938,7 +822,7 @@ function detectJobPage(): JobPageResponse {
     ? parseLinkedInPageTitle(pageTitle)
     : { company: "", title: "" }
   const company =
-    getJsonLdText(jsonLdHiringOrganization) ||
+    jsonLdDetails?.company ||
     getFirstText([
       ".jobs-unified-top-card__company-name a",
       ".jobs-unified-top-card__company-name",
