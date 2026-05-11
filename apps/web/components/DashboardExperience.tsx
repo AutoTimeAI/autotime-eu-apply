@@ -2442,15 +2442,6 @@ export default function HomePage({
       silent?: boolean
       successMessage?: string
     } = {}) => {
-      if (!cloudSyncReadiness.configured) {
-        if (!silent) {
-          setStatus(
-            `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
-          )
-        }
-        return
-      }
-
       try {
         const response = await fetch("/api/sync/dashboard", {
           cache: "no-store"
@@ -2501,7 +2492,7 @@ export default function HomePage({
         }
       }
     },
-    [cloudSyncReadiness.configured, cloudSyncReadiness.issues, userId]
+    [userId]
   )
 
   useEffect(() => {
@@ -2512,10 +2503,6 @@ export default function HomePage({
   }, [loadDashboardSnapshot, userId])
 
   useEffect(() => {
-    if (!cloudSyncReadiness.configured) {
-      return
-    }
-
     const refreshSyncedWorkflow = () => {
       void loadDashboardSnapshot({ silent: true })
     }
@@ -2538,7 +2525,7 @@ export default function HomePage({
       document.removeEventListener("visibilitychange", refreshWhenVisible)
       window.clearInterval(intervalId)
     }
-  }, [cloudSyncReadiness.configured, loadDashboardSnapshot])
+  }, [loadDashboardSnapshot])
 
   const persist = (next: CompanionDashboardState, message: string) => {
     setState(next)
