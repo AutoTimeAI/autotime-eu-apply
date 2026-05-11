@@ -390,6 +390,15 @@ test("ignores scraped paragraph text in explicit job fields", () => {
 test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://www.linkedin.com/jobs/view/123"), "LinkedIn")
   assert.equal(getJobPlatform("https://jobs.linkedin.com/view/123"), "LinkedIn")
+  assert.equal(getJobPlatform("https://www.stepstone.de/stellenangebote--123"), "Stepstone")
+  assert.equal(getJobPlatform("https://uk.indeed.com/viewjob?jk=123"), "Indeed")
+  assert.equal(getJobPlatform("https://de.indeed.com/viewjob?jk=123"), "Indeed")
+  assert.equal(getJobPlatform("https://eures.europa.eu/jobs/application-support"), "EURES")
+  assert.equal(getJobPlatform("https://www.eurotechjobs.com/job/123"), "EuroTechJobs")
+  assert.equal(getJobPlatform("https://www.eurojobs.com/jobs/123"), "EuroJobs")
+  assert.equal(getJobPlatform("https://www.nextleveljobs.eu/jobs/123"), "NextLevelJobs")
+  assert.equal(getJobPlatform("https://wellfound.com/jobs/123"), "Wellfound")
+  assert.equal(getJobPlatform("https://angel.co/jobs/123"), "Wellfound")
   assert.equal(getJobPlatform("https://boards.greenhouse.io/acme/jobs/123"), "Greenhouse")
   assert.equal(getJobPlatform("https://jobs.lever.co/acme/123"), "Lever")
   assert.equal(getJobPlatform("https://acme.wd3.myworkdayjobs.com/jobs/job/123"), "Workday")
@@ -403,6 +412,34 @@ test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://acme.jobs.personio.com/job/123"), "Personio")
   assert.equal(getJobPlatform("https://example.com/jobs/123"), "Generic")
   assert.equal(getJobPlatform("https://notlinkedin.com/jobs/123"), "Generic")
+})
+
+test("detects Tier 1 EU JSON-LD boards as priority platforms", () => {
+  const boards = [
+    ["https://www.stepstone.de/stellenangebote--application-support", "Stepstone"],
+    ["https://ie.indeed.com/viewjob?jk=abc123", "Indeed"],
+    ["https://eures.europa.eu/jobs/application-support", "EURES"],
+    ["https://www.eurotechjobs.com/job/123/application-support", "EuroTechJobs"],
+    ["https://www.eurojobs.com/job/123", "EuroJobs"],
+    ["https://nextleveljobs.eu/jobs/123", "NextLevelJobs"],
+    ["https://wellfound.com/jobs/123", "Wellfound"]
+  ]
+
+  boards.forEach(([url, platform]) => {
+    const details = inferJobPageDetails({
+      title: "Application Support Analyst",
+      heading: "Application Support Analyst",
+      company: "Example Co",
+      description: "Support production applications for European customers.",
+      salary: "EUR 55000-70000 YEAR",
+      employmentType: "FULL_TIME",
+      url
+    })
+
+    assert.equal(details.platform, platform)
+    assert.equal(details.salary, "EUR 55000-70000 YEAR")
+    assert.equal(details.employmentType, "FULL_TIME")
+  })
 })
 
 test("marks LinkedIn as visible import with manual application boundary", () => {

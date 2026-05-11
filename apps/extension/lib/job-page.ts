@@ -13,6 +13,13 @@ export type JobPageDetails = {
 
 export type JobPlatform =
   | "LinkedIn"
+  | "Stepstone"
+  | "Indeed"
+  | "EURES"
+  | "EuroTechJobs"
+  | "EuroJobs"
+  | "NextLevelJobs"
+  | "Wellfound"
   | "Greenhouse"
   | "Lever"
   | "Workday"
@@ -211,6 +218,10 @@ function isHostname(hostname: string, domain: string) {
   return hostname === domain || hostname.endsWith(`.${domain}`)
 }
 
+function isIndeedHostname(hostname: string) {
+  return isHostname(hostname, "indeed.com") || /^indeed\.[a-z.]+$/i.test(hostname)
+}
+
 function getLinkedInJobId(url = "") {
   const directMatch = url.match(/\/jobs\/view\/(\d+)/i)
   const currentJobIdMatch = url.match(/[?&]currentJobId=(\d+)/i)
@@ -223,6 +234,34 @@ export function getJobPlatform(url = ""): JobPlatform {
 
   if (isHostname(hostname, "linkedin.com")) {
     return "LinkedIn"
+  }
+
+  if (isHostname(hostname, "stepstone.de") || isHostname(hostname, "stepstone.com")) {
+    return "Stepstone"
+  }
+
+  if (isIndeedHostname(hostname)) {
+    return "Indeed"
+  }
+
+  if (isHostname(hostname, "eures.europa.eu")) {
+    return "EURES"
+  }
+
+  if (isHostname(hostname, "eurotechjobs.com")) {
+    return "EuroTechJobs"
+  }
+
+  if (isHostname(hostname, "eurojobs.com")) {
+    return "EuroJobs"
+  }
+
+  if (isHostname(hostname, "nextleveljobs.eu")) {
+    return "NextLevelJobs"
+  }
+
+  if (isHostname(hostname, "wellfound.com") || isHostname(hostname, "angel.co")) {
+    return "Wellfound"
   }
 
   if (isHostname(hostname, "greenhouse.io")) {
