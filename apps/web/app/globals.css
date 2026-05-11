@@ -3481,6 +3481,232 @@ h4 {
   font-size: 0.84rem;
 }
 
+.admin-console-shell {
+  display: grid;
+  width: min(1320px, calc(100% - 32px));
+  gap: 16px;
+  margin: 0 auto;
+  padding: 18px 0 54px;
+}
+
+.admin-console-hero,
+.admin-command-strip,
+.admin-console-panel,
+.admin-live-meta,
+.admin-alert-panel {
+  border: 1px solid rgba(20, 31, 46, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-tight);
+}
+
+.admin-console-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+  background:
+    linear-gradient(135deg, rgba(11, 95, 89, 0.96), rgba(13, 23, 40, 0.98)),
+    #0d1728;
+  color: #eef7f5;
+  padding: 22px;
+}
+
+.admin-console-hero h1 {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: 2rem;
+}
+
+.admin-console-hero p:not(.eyebrow) {
+  max-width: 740px;
+  margin: 0;
+  color: rgba(238, 247, 245, 0.78);
+  font-weight: 650;
+}
+
+.admin-console-hero .eyebrow {
+  color: #9ee1d4;
+}
+
+.admin-console-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-console-actions .secondary-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.admin-live-pill {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  border: 1px solid rgba(158, 225, 212, 0.5);
+  border-radius: 999px;
+  background: rgba(21, 128, 94, 0.22);
+  color: #dffcf3;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.admin-live-pill.issue {
+  border-color: rgba(245, 158, 11, 0.56);
+  background: rgba(168, 102, 22, 0.26);
+  color: #fff3d7;
+}
+
+.admin-command-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  background: #111827;
+  color: #eef2f7;
+}
+
+.admin-command-strip article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px;
+}
+
+.admin-command-strip article:last-child {
+  border-right: 0;
+}
+
+.admin-command-strip span {
+  color: #9ca3af;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-command-strip strong {
+  color: #ffffff;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.admin-command-strip p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.86rem;
+}
+
+.admin-live-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.admin-live-meta p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.admin-live-meta label {
+  display: inline-flex;
+  width: auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.admin-live-meta input {
+  width: auto;
+}
+
+.admin-alert-panel {
+  display: grid;
+  gap: 6px;
+  border-left: 4px solid var(--red);
+  padding: 12px 14px;
+}
+
+.admin-alert-panel.warning {
+  border-left-color: var(--amber);
+}
+
+.admin-alert-panel p,
+.admin-alert-panel li {
+  margin: 0;
+  color: var(--muted);
+}
+
+.admin-console-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-console-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.admin-console-panel.wide {
+  grid-column: 1 / -1;
+}
+
+.admin-panel-heading {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.admin-panel-heading h2,
+.admin-panel-heading p {
+  margin: 0;
+}
+
+.admin-panel-heading > span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.admin-signal-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.admin-signal-list div {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 10px;
+}
+
+.admin-signal-list dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-signal-list dd {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
 .consent-banner {
   position: fixed;
   right: 18px;
@@ -3682,6 +3908,9 @@ h4 {
   .decision-columns,
   .pipeline-summary,
   .admin-header,
+  .admin-console-hero,
+  .admin-command-strip,
+  .admin-console-grid,
   .admin-health-grid,
   .admin-metric-grid,
   .admin-config-grid,

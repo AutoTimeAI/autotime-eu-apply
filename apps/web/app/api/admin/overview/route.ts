@@ -45,11 +45,18 @@ export async function GET() {
   }
 
   try {
-    return NextResponse.json({
-      data: await getAdminOverview(),
-      error: null,
-      status: 200
-    })
+    return NextResponse.json(
+      {
+        data: await getAdminOverview(),
+        error: null,
+        status: 200
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store"
+        }
+      }
+    )
   } catch (error: unknown) {
     return NextResponse.json(
       {
