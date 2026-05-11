@@ -1325,13 +1325,19 @@ function getWidgetMarkup({
       }
 
       .handle {
-        display: flex;
-        align-items: center;
+        display: grid;
         gap: 8px;
-        padding: 10px 12px;
+        padding: 10px 12px 12px;
         border-bottom: 1px solid #bdd4dc;
         cursor: move;
         user-select: none;
+      }
+
+      .handle-main {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
       }
 
       .brand-logo,
@@ -1368,11 +1374,12 @@ function getWidgetMarkup({
       }
 
       .header-action-button {
-        min-width: 74px;
-        min-height: 30px;
-        padding: 0 10px;
+        width: 100%;
+        min-width: 0;
+        min-height: 34px;
+        padding: 0 12px;
         box-shadow: 0 5px 12px rgba(0, 108, 103, 0.18);
-        font-size: 10.5px;
+        font-size: 11.5px;
       }
 
       .header-dashboard-button {
@@ -1420,6 +1427,12 @@ function getWidgetMarkup({
         align-items: center;
         gap: 4px;
         margin-left: auto;
+      }
+
+      .header-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
       }
 
       .status-alert {
@@ -1669,24 +1682,27 @@ function getWidgetMarkup({
         }
 
         .header-action-button {
-          min-width: 0;
           padding: 0 8px;
         }
       }
     </style>
     <section class="widget" aria-label="AutoTime job tracker">
       <div class="handle" data-autotime-drag-handle>
-        <div class="brand-mark" aria-hidden="true">
-          <img class="brand-logo" alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
+        <div class="handle-main">
+          <div class="brand-mark" aria-hidden="true">
+            <img class="brand-logo" alt="" aria-hidden="true" src="${chrome.runtime.getURL("icons/128.png")}" />
+          </div>
+          <div class="title-block">
+            <strong>AutoTime EU Apply</strong>
+            <span>Drag to move</span>
+          </div>
+          <div class="window-controls" aria-label="Widget controls">
+            <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
+          </div>
         </div>
-        <div class="title-block">
-          <strong>AutoTime EU Apply</strong>
-          <span>Drag to move</span>
-        </div>
-        <div class="window-controls" aria-label="Widget controls">
+        <div class="header-actions" aria-label="Widget actions">
           <button class="header-action-button" data-autotime-track-job type="button">TRACK JOB</button>
           <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard type="button">DASHBOARD</button>
-          <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
         </div>
       </div>
       ${
