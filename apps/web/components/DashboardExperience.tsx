@@ -2515,6 +2515,15 @@ export default function HomePage({
           if (!silent) {
             setStatus(body.error ?? "Could not load synced dashboard")
           }
+          reportClientDiagnostic(
+            "sync.dashboard.client.read-response-failed",
+            body.error ?? "Dashboard sync read response failed",
+            {
+              httpStatus: response.status,
+              operation: "dashboard-read",
+              route: "/api/sync/dashboard"
+            }
+          )
           return
         }
 
@@ -2548,6 +2557,16 @@ export default function HomePage({
               : "Could not load synced dashboard"
           )
         }
+        reportClientDiagnostic(
+          "sync.dashboard.client.read-fetch-failed",
+          error instanceof Error
+            ? error.message
+            : "Dashboard sync read fetch failed",
+          {
+            operation: "dashboard-read",
+            route: "/api/sync/dashboard"
+          }
+        )
       }
     },
     [userId]
@@ -2583,6 +2602,15 @@ export default function HomePage({
           if (!silent) {
             setStatus(body.error ?? "Could not load synced profile")
           }
+          reportClientDiagnostic(
+            "sync.profile.client.read-response-failed",
+            body.error ?? "Profile sync read response failed",
+            {
+              httpStatus: response.status,
+              operation: "profile-read",
+              route: "/api/sync/profile"
+            }
+          )
           return false
         }
 
@@ -2616,6 +2644,14 @@ export default function HomePage({
               : "Could not load synced profile"
           )
         }
+        reportClientDiagnostic(
+          "sync.profile.client.read-fetch-failed",
+          error instanceof Error ? error.message : "Profile sync read fetch failed",
+          {
+            operation: "profile-read",
+            route: "/api/sync/profile"
+          }
+        )
         return false
       }
     },
