@@ -2028,6 +2028,9 @@ export default function HomePage({
   const applicationSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
+  const profileSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
   const hasUnsyncedDashboardChangesRef = useRef(false)
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
     useState<OnlineAnalyticsReport | null>(null)
@@ -2581,18 +2584,113 @@ export default function HomePage({
     }
   }
 
+  const syncProfileStateToCloud = async (
+    profile: CandidateProfile,
+    {
+      failureMessage = "Profile saved locally. Sync failed",
+      silent = false,
+      successMessage = "Profile synced to your dashboard account"
+    }: {
+      failureMessage?: string
+      silent?: boolean
+      successMessage?: string
+    } = {}
+  ) => {
+    if (!cloudSyncReadiness.configured) {
+      if (!silent) {
+        setStatus(
+          `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+        )
+      }
+      return false
+    }
+
+    const action = prepareProfileSyncAction({
+      readiness: cloudSyncReadiness,
+      session: {
+        checked: true,
+        authenticated: true,
+        userEmail: "signed-in-account",
+        message: "Dashboard session will be checked by the sync endpoint."
+      },
+      profile,
+      explicitUserAction: true,
+      consentGranted: true
+    })
+
+    if (!action.ready) {
+      if (!silent) {
+        setStatus(action.message)
+      }
+      return false
+    }
+
+    try {
+      const response = await fetch("/api/sync/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-autotime-source": "web"
+        },
+        body: JSON.stringify(profile)
+      })
+      const body = (await response.json()) as {
+        error: string | null
+      }
+
+      if (!response.ok || body.error) {
+        if (!silent) {
+          setStatus(`${failureMessage}: ${body.error ?? "Profile sync failed"}`)
+        }
+        return false
+      }
+
+      if (!silent) {
+        setStatus(successMessage)
+      }
+      return true
+    } catch (error: unknown) {
+      if (!silent) {
+        setStatus(
+          `${failureMessage}: ${
+            error instanceof Error ? error.message : "Profile sync failed"
+          }`
+        )
+      }
+      return false
+    }
+  }
+
+  const scheduleProfileSync = (profile: CandidateProfile) => {
+    if (!cloudSyncConsent || !cloudSyncReadiness.configured) {
+      return
+    }
+
+    if (profileSyncTimeoutRef.current) {
+      clearTimeout(profileSyncTimeoutRef.current)
+    }
+
+    profileSyncTimeoutRef.current = setTimeout(() => {
+      profileSyncTimeoutRef.current = null
+      void syncProfileStateToCloud(profile, {
+        failureMessage: "Profile saved locally. Dashboard sync failed",
+        successMessage: "Profile saved and synced to dashboard"
+      })
+    }, 1200)
+  }
+
   const updateProfile = <K extends keyof CandidateProfile>(
     key: K,
     value: CandidateProfile[K]
   ) => {
-    setState((current) => {
-      const next = {
-        ...current,
-        profile: { ...current.profile, [key]: value }
-      }
-      saveState(next, userId)
-      return next
-    })
+    const nextState = {
+      ...state,
+      profile: { ...state.profile, [key]: value }
+    }
+
+    setState(nextState)
+    saveState(nextState, userId)
+    scheduleProfileSync(nextState.profile)
   }
 
   const updateJob = <K extends keyof JobAnalysisDraft>(
@@ -2834,6 +2932,9 @@ export default function HomePage({
     return () => {
       if (applicationSyncTimeoutRef.current) {
         clearTimeout(applicationSyncTimeoutRef.current)
+      }
+      if (profileSyncTimeoutRef.current) {
+        clearTimeout(profileSyncTimeoutRef.current)
       }
     }
   }, [])
@@ -3184,48 +3285,7 @@ export default function HomePage({
 
   const syncProfileToCloud = async () => {
     setCloudSyncConsent(true)
-    const action = prepareProfileSyncAction({
-      readiness: cloudSyncReadiness,
-      session: {
-        checked: true,
-        authenticated: true,
-        userEmail: "signed-in-account",
-        message: "Dashboard session will be checked by the sync endpoint."
-      },
-      profile: state.profile,
-      explicitUserAction: true,
-      consentGranted: true
-    })
-
-    if (!action.ready) {
-      setStatus(action.message)
-      return
-    }
-
-    try {
-      const response = await fetch("/api/sync/profile", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-autotime-source": "web"
-        },
-        body: JSON.stringify(state.profile)
-      })
-      const body = (await response.json()) as {
-        error: string | null
-      }
-
-      if (!response.ok || body.error) {
-        setStatus(body.error ?? "Profile sync failed")
-        return
-      }
-
-      setStatus("Profile synced to your dashboard account")
-    } catch (error: unknown) {
-      setStatus(
-        error instanceof Error ? error.message : "Profile sync failed"
-      )
-    }
+    await syncProfileStateToCloud(state.profile)
   }
 
   const loadProfileFromCloud = async () => {
