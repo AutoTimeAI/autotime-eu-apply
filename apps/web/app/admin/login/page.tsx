@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { AdminLoginContent } from "./AdminLoginContent"
-import { OWNER_ADMIN_EMAIL, isAdminUser } from "../../../lib/admin-access"
+import { isAdminUser } from "../../../lib/admin-access"
 import { createServerClient } from "../../../lib/supabase/server"
 import { getTestAuthUser } from "../../../lib/test-auth"
 
@@ -44,9 +44,9 @@ export default async function AdminLoginPage({
     <AdminLoginContent
       initialStatus={
         params?.adminDenied
-          ? `That Google account is not authorised for admin access. Use ${OWNER_ADMIN_EMAIL}.`
+          ? "This account is not authorised for admin access."
           : user
-          ? `This signed-in account is not ${OWNER_ADMIN_EMAIL}.`
+          ? "This signed-in account is not authorised for admin access."
           : null
       }
     />

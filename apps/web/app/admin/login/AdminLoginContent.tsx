@@ -1,7 +1,6 @@
 "use client"
 
 import { Suspense, useState } from "react"
-import { OWNER_ADMIN_EMAIL } from "../../../lib/admin-access"
 import { publicEnv } from "../../../lib/env"
 import { createBrowserClient } from "../../../lib/supabase/client"
 
@@ -65,8 +64,8 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
           <p className="eyebrow">Internal admin</p>
           <h1>AutoTime control room access</h1>
           <p>
-            Admin sign-in is separated from the user workspace. Access is only
-            granted when the signed-in email is listed in AUTOTIME_ADMIN_EMAILS.
+            Admin sign-in is separated from the user workspace. Access is
+            restricted to admin access only.
           </p>
         </div>
 
@@ -75,7 +74,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
             <span className="admin-live-pill">Protected</span>
             <h2>Admin credentials</h2>
             <p>
-              Use Google with {OWNER_ADMIN_EMAIL}. Other accounts are rejected
+              Continue with Google. Accounts without admin access are rejected
               before the admin console opens.
             </p>
           </div>

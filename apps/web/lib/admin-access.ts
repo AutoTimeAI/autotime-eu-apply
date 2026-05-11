@@ -1,8 +1,6 @@
 import type { User } from "@supabase/supabase-js"
 import { getServerEnv } from "./env"
 
-export const OWNER_ADMIN_EMAIL = "raj.analystdata@gmail.com"
-
 function normaliseEmail(email: string | null | undefined): string {
   return email?.trim().toLowerCase() ?? ""
 }
@@ -18,11 +16,11 @@ function getAdminEmailSet(): Set<string> {
 
 export function isAdminUser(user: User | null): boolean {
   const email = normaliseEmail(user?.email)
-  const ownerEmail = normaliseEmail(OWNER_ADMIN_EMAIL)
+  const adminEmails = getAdminEmailSet()
 
   if (!email) {
     return false
   }
 
-  return email === ownerEmail && getAdminEmailSet().has(ownerEmail)
+  return adminEmails.size === 1 && adminEmails.has(email)
 }
