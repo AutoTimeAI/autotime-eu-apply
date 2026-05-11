@@ -3,11 +3,13 @@ import { appUrl } from "../../lib/openai"
 import {
   getApplications,
   getAccountSession,
+  getApplicationSyncState,
   getReusableAnswers,
   logDiagnosticEvent,
   saveAccountSession,
   updateApplicationSyncState,
-  type AccountSession
+  type AccountSession,
+  type ApplicationRecord
 } from "../../lib/storage"
 import { syncApplicationsToDashboard } from "../../lib/cloud-sync"
 
@@ -58,6 +60,117 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Dashboard sync failed"
 }
 
+async function syncApplicationsWithState({
+  applications,
+  completedEvent,
+  failedEvent,
+  session,
+  startedEvent
+}: {
+  applications: ApplicationRecord[]
+  completedEvent: string
+  failedEvent: string
+  session: AccountSession
+  startedEvent: string
+}) {
+  if (applications.length === 0) {
+    return undefined
+  }
+
+  const applicationIds = applications.map((application) => application.id)
+
+  try {
+    await updateApplicationSyncState(applicationIds, "pending")
+    await logDiagnosticEvent({
+      area: "sync",
+      event: startedEvent,
+      message: "Syncing locally saved jobs to dashboard.",
+      status: "info",
+      details: { applicationCount: applications.length }
+    })
+    await syncApplicationsToDashboard({
+      applications,
+      reusableAnswers: await getReusableAnswers(),
+      session
+    })
+    await updateApplicationSyncState(applicationIds, "synced")
+    await logDiagnosticEvent({
+      area: "sync",
+      event: completedEvent,
+      message: "Locally saved jobs synced to dashboard.",
+      status: "success",
+      details: { applicationCount: applications.length }
+    })
+    return undefined
+  } catch (error: unknown) {
+    const syncError = getErrorMessage(error)
+    await updateApplicationSyncState(applicationIds, "failed", {
+      error: syncError
+    })
+    await logDiagnosticEvent({
+      area: "sync",
+      event: failedEvent,
+      message: syncError,
+      status: "warning",
+      details: { applicationCount: applications.length }
+    })
+    return syncError
+  }
+}
+
+let retrySyncInFlight = false
+
+async function retryPendingApplicationSync(reason: "installed" | "startup") {
+  if (retrySyncInFlight) {
+    return
+  }
+
+  retrySyncInFlight = true
+
+  try {
+    const session = await getAccountSession()
+
+    if (!session?.authToken.trim()) {
+      await logDiagnosticEvent({
+        area: "sync",
+        event: `retry-sync-skipped-${reason}`,
+        message: "Saved job sync retry skipped because no dashboard session exists.",
+        status: "info"
+      })
+      return
+    }
+
+    const [applications, syncState] = await Promise.all([
+      getApplications(),
+      getApplicationSyncState()
+    ])
+    const retryableApplications = applications.filter((application) => {
+      const status = syncState[application.id]?.status
+      return status === "pending" || status === "failed"
+    })
+
+    if (retryableApplications.length === 0) {
+      await logDiagnosticEvent({
+        area: "sync",
+        event: `retry-sync-empty-${reason}`,
+        message: "No saved jobs need dashboard sync retry.",
+        status: "info"
+      })
+      return
+    }
+
+    await syncApplicationsWithState({
+      applications: retryableApplications,
+      completedEvent: `retry-sync-completed-${reason}`,
+      failedEvent: `retry-sync-failed-${reason}`,
+      session,
+      startedEvent: `retry-sync-started-${reason}`
+    })
+  } finally {
+    retrySyncInFlight = false
+  }
+}
+
 async function broadcastAccountConnected() {
   try {
     const tabs = await chrome.tabs.query({})
@@ -106,6 +219,14 @@ async function showWidgetInTab(tab: chrome.tabs.Tab) {
 export default defineBackground(() => {
   chrome.action.onClicked.addListener((tab) => {
     void showWidgetInTab(tab)
+  })
+
+  chrome.runtime.onInstalled.addListener(() => {
+    void retryPendingApplicationSync("installed")
+  })
+
+  chrome.runtime.onStartup.addListener(() => {
+    void retryPendingApplicationSync("startup")
   })
 
   chrome.runtime.onMessageExternal.addListener(
@@ -176,46 +297,13 @@ export default defineBackground(() => {
           })
 
           const applications = await getApplications()
-          let syncError: string | undefined
-
-          if (applications.length > 0) {
-            const applicationIds = applications.map((application) => application.id)
-            try {
-              await updateApplicationSyncState(applicationIds, "pending")
-              await logDiagnosticEvent({
-                area: "sync",
-                event: "connect-sync-started",
-                message: "Syncing locally saved jobs after account connection.",
-                status: "info",
-                details: { applicationCount: applications.length }
-              })
-              await syncApplicationsToDashboard({
-                applications,
-                reusableAnswers: await getReusableAnswers(),
-                session
-              })
-              await updateApplicationSyncState(applicationIds, "synced")
-              await logDiagnosticEvent({
-                area: "sync",
-                event: "connect-sync-completed",
-                message: "Locally saved jobs synced after account connection.",
-                status: "success",
-                details: { applicationCount: applications.length }
-              })
-            } catch (error: unknown) {
-              syncError = getErrorMessage(error)
-              await updateApplicationSyncState(applicationIds, "failed", {
-                error: syncError
-              })
-              await logDiagnosticEvent({
-                area: "sync",
-                event: "connect-sync-failed",
-                message: syncError,
-                status: "warning",
-                details: { applicationCount: applications.length }
-              })
-            }
-          }
+          const syncError = await syncApplicationsWithState({
+            applications,
+            completedEvent: "connect-sync-completed",
+            failedEvent: "connect-sync-failed",
+            session,
+            startedEvent: "connect-sync-started"
+          })
 
           await broadcastAccountConnected()
           await logDiagnosticEvent({
