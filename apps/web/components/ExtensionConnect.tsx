@@ -61,7 +61,7 @@ async function getAccount(accessToken: string): Promise<AccountMeResponse> {
 async function recordExtensionConnection(
   accessToken: string,
   extensionId: string
-): Promise<void> {
+): Promise<string | null> {
   const response = await fetch("/api/sync/extension", {
     method: "POST",
     headers: {
@@ -75,8 +75,10 @@ async function recordExtensionConnection(
   }
 
   if (!response.ok || body.error) {
-    throw new Error(body.error ?? "Could not record extension connection.")
+    return body.error ?? "Could not record extension connection."
   }
+
+  return null
 }
 
 function sendToExtension(
@@ -149,18 +151,22 @@ export default function ExtensionConnect() {
         return
       }
 
-      await recordExtensionConnection(session.access_token, extensionId)
-
       const extensionResponse = await sendToExtension(extensionId, {
         authToken: session.access_token,
         email: account.data.email,
         plan: account.data.plan,
         type: "AUTOTIME_CONNECT_ACCOUNT"
       })
+      const recordWarning = await recordExtensionConnection(
+        session.access_token,
+        extensionId
+      )
 
       setStatus(
         extensionResponse.syncError
           ? `Extension connected. Saved jobs will retry sync from Track Job. Reason: ${extensionResponse.syncError}`
+          : recordWarning
+            ? `Extension connected. Dashboard record warning: ${recordWarning}`
           : "Extension connected. You can return to the side panel."
       )
     } catch (error: unknown) {
