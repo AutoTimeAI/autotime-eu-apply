@@ -1367,6 +1367,14 @@ function getWidgetMarkup({
         cursor: pointer;
       }
 
+      .header-track-button {
+        min-width: 86px;
+        min-height: 30px;
+        padding: 0 12px;
+        box-shadow: 0 5px 12px rgba(0, 108, 103, 0.18);
+        font-size: 11px;
+      }
+
       .launcher-logo:hover,
       .icon-button:hover {
         background: #dff2f0;
@@ -1574,7 +1582,7 @@ function getWidgetMarkup({
 
       .action {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
         align-items: center;
         gap: 8px;
         position: relative;
@@ -1650,16 +1658,6 @@ function getWidgetMarkup({
         background: #edf8f7;
       }
 
-      .track-copy {
-        display: grid;
-        min-width: 0;
-      }
-
-      .track-copy button {
-        width: 100%;
-        min-width: 0;
-      }
-
       .resize-handle {
         position: absolute;
         right: 0;
@@ -1686,7 +1684,7 @@ function getWidgetMarkup({
         }
 
         .action {
-          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          grid-template-columns: minmax(0, 1fr);
         }
 
         .action button {
@@ -1706,6 +1704,7 @@ function getWidgetMarkup({
           <span>Drag to move</span>
         </div>
         <div class="window-controls" aria-label="Widget controls">
+          <button class="header-track-button" data-autotime-track-job type="button">TRACK JOB</button>
           <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
         </div>
       </div>
@@ -1756,9 +1755,6 @@ function getWidgetMarkup({
         </aside>
       </div>
       <div class="action">
-        <div class="track-copy">
-          <button data-autotime-track-job type="button">TRACK JOB</button>
-        </div>
         <button class="dashboard-button" data-autotime-open-dashboard type="button">OPEN DASHBOARD</button>
       </div>
       <button class="resize-handle" data-autotime-resize-widget type="button" title="Resize widget" aria-label="Resize widget"></button>
