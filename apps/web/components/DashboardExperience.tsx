@@ -2896,42 +2896,41 @@ export default function HomePage({
 
   const applyMarketContextToProfile = () => {
     const market = getRoleMarket(productContext)
-
-    persist(
-      {
-        ...state,
-        profile: {
-          ...state.profile,
-          targetCountries: productContext.targetCountry,
-          targetRoles: market.targetRoles,
-          relocationWillingness:
-            productContext.candidatePosition === "foreign-candidate"
-              ? "depends"
-              : state.profile.relocationWillingness,
-          workRightDetails:
-            state.profile.workRightDetails ||
-            (productContext.candidatePosition === "foreign-candidate"
-              ? `Add current visa/work-right status for ${productContext.targetCountry}, sponsorship needs, relocation timing and location constraints.`
-              : `Add current work-right status, notice period, salary expectations and local availability for ${productContext.targetCountry}.`)
-        },
-        jobAnalysis: {
-          ...state.jobAnalysis,
-          seniority: productContext.experienceLevel,
-          positioningAngle: getMarketPositioning(productContext),
-          notes: [
-            state.jobAnalysis.notes,
-            `Profile settings: ${getMarketLabel(productContext)} / ${
-              productContext.candidatePosition === "foreign-candidate"
-                ? "foreign or relocating"
-                : "native or local"
-            } / ${productContext.targetCountry} / ${productContext.urgency}.`
-          ]
-            .filter(Boolean)
-            .join("\n")
-        }
+    const nextState = {
+      ...state,
+      profile: {
+        ...state.profile,
+        targetCountries: productContext.targetCountry,
+        targetRoles: market.targetRoles,
+        relocationWillingness:
+          productContext.candidatePosition === "foreign-candidate"
+            ? "depends"
+            : state.profile.relocationWillingness,
+        workRightDetails:
+          state.profile.workRightDetails ||
+          (productContext.candidatePosition === "foreign-candidate"
+            ? `Add current visa/work-right status for ${productContext.targetCountry}, sponsorship needs, relocation timing and location constraints.`
+            : `Add current work-right status, notice period, salary expectations and local availability for ${productContext.targetCountry}.`)
       },
-      "Profile settings applied to saved evidence"
-    )
+      jobAnalysis: {
+        ...state.jobAnalysis,
+        seniority: productContext.experienceLevel,
+        positioningAngle: getMarketPositioning(productContext),
+        notes: [
+          state.jobAnalysis.notes,
+          `Profile settings: ${getMarketLabel(productContext)} / ${
+            productContext.candidatePosition === "foreign-candidate"
+              ? "foreign or relocating"
+              : "native or local"
+          } / ${productContext.targetCountry} / ${productContext.urgency}.`
+        ]
+          .filter(Boolean)
+          .join("\n")
+      }
+    }
+
+    persist(nextState, "Profile settings applied to saved evidence")
+    scheduleProfileSync(nextState.profile)
   }
 
   const reviewResumeForContext = () => {
@@ -2957,25 +2956,25 @@ export default function HomePage({
       experienceLevel: contextSuggestion.experienceLevel
     }, userId)
     setProductContext(contextSuggestion)
-    persist(
-      {
-        ...state,
-        profile: {
-          ...state.profile,
-          baseCvText: resumeIntake || state.profile.baseCvText,
-          targetCountries: contextSuggestion.targetCountry,
-          targetRoles: contextSuggestion.targetRoles,
-          workRightDetails:
-            state.profile.workRightDetails || contextSuggestion.workRightPrompt
-        },
-        jobAnalysis: {
-          ...state.jobAnalysis,
-          seniority: contextSuggestion.experienceLevel,
-          positioningAngle: getMarketPositioning(contextSuggestion)
-        }
+    const nextState = {
+      ...state,
+      profile: {
+        ...state.profile,
+        baseCvText: resumeIntake || state.profile.baseCvText,
+        targetCountries: contextSuggestion.targetCountry,
+        targetRoles: contextSuggestion.targetRoles,
+        workRightDetails:
+          state.profile.workRightDetails || contextSuggestion.workRightPrompt
       },
-      "Approved CV context applied"
-    )
+      jobAnalysis: {
+        ...state.jobAnalysis,
+        seniority: contextSuggestion.experienceLevel,
+        positioningAngle: getMarketPositioning(contextSuggestion)
+      }
+    }
+
+    persist(nextState, "Approved CV context applied")
+    scheduleProfileSync(nextState.profile)
   }
 
   const saveDashboard = () => {
