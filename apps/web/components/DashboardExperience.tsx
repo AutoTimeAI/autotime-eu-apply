@@ -259,28 +259,14 @@ const commandSidebarItems: Array<{
   {
     href: "/dashboard/match-score",
     focus: "match-score",
-    label: "AI Role Check",
+    label: "Check a Job",
     routeId: "jobs",
     section: "Jobs"
   },
   {
-    href: "/dashboard/cv-tailor",
-    focus: "cv-tailor",
-    label: "CV Evidence",
-    routeId: "profile",
-    section: "Profile"
-  },
-  {
-    href: "/dashboard/application-answers",
-    focus: "application-answers",
-    label: "Application Answers",
-    routeId: "profile",
-    section: "Profile"
-  },
-  {
     href: "/dashboard/autofill-profile",
     focus: "autofill-profile",
-    label: "Profile Evidence",
+    label: "My Profile",
     routeId: "profile",
     section: "Profile"
   },
@@ -289,26 +275,12 @@ const commandSidebarItems: Array<{
     focus: "application-tracker",
     label: "Tracker",
     routeId: "applications",
-    section: "Applications"
-  },
-  {
-    href: "/dashboard/follow-ups",
-    focus: "follow-ups",
-    label: "Follow-ups",
-    routeId: "applications",
-    section: "Applications"
-  },
-  {
-    href: "/dashboard/insights",
-    focus: "insights",
-    label: "Insights",
-    routeId: "applications",
-    section: "Applications"
+    section: "Tracker"
   },
   {
     href: "/dashboard/interview",
     focus: "interview-prep",
-    label: "Interview Prep",
+    label: "Interview",
     routeId: "interview",
     section: "Interview"
   },
@@ -336,29 +308,29 @@ const dashboardFocusCopy: Record<
     body: "Roles tracked from the extension or saved after a job check."
   },
   "match-score": {
-    eyebrow: "AI Role Check",
-    title: "Role Fit Score",
-    body: "Evidence, missing inputs and clear limits behind the score."
+    eyebrow: "Check a Job",
+    title: "Check a job before you apply",
+    body: "Paste a role and get a clear apply, stretch or pause recommendation."
   },
   "cv-tailor": {
-    eyebrow: "CV Evidence",
-    title: "CV Evidence",
-    body: "Saved CV proof used to score roles and keep application claims honest."
+    eyebrow: "CV",
+    title: "CV notes",
+    body: "Save useful CV details for role checks and application answers."
   },
   "application-answers": {
-    eyebrow: "Application Answers",
-    title: "Application Answers",
-    body: "Reusable, truthful answers based only on your draft and profile context."
+    eyebrow: "Answers",
+    title: "Application answers",
+    body: "Draft reusable answers from your profile and saved notes."
   },
   "autofill-profile": {
-    eyebrow: "Profile Evidence",
-    title: "Profile Evidence",
-    body: "Mandatory profile details and reusable evidence for job checks."
+    eyebrow: "Profile",
+    title: "My Profile",
+    body: "Add the basics AutoTime needs to check jobs properly."
   },
   "application-tracker": {
-    eyebrow: "Application Tracker",
-    title: "Application Tracker",
-    body: "Statuses, outcomes and follow-up actions for every saved role."
+    eyebrow: "Tracker",
+    title: "Job Tracker",
+    body: "See saved jobs, update status and keep next steps visible."
   },
   "follow-ups": {
     eyebrow: "Follow-ups",
@@ -366,19 +338,19 @@ const dashboardFocusCopy: Record<
     body: "Deadlines, reminders and next actions across saved applications."
   },
   "interview-prep": {
-    eyebrow: "Interview Prep",
+    eyebrow: "Interview",
     title: "Interview Prep",
-    body: "Interview Buddy answers and prep packs for interview-stage roles."
+    body: "Turn rough notes into clearer interview answers."
   },
   insights: {
-    eyebrow: "Insights",
-    title: "Search Insights",
-    body: "Evidence analytics, outcomes and learning readiness without inflated claims."
+    eyebrow: "Progress",
+    title: "Progress",
+    body: "See what is working across saved jobs."
   },
   settings: {
     eyebrow: "Settings",
     title: "Settings",
-    body: "Market context, cloud sync and profile controls."
+    body: "Account, sync and profile controls."
   }
 }
 
@@ -2320,14 +2292,14 @@ export default function HomePage({
     return sections
   }, [])
   const actionPanelEyebrow = isOverview
-    ? "Today"
+    ? "Quick actions"
     : currentTab === "jobs"
-      ? "AI Role Check"
+      ? "Check a Job"
       : currentTab === "profile"
-        ? "Profile Actions"
+        ? "Profile"
         : currentTab === "applications"
-          ? "Tracker Actions"
-          : "Interview Buddy"
+          ? "Tracker"
+          : "Interview"
   const showHeaderJobActions =
     isOverview || currentTab === "jobs" || currentTab === "applications"
   const showExecutivePanel = isOverview || currentTab === "jobs"
@@ -2336,8 +2308,7 @@ export default function HomePage({
   const showProfileCloudSync =
     activeFocus === "autofill-profile" || activeFocus === "settings"
   const showApplicationAnalytics =
-    (activeFocus === "application-tracker" || activeFocus === "insights") &&
-    !selectedApplication
+    activeFocus === "insights" && !selectedApplication
   const showApplicationList = activeFocus !== "insights" && !selectedApplication
   const showInterviewPrepPacks = activeFocus === "interview-prep"
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
@@ -2350,34 +2321,34 @@ export default function HomePage({
   const followUpTone = activeActionCount > 0 ? "warn" : "good"
   const commandCentreCards = [
     {
-      title: "Next Actions",
+      title: "To do",
       value: activeActionCount > 0 ? `${activeActionCount} actions` : "Clear",
       tone: followUpTone,
       progress: activeActionCount > 0 ? 66 : 100,
       body:
         activeActionCount > 0
-          ? "Open follow-ups and deadlines that need attention."
-          : "No urgent follow-up is due from saved jobs."
+          ? "Follow-ups or status updates need attention."
+          : "Nothing urgent is waiting."
     },
     {
-      title: "Current Job Decision",
+      title: "Latest job check",
       value: `${fitEvaluation.overallScore}/100`,
       tone: decisionTone,
       progress: fitEvaluation.overallScore,
       body: fitEvaluation.decision
     },
     {
-      title: "Profile Evidence",
+      title: "Profile",
       value: `${readinessScore}%`,
       tone: readinessScore >= 80 ? "good" : readinessScore >= 50 ? "warn" : "blocked",
       progress: readinessScore,
       body:
         decisionBrief.missingInputs.length > 0
-          ? `${decisionBrief.missingInputs.length} missing input${decisionBrief.missingInputs.length === 1 ? "" : "s"}`
-          : "Profile evidence is ready for scoring."
+          ? `${decisionBrief.missingInputs.length} item${decisionBrief.missingInputs.length === 1 ? "" : "s"} missing`
+          : "Ready for job checks."
     },
     {
-      title: "Decision Gate",
+      title: "Job risk",
       value: riskLabel,
       tone: decisionTone,
       progress:
@@ -2388,10 +2359,10 @@ export default function HomePage({
             : 28,
       body:
         decisionBrief.contentGate === "ready"
-          ? "No content blocker detected."
+          ? "No major blocker found."
           : decisionBrief.contentGate === "stretch"
-            ? "Stretch risk must stay visible."
-            : "Resolve blockers before writing."
+            ? "This looks like a stretch role."
+            : "Review blockers before applying."
     },
     {
       title: "Saved Jobs",
@@ -2405,73 +2376,43 @@ export default function HomePage({
       value: `${activeActionCount}`,
       tone: followUpTone,
       progress: activeActionCount > 0 ? 45 : 100,
-      body: "Next actions across saved applications."
+      body: "Next steps across saved jobs."
     },
     {
-      title: "Interview Prep",
+      title: "Interview",
       value: `${state.interviewPrepPacks.length} prep packs`,
       tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral",
       progress: Math.min(100, state.interviewPrepPacks.length * 34),
       body: `${state.applications.length} saved jobs and ${interviewApplications.length} interviews.`
     }
   ]
-  const workspaceIntegrityItems = [
-    {
-      label: "Storage",
-      value: cloudSyncReadiness.configured ? "Account sync" : "Local only",
-      tone: cloudSyncReadiness.configured ? "good" : "neutral",
-      body: cloudSyncReadiness.configured
-        ? "Uploads require consent and a signed-in account."
-        : "No remote upload is enabled from this browser session."
-    },
-    {
-      label: "Profile bridge",
-      value: profileBridgeReady ? "Ready" : "Incomplete",
-      tone: profileBridgeReady ? "good" : "warn",
-      body: profileBridgeReady
-        ? "Required profile evidence is present for stronger job checks."
-        : `${profileBridgeIssues.length} required profile field${profileBridgeIssues.length === 1 ? "" : "s"} missing.`
-    },
-    {
-      label: "Decision output",
-      value: "Index only",
-      tone: "neutral",
-      body: "Scores are decision indexes, not predictions or guarantees."
-    },
-    {
-      label: "Application boundary",
-      value: "Import only",
-      tone: "good",
-      body: "Visible job details can be imported; applications stay manual."
-    }
-  ]
   const overviewWorkflowItems = [
     {
       href: "/dashboard/autofill-profile",
-      label: "Profile",
+      label: "1. Profile",
       value: `${readinessScore}%`,
       detail: profileBridgeReady
-        ? "Evidence ready"
+        ? "Ready"
         : `${profileBridgeIssues.length} missing`,
       tone: readinessScore >= 80 ? "good" : readinessScore >= 50 ? "warn" : "blocked"
     },
     {
       href: "/dashboard/match-score",
-      label: "AI Role Check",
+      label: "2. Check job",
       value: `${fitEvaluation.overallScore}/100`,
       detail: fitEvaluation.decision,
       tone: decisionTone
     },
     {
       href: "/dashboard/applications",
-      label: "Tracker",
+      label: "3. Track",
       value: `${state.applications.length}`,
       detail: `${statusCounts.Applied + statusCounts.Interview} progressed`,
       tone: state.applications.length > 0 ? "good" : "neutral"
     },
     {
       href: "/dashboard/interview",
-      label: "Interview Prep",
+      label: "4. Interview",
       value: `${state.interviewPrepPacks.length}`,
       detail: `${interviewApplications.length} interview roles`,
       tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral"
@@ -2480,7 +2421,7 @@ export default function HomePage({
   const setupChecklistItems = [
     {
       href: "/dashboard/autofill-profile",
-      label: "Profile evidence",
+      label: "Profile",
       value: profileBridgeReady ? "Ready" : "Needs input",
       detail: profileBridgeReady
         ? "Core evidence is present"
@@ -2521,13 +2462,13 @@ export default function HomePage({
   const commandQuickActions = [
     {
       href: "/dashboard/inbox",
-      label: "Open Saved Jobs",
+      label: "Saved jobs",
       title: "Review saved roles",
       body: "Check which roles need a decision, status update or next action."
     },
     {
       href: "/dashboard/match-score",
-      label: "Open AI Role Check",
+      label: "Check job",
       title: canSaveCheckedJob ? "Save this checked job" : "Analyse a role",
       body: canSaveCheckedJob
         ? "A role is ready to save into your tracker with evidence attached."
@@ -2535,7 +2476,7 @@ export default function HomePage({
     },
     {
       href: "/dashboard/follow-ups",
-      label: "Open Follow-ups",
+      label: "Follow-ups",
       title:
         activeActionCount > 0
           ? `${activeActionCount} follow-up${activeActionCount === 1 ? "" : "s"} due`
@@ -2550,19 +2491,19 @@ export default function HomePage({
     ? {
         body: `${profileBridgeIssues.length} profile item${
           profileBridgeIssues.length === 1 ? "" : "s"
-        } missing. Start here so role checks have the right evidence.`,
-        cta: "Complete profile",
+        } missing. Add these once so job checks are clearer.`,
+        cta: "Finish profile",
         href: "/dashboard/autofill-profile",
         label: "Best next step",
-        title: "Finish your profile evidence"
+        title: "Finish your profile"
       }
     : state.applications.length === 0
       ? {
-          body: "Track a job from the extension or check one manually, then save it into your tracker.",
+          body: "Check one role manually or track it from the extension. Saved jobs will appear in your tracker.",
           cta: "Check a job",
           href: "/dashboard/jobs",
           label: "Best next step",
-          title: "Add your first role"
+          title: "Save your first job"
         }
       : activeActionCount > 0
         ? {
@@ -2572,14 +2513,14 @@ export default function HomePage({
             cta: "Open follow-ups",
             href: "/dashboard/follow-ups",
             label: "Best next step",
-            title: "Move the next action forward"
+            title: "Handle the next action"
           }
         : {
             body: "Your saved jobs are tidy. Review recent roles or check another job when you are ready.",
             cta: "Review tracker",
             href: "/dashboard/applications",
             label: "Best next step",
-            title: "Keep your tracker current"
+            title: "Keep your tracker tidy"
           }
 
   const loadDashboardSnapshot = useCallback(
@@ -3673,26 +3614,26 @@ export default function HomePage({
   )
   const actionPanelTitle =
     isOverview
-      ? "Start with the one job-search task that matters next."
+      ? "What do you want to do now?"
       : currentTab === "jobs"
-      ? "Check this role for work-right, skill and location risk."
+      ? "Paste a job and see if it is worth applying."
       : currentTab === "profile"
-        ? "Complete profile evidence and review CV context."
+        ? "Add the details AutoTime needs about you."
         : currentTab === "applications"
-          ? "Review saved roles that need a next action."
-          : "Turn a rough interview answer into saved, reusable versions."
+          ? "Review saved jobs and update the next step."
+          : "Prepare a clearer interview answer."
   const actionPanelStateLabel =
     isOverview
       ? profileBridgeReady
-        ? "Profile evidence ready; job checks can use saved context"
-        : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing before stronger checks`
+        ? "Your profile is ready for job checks"
+        : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing`
       : currentTab === "jobs"
       ? hasJobDraft(state.jobAnalysis)
         ? "Ready to analyse current role"
         : "Waiting for role details"
       : currentTab === "profile"
         ? profileBridgeReady
-          ? "Profile evidence ready"
+          ? "Profile ready"
           : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing`
         : currentTab === "applications"
           ? activeActionCount > 0
@@ -3807,17 +3748,17 @@ export default function HomePage({
           </div>
         </div>
         {showExecutivePanel ? (
-        <div className={`executive-panel tone-${decisionTone}`} aria-label="Dashboard evidence summary">
+        <div className={`executive-panel tone-${decisionTone}`} aria-label="Dashboard summary">
           <div>
-            <small>Profile evidence</small>
+            <small>Profile</small>
             <strong>{readinessScore}</strong>
           </div>
           <div>
-            <small>Decision index</small>
+            <small>Job score</small>
             <strong>{fitEvaluation.overallScore}</strong>
           </div>
           <p>
-            <small>Decision status</small>
+            <small>Latest check</small>
             <span>{fitEvaluation.decision}</span>
           </p>
         </div>
@@ -3888,31 +3829,6 @@ export default function HomePage({
         </aside>
 
         <div className="command-content">
-          {isOverview ? (
-            <section
-              className="workspace-integrity-panel"
-              aria-labelledby="workspace-integrity-title"
-            >
-              <div className="section-heading">
-                <p className="eyebrow">Account status</p>
-                <h2 id="workspace-integrity-title">Saved data and controls</h2>
-                <p>
-                  The dashboard keeps saved jobs visible, explains role checks,
-                  and leaves every application step under your control.
-                </p>
-              </div>
-              <div className="integrity-grid">
-                {workspaceIntegrityItems.map((item) => (
-                  <article className={`tone-${item.tone}`} key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <p>{item.body}</p>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
           <section className="ai-copilot-panel" aria-label="Guided actions">
             <div className="ai-copilot-header">
               <div>
@@ -3926,13 +3842,13 @@ export default function HomePage({
               {isOverview ? (
                 <>
                   <a className="secondary-button" href="/dashboard/autofill-profile">
-                    Complete profile evidence
+                    Finish profile
                   </a>
                   <a className="secondary-button" href="/dashboard/jobs">
-                    Check a job
+                    Check job
                   </a>
                   <a className="secondary-button" href="/dashboard/applications">
-                    Review applications
+                    Open tracker
                   </a>
                 </>
               ) : currentTab === "jobs" ? (
@@ -4166,13 +4082,13 @@ export default function HomePage({
       >
         <div>
           <p className="eyebrow">Job decision</p>
-          <h2>AI Role Check verdict</h2>
+          <h2>Job check result</h2>
           <p>Paste a role below to get a practical apply, stretch or pause decision.</p>
         </div>
         <div className="decision-score">
           <strong>{decisionBrief.score}</strong>
           <span>{decisionBrief.decision}</span>
-          <small>{decisionBrief.confidence} rule confidence</small>
+          <small>{decisionBrief.confidence} confidence</small>
           <small>
             {decisionBrief.contentGate === "ready"
               ? "No content blocker detected"
@@ -4180,11 +4096,11 @@ export default function HomePage({
                 ? "Stretch label required"
                 : "Content blocked"}
           </small>
-          <small>Decision index, not probability</small>
+          <small>Guidance, not a guarantee</small>
         </div>
         <div className="decision-columns">
           <section>
-            <h3>Why this score</h3>
+            <h3>Why</h3>
             <ul className="bullets-list">
               {decisionBrief.rationale.map((item) => (
                 <li key={item}>{item}</li>
@@ -4192,7 +4108,7 @@ export default function HomePage({
             </ul>
           </section>
           <section>
-            <h3>Evidence found</h3>
+            <h3>Matched details</h3>
             <ul className="bullets-list">
               {decisionBrief.evidenceFound.map((item) => (
                 <li key={item}>{item}</li>
@@ -4200,7 +4116,7 @@ export default function HomePage({
             </ul>
           </section>
           <section>
-            <h3>Risks to verify</h3>
+            <h3>Check first</h3>
             <ul className="bullets-list">
               {decisionBrief.risks.map((item) => (
                 <li key={item}>{item}</li>
@@ -4208,7 +4124,7 @@ export default function HomePage({
             </ul>
           </section>
           <section>
-            <h3>What is missing</h3>
+            <h3>Missing info</h3>
             {decisionBrief.missingInputs.length ? (
               <ul className="bullets-list">
                 {decisionBrief.missingInputs.map((item) => (
@@ -4216,7 +4132,7 @@ export default function HomePage({
                 ))}
               </ul>
             ) : (
-              <p className="empty-state">Core decision inputs are present.</p>
+              <p className="empty-state">Core job details are present.</p>
             )}
           </section>
           <section>
@@ -4229,7 +4145,7 @@ export default function HomePage({
           </section>
         </div>
         <p className="decision-integrity-note">
-          Evidence first. Scores and next steps stay explainable.
+          Use this as guidance before deciding whether to apply.
         </p>
       </section>
       )}
@@ -4247,8 +4163,8 @@ export default function HomePage({
           </div>
           <div className="section-intro">
             <p className="eyebrow">Today</p>
-            <h2>Where things stand</h2>
-            <p>Scan the essentials, then continue with one clear action.</p>
+            <h2>Your job search path</h2>
+            <p>Start from the left and keep moving one step at a time.</p>
           </div>
           <div className="overview-workflow-map" aria-label="Application workflow">
             {overviewWorkflowItems.map((item) => (
@@ -4257,36 +4173,6 @@ export default function HomePage({
                 <strong>{item.value}</strong>
                 <p>{item.detail}</p>
               </a>
-            ))}
-          </div>
-          <div className="dashboard-setup-checklist" aria-label="Setup status">
-            <div>
-              <p className="eyebrow">Setup</p>
-              <h3>Account path</h3>
-            </div>
-            <div className="dashboard-setup-grid">
-              {setupChecklistItems.map((item) => (
-                <a className={`tone-${item.tone}`} href={item.href} key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
-                  <p>{item.detail}</p>
-                </a>
-              ))}
-            </div>
-          </div>
-          <div className="command-centre-grid">
-            {commandCentreCards.map((card) => (
-              <article className={`command-centre-card tone-${card.tone}`} key={card.title}>
-                <div className="dashboard-card-topline">
-                  <span>{card.title}</span>
-                  <i aria-hidden="true" />
-                </div>
-                <strong>{card.value}</strong>
-                <div className="dashboard-card-meter" aria-hidden="true">
-                  <i style={{ width: `${card.progress}%` }} />
-                </div>
-                <p>{card.body}</p>
-              </article>
             ))}
           </div>
           <div className="command-action-dock" aria-label="Recommended actions">
@@ -4298,6 +4184,39 @@ export default function HomePage({
               </a>
             ))}
           </div>
+          <details className="dashboard-more-details">
+            <summary>More details</summary>
+            <div className="dashboard-setup-checklist" aria-label="Setup status">
+              <div>
+                <p className="eyebrow">Setup</p>
+                <h3>Account path</h3>
+              </div>
+              <div className="dashboard-setup-grid">
+                {setupChecklistItems.map((item) => (
+                  <a className={`tone-${item.tone}`} href={item.href} key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <p>{item.detail}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div className="command-centre-grid">
+              {commandCentreCards.map((card) => (
+                <article className={`command-centre-card tone-${card.tone}`} key={card.title}>
+                  <div className="dashboard-card-topline">
+                    <span>{card.title}</span>
+                    <i aria-hidden="true" />
+                  </div>
+                  <strong>{card.value}</strong>
+                  <div className="dashboard-card-meter" aria-hidden="true">
+                    <i style={{ width: `${card.progress}%` }} />
+                  </div>
+                  <p>{card.body}</p>
+                </article>
+              ))}
+            </div>
+          </details>
         </section>
       )}
 
@@ -4314,17 +4233,17 @@ export default function HomePage({
           <p className="eyebrow">Profile readiness</p>
           <h2>
             {profileBridgeReady
-              ? "Profile evidence is ready"
-              : "Complete profile evidence"}
+              ? "Profile is ready"
+              : "Complete your profile"}
           </h2>
           <p>
             Target roles, CV text and work-right details are required before job
-            checks can make stronger recommendations.
+            checks can make clearer recommendations.
           </p>
         </div>
         {profileBridgeReady ? (
           <ul className="bullets-list">
-            <li>Profile evidence can support job-fit scores and next steps.</li>
+            <li>Your profile can support job-fit scores and next steps.</li>
             <li>Work-right and country details are available for checks.</li>
             <li>You can export a backup any time.</li>
           </ul>
@@ -4355,7 +4274,7 @@ export default function HomePage({
               : "Your data is saved on this browser"}
           </h2>
           <p>
-            Profile evidence saves in this browser first. Use account sync when
+            Your profile saves in this browser first. Use account sync when
             you want it available from your signed-in dashboard account.
           </p>
         </div>
@@ -4406,7 +4325,7 @@ export default function HomePage({
             type="button"
             onClick={syncProfileToCloud}
           >
-            Sync profile evidence
+            Sync profile
           </button>
           <button
             className="secondary-button"
@@ -4453,10 +4372,7 @@ export default function HomePage({
         >
           <span>{state.applications.length}</span>
           <small>Saved jobs</small>
-          <p>
-            {statusCounts.Applied + statusCounts.Interview} progressed beyond
-            saved
-          </p>
+          <p>{statusCounts.Applied + statusCounts.Interview} in progress</p>
         </div>
         <div
           className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
@@ -4473,11 +4389,11 @@ export default function HomePage({
         >
           <span>{activeActionCount}</span>
           <small>Next actions</small>
-          <p>Follow-ups tracked across live roles</p>
+          <p>Follow-ups across saved jobs</p>
         </div>
         <div className="metric-card warn">
           <span>{state.jobAnalysis.skills?.length ?? 0}</span>
-          <small>Job details</small>
+          <small>Last check</small>
           <p>{riskLabel}</p>
         </div>
       </section>
@@ -4488,9 +4404,9 @@ export default function HomePage({
           <div className="input-column">
             <div className="profile-form-toolbar">
               <div>
-                <p className="eyebrow">Profile evidence</p>
-                <h2>Candidate details</h2>
-                <p>Saved locally as you type.</p>
+                <p className="eyebrow">Profile</p>
+                <h2>Your details</h2>
+                <p>Saved as you type.</p>
               </div>
               <div className="profile-form-actions">
                 <button
@@ -4783,8 +4699,8 @@ export default function HomePage({
                 <p className="eyebrow">Positioning first</p>
                 <h2>
                   {fitEvaluation.contentGate === "blocked"
-                    ? "Resolve the blocker before writing"
-                    : "Best angle before application content"}
+                    ? "Check the blocker before applying"
+                    : "Best angle for this job"}
                 </h2>
               </div>
               <p className="large-copy">
@@ -4833,8 +4749,8 @@ export default function HomePage({
       <section className="trust-grid" aria-label="Evidence and official verification">
         <section className="evidence-ledger-panel">
           <div className="section-heading">
-            <p className="eyebrow">Evidence ledger</p>
-            <h2>Traceable recommendation</h2>
+            <p className="eyebrow">Details</p>
+            <h2>Why AutoTime suggested this</h2>
           </div>
           <div className="ledger-table">
             {evidenceLedgerRows.map((row) => (
@@ -4848,7 +4764,7 @@ export default function HomePage({
                 <p>{row.explanation}</p>
                 <dl>
                   <div>
-                    <dt>Evidence</dt>
+                    <dt>Matched detail</dt>
                     <dd>{row.evidence.join(" ")}</dd>
                   </div>
                   <div>
@@ -4863,8 +4779,8 @@ export default function HomePage({
 
         <section className="content-guardrail-panel">
           <div className="section-heading">
-            <p className="eyebrow">AI honesty guardrails</p>
-            <h2>Content guardrails</h2>
+            <p className="eyebrow">Writing safety</p>
+            <h2>Before generating content</h2>
           </div>
           <div className="guardrail-list">
             {contentGuardrails.map((item) => (
@@ -4975,8 +4891,8 @@ export default function HomePage({
           >
             <article>
               <span>{persistedEvidenceRecords.length}</span>
-              <strong>Evidence records</strong>
-              <p>Stored checks from saved jobs, profile proof and risks.</p>
+              <strong>Saved checks</strong>
+              <p>Checks stored from saved jobs and profile details.</p>
             </article>
             <article>
               <span>{outcomeAnalytics.total}</span>
@@ -5172,15 +5088,15 @@ export default function HomePage({
             </section>
           ) : null}
           {selectedApplication ? (
-          <section className="job-detail-panel" aria-label="Application detail">
+          <section className="job-detail-panel" aria-label="Job detail">
             <div className="job-detail-header">
               <div>
-                <p className="eyebrow">Application Detail</p>
+                <p className="eyebrow">Job Detail</p>
                 <h2>
                   {selectedApplication.roleTitle || selectedApplication.title}
                 </h2>
                 <p>
-                  {selectedApplication.company || "Unknown company"} ·{" "}
+                  {selectedApplication.company || "Unknown company"} /{" "}
                   {selectedApplication.status}
                 </p>
               </div>
@@ -5192,20 +5108,20 @@ export default function HomePage({
             <div className="job-detail-grid">
               <article className="panel">
                 <div className="section-heading">
-                  <p className="eyebrow">Decision</p>
-                  <h3>Score and limits</h3>
+                  <p className="eyebrow">Job check</p>
+                  <h3>Recommendation</h3>
                 </div>
                 <dl className="summary-list">
                   <div>
-                    <dt>Decision index</dt>
+                    <dt>Job score</dt>
                     <dd>{selectedApplication.fitScore ?? "Not scored"}</dd>
                   </div>
                   <div>
-                    <dt>Decision</dt>
+                    <dt>Recommendation</dt>
                     <dd>{selectedApplication.fitDecision ?? "Not analysed"}</dd>
                   </div>
                   <div>
-                    <dt>Content gate</dt>
+                    <dt>Writing status</dt>
                     <dd>{selectedApplication.contentGate ?? "Not checked"}</dd>
                   </div>
                   <div>
@@ -5285,9 +5201,9 @@ export default function HomePage({
             <section className="ready-checklist" aria-label="Ready to apply checklist">
               <div className="section-heading">
                 <p className="eyebrow">Ready to Apply</p>
-                <h3>Evidence gate</h3>
+                <h3>Checklist</h3>
                 <p>
-                  Resolve blocked items before using this job as ready.
+                  Resolve blocked items before treating this job as ready.
                 </p>
               </div>
               <div className="ready-checklist-grid">
@@ -5305,8 +5221,8 @@ export default function HomePage({
             <div className="job-detail-grid">
               <section className="panel">
                 <div className="section-heading">
-                  <p className="eyebrow">Evidence</p>
-                  <h3>Records for this job</h3>
+                  <p className="eyebrow">Check details</p>
+                  <h3>Saved notes for this job</h3>
                 </div>
                 <div className="evidence-record-list">
                   {selectedApplicationEvidence.length ? (
@@ -5323,7 +5239,7 @@ export default function HomePage({
                     ))
                   ) : (
                     <p className="empty-state">
-                      No evidence records are attached to this job yet.
+                      No saved check details are attached to this job yet.
                     </p>
                   )}
                 </div>
@@ -5352,7 +5268,7 @@ export default function HomePage({
                 )}
                 <div className="application-actions">
                   <a className="secondary-button" href="/dashboard/application-answers">
-                    Application Answers
+                    Write answers
                   </a>
                   <button
                     className="secondary-button"
@@ -5360,7 +5276,7 @@ export default function HomePage({
                     type="button"
                     onClick={() => generateInterviewPrep(selectedApplication)}
                   >
-                    Generate Prep
+                    Prep interview
                   </button>
                 </div>
                 {selectedInterviewPrepPack ? (
@@ -5461,7 +5377,7 @@ export default function HomePage({
                     <small>{application.url}</small>
                     {application.fitDecision ? (
                       <small>
-                        Decision index {application.fitScore ?? 0} -{" "}
+                        Job score {application.fitScore ?? 0} -{" "}
                         {application.fitDecision}
                         {application.contentGate === "stretch"
                           ? " - stretch"

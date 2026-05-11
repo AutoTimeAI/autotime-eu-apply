@@ -598,7 +598,7 @@ h4 {
 
 .command-workspace {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 190px minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -625,14 +625,14 @@ h4 {
 
 .command-sidebar nav {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .command-sidebar a {
   position: relative;
   border-radius: 6px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 650;
   padding: 9px 10px;
   text-decoration: none;
@@ -724,7 +724,7 @@ h4 {
 
 .workspace-integrity-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 0.3fr) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   margin-bottom: 16px;
@@ -819,9 +819,9 @@ h4 {
   border: 1px solid #bedbd7;
   border-left: 4px solid var(--accent);
   border-radius: 8px;
-  background: #f7fbfa;
+  background: #ffffff;
   box-shadow: var(--shadow-tight);
-  padding: 18px;
+  padding: 20px;
 }
 
 .today-focus-panel h2,
@@ -832,7 +832,7 @@ h4 {
 .today-focus-panel h2 {
   margin-bottom: 6px;
   color: var(--ink);
-  font-size: 1.35rem;
+  font-size: 1.45rem;
 }
 
 .today-focus-panel p:not(.eyebrow) {
@@ -869,7 +869,7 @@ h4 {
   position: relative;
   display: grid;
   gap: 7px;
-  min-height: 118px;
+  min-height: 112px;
   border: 1px solid var(--border);
   border-left: 4px solid var(--border-strong);
   border-radius: 8px;
@@ -903,12 +903,12 @@ h4 {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 750;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .overview-workflow-map strong {
   color: var(--ink);
-  font-size: 1.45rem;
+  font-size: 1.32rem;
   line-height: 1;
 }
 
@@ -1105,6 +1105,32 @@ h4 {
   font-size: 0.76rem;
   font-weight: 750;
   text-transform: uppercase;
+}
+
+.dashboard-more-details {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-tight);
+  padding: 12px;
+}
+
+.dashboard-more-details[open] {
+  gap: 14px;
+}
+
+.dashboard-more-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--accent-strong);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.dashboard-more-details .dashboard-setup-checklist {
+  box-shadow: none;
 }
 
 .command-action-dock strong {
