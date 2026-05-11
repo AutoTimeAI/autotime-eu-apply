@@ -3880,6 +3880,21 @@ h4 {
   list-style: none;
 }
 
+.admin-log-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.35fr) minmax(180px, 0.35fr) auto;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.admin-log-filters label {
+  margin: 0;
+}
+
 .admin-log-stream li {
   display: grid;
   grid-template-columns: 170px minmax(160px, 1fr) auto;
@@ -3909,6 +3924,18 @@ h4 {
   color: var(--text);
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.admin-log-stream em {
+  grid-column: 2 / -1;
+  margin: 0;
+  border-left: 3px solid var(--blue);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: normal;
+  font-weight: 650;
+  line-height: 1.42;
+  padding-left: 8px;
 }
 
 .admin-log-stream small {

@@ -10,6 +10,9 @@ type AdminApiResponse = {
 }
 
 const refreshIntervalMs = 15000
+const severityFilters = ["all", "severe", "warn", "info"] as const
+
+type SeverityFilter = (typeof severityFilters)[number]
 
 function formatDate(value: string | null): string {
   if (!value) {
@@ -49,6 +52,26 @@ function getSeverityLabel(severity: AdminOverview["logs"][number]["severity"]) {
   return severity
 }
 
+function getFixHint(entry: AdminOverview["logs"][number]) {
+  if (entry.severity === "severe") {
+    return "Check the failing API, environment variables, and production logs first."
+  }
+
+  if (entry.area === "sync") {
+    return "Check extension session, dashboard auth token, and the sync API response."
+  }
+
+  if (entry.area === "connect") {
+    return "Check extension ID, dashboard origin, and account connection flow."
+  }
+
+  if (entry.severity === "warn") {
+    return "Review recent config, DB availability, and retry state before escalating."
+  }
+
+  return "Informational signal. No action needed unless it repeats unexpectedly."
+}
+
 export function AdminRealtimeConsole({
   initialOverview
 }: {
@@ -59,6 +82,9 @@ export function AdminRealtimeConsole({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdatedAt, setLastUpdatedAt] = useState(initialOverview.checkedAt)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [severityFilter, setSeverityFilter] =
+    useState<SeverityFilter>("all")
+  const [areaFilter, setAreaFilter] = useState("all")
 
   const healthScore = useMemo(() => getHealthScore(overview), [overview])
   const activeExtensions = overview.recentExtensionConnections.filter(
@@ -70,6 +96,21 @@ export function AdminRealtimeConsole({
   const latestAi = overview.recentAiUsage[0]?.createdAt ?? null
   const config = overview.config.extensionConnection
   const logging = overview.config.logging
+  const logAreas = useMemo(
+    () => Array.from(new Set(overview.logs.map((entry) => entry.area))).sort(),
+    [overview.logs]
+  )
+  const filteredLogs = useMemo(
+    () =>
+      overview.logs.filter((entry) => {
+        const matchesSeverity =
+          severityFilter === "all" || entry.severity === severityFilter
+        const matchesArea = areaFilter === "all" || entry.area === areaFilter
+
+        return matchesSeverity && matchesArea
+      }),
+    [areaFilter, overview.logs, severityFilter]
+  )
 
   const refresh = useCallback(async () => {
     try {
@@ -295,12 +336,53 @@ export function AdminRealtimeConsole({
               <h2>Live event stream</h2>
             </div>
             <span>
-              {overview.logs.length} entries
+              {filteredLogs.length} of {overview.logs.length} entries
               {overview.storedLogs.length > 0 ? " / persisted" : " / computed"}
             </span>
           </div>
+          <div className="admin-log-filters" aria-label="Log filters">
+            <label>
+              Severity
+              <select
+                value={severityFilter}
+                onChange={(event) =>
+                  setSeverityFilter(event.target.value as SeverityFilter)
+                }
+              >
+                {severityFilters.map((severity) => (
+                  <option key={severity} value={severity}>
+                    {severity === "all" ? "All severities" : severity}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Area
+              <select
+                value={areaFilter}
+                onChange={(event) => setAreaFilter(event.target.value)}
+              >
+                <option value="all">All areas</option>
+                {logAreas.map((area) => (
+                  <option key={area} value={area}>
+                    {area}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
+                setAreaFilter("all")
+                setSeverityFilter("all")
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
           <ol className="admin-log-stream">
-            {overview.logs.map((entry) => (
+            {filteredLogs.map((entry) => (
               <li key={`${entry.area}-${entry.event}-${entry.timestamp}`}>
                 <time>{formatDate(entry.timestamp)}</time>
                 <strong>{entry.event}</strong>
@@ -309,12 +391,21 @@ export function AdminRealtimeConsole({
                 </span>
                 <p>{entry.message}</p>
                 <small>{entry.area}</small>
+                <em>{getFixHint(entry)}</em>
               </li>
             ))}
-            {overview.logs.length === 0 ? (
+            {filteredLogs.length === 0 ? (
               <li>
-                <strong>No logs yet</strong>
-                <p>Admin access active.</p>
+                <strong>
+                  {overview.logs.length === 0
+                    ? "No logs yet"
+                    : "No logs match these filters"}
+                </strong>
+                <p>
+                  {overview.logs.length === 0
+                    ? "Admin access active."
+                    : "Clear filters or choose a different severity or area."}
+                </p>
               </li>
             ) : null}
           </ol>
