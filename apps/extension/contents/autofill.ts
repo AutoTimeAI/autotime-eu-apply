@@ -2029,7 +2029,7 @@ function bindWidgetEvents(
         (element): element is Element =>
           typeof (element as Element).matches === "function" &&
           (element as Element).matches(
-            "[data-autotime-collapse-widget], [data-autotime-resize-widget]"
+            "button, [data-autotime-collapse-widget], [data-autotime-resize-widget], [data-autotime-track-job], [data-autotime-open-dashboard]"
           )
       )
 
@@ -2288,7 +2288,20 @@ function bindWidgetEvents(
     bindResizeHandle(resizeHandle)
   }
 
-  trackButton?.addEventListener("click", () => {
+  ;[trackButton, dashboardButton].forEach((button) => {
+    button?.addEventListener("pointerdown", (event) => {
+      event.stopPropagation()
+    })
+  })
+
+  trackButton?.addEventListener("click", (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (trackButton.disabled) {
+      return
+    }
+
     trackButton.disabled = true
     setStatus("Tracking job...")
 
@@ -2297,8 +2310,19 @@ function bindWidgetEvents(
       .catch(() => setStatus("Could not track this job."))
   })
 
-  dashboardButton?.addEventListener("click", () => {
-    window.open(`${appUrl}/dashboard`, "_blank", "noopener,noreferrer")
+  dashboardButton?.addEventListener("click", (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const dashboardWindow = window.open(
+      `${appUrl}/dashboard`,
+      "_blank",
+      "noopener,noreferrer"
+    )
+
+    if (!dashboardWindow) {
+      window.location.href = `${appUrl}/dashboard`
+    }
   })
 }
 
