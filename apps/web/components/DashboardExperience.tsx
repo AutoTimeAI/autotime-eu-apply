@@ -2667,6 +2667,26 @@ export default function HomePage({
     setTimeout(() => setStatus(""), 3000)
   }
 
+  const reportClientDiagnostic = (
+    code: string,
+    message: string,
+    metadata: Record<string, string | number | boolean | null> = {}
+  ) => {
+    void fetch("/api/diagnostics/client", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-autotime-source": "web"
+      },
+      body: JSON.stringify({
+        area: "sync",
+        code,
+        message,
+        metadata
+      })
+    }).catch(() => undefined)
+  }
+
   const runOnlineAnalytics = async () => {
     if (!persistedEvidenceRecords.length && !persistedOutcomeRecords.length) {
       setOnlineAnalyticsStatus("Save a checked job before running analytics.")
@@ -2764,6 +2784,15 @@ export default function HomePage({
         if (!silent) {
           setStatus(`${failureMessage}: ${body.error ?? "Profile sync failed"}`)
         }
+        reportClientDiagnostic(
+          "sync.profile.client.response-failed",
+          body.error ?? "Profile sync response failed",
+          {
+            httpStatus: response.status,
+            operation: "profile-write",
+            route: "/api/sync/profile"
+          }
+        )
         return false
       }
 
@@ -2779,6 +2808,14 @@ export default function HomePage({
           }`
         )
       }
+      reportClientDiagnostic(
+        "sync.profile.client.fetch-failed",
+        error instanceof Error ? error.message : "Profile sync fetch failed",
+        {
+          operation: "profile-write",
+          route: "/api/sync/profile"
+        }
+      )
       return false
     }
   }
@@ -3016,6 +3053,16 @@ export default function HomePage({
         if (!silent) {
           setStatus(`${failureMessage}: ${body.error ?? "Dashboard sync failed"}`)
         }
+        reportClientDiagnostic(
+          "sync.dashboard.client.response-failed",
+          body.error ?? "Dashboard sync response failed",
+          {
+            applicationCount: nextState.applications.length,
+            httpStatus: response.status,
+            operation: "dashboard-write",
+            route: "/api/sync/dashboard"
+          }
+        )
         return false
       }
 
@@ -3031,6 +3078,15 @@ export default function HomePage({
           }`
         )
       }
+      reportClientDiagnostic(
+        "sync.dashboard.client.fetch-failed",
+        error instanceof Error ? error.message : "Dashboard sync fetch failed",
+        {
+          applicationCount: nextState.applications.length,
+          operation: "dashboard-write",
+          route: "/api/sync/dashboard"
+        }
+      )
       return false
     }
   }
