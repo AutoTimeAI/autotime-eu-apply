@@ -292,7 +292,7 @@ async function syncTrackedApplicationsToDashboard(
 
   if (!session?.authToken.trim()) {
     return {
-      reason: "Connect extension to sync to dashboard",
+      reason: "Click CONNECT to sync to dashboard",
       synced: false
     }
   }
@@ -1276,7 +1276,7 @@ function getWidgetMarkup({
       : normalizedStatus.includes("saved locally") ||
           normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
-        ? "Connect the extension from the dashboard to sync this job."
+        ? "Use the CONNECT button in this widget to link your dashboard account."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
           : "Check the visible job page and try again."
