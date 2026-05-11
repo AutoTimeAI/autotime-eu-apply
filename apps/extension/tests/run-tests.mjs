@@ -56,6 +56,7 @@ import {
   getAccountSession,
   deleteApplication,
   getAIUsageLog,
+  getApplicationSyncState,
   getApplicationContentDraft,
   getApplications,
   getJobAnalysisDraft,
@@ -70,7 +71,8 @@ import {
   saveProfile,
   saveReusableAnswers,
   saveTrackerDraft,
-  updateApplication
+  updateApplication,
+  updateApplicationSyncState
 } from "../lib/storage.ts"
 import {
   countWords,
@@ -1118,6 +1120,53 @@ test("saves and clears account session", async () => {
   await clearAccountSession()
 
   assert.equal(await getAccountSession(), null)
+})
+
+test("tracks application sync state from pending to synced", async () => {
+  resetStorage()
+
+  await updateApplicationSyncState(["application-1"], "pending")
+  const pendingState = await getApplicationSyncState()
+
+  assert.equal(pendingState["application-1"].status, "pending")
+  assert.equal(pendingState["application-1"].attempts, 1)
+  assert.equal(typeof pendingState["application-1"].lastTriedAt, "string")
+  assert.equal(pendingState["application-1"].lastError, undefined)
+
+  await updateApplicationSyncState(["application-1"], "synced")
+  const syncedState = await getApplicationSyncState()
+
+  assert.equal(syncedState["application-1"].status, "synced")
+  assert.equal(syncedState["application-1"].attempts, 1)
+  assert.equal(typeof syncedState["application-1"].lastSyncedAt, "string")
+  assert.equal(syncedState["application-1"].lastError, undefined)
+})
+
+test("keeps failed application sync state retryable with reason", async () => {
+  resetStorage()
+
+  await updateApplicationSyncState(["application-1", "application-2"], "pending")
+  await updateApplicationSyncState(["application-1"], "failed", {
+    error: "Dashboard sync failed: unauthorized"
+  })
+  const failedState = await getApplicationSyncState()
+
+  assert.equal(failedState["application-1"].status, "failed")
+  assert.equal(failedState["application-1"].attempts, 1)
+  assert.equal(
+    failedState["application-1"].lastError,
+    "Dashboard sync failed: unauthorized"
+  )
+  assert.equal(typeof failedState["application-1"].lastTriedAt, "string")
+  assert.equal(failedState["application-2"].status, "pending")
+  assert.equal(failedState["application-2"].attempts, 1)
+
+  await updateApplicationSyncState(["application-1"], "pending")
+  const retryState = await getApplicationSyncState()
+
+  assert.equal(retryState["application-1"].status, "pending")
+  assert.equal(retryState["application-1"].attempts, 2)
+  assert.equal(retryState["application-1"].lastError, undefined)
 })
 
 test("clears legacy OpenAI settings", async () => {
