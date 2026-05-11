@@ -10,6 +10,7 @@ import {
 } from "../lib/storage"
 import {
   formatJobPageNotes,
+  getLinkedInCanonicalJobUrl,
   getLinkedInManualInputMessage,
   inferJobPageDetails,
   isLinkedInUrl,
@@ -61,6 +62,7 @@ const minFullWidgetHeight = 300
 const minWidgetWidth = 64
 const minWidgetHeight = 64
 let showAutotimeWidget: (() => void) | null = null
+let autoShowMonitorStarted = false
 const noJobDescriptionMessage =
   "No job description found. Update your description and click the button below to retrieve insights."
 const insightKeywords = [
@@ -221,13 +223,17 @@ function getStoredWidgetPlacement() {
 }
 
 function saveWidgetPlacement(nextPlacement: StoredWidgetPlacement) {
-  localStorage.setItem(
-    widgetPositionKey,
-    JSON.stringify({
-      ...getStoredWidgetPlacement(),
-      ...nextPlacement
-    })
-  )
+  try {
+    localStorage.setItem(
+      widgetPositionKey,
+      JSON.stringify({
+        ...getStoredWidgetPlacement(),
+        ...nextPlacement
+      })
+    )
+  } catch {
+    // Some job boards can restrict page storage; the widget still works.
+  }
 }
 
 function saveWidgetPosition(left: number, top: number) {
@@ -426,6 +432,22 @@ function getFirstText(
 ) {
   for (const selector of selectors) {
     const element = document.querySelector<HTMLElement>(selector)
+    const text = cleanVisibleText(element?.innerText || element?.textContent || "")
+    if (text && isAcceptable(text)) {
+      return text
+    }
+  }
+
+  return ""
+}
+
+function getFirstTextWithin(
+  root: ParentNode,
+  selectors: string[],
+  isAcceptable: (text: string) => boolean = () => true
+) {
+  for (const selector of selectors) {
+    const element = root.querySelector<HTMLElement>(selector)
     const text = cleanVisibleText(element?.innerText || element?.textContent || "")
     if (text && isAcceptable(text)) {
       return text
@@ -756,6 +778,124 @@ function parseLinkedInTopCardLocation() {
   return location ?? ""
 }
 
+function getLinkedInCurrentJobId(url = window.location.href) {
+  try {
+    const parsed = new URL(url)
+    const currentJobId = parsed.searchParams.get("currentJobId")?.trim()
+
+    return /^\d+$/.test(currentJobId ?? "") ? currentJobId ?? "" : ""
+  } catch {
+    return ""
+  }
+}
+
+function getUniqueVisibleLines(element: HTMLElement) {
+  const seen = new Set<string>()
+
+  return (element.innerText || element.textContent || "")
+    .split(/\n+/)
+    .map(cleanVisibleText)
+    .filter(Boolean)
+    .filter((line) => {
+      const normalized = line.toLowerCase()
+
+      if (seen.has(normalized)) {
+        return false
+      }
+
+      seen.add(normalized)
+      return true
+    })
+}
+
+function getLinkedInSearchResultCardDetails() {
+  const currentJobId = getLinkedInCurrentJobId()
+
+  if (!currentJobId) {
+    return null
+  }
+
+  const jobLink =
+    document.querySelector<HTMLAnchorElement>(
+      `a[href*="/jobs/view/${currentJobId}"]`
+    ) ||
+    document.querySelector<HTMLAnchorElement>(
+      `a[href*="currentJobId=${currentJobId}"]`
+    )
+  const jobMarker =
+    jobLink ||
+    document.querySelector<HTMLElement>(
+      `[data-occludable-job-id="${currentJobId}"], [data-job-id="${currentJobId}"], [data-entity-urn*="${currentJobId}"]`
+    )
+
+  if (!jobMarker) {
+    return null
+  }
+
+  const card = jobMarker.closest<HTMLElement>(
+    [
+      "[data-occludable-job-id]",
+      ".jobs-search-results__list-item",
+      ".job-card-container",
+      ".base-card",
+      "li",
+      "article"
+    ].join(", ")
+  )
+
+  if (!card) {
+    return null
+  }
+
+  const lines = getUniqueVisibleLines(card).filter(
+    (line) =>
+      !/^(promoted|viewed|easy apply|be an early applicant|actively hiring|\d+\s+(?:minute|hour|day|week|month)s?\s+ago)$/i.test(
+        line
+      )
+  )
+  const title =
+    cleanVisibleText(jobLink?.innerText || jobLink?.textContent || "") ||
+    getFirstTextWithin(card, [
+      ".job-card-list__title",
+      ".job-card-container__link",
+      ".base-search-card__title",
+      "h3",
+      "a[href*='/jobs/view/']"
+    ], isLikelyVisibleTitle) ||
+    lines.find(isLikelyVisibleTitle) ||
+    ""
+  const company =
+    getFirstTextWithin(card, [
+      ".job-card-container__primary-description",
+      ".job-card-container__company-name",
+      ".base-search-card__subtitle",
+      "h4"
+    ], isLikelyVisibleCompany) ||
+    lines.find((line) => line !== title && isLikelyVisibleCompany(line)) ||
+    ""
+  const location =
+    getFirstTextWithin(card, [
+      ".job-card-container__metadata-item",
+      ".job-card-container__metadata-wrapper li",
+      ".job-search-card__location",
+      ".base-search-card__metadata"
+    ], isLikelyVisibleLocation) ||
+    lines.find(
+      (line) =>
+        line !== title &&
+        line !== company &&
+        isLikelyVisibleLocation(line)
+    ) ||
+    ""
+
+  return {
+    company,
+    location,
+    title,
+    url: getLinkedInCanonicalJobUrl(window.location.href)
+  }
+}
+
 function cleanLinkedInLocation(value = "") {
   const withoutStatus = cleanVisibleText(value)
     .replace(/\b(?:reposted|posted)\s+\d+\s+(?:minute|hour|day|week|month)s?\s+ago\b.*$/i, "")
@@ -833,6 +973,9 @@ function getJsonLdAddressText(value: unknown): string {
 
 function detectJobPage(): JobPageResponse {
   const jsonLdPosting = getJsonLdJobPosting()
+  const linkedInSearchCard = isLinkedInUrl(window.location.href)
+    ? getLinkedInSearchResultCardDetails()
+    : null
   const jsonLdHiringOrganization = jsonLdPosting?.hiringOrganization
   const jsonLdLocationText =
     getJsonLdAddressText(jsonLdPosting?.jobLocation) ||
@@ -875,7 +1018,9 @@ function detectJobPage(): JobPageResponse {
       ["Company", "Organization", "Organisation", "Employer"],
       isLikelyVisibleCompany
     ) ||
-    (isLinkedInUrl(window.location.href) ? parseLinkedInTopCardCompany() : "")
+    (isLinkedInUrl(window.location.href)
+      ? parseLinkedInTopCardCompany() || linkedInSearchCard?.company
+      : "")
   const location =
     jsonLdLocationText ||
     (isLinkedInUrl(window.location.href)
@@ -886,7 +1031,8 @@ function detectJobPage(): JobPageResponse {
             ".topcard__flavor--bullet",
             "[data-automation-id='job-details-location']"
           ], isLikelyVisibleLocation) ||
-            parseLinkedInTopCardLocation()
+            parseLinkedInTopCardLocation() ||
+            linkedInSearchCard?.location
         )
       : getFirstText([
           ".posting-categories .location",
@@ -921,6 +1067,7 @@ function detectJobPage(): JobPageResponse {
         "[data-ui='job-title']",
         "[data-automation-id='jobPostingHeader']"
       ], isLikelyVisibleTitle) ||
+      linkedInSearchCard?.title ||
       getExactLabeledText(
         ["Job title", "Role title", "Position", "Title"],
         isLikelyVisibleTitle
@@ -929,7 +1076,9 @@ function detectJobPage(): JobPageResponse {
     location,
     description:
       jsonLdDescription || getJobDescription(),
-    url: window.location.href
+    url: isLinkedInUrl(window.location.href)
+      ? linkedInSearchCard?.url || getLinkedInCanonicalJobUrl(window.location.href)
+      : window.location.href
   })
 
   if (!details.roleTitle && !details.company) {
@@ -1638,6 +1787,53 @@ function shouldAutoShowJobWidget() {
   )
 }
 
+function tryInitializeJobWidget() {
+  try {
+    if (shouldAutoShowJobWidget()) {
+      initializeMovableJobWidget()
+    }
+  } catch {
+    // Keep the content script alive if a third-party page mutates during reads.
+  }
+}
+
+function startJobWidgetAutoShowMonitor() {
+  if (autoShowMonitorStarted) {
+    return
+  }
+
+  autoShowMonitorStarted = true
+  let lastUrl = window.location.href
+  let attempts = 0
+  const maxAttempts = 40
+
+  const checkPage = () => {
+    const currentUrl = window.location.href
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl
+      attempts = 0
+    }
+
+    if (!document.getElementById(widgetHostId)) {
+      tryInitializeJobWidget()
+    }
+
+    attempts += 1
+    if (attempts >= maxAttempts || document.getElementById(widgetHostId)) {
+      window.clearInterval(interval)
+      observer.disconnect()
+    }
+  }
+
+  const observer = new MutationObserver(checkPage)
+  observer.observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  })
+  const interval = window.setInterval(checkPage, 500)
+  checkPage()
+}
+
 function initializeMovableJobWidget() {
   if (document.getElementById(widgetHostId)) {
     showAutotimeWidget?.()
@@ -2096,9 +2292,7 @@ function bindWidgetEvents(
 }
 
 export function registerAutotimeContentScript() {
-  if (shouldAutoShowJobWidget()) {
-    initializeMovableJobWidget()
-  }
+  startJobWidgetAutoShowMonitor()
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "AUTOTIME_AUTOFILL_PROFILE") {

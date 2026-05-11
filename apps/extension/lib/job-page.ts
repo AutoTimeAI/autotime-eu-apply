@@ -117,6 +117,25 @@ export function isLinkedInUrl(url = "") {
   return getJobPlatform(url) === "LinkedIn"
 }
 
+export function getLinkedInCanonicalJobUrl(url = "") {
+  if (!isLinkedInUrl(url)) {
+    return cleanText(url)
+  }
+
+  try {
+    const parsed = new URL(url)
+    const currentJobId = parsed.searchParams.get("currentJobId")?.trim()
+
+    if (/^\d+$/.test(currentJobId ?? "")) {
+      return `${parsed.origin}/jobs/view/${currentJobId}/`
+    }
+  } catch {
+    return cleanText(url)
+  }
+
+  return cleanText(url)
+}
+
 export function getLinkedInManualInputMessage() {
   return "LinkedIn stays manual: AutoTime can import visible job details, but will not auto-submit or fill applications."
 }

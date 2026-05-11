@@ -19,6 +19,7 @@ import {
 } from "../lib/autofill.ts"
 import {
   formatJobPageNotes,
+  getLinkedInCanonicalJobUrl,
   getLinkedInManualInputMessage,
   getJobPlatform,
   inferJobPageDetails,
@@ -400,10 +401,33 @@ test("detects priority job platforms from urls", () => {
 
 test("marks LinkedIn as visible import with manual application boundary", () => {
   assert.equal(isLinkedInUrl("https://www.linkedin.com/jobs/view/123"), true)
+  assert.equal(
+    isLinkedInUrl(
+      "https://www.linkedin.com/jobs/search-results/?currentJobId=4390984648&keywords=application%20support"
+    ),
+    true
+  )
   assert.equal(isLinkedInUrl("https://uk.linkedin.com/jobs/view/123"), true)
   assert.equal(isLinkedInUrl("https://jobs.lever.co/acme/123"), false)
   assert.match(getLinkedInManualInputMessage(), /import visible job details/i)
   assert.match(getLinkedInManualInputMessage(), /will not auto-submit/i)
+})
+
+test("canonicalizes LinkedIn currentJobId search urls", () => {
+  assert.equal(
+    getLinkedInCanonicalJobUrl(
+      "https://www.linkedin.com/jobs/search-results/?currentJobId=4390984648&keywords=application%20support&origin=SUGGESTION"
+    ),
+    "https://www.linkedin.com/jobs/view/4390984648/"
+  )
+  assert.equal(
+    getLinkedInCanonicalJobUrl("https://www.linkedin.com/jobs/view/123"),
+    "https://www.linkedin.com/jobs/view/123"
+  )
+  assert.equal(
+    getLinkedInCanonicalJobUrl("https://jobs.lever.co/acme/123"),
+    "https://jobs.lever.co/acme/123"
+  )
 })
 
 test("does not split priority platform page titles into guessed fields", () => {
