@@ -17,7 +17,7 @@ function getSafeRedirectPath(redirectTo: string | string[] | undefined) {
     return "/admin"
   }
 
-  return value.startsWith("/admin") ? value : "/admin"
+  return value === "/admin" ? value : "/admin"
 }
 
 export default async function AdminLoginPage({

@@ -1,6 +1,5 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
 import { OWNER_ADMIN_EMAIL } from "../../../lib/admin-access"
 import { publicEnv } from "../../../lib/env"
@@ -13,9 +12,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
-  const searchParams = useSearchParams()
   const [status, setStatus] = useState<string | null>(initialStatus)
-  const redirectTo = searchParams.get("redirectTo") || "/admin"
 
   const handleSignIn = async () => {
     try {
@@ -26,7 +23,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
         "/auth/callback",
         publicEnv.NEXT_PUBLIC_APP_URL
       )
-      callbackUrl.searchParams.set("redirectTo", redirectTo)
+      callbackUrl.searchParams.set("redirectTo", "/admin")
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",

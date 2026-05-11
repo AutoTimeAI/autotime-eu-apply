@@ -38,6 +38,10 @@ function getAdminDeniedRedirect(request: NextRequest): NextResponse {
   return NextResponse.redirect(deniedUrl)
 }
 
+function getPostAuthRedirectPath(pathname: string): string {
+  return isAdminRedirect(pathname) ? "/admin" : pathname
+}
+
 async function ensureFreeSubscription(userId: string): Promise<boolean> {
   try {
     const supabase = createAdminClient()
@@ -164,7 +168,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       userId: user.id
     })
 
-    return NextResponse.redirect(new URL(redirectPath, request.url))
+    return NextResponse.redirect(
+      new URL(getPostAuthRedirectPath(redirectPath), request.url)
+    )
   } catch (error: unknown) {
     if (error instanceof Error) {
       logAuthCallbackError("session-exchange", error)
