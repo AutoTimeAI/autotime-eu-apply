@@ -2553,6 +2553,75 @@ export default function HomePage({
     [userId]
   )
 
+  const loadProfileSnapshot = useCallback(
+    async ({
+      silent = false,
+      successMessage = "Synced profile loaded into this browser"
+    }: {
+      silent?: boolean
+      successMessage?: string
+    } = {}) => {
+      if (!cloudSyncReadiness.configured) {
+        if (!silent) {
+          setStatus(
+            `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+          )
+        }
+        return false
+      }
+
+      try {
+        const response = await fetch("/api/sync/profile", {
+          cache: "no-store"
+        })
+        const body = (await response.json()) as {
+          data: { profile: CandidateProfile | null } | null
+          error: string | null
+        }
+
+        if (!response.ok || body.error) {
+          if (!silent) {
+            setStatus(body.error ?? "Could not load synced profile")
+          }
+          return false
+        }
+
+        if (!body.data?.profile) {
+          if (!silent) {
+            setStatus("No synced profile found for this account yet")
+          }
+          return false
+        }
+
+        const syncedProfile = body.data.profile
+
+        setState((current) => {
+          const nextState = {
+            ...current,
+            profile: syncedProfile
+          }
+          saveState(nextState, userId)
+          return nextState
+        })
+
+        if (!silent) {
+          setStatus(successMessage)
+        }
+        return true
+      } catch (error: unknown) {
+        if (!silent) {
+          setStatus(
+            error instanceof Error
+              ? error.message
+              : "Could not load synced profile"
+          )
+        }
+        return false
+      }
+    },
+    [cloudSyncReadiness, userId]
+  )
+
   useEffect(() => {
     setState(getStoredState(userId))
     setProductContext(getStoredProductContext(userId))
@@ -2561,7 +2630,10 @@ export default function HomePage({
     setSyncPreferences(storedSyncPreferences)
     setCloudSyncConsent(storedSyncPreferences.profileAccountSyncEnabled)
     void loadDashboardSnapshot({ silent: true })
-  }, [loadDashboardSnapshot, userId])
+    if (storedSyncPreferences.profileAccountSyncEnabled) {
+      void loadProfileSnapshot({ silent: true })
+    }
+  }, [loadDashboardSnapshot, loadProfileSnapshot, userId])
 
   useEffect(() => {
     const refreshSyncedWorkflow = () => {
@@ -3353,42 +3425,7 @@ export default function HomePage({
   }
 
   const loadProfileFromCloud = async () => {
-    if (!cloudSyncReadiness.configured) {
-      setStatus(
-        `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
-      )
-      return
-    }
-
-    try {
-      const response = await fetch("/api/sync/profile")
-      const body = (await response.json()) as {
-        data: { profile: CandidateProfile | null } | null
-        error: string | null
-      }
-
-      if (!response.ok || body.error) {
-        setStatus(body.error ?? "Could not load synced profile")
-        return
-      }
-
-      if (!body.data?.profile) {
-        setStatus("No synced profile found for this account yet")
-        return
-      }
-
-      persist(
-        {
-          ...state,
-          profile: body.data.profile
-        },
-        "Synced profile loaded into this browser"
-      )
-    } catch (error: unknown) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not load synced profile"
-      )
-    }
+    await loadProfileSnapshot()
   }
 
   const deleteProfileForAccount = async () => {
