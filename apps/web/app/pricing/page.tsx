@@ -103,35 +103,12 @@ export default async function PricingPage() {
       <header className="pricing-hero">
         <div>
           <p className="eyebrow">Pricing</p>
-          <h1>Choose the search system that matches your ambition</h1>
+          <h1>Choose your AutoTime plan</h1>
           <p>
-            Start with local-first tracking, then upgrade when unlimited AI,
-            cloud sync and interview prep become worth more than the time they
-            save.
+            Start free. Upgrade when you need unlimited AI, sync and interview prep.
           </p>
         </div>
       </header>
-
-      <section
-        className="pricing-demo-panel"
-        aria-labelledby="pricing-demo-title"
-      >
-        <div className="section-heading">
-          <p className="eyebrow">Product walkthrough</p>
-          <h2 id="pricing-demo-title">See AutoTime before choosing a plan</h2>
-          <p>
-            A first-time user tour of profile evidence, Job Check, extension
-            import, application content, tracking, interview prep and Pro.
-          </p>
-        </div>
-        <video
-          controls
-          preload="metadata"
-          src="/demo/autotime-first-user-demo.mp4"
-        >
-          Your browser does not support embedded video.
-        </video>
-      </section>
 
       <PricingCards
         accountPlan={account?.plan ?? null}
