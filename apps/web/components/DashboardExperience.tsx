@@ -78,6 +78,10 @@ type TrustState = {
   officialSourceReviewedAt: string
 }
 
+type SyncPreferences = {
+  profileAccountSyncEnabled: boolean
+}
+
 type ContextSuggestion = ProductContext & {
   targetRoles: string
   workRightPrompt: string
@@ -186,6 +190,7 @@ const analyticsServiceBaseUrl =
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const trustStateStorageKey = "autotime-v2-trust-state"
+const syncPreferenceStorageKey = "autotime-v2-sync-preferences"
 
 function getUserScopedStorageKey(baseKey: string, userId: string) {
   return `${baseKey}:${userId}`
@@ -735,6 +740,14 @@ const trustStateSchema = z.object({
   officialSourceReviewedAt: z.string().optional()
 })
 
+const defaultSyncPreferences: SyncPreferences = {
+  profileAccountSyncEnabled: false
+}
+
+const syncPreferencesSchema = z.object({
+  profileAccountSyncEnabled: z.boolean().optional()
+})
+
 const emptyProfile: CandidateProfile = {
   fullName: "",
   email: "",
@@ -895,6 +908,38 @@ function saveTrustState(state: TrustState, userId: string) {
   window.localStorage.setItem(
     getUserScopedStorageKey(trustStateStorageKey, userId),
     JSON.stringify(state)
+  )
+}
+
+function getStoredSyncPreferences(userId: string): SyncPreferences {
+  if (typeof window === "undefined") {
+    return defaultSyncPreferences
+  }
+
+  try {
+    const parsed = syncPreferencesSchema.safeParse(
+      JSON.parse(
+        window.localStorage.getItem(
+          getUserScopedStorageKey(syncPreferenceStorageKey, userId)
+        ) ?? "null"
+      )
+    )
+
+    return parsed.success
+      ? {
+          ...defaultSyncPreferences,
+          ...parsed.data
+        }
+      : defaultSyncPreferences
+  } catch {
+    return defaultSyncPreferences
+  }
+}
+
+function saveSyncPreferences(preferences: SyncPreferences, userId: string) {
+  window.localStorage.setItem(
+    getUserScopedStorageKey(syncPreferenceStorageKey, userId),
+    JSON.stringify(preferences)
   )
 }
 
@@ -2024,6 +2069,8 @@ export default function HomePage({
     useState<InterviewBuddyOutputs>(emptyInterviewBuddyOutputs)
   const [isCopilotThinking, setIsCopilotThinking] = useState(false)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
+  const [syncPreferences, setSyncPreferences] =
+    useState<SyncPreferences>(defaultSyncPreferences)
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
   const applicationSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
@@ -2510,6 +2557,9 @@ export default function HomePage({
     setState(getStoredState(userId))
     setProductContext(getStoredProductContext(userId))
     setTrustState(getStoredTrustState(userId))
+    const storedSyncPreferences = getStoredSyncPreferences(userId)
+    setSyncPreferences(storedSyncPreferences)
+    setCloudSyncConsent(storedSyncPreferences.profileAccountSyncEnabled)
     void loadDashboardSnapshot({ silent: true })
   }, [loadDashboardSnapshot, userId])
 
@@ -2662,7 +2712,10 @@ export default function HomePage({
   }
 
   const scheduleProfileSync = (profile: CandidateProfile) => {
-    if (!cloudSyncConsent || !cloudSyncReadiness.configured) {
+    if (
+      !syncPreferences.profileAccountSyncEnabled ||
+      !cloudSyncReadiness.configured
+    ) {
       return
     }
 
@@ -2691,6 +2744,17 @@ export default function HomePage({
     setState(nextState)
     saveState(nextState, userId)
     scheduleProfileSync(nextState.profile)
+  }
+
+  const setProfileAccountSyncEnabled = (enabled: boolean) => {
+    const next = {
+      ...syncPreferences,
+      profileAccountSyncEnabled: enabled
+    }
+
+    setSyncPreferences(next)
+    setCloudSyncConsent(enabled)
+    saveSyncPreferences(next, userId)
   }
 
   const updateJob = <K extends keyof JobAnalysisDraft>(
@@ -3284,7 +3348,7 @@ export default function HomePage({
   }
 
   const syncProfileToCloud = async () => {
-    setCloudSyncConsent(true)
+    setProfileAccountSyncEnabled(true)
     await syncProfileStateToCloud(state.profile)
   }
 
@@ -4070,7 +4134,9 @@ export default function HomePage({
               checked={cloudSyncConsent}
               disabled={!cloudSyncReadiness.configured}
               type="checkbox"
-              onChange={(event) => setCloudSyncConsent(event.target.checked)}
+              onChange={(event) =>
+                setProfileAccountSyncEnabled(event.target.checked)
+              }
             />
             I consent to sync my candidate profile and dashboard workflow to my
             authenticated account.
