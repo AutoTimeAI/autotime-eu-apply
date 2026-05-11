@@ -19,6 +19,7 @@ import {
   clearApplicationContentDraft,
   clearJobAnalysisDraft,
   clearAccountSession,
+  clearDiagnosticLog,
   clearLegacyOpenAISettings,
   clearProfile,
   clearReusableAnswers,
@@ -28,6 +29,7 @@ import {
   getAIUsageLog,
   getApplications,
   getApplicationContentDraft,
+  getDiagnosticLog,
   getJobAnalysisDraft,
   getProfile,
   getReusableAnswers,
@@ -38,7 +40,9 @@ import {
   saveReusableAnswers,
   saveTrackerDraft,
   logAIUsage,
+  logDiagnosticEvent,
   type AIUsageLogEntry,
+  type DiagnosticLogEntry,
   updateApplication,
   type AccountSession,
   type ApplicationRecord,
@@ -214,6 +218,7 @@ function SidePanelApp() {
     useState<TrackerDraft | null>(null)
   const [applications, setApplications] = useState<ApplicationRecord[]>([])
   const [aiUsageLog, setAIUsageLog] = useState<AIUsageLogEntry[]>([])
+  const [diagnosticLog, setDiagnosticLog] = useState<DiagnosticLogEntry[]>([])
   const [accountSession, setAccountSession] = useState<AccountSession | null>(
     null
   )
@@ -308,6 +313,10 @@ function SidePanelApp() {
     setAIUsageLog(savedUsageLog)
   }
 
+  const loadDiagnosticLog = async () => {
+    setDiagnosticLog(await getDiagnosticLog())
+  }
+
   const loadAccountSession = async () => {
     await clearLegacyOpenAISettings()
     setAccountSession(await getAccountSession())
@@ -342,6 +351,7 @@ function SidePanelApp() {
 
       await loadApplications()
       await loadAIUsageLog()
+      await loadDiagnosticLog()
       await loadAccountSession()
     }
 
@@ -357,6 +367,10 @@ function SidePanelApp() {
     ) => {
       if (areaName === "local" && changes["account-session"]) {
         refreshAccountSession()
+      }
+
+      if (areaName === "local" && changes["diagnostic-log"]) {
+        void loadDiagnosticLog()
       }
     }
 
@@ -1073,6 +1087,13 @@ function SidePanelApp() {
 
   const handleSignOut = async () => {
     await clearAccountSession()
+    await logDiagnosticEvent({
+      area: "sidepanel",
+      event: "account-session-cleared",
+      message: "Account session cleared from extension side panel.",
+      status: "info"
+    })
+    await loadDiagnosticLog()
     setAccountSession(null)
     setAccountStatus("Signed out")
     setTimeout(() => setAccountStatus(""), 2500)
@@ -1086,18 +1107,62 @@ function SidePanelApp() {
     }
 
     try {
+      await logDiagnosticEvent({
+        area: "sync",
+        event: "profile-sync-started",
+        message: "Profile sync started from extension side panel.",
+        status: "info"
+      })
       await syncProfileToDashboard({
         profile: savedProfile,
         session: accountSession
       })
+      await logDiagnosticEvent({
+        area: "sync",
+        event: "profile-sync-completed",
+        message: "Profile synced to dashboard from extension side panel.",
+        status: "success"
+      })
       setAccountStatus("Profile synced to dashboard")
     } catch (error: unknown) {
+      await logDiagnosticEvent({
+        area: "sync",
+        event: "profile-sync-failed",
+        message:
+          error instanceof Error ? error.message : "Profile sync failed",
+        status: "error"
+      })
       setAccountStatus(
         error instanceof Error ? error.message : "Profile sync failed"
       )
     }
 
+    await loadDiagnosticLog()
     setTimeout(() => setAccountStatus(""), 5000)
+  }
+
+  const handleExportDiagnosticLog = async () => {
+    const entries = await getDiagnosticLog()
+    const blob = new Blob([JSON.stringify(entries, null, 2)], {
+      type: "application/json;charset=utf-8"
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = "autotime-diagnostic-log.json"
+    link.click()
+    URL.revokeObjectURL(url)
+
+    setDiagnosticLog(entries)
+    setAccountStatus("Diagnostic log exported")
+    setTimeout(() => setAccountStatus(""), 2500)
+  }
+
+  const handleClearDiagnosticLog = async () => {
+    await clearDiagnosticLog()
+    setDiagnosticLog([])
+    setAccountStatus("Diagnostic log cleared")
+    setTimeout(() => setAccountStatus(""), 2500)
   }
 
   const handleLoadProfileFromDashboard = async () => {
@@ -1387,6 +1452,9 @@ function SidePanelApp() {
       ) : activeSection === "account" ? (
         <AccountSection
           canSyncProfile={Boolean(savedProfile)}
+          diagnosticLog={diagnosticLog}
+          onClearDiagnosticLog={handleClearDiagnosticLog}
+          onExportDiagnosticLog={handleExportDiagnosticLog}
           onLoadProfileFromDashboard={handleLoadProfileFromDashboard}
           onSignOut={handleSignOut}
           onSyncProfileToDashboard={handleSyncProfileToDashboard}

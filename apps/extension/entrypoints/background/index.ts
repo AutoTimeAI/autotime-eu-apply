@@ -4,6 +4,7 @@ import {
   getApplications,
   getAccountSession,
   getReusableAnswers,
+  logDiagnosticEvent,
   saveAccountSession,
   type AccountSession
 } from "../../lib/storage"
@@ -57,17 +58,26 @@ function getErrorMessage(error: unknown) {
 }
 
 async function broadcastAccountConnected() {
-  const tabs = await chrome.tabs.query({})
+  try {
+    const tabs = await chrome.tabs.query({})
 
-  await Promise.allSettled(
-    tabs
-      .filter((tab) => tab.id)
-      .map((tab) =>
-        chrome.tabs.sendMessage(tab.id as number, {
-          type: "AUTOTIME_ACCOUNT_CONNECTED"
-        })
-      )
-  )
+    await Promise.allSettled(
+      tabs
+        .filter((tab) => tab.id)
+        .map((tab) =>
+          chrome.tabs.sendMessage(tab.id as number, {
+            type: "AUTOTIME_ACCOUNT_CONNECTED"
+          })
+        )
+    )
+  } catch (error: unknown) {
+    await logDiagnosticEvent({
+      area: "connect",
+      event: "account-connected-broadcast-failed",
+      message: getErrorMessage(error),
+      status: "warning"
+    })
+  }
 }
 
 async function showWidgetInTab(tab: chrome.tabs.Tab) {
@@ -104,11 +114,24 @@ export default defineBackground(() => {
       sendResponse: (response: ExternalResponse) => void
     ) => {
       if (!isTrustedSender(sender)) {
+        void logDiagnosticEvent({
+          area: "connect",
+          event: "external-message-untrusted",
+          message: "Dashboard-to-extension message rejected because sender is not trusted.",
+          status: "error",
+          details: { senderUrl: sender.url ?? "missing" }
+        })
         sendResponse({ error: "Untrusted sender", ok: false })
         return false
       }
 
       if (message.type === "AUTOTIME_PING") {
+        void logDiagnosticEvent({
+          area: "connect",
+          event: "ping-received",
+          message: "Dashboard preflight ping reached the extension.",
+          status: "info"
+        })
         void getAccountSession()
           .then((session) =>
             sendResponse({
@@ -131,34 +154,81 @@ export default defineBackground(() => {
       const session = parseAccountSession(message)
 
       if (!session) {
+        void logDiagnosticEvent({
+          area: "connect",
+          event: "connect-invalid-message",
+          message: "Connection message did not include a valid account session.",
+          status: "error"
+        })
         sendResponse({ error: "Invalid account session", ok: false })
         return false
       }
 
       void saveAccountSession(session)
         .then(async () => {
+          await logDiagnosticEvent({
+            area: "connect",
+            event: "account-session-saved",
+            message: "Account session saved in extension storage.",
+            status: "success",
+            details: { email: session.email, plan: session.plan }
+          })
+
           const applications = await getApplications()
           let syncError: string | undefined
 
           if (applications.length > 0) {
             try {
+              await logDiagnosticEvent({
+                area: "sync",
+                event: "connect-sync-started",
+                message: "Syncing locally saved jobs after account connection.",
+                status: "info",
+                details: { applicationCount: applications.length }
+              })
               await syncApplicationsToDashboard({
                 applications,
                 reusableAnswers: await getReusableAnswers(),
                 session
               })
+              await logDiagnosticEvent({
+                area: "sync",
+                event: "connect-sync-completed",
+                message: "Locally saved jobs synced after account connection.",
+                status: "success",
+                details: { applicationCount: applications.length }
+              })
             } catch (error: unknown) {
               syncError = getErrorMessage(error)
+              await logDiagnosticEvent({
+                area: "sync",
+                event: "connect-sync-failed",
+                message: syncError,
+                status: "warning",
+                details: { applicationCount: applications.length }
+              })
             }
           }
 
           await broadcastAccountConnected()
+          await logDiagnosticEvent({
+            area: "connect",
+            event: "account-connected-broadcast",
+            message: "Connection update broadcast to open extension tabs.",
+            status: "success"
+          })
 
           sendResponse({ ok: true, syncError })
         })
-        .catch(() =>
+        .catch((error: unknown) => {
+          void logDiagnosticEvent({
+            area: "connect",
+            event: "account-session-save-failed",
+            message: getErrorMessage(error),
+            status: "error"
+          })
           sendResponse({ error: "Could not save account session", ok: false })
-        )
+        })
 
       return true
     }

@@ -56,6 +56,16 @@ export type AccountSession = {
   plan: "free" | "pro"
 }
 
+export type DiagnosticLogEntry = {
+  id: string
+  area: "connect" | "sync" | "widget" | "sidepanel"
+  createdAt: string
+  details?: Record<string, string | number | boolean | null>
+  event: string
+  message?: string
+  status: "info" | "success" | "warning" | "error"
+}
+
 type LegacyApplicationStatus =
   | ApplicationStatus
   | "draft"
@@ -145,7 +155,9 @@ const APPLICATION_CONTENT_KEY = "application-content-draft"
 const TRACKER_DRAFT_KEY = "tracker-draft"
 const AI_USAGE_LOG_KEY = "ai-usage-log"
 const ACCOUNT_SESSION_KEY = "account-session"
+const DIAGNOSTIC_LOG_KEY = "diagnostic-log"
 const LEGACY_OPENAI_SETTINGS_KEY = "openai-settings"
+const MAX_DIAGNOSTIC_LOG_ENTRIES = 150
 
 function normalizeProfile(profile: Partial<CandidateProfile>): CandidateProfile {
   return {
@@ -362,6 +374,63 @@ function normalizeAccountSession(
   }
 }
 
+function createId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  )
+}
+
+function normalizeDiagnosticDetails(
+  details: Record<string, unknown> | undefined
+): DiagnosticLogEntry["details"] | undefined {
+  if (!details) {
+    return undefined
+  }
+
+  return Object.fromEntries(
+    Object.entries(details)
+      .filter(([key]) => !/token|secret|password|authorization/i.test(key))
+      .map(([key, value]) => {
+        if (
+          typeof value === "string" ||
+          typeof value === "number" ||
+          typeof value === "boolean" ||
+          value === null
+        ) {
+          return [key, value]
+        }
+
+        return [key, String(value)]
+      })
+  )
+}
+
+function normalizeDiagnosticLogEntry(
+  entry: Partial<DiagnosticLogEntry>
+): DiagnosticLogEntry {
+  return {
+    id: entry.id ?? createId(),
+    area:
+      entry.area === "connect" ||
+      entry.area === "sync" ||
+      entry.area === "widget" ||
+      entry.area === "sidepanel"
+        ? entry.area
+        : "connect",
+    createdAt: entry.createdAt ?? new Date().toISOString(),
+    details: normalizeDiagnosticDetails(entry.details),
+    event: entry.event ?? "unknown",
+    message: entry.message,
+    status:
+      entry.status === "success" ||
+      entry.status === "warning" ||
+      entry.status === "error"
+        ? entry.status
+        : "info"
+  }
+}
+
 export async function saveProfile(profile: CandidateProfile) {
   await chrome.storage.local.set({ [PROFILE_KEY]: profile })
 }
@@ -460,6 +529,36 @@ export async function logAIUsage(
 
 export async function clearAIUsageLog() {
   await chrome.storage.local.remove(AI_USAGE_LOG_KEY)
+}
+
+export async function getDiagnosticLog(): Promise<DiagnosticLogEntry[]> {
+  const result = await chrome.storage.local.get(DIAGNOSTIC_LOG_KEY)
+  const entries =
+    (result[DIAGNOSTIC_LOG_KEY] as Partial<DiagnosticLogEntry>[] | undefined) ??
+    []
+
+  return entries.map(normalizeDiagnosticLogEntry)
+}
+
+export async function logDiagnosticEvent(
+  entry: Omit<DiagnosticLogEntry, "createdAt" | "id"> &
+    Partial<Pick<DiagnosticLogEntry, "createdAt" | "id">>
+) {
+  const existing = await getDiagnosticLog()
+  const normalizedEntry = normalizeDiagnosticLogEntry(entry)
+
+  await chrome.storage.local.set({
+    [DIAGNOSTIC_LOG_KEY]: [normalizedEntry, ...existing].slice(
+      0,
+      MAX_DIAGNOSTIC_LOG_ENTRIES
+    )
+  })
+
+  return normalizedEntry
+}
+
+export async function clearDiagnosticLog() {
+  await chrome.storage.local.remove(DIAGNOSTIC_LOG_KEY)
 }
 
 export async function saveAccountSession(session: AccountSession) {

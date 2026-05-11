@@ -1,5 +1,5 @@
 import type { Ref } from "react"
-import type { AccountSession } from "../lib/storage"
+import type { AccountSession, DiagnosticLogEntry } from "../lib/storage"
 import { appUrl } from "../lib/openai"
 import { getStatusClassName } from "./utils"
 
@@ -9,8 +9,11 @@ type AccountSectionProps = {
   status: string
   statusRef: Ref<HTMLParagraphElement>
   onLoadProfileFromDashboard: () => void
+  onClearDiagnosticLog: () => void
+  onExportDiagnosticLog: () => void
   onSignOut: () => void
   onSyncProfileToDashboard: () => void
+  diagnosticLog: DiagnosticLogEntry[]
 }
 
 function PlanBadge({ plan }: { plan: AccountSession["plan"] }) {
@@ -28,6 +31,9 @@ function openExtensionConnect() {
 
 export function AccountSection({
   canSyncProfile,
+  diagnosticLog,
+  onClearDiagnosticLog,
+  onExportDiagnosticLog,
   onLoadProfileFromDashboard,
   session,
   status,
@@ -99,6 +105,36 @@ export function AccountSection({
             </button>
           </>
         )}
+
+        <div className="summary-card">
+          <h3>Connection diagnostics</h3>
+          <p>
+            {diagnosticLog.length
+              ? `${diagnosticLog.length} recent events captured.`
+              : "No diagnostic events captured yet."}
+          </p>
+          {diagnosticLog[0] ? (
+            <p>
+              Latest: {diagnosticLog[0].event} ({diagnosticLog[0].status})
+            </p>
+          ) : null}
+        </div>
+        <button
+          className="secondary-button"
+          disabled={diagnosticLog.length === 0}
+          type="button"
+          onClick={onExportDiagnosticLog}
+        >
+          Export diagnostic log
+        </button>
+        <button
+          className="secondary-button"
+          disabled={diagnosticLog.length === 0}
+          type="button"
+          onClick={onClearDiagnosticLog}
+        >
+          Clear diagnostic log
+        </button>
 
         {status && (
           <p

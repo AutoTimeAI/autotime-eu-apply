@@ -2,6 +2,7 @@ import {
   getAccountSession,
   getApplicationContentDraft,
   getApplications,
+  logDiagnosticEvent,
   getProfile,
   getReusableAnswers,
   saveApplication,
@@ -1773,12 +1774,25 @@ function getWidgetMarkup({
 
 async function saveDetectedJob(details: JobPageResponse | null) {
   if (!details?.url) {
+    void logDiagnosticEvent({
+      area: "widget",
+      event: "track-job-missing-url",
+      message: "Track Job clicked without a visible job URL.",
+      status: "warning"
+    })
     return "Open a visible job page, then try again."
   }
 
   const applications = await getApplications()
 
   if (hasApplicationWithUrl(applications, details.url)) {
+    void logDiagnosticEvent({
+      area: "widget",
+      event: "track-job-duplicate-local",
+      message: "Job already exists in local extension storage.",
+      status: "info",
+      details: { url: details.url }
+    })
     const syncStatus = await syncTrackedApplicationsToDashboard(applications)
     return syncStatus.synced
       ? "This job is already tracked and synced to dashboard"
@@ -1789,6 +1803,17 @@ async function saveDetectedJob(details: JobPageResponse | null) {
   const updatedApplications = [record, ...applications]
 
   await saveApplication(record)
+  void logDiagnosticEvent({
+    area: "widget",
+    event: "track-job-saved-local",
+    message: "Job saved locally before dashboard sync.",
+    status: "success",
+    details: {
+      company: details.company || "unknown",
+      roleTitle: details.roleTitle || "unknown",
+      url: details.url
+    }
+  })
 
   const syncStatus =
     await syncTrackedApplicationsToDashboard(updatedApplications)
@@ -2061,6 +2086,12 @@ function initializeMovableJobWidget() {
 
     void getAccountSession().then((session) => {
       accountSession = session
+      void logDiagnosticEvent({
+        area: "widget",
+        event: "account-connected-received",
+        message: "Widget received account connected broadcast.",
+        status: session?.authToken.trim() ? "success" : "warning"
+      })
       render()
       sendResponse({ ok: true })
     })

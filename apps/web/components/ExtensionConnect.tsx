@@ -43,6 +43,13 @@ type ExtensionRuntime = {
   ) => void
 }
 
+type ConnectStep = {
+  id: string
+  message: string
+  status: "info" | "success" | "warning" | "error"
+  timestamp: string
+}
+
 type ChromeWindow = Window & {
   chrome?: {
     runtime?: ExtensionRuntime
@@ -145,9 +152,25 @@ export default function ExtensionConnect() {
     : "/extension/connect"
   const signInHref = `/login?redirectTo=${encodeURIComponent(signInRedirect)}`
   const [status, setStatus] = useState<string | null>(null)
+  const [steps, setSteps] = useState<ConnectStep[]>([])
   const [isPending, setIsPending] = useState(false)
 
   const connectAttemptedRef = useRef(false)
+
+  const addStep = useCallback(
+    (message: string, status: ConnectStep["status"] = "info") => {
+      setSteps((current) => [
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          message,
+          status,
+          timestamp: new Date().toISOString()
+        },
+        ...current
+      ].slice(0, 12))
+    },
+    []
+  )
 
   const handleConnect = useCallback(async () => {
     try {
@@ -155,12 +178,17 @@ export default function ExtensionConnect() {
       setStatus(null)
 
       if (!extensionId.trim()) {
-        setStatus("Open CONNECT from the AutoTime job-page widget or extension Account tab.")
+        const message =
+          "Open CONNECT from the AutoTime job-page widget or extension Account tab."
+        addStep(message, "warning")
+        setStatus(message)
         return
       }
 
       setStatus("Checking installed extension...")
+      addStep("Checking installed extension reachability.")
       await pingExtension(extensionId)
+      addStep("Extension preflight reached the installed extension.", "success")
 
       const supabase = createBrowserClient()
       const {
@@ -169,44 +197,60 @@ export default function ExtensionConnect() {
       } = await supabase.auth.getSession()
 
       if (error || !session?.access_token) {
-        setStatus("Sign in first, then reconnect the extension.")
+        const message = "Sign in first, then reconnect the extension."
+        addStep(message, "warning")
+        setStatus(message)
         return
       }
 
       setStatus("Connecting dashboard account to extension...")
+      addStep("Dashboard session detected. Reading account plan.")
       const account = await getAccount(session.access_token)
 
       if (!account.data) {
-        setStatus(account.error ?? "Could not read your AutoTime account.")
+        const message = account.error ?? "Could not read your AutoTime account."
+        addStep(message, "error")
+        setStatus(message)
         return
       }
 
+      addStep("Sending account session to extension.")
       const extensionResponse = await sendToExtension(extensionId, {
         authToken: session.access_token,
         email: account.data.email,
         plan: account.data.plan,
         type: "AUTOTIME_CONNECT_ACCOUNT"
       })
+      addStep("Extension accepted and stored the account session.", "success")
+
+      addStep("Recording dashboard connection audit.")
       const recordWarning = await recordExtensionConnection(
         session.access_token,
         extensionId
       )
+      if (recordWarning) {
+        addStep(`Dashboard audit warning: ${recordWarning}`, "warning")
+      } else {
+        addStep("Dashboard connection audit recorded.", "success")
+      }
 
-      setStatus(
+      const successMessage =
         extensionResponse.syncError
           ? `Extension connected. Saved jobs will retry sync from Track Job. Reason: ${extensionResponse.syncError}`
           : recordWarning
             ? `Extension connected. Dashboard record warning: ${recordWarning}`
-          : "Extension connected. You can return to the side panel."
-      )
+            : "Extension connected. You can return to the side panel."
+      setStatus(successMessage)
+      addStep(successMessage, extensionResponse.syncError ? "warning" : "success")
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Extension connection failed."
+      addStep(message, "error")
       setStatus(message)
     } finally {
       setIsPending(false)
     }
-  }, [extensionId])
+  }, [addStep, extensionId])
 
   useEffect(() => {
     if (connectAttemptedRef.current || !extensionId.trim()) {
@@ -236,6 +280,15 @@ export default function ExtensionConnect() {
         </a>
       </div>
       {status ? <p className="status-banner">{status}</p> : null}
+      {steps.length ? (
+        <ol className="summary-list" aria-label="Connection diagnostic log">
+          {steps.map((step) => (
+            <li key={step.id}>
+              <strong>{step.status}</strong> {step.message}
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </section>
   )
 }
