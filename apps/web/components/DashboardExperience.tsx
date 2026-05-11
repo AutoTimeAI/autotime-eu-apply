@@ -245,14 +245,14 @@ const commandSidebarItems: Array<{
   {
     href: "/dashboard",
     focus: "dashboard",
-    label: "Dashboard",
+    label: "Today",
     routeId: "overview",
     section: "Overview"
   },
   {
     href: "/dashboard/inbox",
     focus: "job-inbox",
-    label: "Job Inbox",
+    label: "Saved Jobs",
     routeId: "applications",
     section: "Jobs"
   },
@@ -287,7 +287,7 @@ const commandSidebarItems: Array<{
   {
     href: "/dashboard/applications",
     focus: "application-tracker",
-    label: "Application Tracker",
+    label: "Tracker",
     routeId: "applications",
     section: "Applications"
   },
@@ -326,17 +326,17 @@ const dashboardFocusCopy: Record<
   { eyebrow: string; title: string; body: string }
 > = {
   dashboard: {
-    eyebrow: "Dashboard",
+    eyebrow: "Today",
     title: "Your Job Search Desk",
-    body: "A calmer place to check roles, save applications, and keep the next step visible."
+    body: "One place to see what needs attention, check a role, and keep saved jobs moving."
   },
   "job-inbox": {
-    eyebrow: "Job Inbox",
-    title: "Job Inbox",
-    body: "Saved and checked roles, with the next action kept visible."
+    eyebrow: "Saved Jobs",
+    title: "Saved Jobs",
+    body: "Roles tracked from the extension or saved after a job check."
   },
   "match-score": {
-    eyebrow: "Match Score",
+    eyebrow: "AI Role Check",
     title: "Role Fit Score",
     body: "Evidence, missing inputs and clear limits behind the score."
   },
@@ -358,7 +358,7 @@ const dashboardFocusCopy: Record<
   "application-tracker": {
     eyebrow: "Application Tracker",
     title: "Application Tracker",
-    body: "Pipeline, outcomes and follow-up actions for live applications."
+    body: "Statuses, outcomes and follow-up actions for every saved role."
   },
   "follow-ups": {
     eyebrow: "Follow-ups",
@@ -1779,7 +1779,7 @@ function getDecisionBrief({
     nextActions:
       fitEvaluation.contentGate === "ready"
         ? [
-            "Save the role into Applications.",
+            "Save the role into the tracker.",
             "Generate application content from the approved positioning angle.",
             "Track next action and prepare interview prompts if shortlisted."
           ]
@@ -2320,13 +2320,13 @@ export default function HomePage({
     return sections
   }, [])
   const actionPanelEyebrow = isOverview
-    ? "Workspace Actions"
+    ? "Today"
     : currentTab === "jobs"
       ? "AI Role Check"
       : currentTab === "profile"
         ? "Profile Actions"
         : currentTab === "applications"
-          ? "Application Actions"
+          ? "Tracker Actions"
           : "Interview Buddy"
   const showHeaderJobActions =
     isOverview || currentTab === "jobs" || currentTab === "applications"
@@ -2357,7 +2357,7 @@ export default function HomePage({
       body:
         activeActionCount > 0
           ? "Open follow-ups and deadlines that need attention."
-          : "No urgent follow-up is due from saved applications."
+          : "No urgent follow-up is due from saved jobs."
     },
     {
       title: "Current Job Decision",
@@ -2394,7 +2394,7 @@ export default function HomePage({
             : "Resolve blockers before writing."
     },
     {
-      title: "Saved Applications",
+      title: "Saved Jobs",
       value: `${state.applications.length} jobs`,
       tone: state.applications.length > 0 ? "good" : "neutral",
       progress: Math.min(100, state.applications.length * 24),
@@ -2457,14 +2457,14 @@ export default function HomePage({
     },
     {
       href: "/dashboard/match-score",
-      label: "Job Check",
+      label: "AI Role Check",
       value: `${fitEvaluation.overallScore}/100`,
       detail: fitEvaluation.decision,
       tone: decisionTone
     },
     {
       href: "/dashboard/applications",
-      label: "Applications",
+      label: "Tracker",
       value: `${state.applications.length}`,
       detail: `${statusCounts.Applied + statusCounts.Interview} progressed`,
       tone: state.applications.length > 0 ? "good" : "neutral"
@@ -2493,17 +2493,17 @@ export default function HomePage({
       value: state.applications.length > 0 ? "Receiving jobs" : "Connect",
       detail:
         state.applications.length > 0
-          ? "Tracked jobs can appear here"
-          : "Open extension health",
+          ? "Tracked jobs are reaching the dashboard"
+          : "Connect Chrome to sync tracked jobs",
       tone: state.applications.length > 0 ? "good" : "neutral"
     },
     {
       href: "/dashboard/applications",
-      label: "First tracked job",
+      label: "First saved job",
       value: state.applications.length > 0 ? `${state.applications.length} saved` : "Not yet",
       detail:
         state.applications.length > 0
-          ? "Application tracker has data"
+          ? "Tracker has data"
           : "Track a role from the extension",
       tone: state.applications.length > 0 ? "good" : "warn"
     },
@@ -2521,13 +2521,13 @@ export default function HomePage({
   const commandQuickActions = [
     {
       href: "/dashboard/inbox",
-      label: "Open Job Inbox",
+      label: "Open Saved Jobs",
       title: "Review saved roles",
       body: "Check which roles need a decision, status update or next action."
     },
     {
       href: "/dashboard/match-score",
-      label: "Check Match Score",
+      label: "Open AI Role Check",
       title: canSaveCheckedJob ? "Save this checked job" : "Analyse a role",
       body: canSaveCheckedJob
         ? "A role is ready to save into your tracker with evidence attached."
@@ -2543,7 +2543,7 @@ export default function HomePage({
       body:
         activeActionCount > 0
           ? "Move the next action forward before it gets buried."
-          : "No urgent follow-up is waiting from saved applications."
+          : "No urgent follow-up is waiting from saved jobs."
     }
   ]
   const todayAction = !profileBridgeReady
@@ -2575,8 +2575,8 @@ export default function HomePage({
             title: "Move the next action forward"
           }
         : {
-            body: "Your saved workflow is tidy. Review recent roles or check another job when you are ready.",
-            cta: "Review applications",
+            body: "Your saved jobs are tidy. Review recent roles or check another job when you are ready.",
+            cta: "Review tracker",
             href: "/dashboard/applications",
             label: "Best next step",
             title: "Keep your tracker current"
@@ -3673,13 +3673,13 @@ export default function HomePage({
   )
   const actionPanelTitle =
     isOverview
-      ? "Start with the next visible step in your workflow."
+      ? "Start with the one job-search task that matters next."
       : currentTab === "jobs"
       ? "Check this role for work-right, skill and location risk."
       : currentTab === "profile"
         ? "Complete profile evidence and review CV context."
         : currentTab === "applications"
-          ? "Review roles that need a next action."
+          ? "Review saved roles that need a next action."
           : "Turn a rough interview answer into saved, reusable versions."
   const actionPanelStateLabel =
     isOverview
@@ -3793,7 +3793,7 @@ export default function HomePage({
                 </a>
                 ) : null}
                 <a className="secondary-button" href="/dashboard/inbox">
-                  Job Inbox
+                  Saved Jobs
                 </a>
               </>
             ) : null}
@@ -3863,7 +3863,7 @@ export default function HomePage({
 
       <div className="command-workspace">
         <aside className="command-sidebar" aria-label="Command centre navigation">
-          <p>Workspace</p>
+          <p>Your work</p>
           <nav>
             {commandSidebarSections.map((section) => (
               <div className="command-sidebar-group" key={section.label}>
@@ -3894,11 +3894,11 @@ export default function HomePage({
               aria-labelledby="workspace-integrity-title"
             >
               <div className="section-heading">
-                <p className="eyebrow">Workspace status</p>
-                <h2 id="workspace-integrity-title">Evidence and boundaries</h2>
+                <p className="eyebrow">Account status</p>
+                <h2 id="workspace-integrity-title">Saved data and controls</h2>
                 <p>
-                  The dashboard stores what you provide, explains every job
-                  decision, and keeps application actions under your control.
+                  The dashboard keeps saved jobs visible, explains role checks,
+                  and leaves every application step under your control.
                 </p>
               </div>
               <div className="integrity-grid">
@@ -4166,7 +4166,7 @@ export default function HomePage({
       >
         <div>
           <p className="eyebrow">Job decision</p>
-          <h2>Job Check verdict</h2>
+          <h2>AI Role Check verdict</h2>
           <p>Paste a role below to get a practical apply, stretch or pause decision.</p>
         </div>
         <div className="decision-score">
@@ -4246,7 +4246,7 @@ export default function HomePage({
             <a href={todayAction.href}>{todayAction.cta}</a>
           </div>
           <div className="section-intro">
-            <p className="eyebrow">Dashboard</p>
+            <p className="eyebrow">Today</p>
             <h2>Where things stand</h2>
             <p>Scan the essentials, then continue with one clear action.</p>
           </div>
@@ -4698,7 +4698,7 @@ export default function HomePage({
                   : "Save blocker for review"}
             </button>
             <p className="job-check-save-note">
-              Saving moves this checked role into Applications with the current
+              Saving moves this checked role into the tracker with the current
               score, risks and next action attached.
             </p>
           </div>
@@ -5577,8 +5577,18 @@ export default function HomePage({
                 <p>
                   {state.applications.length
                     ? "Clear filters or search for another role, company or action."
-                    : "Track a role from the extension or save a checked job here, then manage the next action in this dashboard."}
+                    : "Tracked roles from the extension and saved role checks appear here."}
                 </p>
+                {!state.applications.length ? (
+                  <div className="empty-state-actions">
+                    <a className="secondary-button" href="/dashboard/extension">
+                      Connect extension
+                    </a>
+                    <a className="secondary-button" href="/dashboard/match-score">
+                      Check a role
+                    </a>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>

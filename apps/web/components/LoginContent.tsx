@@ -52,10 +52,10 @@ function LoginForm() {
         <div>
           <p className="eyebrow">AutoTime EU Apply</p>
           <h1 id="auth-intro-title">
-            UK/EU job search workspace
+            Open your AutoTime dashboard
           </h1>
           <p>
-            Track roles, check fit, manage profile evidence and prepare follow-ups.
+            Track saved jobs, check role fit, manage profile evidence and prepare follow-ups.
           </p>
         </div>
         <div className="auth-proof-grid" aria-label="Product strengths">
@@ -77,8 +77,8 @@ function LoginForm() {
       <section className="auth-card">
         <div className="section-heading">
           <p className="eyebrow">Sign in</p>
-          <h2>Your workspace is ready</h2>
-          <p>Sign in to open your dashboard and connected account.</p>
+          <h2>Your dashboard is ready</h2>
+          <p>Sign in to open your dashboard and sync tracked jobs.</p>
         </div>
         <div className="header-actions">
           <button type="button" onClick={() => handleSignIn("github")}>

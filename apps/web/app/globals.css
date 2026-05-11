@@ -2573,6 +2573,17 @@ h4 {
   margin: 0;
 }
 
+.empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.empty-state-actions a {
+  width: fit-content;
+}
+
 .utility-bar {
   display: grid;
   grid-template-columns:

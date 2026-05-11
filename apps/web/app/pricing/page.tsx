@@ -70,13 +70,14 @@ const faqs = [
 ]
 
 const freeFeatures = [
-  { label: "Chrome extension with local storage", included: true },
+  { label: "Chrome extension with local save first", included: true },
+  { label: "Tracked job sync to dashboard", included: true },
   { label: "5 AI job analyses per month", included: true },
   { label: "Application tracking (unlimited)", included: true },
   { label: "Work-right and country fit scoring", included: true },
   { label: "Visible LinkedIn and job-board import", included: true },
   { label: "CSV export", included: true },
-  { label: "Cloud sync across devices", included: false },
+  { label: "Full profile and workflow cloud sync", included: false },
   { label: "AI application content generation", included: false },
   { label: "Interview prep packs", included: false },
   { label: "Unlimited AI analyses", included: false }
@@ -84,7 +85,7 @@ const freeFeatures = [
 
 const proFeatures = [
   { label: "Everything in Free", included: true },
-  { label: "Cloud sync - never lose your data", included: true },
+  { label: "Full profile and workflow cloud sync", included: true },
   { label: "Unlimited AI job analyses", included: true },
   { label: "AI cover letter and application content", included: true },
   { label: "Role-specific interview prep packs", included: true },
@@ -105,7 +106,8 @@ export default async function PricingPage() {
           <p className="eyebrow">Pricing</p>
           <h1>Choose your AutoTime plan</h1>
           <p>
-            Start free. Upgrade when you need unlimited AI, sync and interview prep.
+            Start free with tracked-job sync. Upgrade when you need unlimited AI,
+            full workflow sync and interview prep.
           </p>
         </div>
       </header>

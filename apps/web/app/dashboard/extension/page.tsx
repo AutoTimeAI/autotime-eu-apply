@@ -81,7 +81,7 @@ export default async function DashboardExtensionPage() {
             <h1>Extension connection</h1>
             <p>
               Install the extension, connect this dashboard account, and keep
-              tracked jobs synced into Applications.
+              tracked jobs synced into the tracker.
             </p>
           </div>
           <span className={`extension-health-pill ${healthTone}`}>
@@ -167,7 +167,7 @@ export default async function DashboardExtensionPage() {
                       {connection.browser_label ?? "Chrome extension"}
                     </strong>
                     <span>
-                      {connection.revoked_at ? "Revoked" : "Active"} ·{" "}
+                      {connection.revoked_at ? "Revoked" : "Active"} /{" "}
                       {connection.extension_id ?? "Extension ID unavailable"}
                     </span>
                     <small>

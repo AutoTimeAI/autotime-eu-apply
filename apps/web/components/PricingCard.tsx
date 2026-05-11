@@ -229,8 +229,8 @@ export function PricingCards({
         <PricingCard
           action="link"
           billingInterval={billingInterval}
-          ctaLabel={isSignedIn ? "Open workspace" : "Get started free"}
-          description="Local tracking and limited AI analysis."
+          ctaLabel={isSignedIn ? "Open dashboard" : "Start free"}
+          description="Tracked-job sync, local-first saving and limited AI analysis."
           features={freeFeatures}
           href={isSignedIn ? "/dashboard" : "/login"}
           name="Free"
@@ -241,7 +241,7 @@ export function PricingCards({
           annualPriceId={annualPriceId}
           billingInterval={billingInterval}
           ctaLabel={isPro ? "Manage plan" : "Start Pro"}
-          description="Unlimited AI, sync and interview prep."
+          description="Unlimited AI, full workflow sync and interview prep."
           features={proFeatures}
           highlighted
           monthlyPriceId={monthlyPriceId}
