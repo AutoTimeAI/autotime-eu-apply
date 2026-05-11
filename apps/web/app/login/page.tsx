@@ -5,9 +5,26 @@ import { getTestAuthUser } from "../../lib/test-auth"
 
 export const dynamic = "force-dynamic"
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+function getSafeRedirectPath(redirectTo: string | string[] | undefined) {
+  const value = Array.isArray(redirectTo) ? redirectTo[0] : redirectTo
+
+  if (!value?.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard"
+  }
+
+  return value
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams
+  const redirectTo = getSafeRedirectPath(params?.redirectTo)
+
   if (getTestAuthUser()) {
-    redirect("/dashboard")
+    redirect(redirectTo)
   }
 
   const supabase = await createServerClient()
@@ -16,7 +33,7 @@ export default async function LoginPage() {
   } = await supabase.auth.getUser()
 
   if (user) {
-    redirect("/dashboard")
+    redirect(redirectTo)
   }
 
   return <LoginContent />
