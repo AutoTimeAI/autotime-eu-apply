@@ -3707,6 +3707,81 @@ h4 {
   overflow-wrap: anywhere;
 }
 
+.admin-log-stream {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-log-stream li {
+  display: grid;
+  grid-template-columns: 170px minmax(160px, 1fr) auto;
+  gap: 6px 10px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 10px;
+}
+
+.admin-log-stream time,
+.admin-log-stream small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-log-stream strong {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.admin-log-stream p {
+  grid-column: 2 / -1;
+  margin: 0;
+  color: var(--text);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.admin-log-stream small {
+  grid-column: 1 / 2;
+  grid-row: 2;
+  text-transform: uppercase;
+}
+
+.admin-log-severity {
+  justify-self: end;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.admin-log-severity.healthy {
+  border-color: #b7ddca;
+  background: #edf8f2;
+  color: var(--green);
+}
+
+.admin-log-severity.warning {
+  border-color: #efd1a3;
+  background: #fff6e8;
+  color: var(--amber);
+}
+
+.admin-log-severity.critical {
+  border-color: #edc2c8;
+  background: #fff1f3;
+  color: var(--red);
+}
+
 .admin-login-shell {
   display: grid;
   min-height: 100vh;
@@ -3978,6 +4053,7 @@ h4 {
   .admin-command-strip,
   .admin-console-grid,
   .admin-login-panel,
+  .admin-log-stream li,
   .admin-health-grid,
   .admin-metric-grid,
   .admin-config-grid,

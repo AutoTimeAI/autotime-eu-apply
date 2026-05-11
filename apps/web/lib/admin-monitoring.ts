@@ -52,6 +52,13 @@ export type AdminOverview = {
     sourceSurface: string
     userId: string
   }>
+  logs: Array<{
+    area: string
+    event: string
+    message: string
+    severity: StatusTone | "info"
+    timestamp: string
+  }>
   warnings: string[]
 }
 
@@ -87,6 +94,75 @@ async function getTableCount(table: Parameters<ReturnType<typeof createAdminClie
 
 function formatLatency(startedAt: number): string {
   return `${Date.now() - startedAt}ms`
+}
+
+function buildAdminLogs({
+  checkedAt,
+  health,
+  recentAiUsage,
+  recentExtensionConnections,
+  recentSyncEvents,
+  warnings
+}: {
+  checkedAt: string
+  health: HealthCard[]
+  recentAiUsage: AdminOverview["recentAiUsage"]
+  recentExtensionConnections: AdminOverview["recentExtensionConnections"]
+  recentSyncEvents: AdminOverview["recentSyncEvents"]
+  warnings: string[]
+}): AdminOverview["logs"] {
+  const warningLogs = warnings.map((warning, index) => ({
+    area: "admin",
+    event: "admin-query-warning",
+    message: warning,
+    severity: "warning" as const,
+    timestamp: new Date(Date.now() - index).toISOString()
+  }))
+  const healthLogs = health.map((item, index) => ({
+    area: "health",
+    event: item.label,
+    message: item.detail,
+    severity: item.status,
+    timestamp: new Date(Date.parse(checkedAt) - index).toISOString()
+  }))
+  const extensionLogs = recentExtensionConnections.map((item) => ({
+    area: "extension",
+    event: item.revokedAt ? "extension-revoked" : "extension-connected",
+    message: item.revokedAt
+      ? "Extension connection is revoked."
+      : item.lastSyncedAt
+        ? "Extension connected and sync timestamp exists."
+        : "Extension connected; no sync timestamp yet.",
+    severity: item.revokedAt ? ("warning" as const) : ("healthy" as const),
+    timestamp: item.revokedAt ?? item.lastSyncedAt ?? item.lastConnectedAt
+  }))
+  const syncLogs = recentSyncEvents.map((item) => ({
+    area: "sync",
+    event: `${item.entityType}.${item.action}`,
+    message: item.message,
+    severity: "info" as const,
+    timestamp: item.createdAt
+  }))
+  const aiLogs = recentAiUsage.map((item) => ({
+    area: "ai",
+    event: item.feature,
+    message: `${item.model} used ${item.tokens} tokens.`,
+    severity: "info" as const,
+    timestamp: item.createdAt
+  }))
+
+  return [
+    ...warningLogs,
+    ...healthLogs,
+    ...extensionLogs,
+    ...syncLogs,
+    ...aiLogs
+  ]
+    .sort(
+      (left, right) =>
+        Date.parse(right.timestamp) - Date.parse(left.timestamp)
+    )
+    .slice(0, 30)
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
@@ -216,45 +292,56 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     (item) => !item.revokedAt
   ).length
 
+  const health: HealthCard[] = [
+    {
+      detail: requiredEnvReady
+        ? "Required runtime variables are configured."
+        : "One or more required runtime variables are missing.",
+      label: "Web runtime",
+      status: requiredEnvReady ? "healthy" : "critical",
+      value: requiredEnvReady ? "Ready" : "Missing config"
+    },
+    {
+      detail: dbProbe.error
+        ? dbProbe.error
+        : `Service role database probe completed in ${dbProbe.data}.`,
+      label: "Database",
+      status: dbProbe.error ? "critical" : "healthy",
+      value: dbProbe.error ? "Failed" : "Reachable"
+    },
+    {
+      detail:
+        activeExtensionConnections > 0
+          ? "At least one active extension connection exists."
+          : "No active extension connections have been recorded yet.",
+      label: "Extension",
+      status: activeExtensionConnections > 0 ? "healthy" : "warning",
+      value: `${activeExtensionConnections} active`
+    },
+    {
+      detail: "Connection events and failure meanings are loaded from config.",
+      label: "Monitoring config",
+      status: "healthy",
+      value: extensionConnectionConfig.flowId
+    }
+  ]
+  const checkedAt = new Date().toISOString()
+
   return {
-    checkedAt: new Date().toISOString(),
+    checkedAt,
     config: {
       extensionConnection: extensionConnectionConfig
     },
     counts: counts.data,
-    health: [
-      {
-        detail: requiredEnvReady
-          ? "Required runtime variables are configured."
-          : "One or more required runtime variables are missing.",
-        label: "Web runtime",
-        status: requiredEnvReady ? "healthy" : "critical",
-        value: requiredEnvReady ? "Ready" : "Missing config"
-      },
-      {
-        detail: dbProbe.error
-          ? dbProbe.error
-          : `Service role database probe completed in ${dbProbe.data}.`,
-        label: "Database",
-        status: dbProbe.error ? "critical" : "healthy",
-        value: dbProbe.error ? "Failed" : "Reachable"
-      },
-      {
-        detail:
-          activeExtensionConnections > 0
-            ? "At least one active extension connection exists."
-            : "No active extension connections have been recorded yet.",
-        label: "Extension",
-        status: activeExtensionConnections > 0 ? "healthy" : "warning",
-        value: `${activeExtensionConnections} active`
-      },
-      {
-        detail: "Connection events and failure meanings are loaded from config.",
-        label: "Monitoring config",
-        status: "healthy",
-        value: extensionConnectionConfig.flowId
-      }
-    ],
+    health,
+    logs: buildAdminLogs({
+      checkedAt,
+      health,
+      recentAiUsage: recentAiUsage.data,
+      recentExtensionConnections: recentExtensionConnections.data,
+      recentSyncEvents: recentSyncEvents.data,
+      warnings
+    }),
     recentAiUsage: recentAiUsage.data,
     recentExtensionConnections: recentExtensionConnections.data,
     recentSyncEvents: recentSyncEvents.data,

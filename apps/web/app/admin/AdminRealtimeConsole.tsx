@@ -45,6 +45,14 @@ function getCount(overview: AdminOverview, label: string) {
   return overview.counts.find((item) => item.label === label)?.value ?? 0
 }
 
+function getSeverityLabel(severity: AdminOverview["logs"][number]["severity"]) {
+  if (severity === "healthy") {
+    return "success"
+  }
+
+  return severity
+}
+
 export function AdminRealtimeConsole({
   initialOverview
 }: {
@@ -281,6 +289,35 @@ export function AdminRealtimeConsole({
               </tbody>
             </table>
           </div>
+        </article>
+
+        <article className="admin-console-panel wide">
+          <div className="admin-panel-heading">
+            <div>
+              <p className="eyebrow">Logs</p>
+              <h2>Live event stream</h2>
+            </div>
+            <span>{overview.logs.length} entries</span>
+          </div>
+          <ol className="admin-log-stream">
+            {overview.logs.map((entry) => (
+              <li key={`${entry.area}-${entry.event}-${entry.timestamp}`}>
+                <time>{formatDate(entry.timestamp)}</time>
+                <strong>{entry.event}</strong>
+                <span className={`admin-log-severity ${entry.severity}`}>
+                  {getSeverityLabel(entry.severity)}
+                </span>
+                <p>{entry.message}</p>
+                <small>{entry.area}</small>
+              </li>
+            ))}
+            {overview.logs.length === 0 ? (
+              <li>
+                <strong>No logs yet</strong>
+                <p>Admin access active.</p>
+              </li>
+            ) : null}
+          </ol>
         </article>
 
         <article className="admin-console-panel">
