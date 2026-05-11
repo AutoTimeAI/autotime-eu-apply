@@ -1367,12 +1367,24 @@ function getWidgetMarkup({
         cursor: pointer;
       }
 
-      .header-track-button {
-        min-width: 86px;
+      .header-action-button {
+        min-width: 74px;
         min-height: 30px;
-        padding: 0 12px;
+        padding: 0 10px;
         box-shadow: 0 5px 12px rgba(0, 108, 103, 0.18);
-        font-size: 11px;
+        font-size: 10.5px;
+      }
+
+      .header-dashboard-button {
+        border-color: #bdd4dc;
+        background: #ffffff;
+        box-shadow: none;
+        color: #075c59;
+      }
+
+      .header-dashboard-button:hover {
+        border-color: #007c78;
+        background: #edf8f7;
       }
 
       .launcher-logo:hover,
@@ -1580,18 +1592,6 @@ function getWidgetMarkup({
         white-space: pre-wrap;
       }
 
-      .action {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        align-items: center;
-        gap: 8px;
-        position: relative;
-        z-index: 2;
-        padding: 8px 12px 12px;
-        border-top: 1px solid #bdd4dc;
-        background: rgba(255, 255, 255, 0.92);
-      }
-
       button {
         min-width: 116px;
         min-height: 36px;
@@ -1643,21 +1643,6 @@ function getWidgetMarkup({
         color: #06162f;
       }
 
-      .dashboard-button {
-        width: 100%;
-        min-width: 0;
-        min-height: 34px;
-        border-color: #bdd4dc;
-        background: #ffffff;
-        box-shadow: none;
-        color: #075c59;
-      }
-
-      .dashboard-button:hover {
-        border-color: #007c78;
-        background: #edf8f7;
-      }
-
       .resize-handle {
         position: absolute;
         right: 0;
@@ -1683,14 +1668,9 @@ function getWidgetMarkup({
           grid-template-columns: minmax(0, 1fr);
         }
 
-        .action {
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .action button {
-          width: 100%;
+        .header-action-button {
           min-width: 0;
-          padding: 0 10px;
+          padding: 0 8px;
         }
       }
     </style>
@@ -1704,7 +1684,8 @@ function getWidgetMarkup({
           <span>Drag to move</span>
         </div>
         <div class="window-controls" aria-label="Widget controls">
-          <button class="header-track-button" data-autotime-track-job type="button">TRACK JOB</button>
+          <button class="header-action-button" data-autotime-track-job type="button">TRACK JOB</button>
+          <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard type="button">DASHBOARD</button>
           <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
         </div>
       </div>
@@ -1753,9 +1734,6 @@ function getWidgetMarkup({
             <div class="detail-row description-row"><dt>Description</dt><dd><span>${escapeHtml(description)}</span>${descriptionText ? `<div class="description-body">${escapeHtml(descriptionText)}</div>` : ""}</dd></div>
           </dl>
         </aside>
-      </div>
-      <div class="action">
-        <button class="dashboard-button" data-autotime-open-dashboard type="button">OPEN DASHBOARD</button>
       </div>
       <button class="resize-handle" data-autotime-resize-widget type="button" title="Resize widget" aria-label="Resize widget"></button>
     </section>
