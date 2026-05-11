@@ -28,6 +28,19 @@ type ExternalResponse = {
   version?: string
 }
 
+type InternalMessage = {
+  applications?: unknown
+  type?: unknown
+}
+
+type InternalResponse = {
+  connected?: boolean
+  error?: string
+  ok: boolean
+  reason?: string
+  synced?: boolean
+}
+
 function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
   if (!sender.url) {
     return false
@@ -220,6 +233,74 @@ export default defineBackground(() => {
   chrome.action.onClicked.addListener((tab) => {
     void showWidgetInTab(tab)
   })
+
+  chrome.runtime.onMessage.addListener(
+    (
+      message: InternalMessage,
+      _sender,
+      sendResponse: (response: InternalResponse) => void
+    ) => {
+      if (message?.type !== "AUTOTIME_SYNC_APPLICATIONS") {
+        return false
+      }
+
+      void (async () => {
+        const applications = Array.isArray(message.applications)
+          ? (message.applications as ApplicationRecord[])
+          : await getApplications()
+        const applicationIds = applications.map((application) => application.id)
+        const session = await getAccountSession()
+
+        if (!session?.authToken.trim()) {
+          await updateApplicationSyncState(applicationIds, "pending")
+          await logDiagnosticEvent({
+            area: "sync",
+            event: "widget-sync-skipped-unconnected",
+            message: "Widget sync skipped because no dashboard session exists.",
+            status: "info",
+            details: { applicationCount: applications.length }
+          })
+          sendResponse({
+            connected: false,
+            ok: true,
+            reason: "Click CONNECT to sync to dashboard",
+            synced: false
+          })
+          return
+        }
+
+        const syncError = await syncApplicationsWithState({
+          applications,
+          completedEvent: "widget-sync-completed",
+          failedEvent: "widget-sync-failed",
+          session,
+          startedEvent: "widget-sync-started"
+        })
+
+        sendResponse({
+          connected: true,
+          ok: true,
+          reason: syncError ? `Dashboard sync failed: ${syncError}` : undefined,
+          synced: !syncError
+        })
+      })().catch((error: unknown) => {
+        void logDiagnosticEvent({
+          area: "sync",
+          event: "widget-sync-unexpected-failed",
+          message: getErrorMessage(error),
+          status: "error"
+        })
+        sendResponse({
+          error: getErrorMessage(error),
+          ok: false,
+          reason: `Dashboard sync failed: ${getErrorMessage(error)}`,
+          synced: false
+        })
+      })
+
+      return true
+    }
+  )
 
   chrome.runtime.onInstalled.addListener(() => {
     void retryPendingApplicationSync("installed")

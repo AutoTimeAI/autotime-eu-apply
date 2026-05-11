@@ -6,7 +6,6 @@ import {
   getProfile,
   getReusableAnswers,
   saveApplication,
-  updateApplicationSyncState,
   type AccountSession,
   type ApplicationRecord
 } from "../lib/storage"
@@ -22,7 +21,6 @@ import {
   type JobPlatform
 } from "../lib/job-page"
 import { hasApplicationWithUrl } from "../lib/applications"
-import { syncApplicationsToDashboard } from "../lib/cloud-sync"
 import { appUrl } from "../lib/openai"
 import {
   canFillInput,
@@ -287,17 +285,58 @@ function formatSyncFailureMessage(reason: string) {
   return `Dashboard sync failed: ${reason}`
 }
 
+type BackgroundSyncResponse = {
+  connected?: boolean
+  error?: string
+  ok: boolean
+  reason?: string
+  synced?: boolean
+}
+
+function sendApplicationsToBackgroundSync(
+  applications: ApplicationRecord[]
+): Promise<BackgroundSyncResponse> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(
+      {
+        applications,
+        type: "AUTOTIME_SYNC_APPLICATIONS"
+      },
+      (response?: BackgroundSyncResponse) => {
+        if (chrome.runtime.lastError) {
+          resolve({
+            ok: false,
+            reason: formatSyncFailureMessage(
+              chrome.runtime.lastError.message ??
+                "Extension background sync could not be reached."
+            ),
+            synced: false
+          })
+          return
+        }
+
+        resolve(
+          response ?? {
+            ok: false,
+            reason: formatSyncFailureMessage(
+              "Extension background sync did not respond."
+            ),
+            synced: false
+          }
+        )
+      }
+    )
+  })
+}
+
 async function syncTrackedApplicationsToDashboard(
   applications: ApplicationRecord[]
 ) {
   const session = await getAccountSession()
-  const applicationIds = applications.map((application) => application.id)
-
-  await updateApplicationSyncState(applicationIds, "pending")
   void logDiagnosticEvent({
     area: "sync",
-    event: "track-job-sync-pending",
-    message: "Tracked jobs marked pending before dashboard sync.",
+    event: "track-job-sync-requested",
+    message: "Widget requested dashboard sync through the background worker.",
     status: "info",
     details: { applicationCount: applications.length }
   })
@@ -310,12 +349,19 @@ async function syncTrackedApplicationsToDashboard(
   }
 
   try {
-    await syncApplicationsToDashboard({
-      applications,
-      reusableAnswers: await getReusableAnswers(),
-      session
-    })
-    await updateApplicationSyncState(applicationIds, "synced")
+    const response = await sendApplicationsToBackgroundSync(applications)
+
+    if (!response.synced) {
+      return {
+        connected: response.connected ?? Boolean(session?.authToken.trim()),
+        reason:
+          response.reason ??
+          response.error ??
+          formatSyncFailureMessage("Extension background sync failed."),
+        synced: false
+      }
+    }
+
     void logDiagnosticEvent({
       area: "sync",
       event: "track-job-sync-completed",
@@ -323,10 +369,9 @@ async function syncTrackedApplicationsToDashboard(
       status: "success",
       details: { applicationCount: applications.length }
     })
-    return { synced: true }
+    return { connected: true, synced: true }
   } catch (error: unknown) {
     const reason = formatSyncFailureMessage(getErrorMessage(error))
-    await updateApplicationSyncState(applicationIds, "failed", { error: reason })
     void logDiagnosticEvent({
       area: "sync",
       event: "track-job-sync-failed",
@@ -335,6 +380,7 @@ async function syncTrackedApplicationsToDashboard(
       details: { applicationCount: applications.length }
     })
     return {
+      connected: Boolean(session?.authToken.trim()),
       reason,
       synced: false
     }
@@ -1302,10 +1348,16 @@ function getWidgetMarkup({
     ? "Please wait while AutoTime saves this role."
     : normalizedStatus.includes("synced to dashboard")
       ? "Saved roles appear in the AutoTime dashboard tracker."
+      : normalizedStatus.includes("dashboard sync failed")
+        ? isDashboardConnected
+          ? "Dashboard account is connected, but the sync request failed. Retry Track Job or check extension logs."
+          : "Use the CONNECT button in this widget to link your dashboard account."
       : normalizedStatus.includes("saved locally") ||
           normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
-        ? "Use the CONNECT button in this widget to link your dashboard account."
+        ? isDashboardConnected
+          ? "Saved locally in the extension. Retry Track Job to sync this role to the dashboard."
+          : "Use the CONNECT button in this widget to link your dashboard account."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
           : "Check the visible job page and try again."
