@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { createBrowserClient } from "../lib/supabase/client"
 
 type AccountMeResponse = {
@@ -119,7 +119,9 @@ export default function ExtensionConnect() {
   const [status, setStatus] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
 
-  async function handleConnect() {
+  const connectAttemptedRef = useRef(false)
+
+  const handleConnect = useCallback(async () => {
     try {
       setIsPending(true)
       setStatus(null)
@@ -168,7 +170,16 @@ export default function ExtensionConnect() {
     } finally {
       setIsPending(false)
     }
-  }
+  }, [extensionId])
+
+  useEffect(() => {
+    if (connectAttemptedRef.current || !extensionId.trim()) {
+      return
+    }
+
+    connectAttemptedRef.current = true
+    void handleConnect()
+  }, [extensionId, handleConnect])
 
   return (
     <section className="market-context-panel">
