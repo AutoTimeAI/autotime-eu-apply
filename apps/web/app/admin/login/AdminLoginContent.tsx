@@ -5,8 +5,6 @@ import { Suspense, useState } from "react"
 import { publicEnv } from "../../../lib/env"
 import { createBrowserClient } from "../../../lib/supabase/client"
 
-type OAuthProvider = "github" | "google"
-
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
@@ -18,7 +16,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
   const [status, setStatus] = useState<string | null>(initialStatus)
   const redirectTo = searchParams.get("redirectTo") || "/admin"
 
-  const handleSignIn = async (provider: OAuthProvider) => {
+  const handleSignIn = async () => {
     try {
       setStatus(null)
 
@@ -30,7 +28,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
       callbackUrl.searchParams.set("redirectTo", redirectTo)
 
       const { error } = await supabase.auth.signInWithOAuth({
-        provider,
+        provider: "google",
         options: {
           redirectTo: callbackUrl.toString()
         }
@@ -85,13 +83,9 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
           </div>
 
           <div className="admin-login-actions">
-            <button type="button" onClick={() => handleSignIn("github")}>
-              Continue with GitHub
-            </button>
             <button
-              className="secondary-button"
               type="button"
-              onClick={() => handleSignIn("google")}
+              onClick={handleSignIn}
             >
               Continue with Google
             </button>
