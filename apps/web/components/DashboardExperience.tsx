@@ -3106,6 +3106,7 @@ export default function HomePage({
   }
 
   const syncProfileToCloud = async () => {
+    setCloudSyncConsent(true)
     const action = prepareProfileSyncAction({
       readiness: cloudSyncReadiness,
       session: {
@@ -3116,7 +3117,7 @@ export default function HomePage({
       },
       profile: state.profile,
       explicitUserAction: true,
-      consentGranted: cloudSyncConsent
+      consentGranted: true
     })
 
     if (!action.ready) {
