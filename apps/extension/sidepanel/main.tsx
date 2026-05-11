@@ -27,6 +27,7 @@ import {
   deleteApplication,
   getAccountSession,
   getAIUsageLog,
+  getApplicationSyncState,
   getApplications,
   getApplicationContentDraft,
   getDiagnosticLog,
@@ -42,8 +43,10 @@ import {
   logAIUsage,
   logDiagnosticEvent,
   type AIUsageLogEntry,
+  type ApplicationSyncState,
   type DiagnosticLogEntry,
   updateApplication,
+  updateApplicationSyncState,
   type AccountSession,
   type ApplicationRecord,
   type ApplicationContentSnapshot,
@@ -217,6 +220,9 @@ function SidePanelApp() {
   const [savedTrackerDraft, setSavedTrackerDraft] =
     useState<TrackerDraft | null>(null)
   const [applications, setApplications] = useState<ApplicationRecord[]>([])
+  const [applicationSyncState, setApplicationSyncState] = useState<
+    Record<string, ApplicationSyncState>
+  >({})
   const [aiUsageLog, setAIUsageLog] = useState<AIUsageLogEntry[]>([])
   const [diagnosticLog, setDiagnosticLog] = useState<DiagnosticLogEntry[]>([])
   const [accountSession, setAccountSession] = useState<AccountSession | null>(
@@ -306,6 +312,7 @@ function SidePanelApp() {
   const loadApplications = async () => {
     const savedApplications = await getApplications()
     setApplications(savedApplications)
+    setApplicationSyncState(await getApplicationSyncState())
   }
 
   const loadAIUsageLog = async () => {
@@ -371,6 +378,13 @@ function SidePanelApp() {
 
       if (areaName === "local" && changes["diagnostic-log"]) {
         void loadDiagnosticLog()
+      }
+
+      if (
+        areaName === "local" &&
+        (changes["application-sync-state"] || changes["saved-applications"])
+      ) {
+        void loadApplications()
       }
     }
 
@@ -582,6 +596,60 @@ function SidePanelApp() {
     return detectJobPageFromTab(activeTab)
   }
 
+  const syncApplicationListToDashboard = async (
+    applicationsToSync: ApplicationRecord[]
+  ) => {
+    const applicationIds = applicationsToSync.map((application) => application.id)
+
+    if (!accountSession?.authToken.trim()) {
+      await updateApplicationSyncState(applicationIds, "pending")
+      setApplicationSyncState(await getApplicationSyncState())
+      return {
+        reason: "Sign in to sync to dashboard.",
+        synced: false
+      }
+    }
+
+    await updateApplicationSyncState(applicationIds, "pending")
+    setApplicationSyncState(await getApplicationSyncState())
+
+    try {
+      await syncApplicationsToDashboard({
+        applications: applicationsToSync,
+        reusableAnswers: savedReusableAnswers ?? reusableAnswers,
+        session: accountSession
+      })
+      await updateApplicationSyncState(applicationIds, "synced")
+      setApplicationSyncState(await getApplicationSyncState())
+      return { synced: true }
+    } catch (error: unknown) {
+      const reason =
+        error instanceof Error ? error.message : "Dashboard sync failed"
+      await updateApplicationSyncState(applicationIds, "failed", { error: reason })
+      setApplicationSyncState(await getApplicationSyncState())
+      return {
+        reason,
+        synced: false
+      }
+    }
+  }
+
+  const retryApplicationSync = async () => {
+    if (applications.length === 0) {
+      setApplicationsStatus("No applications to sync")
+      setTimeout(() => setApplicationsStatus(""), 2500)
+      return
+    }
+
+    const result = await syncApplicationListToDashboard(applications)
+    setApplicationsStatus(
+      result.synced
+        ? "Tracked jobs synced to dashboard"
+        : `Saved locally. ${result.reason}`
+    )
+    setTimeout(() => setApplicationsStatus(""), 4500)
+  }
+
   const saveCurrentTabAsApplication = async () => {
     const tabs = await chrome.tabs.query({
       active: true,
@@ -603,28 +671,12 @@ function SidePanelApp() {
 
     if (hasApplicationWithUrl(applications, details.url)) {
       setTrackedJobDetails(details)
-      if (!accountSession?.authToken.trim()) {
-        setApplicationsStatus(
-          "This job is already saved locally. Use Account > Sign in to sync to dashboard."
-        )
-        setTimeout(() => setApplicationsStatus(""), 4500)
-        return
-      }
-
-      try {
-        await syncApplicationsToDashboard({
-          applications,
-          reusableAnswers: savedReusableAnswers ?? reusableAnswers,
-          session: accountSession
-        })
-        setApplicationsStatus("This job is already tracked and synced to dashboard")
-      } catch (error: unknown) {
-        setApplicationsStatus(
-          error instanceof Error
-            ? "This job is already saved locally. Dashboard sync failed."
-            : "This job is already tracked. Dashboard sync failed."
-        )
-      }
+      const syncResult = await syncApplicationListToDashboard(applications)
+      setApplicationsStatus(
+        syncResult.synced
+          ? "This job is already tracked and synced to dashboard"
+          : `This job is already saved locally. ${syncResult.reason}`
+      )
       setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }
@@ -649,30 +701,15 @@ function SidePanelApp() {
 
     await saveApplication(record)
     setTrackedJobDetails(details)
-    setApplications((current) => [record, ...current])
+    const updatedApplications = [record, ...applications]
+    setApplications(updatedApplications)
 
-    if (!accountSession?.authToken.trim()) {
-      setApplicationsStatus(
-        "Job saved locally. Use Account > Sign in to sync to dashboard."
-      )
-      setTimeout(() => setApplicationsStatus(""), 4500)
-      return
-    }
-
-    try {
-      await syncApplicationsToDashboard({
-        applications: [record, ...applications],
-        reusableAnswers: savedReusableAnswers ?? reusableAnswers,
-        session: accountSession
-      })
-      setApplicationsStatus("Job tracked and synced to dashboard")
-    } catch (error: unknown) {
-      setApplicationsStatus(
-        error instanceof Error
-          ? "Job saved locally. Dashboard sync failed."
-          : "Job tracked in extension. Dashboard sync failed."
-      )
-    }
+    const syncResult = await syncApplicationListToDashboard(updatedApplications)
+    setApplicationsStatus(
+      syncResult.synced
+        ? "Job tracked and synced to dashboard"
+        : `Job saved locally. ${syncResult.reason}`
+    )
 
     setTimeout(() => setApplicationsStatus(""), 4500)
   }
@@ -1424,6 +1461,7 @@ function SidePanelApp() {
       ) : activeSection === "applications" ? (
         <ApplicationsSection
           applications={applications}
+          applicationSyncState={applicationSyncState}
           searchQuery={applicationSearchQuery}
           status={applicationsStatus}
           statusFilter={applicationStatusFilter}
@@ -1434,6 +1472,7 @@ function SidePanelApp() {
           onExportV2Dashboard={exportV2Dashboard}
           onSaveCurrentTab={saveCurrentTabAsApplication}
           onSearchQueryChange={setApplicationSearchQuery}
+          onSyncApplications={retryApplicationSync}
           onStatusFilterChange={setApplicationStatusFilter}
           onUpdateApplication={updateSavedApplication}
         />

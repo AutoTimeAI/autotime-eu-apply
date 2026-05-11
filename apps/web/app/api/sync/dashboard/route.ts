@@ -40,6 +40,8 @@ type DashboardReadData = {
   >
 }
 
+type SourceSurface = Database["public"]["Tables"]["sync_events"]["Insert"]["source_surface"]
+
 const dashboardWorkflowSchema = companionDashboardStateSchema.pick({
   reusableAnswers: true,
   applications: true,
@@ -68,7 +70,8 @@ function dateToNull(value: string | undefined): string | null {
 
 function mapReusableAnswersToRow(
   userId: string,
-  answers: ReusableAnswers
+  answers: ReusableAnswers,
+  sourceSurface: SourceSurface
 ): Database["public"]["Tables"]["reusable_answers"]["Insert"] {
   return {
     user_id: userId,
@@ -80,14 +83,15 @@ function mapReusableAnswersToRow(
     motivation_answer: answers.motivationAnswer,
     strengths_answer: answers.strengthsAnswer,
     availability_answer: answers.availabilityAnswer,
-    source_surface: "web",
+    source_surface: sourceSurface,
     schema_version: 1
   }
 }
 
 function mapApplicationToRow(
   userId: string,
-  application: ApplicationRecord
+  application: ApplicationRecord,
+  sourceSurface: SourceSurface
 ): Database["public"]["Tables"]["applications"]["Insert"] {
   return {
     id: application.id,
@@ -107,7 +111,7 @@ function mapApplicationToRow(
     content_gate: application.contentGate ?? null,
     content_snapshot: application.contentSnapshot ?? null,
     job_snapshot: null,
-    source_surface: "web",
+    source_surface: sourceSurface,
     schema_version: 1,
     created_at: application.createdAt
   }
@@ -166,7 +170,8 @@ function mapOutcomeToRow(
 
 function mapPrepPackToRow(
   userId: string,
-  pack: InterviewPrepPack
+  pack: InterviewPrepPack,
+  sourceSurface: SourceSurface
 ): Database["public"]["Tables"]["interview_prep_packs"]["Insert"] {
   return {
     id: pack.id,
@@ -181,11 +186,84 @@ function mapPrepPackToRow(
     skills_to_revise: pack.skillsToRevise,
     questions_to_ask_employer: pack.questionsToAskEmployer,
     final_prep_checklist: pack.finalPrepChecklist,
-    source_surface: "web",
+    source_surface: sourceSurface,
     schema_version: 1,
     created_at: pack.createdAt,
     updated_at: pack.updatedAt
   }
+}
+
+function getSourceSurface(request: NextRequest): SourceSurface {
+  return request.headers.get("x-autotime-source") === "extension"
+    ? "extension"
+    : "web"
+}
+
+function mapSyncEvents({
+  payload,
+  sourceSurface,
+  userId
+}: {
+  payload: DashboardWorkflowPayload
+  sourceSurface: SourceSurface
+  userId: string
+}): Database["public"]["Tables"]["sync_events"]["Insert"][] {
+  const events: Database["public"]["Tables"]["sync_events"]["Insert"][] = [
+    {
+      action: "updated",
+      entity_id: userId,
+      entity_type: "reusable_answers",
+      message: "Reusable answers synced to dashboard.",
+      source_surface: sourceSurface,
+      user_id: userId
+    }
+  ]
+
+  for (const application of payload.applications) {
+    events.push({
+      action: "updated",
+      entity_id: application.id,
+      entity_type: "application",
+      message: "Application synced to dashboard.",
+      source_surface: sourceSurface,
+      user_id: userId
+    })
+  }
+
+  for (const record of payload.evidenceRecords ?? []) {
+    events.push({
+      action: "updated",
+      entity_id: record.id,
+      entity_type: "evidence_record",
+      message: "Evidence record synced to dashboard.",
+      source_surface: sourceSurface,
+      user_id: userId
+    })
+  }
+
+  for (const record of payload.outcomeRecords ?? []) {
+    events.push({
+      action: "updated",
+      entity_id: record.id,
+      entity_type: "outcome_record",
+      message: "Outcome record synced to dashboard.",
+      source_surface: sourceSurface,
+      user_id: userId
+    })
+  }
+
+  for (const pack of payload.interviewPrepPacks ?? []) {
+    events.push({
+      action: "updated",
+      entity_id: pack.id,
+      entity_type: "interview_prep_pack",
+      message: "Interview prep pack synced to dashboard.",
+      source_surface: sourceSurface,
+      user_id: userId
+    })
+  }
+
+  return events
 }
 
 function rowToReusableAnswers(
@@ -421,32 +499,18 @@ export async function POST(
 
     const payload = dashboardWorkflowSchema.parse(await request.json())
     const supabase = createAdminClient()
-
-    const deleteSteps = [
-      await supabase.from("interview_prep_packs").delete().eq("user_id", auth.user.id),
-      await supabase.from("evidence_records").delete().eq("user_id", auth.user.id),
-      await supabase.from("outcome_records").delete().eq("user_id", auth.user.id),
-      await supabase.from("applications").delete().eq("user_id", auth.user.id)
-    ]
-    const deleteError = deleteSteps.map((step) => step.error).find(Boolean)
-
-    if (deleteError) {
-      return diagnosticJson({
-        area: "sync",
-        code: "sync.dashboard.delete.failed",
-        data: null,
-        error: deleteError.message,
-        log: true,
-        request,
-        status: 500
-      })
-    }
+    const sourceSurface = getSourceSurface(request)
 
     const reusableAnswersResult = await supabase
       .from("reusable_answers")
-      .upsert(mapReusableAnswersToRow(auth.user.id, payload.reusableAnswers), {
-        onConflict: "user_id"
-      })
+      .upsert(
+        mapReusableAnswersToRow(
+          auth.user.id,
+          payload.reusableAnswers,
+          sourceSurface
+        ),
+        { onConflict: "user_id" }
+      )
 
     if (reusableAnswersResult.error) {
       return diagnosticJson({
@@ -463,7 +527,12 @@ export async function POST(
     if (payload.applications.length) {
       const { error } = await supabase
         .from("applications")
-        .insert(payload.applications.map((item) => mapApplicationToRow(auth.user.id, item)))
+        .upsert(
+          payload.applications.map((item) =>
+            mapApplicationToRow(auth.user.id, item, sourceSurface)
+          ),
+          { onConflict: "id" }
+        )
 
       if (error) {
         return diagnosticJson({
@@ -481,7 +550,12 @@ export async function POST(
     if (payload.evidenceRecords?.length) {
       const { error } = await supabase
         .from("evidence_records")
-        .insert(payload.evidenceRecords.map((item) => mapEvidenceToRow(auth.user.id, item)))
+        .upsert(
+          payload.evidenceRecords.map((item) =>
+            mapEvidenceToRow(auth.user.id, item)
+          ),
+          { onConflict: "id" }
+        )
 
       if (error) {
         return diagnosticJson({
@@ -499,7 +573,12 @@ export async function POST(
     if (payload.outcomeRecords?.length) {
       const { error } = await supabase
         .from("outcome_records")
-        .insert(payload.outcomeRecords.map((item) => mapOutcomeToRow(auth.user.id, item)))
+        .upsert(
+          payload.outcomeRecords.map((item) =>
+            mapOutcomeToRow(auth.user.id, item)
+          ),
+          { onConflict: "user_id,application_id" }
+        )
 
       if (error) {
         return diagnosticJson({
@@ -517,12 +596,39 @@ export async function POST(
     if (payload.interviewPrepPacks.length) {
       const { error } = await supabase
         .from("interview_prep_packs")
-        .insert(payload.interviewPrepPacks.map((item) => mapPrepPackToRow(auth.user.id, item)))
+        .upsert(
+          payload.interviewPrepPacks.map((item) =>
+            mapPrepPackToRow(auth.user.id, item, sourceSurface)
+          ),
+          { onConflict: "user_id,application_id" }
+        )
 
       if (error) {
         return diagnosticJson({
           area: "sync",
           code: "sync.dashboard.prep.failed",
+          data: null,
+          error: error.message,
+          log: true,
+          request,
+          status: 500
+        })
+      }
+    }
+
+    const syncEvents = mapSyncEvents({
+      payload,
+      sourceSurface,
+      userId: auth.user.id
+    })
+
+    if (syncEvents.length) {
+      const { error } = await supabase.from("sync_events").insert(syncEvents)
+
+      if (error) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.events.failed",
           data: null,
           error: error.message,
           log: true,

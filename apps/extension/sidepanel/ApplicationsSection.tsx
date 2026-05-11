@@ -1,6 +1,10 @@
 import type { Ref } from "react"
 import type { ApplicationStatusFilter } from "../lib/applications"
-import type { ApplicationRecord, ApplicationStatus } from "../lib/storage"
+import type {
+  ApplicationRecord,
+  ApplicationStatus,
+  ApplicationSyncState
+} from "../lib/storage"
 import { applicationStatuses } from "./constants"
 import { formatCreatedDate, getStatusClassName } from "./utils"
 
@@ -19,6 +23,7 @@ type ApplicationChanges = Partial<
 
 type ApplicationsSectionProps = {
   applications: ApplicationRecord[]
+  applicationSyncState: Record<string, ApplicationSyncState>
   searchQuery: string
   status: string
   statusFilter: ApplicationStatusFilter
@@ -29,12 +34,14 @@ type ApplicationsSectionProps = {
   onExportV2Dashboard: () => void
   onSaveCurrentTab: () => void
   onSearchQueryChange: (query: string) => void
+  onSyncApplications: () => void
   onStatusFilterChange: (statusFilter: ApplicationStatusFilter) => void
   onUpdateApplication: (id: string, changes: ApplicationChanges) => void
 }
 
 export function ApplicationsSection({
   applications,
+  applicationSyncState,
   searchQuery,
   status,
   statusFilter,
@@ -45,6 +52,7 @@ export function ApplicationsSection({
   onExportV2Dashboard,
   onSaveCurrentTab,
   onSearchQueryChange,
+  onSyncApplications,
   onStatusFilterChange,
   onUpdateApplication
 }: ApplicationsSectionProps) {
@@ -55,6 +63,9 @@ export function ApplicationsSection({
       <div className="application-actions">
         <button type="button" onClick={onSaveCurrentTab}>
           Save Current Tab
+        </button>
+        <button type="button" onClick={onSyncApplications}>
+          Sync Now
         </button>
         <button type="button" onClick={onExportApplications}>
           Export CSV
@@ -106,6 +117,24 @@ export function ApplicationsSection({
           {visibleApplications.map((application) => (
             <article className="application-record" key={application.id}>
               <div>
+                {(() => {
+                  const syncState = applicationSyncState[application.id]
+                  const label =
+                    syncState?.status === "synced"
+                      ? "Synced"
+                      : syncState?.status === "failed"
+                        ? "Sync failed"
+                        : "Saved locally"
+
+                  return (
+                    <span
+                      className={`plan-badge ${syncState?.status === "synced" ? "pro" : ""}`}
+                      title={syncState?.lastError ?? undefined}
+                    >
+                      {label}
+                    </span>
+                  )
+                })()}
                 <h3>{application.roleTitle || application.title}</h3>
                 {application.company && <p>{application.company}</p>}
                 <a href={application.url} target="_blank" rel="noreferrer">
