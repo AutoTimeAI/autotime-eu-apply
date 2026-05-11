@@ -43,7 +43,9 @@ export default async function AdminLoginPage({
   return (
     <AdminLoginContent
       initialStatus={
-        user
+        params?.adminDenied
+          ? "That Google account is not authorised for admin access. Use raj.analystdata@gmail.com or update AUTOTIME_ADMIN_EMAILS."
+          : user
           ? "This signed-in account is not listed in AUTOTIME_ADMIN_EMAILS."
           : null
       }

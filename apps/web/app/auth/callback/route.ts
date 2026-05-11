@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { isAdminUser } from "../../../lib/admin-access"
 import { sendWelcomeEmail } from "../../../lib/email"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
@@ -24,6 +25,17 @@ function getSafeRedirectPath(request: NextRequest): string {
   }
 
   return redirectTo
+}
+
+function isAdminRedirect(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/")
+}
+
+function getAdminDeniedRedirect(request: NextRequest): NextResponse {
+  const deniedUrl = new URL("/admin/login", request.url)
+  deniedUrl.searchParams.set("adminDenied", "1")
+
+  return NextResponse.redirect(deniedUrl)
 }
 
 async function ensureFreeSubscription(userId: string): Promise<boolean> {
@@ -138,15 +150,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return getErrorRedirect(request, "read-user", message)
     }
 
+    const redirectPath = getSafeRedirectPath(request)
+
+    if (isAdminRedirect(redirectPath) && !isAdminUser(user)) {
+      await supabase.auth.signOut()
+
+      return getAdminDeniedRedirect(request)
+    }
+
     await runFirstLoginSetup({
       email: user.email,
       name: getMetadataName(user.user_metadata) ?? getFallbackName(user.email),
       userId: user.id
     })
 
-    return NextResponse.redirect(
-      new URL(getSafeRedirectPath(request), request.url)
-    )
+    return NextResponse.redirect(new URL(redirectPath, request.url))
   } catch (error: unknown) {
     if (error instanceof Error) {
       logAuthCallbackError("session-exchange", error)

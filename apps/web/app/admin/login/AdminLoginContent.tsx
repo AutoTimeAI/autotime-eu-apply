@@ -77,8 +77,8 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
             <span className="admin-live-pill">Protected</span>
             <h2>Admin credentials</h2>
             <p>
-              Use the same OAuth provider as your admin email, then you will be
-              routed to the live operations panel.
+              Use Google with raj.analystdata@gmail.com. Other accounts are
+              rejected before the admin console opens.
             </p>
           </div>
 
