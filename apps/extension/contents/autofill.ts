@@ -11,11 +11,13 @@ import {
 import {
   extractJobPostingFromJsonLd,
   formatJobPageNotes,
+  getJobPlatform,
   getLinkedInCanonicalJobUrl,
   inferJobPageDetails,
   isLinkedInUrl,
   parseLinkedInPageTitle,
-  type JobPageDetails
+  type JobPageDetails,
+  type JobPlatform
 } from "../lib/job-page"
 import { hasApplicationWithUrl } from "../lib/applications"
 import { syncApplicationsToDashboard } from "../lib/cloud-sync"
@@ -43,6 +45,12 @@ type JobPageResponse = JobPageDetails & {
 }
 
 type TextControl = HTMLInputElement | HTMLTextAreaElement
+type PlatformSelectorHints = {
+  company: string[]
+  description: string[]
+  location: string[]
+  title: string[]
+}
 type StoredWidgetPlacement = {
   closed?: boolean
   height?: number
@@ -62,6 +70,12 @@ const minFullWidgetWidth = 360
 const minFullWidgetHeight = 300
 const minWidgetWidth = 64
 const minWidgetHeight = 64
+const emptyPlatformSelectorHints: PlatformSelectorHints = {
+  company: [],
+  description: [],
+  location: [],
+  title: []
+}
 let showAutotimeWidget: (() => void) | null = null
 let autoShowMonitorStarted = false
 const noJobDescriptionMessage =
@@ -416,6 +430,166 @@ function getJsonLdJobPosting() {
   return null
 }
 
+function getPlatformSelectorHints(platform: JobPlatform): PlatformSelectorHints {
+  switch (platform) {
+    case "Xing":
+      return {
+        title: ["[data-testid='job-title']", "[data-qa='job-title']", "h1"],
+        company: [
+          "[data-testid='company-name']",
+          "[data-qa='company-name']",
+          "a[href*='/pages/']"
+        ],
+        location: [
+          "[data-testid='job-location']",
+          "[data-testid='location']",
+          "[data-qa='job-location']"
+        ],
+        description: [
+          "[data-testid='job-description']",
+          "[data-qa='job-description']",
+          "[class*='job-description']",
+          "[class*='JobDescription']"
+        ]
+      }
+    case "WelcomeToTheJungle":
+      return {
+        title: ["[data-testid='job-title']", "h1"],
+        company: [
+          "[data-testid='company-name']",
+          "[data-testid='job-company-name']",
+          "a[href*='/companies/']"
+        ],
+        location: [
+          "[data-testid='job-location']",
+          "[data-testid='job-office-location']",
+          "[class*='JobLocation']"
+        ],
+        description: [
+          "[data-testid='job-description']",
+          "[data-testid='job-section-description']",
+          "[data-testid='job-profile']",
+          "[class*='JobDescription']"
+        ]
+      }
+    case "NationaleVacaturebank":
+      return {
+        title: [
+          "[data-testid='vacancy-title']",
+          "[data-testid='job-title']",
+          "h1"
+        ],
+        company: [
+          "[data-testid='company-name']",
+          ".vacancy-company",
+          ".vacature-company",
+          "[class*='company']"
+        ],
+        location: [
+          "[data-testid='job-location']",
+          "[data-testid='location']",
+          ".vacancy-location",
+          ".vacature-location"
+        ],
+        description: [
+          "[data-testid='vacancy-description']",
+          "[data-testid='job-description']",
+          ".vacancy-description",
+          ".vacature-description",
+          "[class*='vacancy-description']"
+        ]
+      }
+    case "InfoJobs":
+      return {
+        title: ["[data-testid='job-title']", "h1"],
+        company: [
+          "[data-testid='company-name']",
+          ".ij-OfferDetailHeader-companyName",
+          "a[href*='/empresa/']"
+        ],
+        location: [
+          "[data-testid='job-location']",
+          ".ij-OfferDetailHeader-location",
+          "[class*='location']"
+        ],
+        description: [
+          "[data-testid='job-description']",
+          ".ij-OfferDetailDescription",
+          "#prefijoDescripcion1",
+          "[class*='OfferDetailDescription']"
+        ]
+      }
+    case "Monster":
+      return {
+        title: [
+          "[data-testid='job-title']",
+          "[data-testid='svx-job-title']",
+          "h1"
+        ],
+        company: [
+          "[data-testid='company-name']",
+          "[data-testid='svx-company-name']",
+          ".company",
+          "[class*='company']"
+        ],
+        location: [
+          "[data-testid='job-location']",
+          "[data-testid='svx-job-location']",
+          ".location",
+          "[class*='location']"
+        ],
+        description: [
+          "[data-testid='job-description']",
+          "[data-testid='svx-job-description']",
+          "#JobDescription",
+          ".job-description",
+          "[class*='description']"
+        ]
+      }
+    case "EuroTopTech":
+      return {
+        title: ["h1", "[data-testid='job-title']", ".job-title"],
+        company: [
+          "[data-testid='company-name']",
+          ".company",
+          ".job-company"
+        ],
+        location: [
+          "[data-testid='job-location']",
+          ".location",
+          ".job-location"
+        ],
+        description: [
+          "[data-testid='job-description']",
+          ".job-description",
+          ".description",
+          "#job-description"
+        ]
+      }
+    case "JobTeaser":
+      return {
+        title: ["[data-testid='job-title']", "h1"],
+        company: [
+          "[data-testid='company-name']",
+          "[data-testid='organization-name']",
+          "a[href*='/companies/']"
+        ],
+        location: [
+          "[data-testid='job-location']",
+          "[data-testid='location']",
+          "[class*='location']"
+        ],
+        description: [
+          "[data-testid='job-description']",
+          "[data-testid='offer-description']",
+          "[class*='description']"
+        ]
+      }
+    default:
+      return emptyPlatformSelectorHints
+  }
+}
+
 function getFirstText(
   selectors: string[],
   isAcceptable: (text: string) => boolean = () => true
@@ -652,7 +826,7 @@ function getLinkedInJobDescription() {
     : getLinkedInJobDescriptionFromVisibleText()
 }
 
-function getJobDescription() {
+function getJobDescription(extraSelectors: string[] = []) {
   if (isLinkedInUrl(window.location.href)) {
     const linkedInDescription = getLinkedInJobDescription()
 
@@ -662,6 +836,7 @@ function getJobDescription() {
   }
 
   const selectedDescription = getLongestText([
+    ...extraSelectors,
     ".jobs-description__content",
     ".jobs-box__html-content",
     ".jobs-description-content__text",
@@ -803,9 +978,11 @@ function cleanLinkedInLocation(value = "") {
 }
 
 function detectJobPage(): JobPageResponse {
+  const platform = getJobPlatform(window.location.href)
   const jsonLdPosting = getJsonLdJobPosting()
   const jsonLdDetails = extractJobPostingFromJsonLd(jsonLdPosting)
-  const isLinkedInPage = isLinkedInUrl(window.location.href)
+  const isLinkedInPage = platform === "LinkedIn"
+  const platformSelectors = getPlatformSelectorHints(platform)
   const jsonLdLocationText = jsonLdDetails?.location ?? ""
   const jsonLdTitle = jsonLdDetails?.roleTitle ?? ""
   const jsonLdDescription = jsonLdDetails?.description ?? ""
@@ -824,6 +1001,7 @@ function detectJobPage(): JobPageResponse {
   const company =
     jsonLdDetails?.company ||
     getFirstText([
+      ...platformSelectors.company,
       ".jobs-unified-top-card__company-name a",
       ".jobs-unified-top-card__company-name",
       ".job-details-jobs-unified-top-card__company-name a",
@@ -859,6 +1037,7 @@ function detectJobPage(): JobPageResponse {
             parseLinkedInTopCardLocation()
         )
       : getFirstText([
+          ...platformSelectors.location,
           ".posting-categories .location",
           ".location",
           "[data-testid='job-location']",
@@ -877,6 +1056,7 @@ function detectJobPage(): JobPageResponse {
     heading:
       jsonLdTitle ||
       getFirstText([
+        ...platformSelectors.title,
         ".job-details-jobs-unified-top-card__job-title h1",
         ".jobs-unified-top-card__job-title",
         ".job-details-jobs-unified-top-card__job-title",
@@ -901,7 +1081,7 @@ function detectJobPage(): JobPageResponse {
     location,
     salary: jsonLdSalary,
     description:
-      jsonLdDescription || getJobDescription(),
+      jsonLdDescription || getJobDescription(platformSelectors.description),
     url: isLinkedInPage
       ? getLinkedInCanonicalJobUrl(window.location.href)
       : window.location.href

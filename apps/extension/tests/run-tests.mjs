@@ -399,6 +399,21 @@ test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://www.nextleveljobs.eu/jobs/123"), "NextLevelJobs")
   assert.equal(getJobPlatform("https://wellfound.com/jobs/123"), "Wellfound")
   assert.equal(getJobPlatform("https://angel.co/jobs/123"), "Wellfound")
+  assert.equal(getJobPlatform("https://www.xing.com/jobs/acme-application-support-123"), "Xing")
+  assert.equal(
+    getJobPlatform("https://www.welcometothejungle.com/en/companies/acme/jobs/application-support"),
+    "WelcomeToTheJungle"
+  )
+  assert.equal(
+    getJobPlatform("https://www.nationalevacaturebank.nl/vacature/application-support"),
+    "NationaleVacaturebank"
+  )
+  assert.equal(getJobPlatform("https://www.infojobs.net/madrid/application-support/of-i123"), "InfoJobs")
+  assert.equal(getJobPlatform("https://www.infojobs.it/offerta-lavoro/application-support"), "InfoJobs")
+  assert.equal(getJobPlatform("https://www.monster.co.uk/job-openings/application-support"), "Monster")
+  assert.equal(getJobPlatform("https://www.monster.de/stellenangebot/application-support"), "Monster")
+  assert.equal(getJobPlatform("https://www.eurotoptech.com/jobs/123"), "EuroTopTech")
+  assert.equal(getJobPlatform("https://www.jobteaser.com/en/job-offers/123"), "JobTeaser")
   assert.equal(getJobPlatform("https://boards.greenhouse.io/acme/jobs/123"), "Greenhouse")
   assert.equal(getJobPlatform("https://jobs.lever.co/acme/123"), "Lever")
   assert.equal(getJobPlatform("https://acme.wd3.myworkdayjobs.com/jobs/job/123"), "Workday")
@@ -439,6 +454,42 @@ test("detects Tier 1 EU JSON-LD boards as priority platforms", () => {
     assert.equal(details.platform, platform)
     assert.equal(details.salary, "EUR 55000-70000 YEAR")
     assert.equal(details.employmentType, "FULL_TIME")
+  })
+})
+
+test("detects Tier 2 EU selector boards as priority platforms", () => {
+  const boards = [
+    ["https://www.xing.com/jobs/acme-application-support-123", "Xing"],
+    [
+      "https://www.welcometothejungle.com/en/companies/acme/jobs/application-support",
+      "WelcomeToTheJungle"
+    ],
+    [
+      "https://www.nationalevacaturebank.nl/vacature/application-support",
+      "NationaleVacaturebank"
+    ],
+    ["https://www.infojobs.net/madrid/application-support/of-i123", "InfoJobs"],
+    ["https://www.monster.fr/emploi/recherche?q=application-support", "Monster"],
+    ["https://www.eurotoptech.com/jobs/123", "EuroTopTech"],
+    ["https://www.jobteaser.com/en/job-offers/123", "JobTeaser"]
+  ]
+
+  boards.forEach(([url, platform]) => {
+    const details = inferJobPageDetails({
+      title: "Application Support Analyst",
+      heading: "Application Support Analyst",
+      company: "Example Co",
+      location: "Amsterdam, Netherlands",
+      description: "Support production applications for European customers.",
+      url
+    })
+
+    assert.equal(details.platform, platform)
+    assert.equal(details.roleTitle, "Application Support Analyst")
+    assert.equal(details.company, "Example Co")
+    assert.equal(details.location, "Amsterdam, Netherlands")
+    assert.equal(details.salary, undefined)
+    assert.equal(details.employmentType, undefined)
   })
 })
 

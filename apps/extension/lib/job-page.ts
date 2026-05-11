@@ -20,6 +20,13 @@ export type JobPlatform =
   | "EuroJobs"
   | "NextLevelJobs"
   | "Wellfound"
+  | "Xing"
+  | "WelcomeToTheJungle"
+  | "NationaleVacaturebank"
+  | "InfoJobs"
+  | "Monster"
+  | "EuroTopTech"
+  | "JobTeaser"
   | "Greenhouse"
   | "Lever"
   | "Workday"
@@ -262,6 +269,39 @@ export function getJobPlatform(url = ""): JobPlatform {
 
   if (isHostname(hostname, "wellfound.com") || isHostname(hostname, "angel.co")) {
     return "Wellfound"
+  }
+
+  if (isHostname(hostname, "xing.com")) {
+    return "Xing"
+  }
+
+  if (isHostname(hostname, "welcometothejungle.com")) {
+    return "WelcomeToTheJungle"
+  }
+
+  if (isHostname(hostname, "nationalevacaturebank.nl")) {
+    return "NationaleVacaturebank"
+  }
+
+  if (isHostname(hostname, "infojobs.net") || isHostname(hostname, "infojobs.it")) {
+    return "InfoJobs"
+  }
+
+  if (
+    isHostname(hostname, "monster.com") ||
+    isHostname(hostname, "monster.co.uk") ||
+    isHostname(hostname, "monster.de") ||
+    isHostname(hostname, "monster.fr")
+  ) {
+    return "Monster"
+  }
+
+  if (isHostname(hostname, "eurotoptech.com")) {
+    return "EuroTopTech"
+  }
+
+  if (isHostname(hostname, "jobteaser.com")) {
+    return "JobTeaser"
   }
 
   if (isHostname(hostname, "greenhouse.io")) {
