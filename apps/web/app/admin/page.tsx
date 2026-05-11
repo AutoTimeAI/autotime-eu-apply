@@ -35,9 +35,6 @@ export default async function AdminPage() {
   }
 
   return (
-    <AdminRealtimeConsole
-      adminEmail={user.email ?? "admin"}
-      initialOverview={await getAdminOverview()}
-    />
+    <AdminRealtimeConsole initialOverview={await getAdminOverview()} />
   )
 }

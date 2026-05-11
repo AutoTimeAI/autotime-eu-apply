@@ -74,8 +74,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
             <span className="admin-live-pill">Protected</span>
             <h2>Admin credentials</h2>
             <p>
-              Continue with Google. Accounts without admin access are rejected
-              before the admin console opens.
+              Continue with Google for admin access.
             </p>
           </div>
 
@@ -93,7 +92,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
               <strong>Admin access check</strong>
               <p>{status}</p>
               <button className="secondary-button" type="button" onClick={signOut}>
-                Sign out current account
+                Reset admin session
               </button>
             </div>
           ) : null}

@@ -44,9 +44,9 @@ export default async function AdminLoginPage({
     <AdminLoginContent
       initialStatus={
         params?.adminDenied
-          ? "This account is not authorised for admin access."
+          ? "Admin access only."
           : user
-          ? "This signed-in account is not authorised for admin access."
+          ? "Admin access only."
           : null
       }
     />

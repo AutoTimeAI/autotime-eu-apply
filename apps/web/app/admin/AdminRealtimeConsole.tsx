@@ -46,10 +46,8 @@ function getCount(overview: AdminOverview, label: string) {
 }
 
 export function AdminRealtimeConsole({
-  adminEmail,
   initialOverview
 }: {
-  adminEmail: string
   initialOverview: AdminOverview
 }) {
   const [overview, setOverview] = useState(initialOverview)
@@ -170,8 +168,7 @@ export function AdminRealtimeConsole({
 
       <section className="admin-live-meta">
         <p>
-          Signed in as <strong>{adminEmail}</strong>. Last refresh{" "}
-          <strong>{formatTime(lastUpdatedAt)}</strong>.
+          Admin access active. Last refresh <strong>{formatTime(lastUpdatedAt)}</strong>.
         </p>
         <label>
           <input
