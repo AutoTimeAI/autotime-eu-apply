@@ -58,6 +58,7 @@ export type SyncEntityType =
   | "outcome_record"
   | "interview_prep_pack"
 export type SyncAction = "created" | "updated" | "deleted"
+export type OperationalLogLevel = "severe" | "warn" | "info"
 
 export type Database = {
   public: {
@@ -670,6 +671,54 @@ export type Database = {
           snapshot?: Json
           source_surface?: SourceSurface
           schema_version?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      operational_logs: {
+        Row: {
+          id: string
+          level: OperationalLogLevel
+          area: string
+          code: string
+          message: string
+          diagnostic_id: string | null
+          user_id: string | null
+          request_method: string | null
+          request_path: string | null
+          http_status: number | null
+          metadata: Json
+          resolved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          level: OperationalLogLevel
+          area: string
+          code: string
+          message: string
+          diagnostic_id?: string | null
+          user_id?: string | null
+          request_method?: string | null
+          request_path?: string | null
+          http_status?: number | null
+          metadata?: Json
+          resolved_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          level?: OperationalLogLevel
+          area?: string
+          code?: string
+          message?: string
+          diagnostic_id?: string | null
+          user_id?: string | null
+          request_method?: string | null
+          request_path?: string | null
+          http_status?: number | null
+          metadata?: Json
+          resolved_at?: string | null
           created_at?: string
         }
         Relationships: []

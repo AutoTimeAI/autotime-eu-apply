@@ -54,6 +54,17 @@ export type AdminOverview = {
     sourceSurface: string
     userId: string
   }>
+  storedLogs: Array<{
+    area: string
+    code: string
+    diagnosticId: string | null
+    httpStatus: number | null
+    level: "severe" | "warn" | "info"
+    message: string
+    metadata: unknown
+    path: string | null
+    timestamp: string
+  }>
   logs: Array<{
     area: string
     event: string
@@ -290,12 +301,39 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     }))
   })
 
+  const storedLogs = await safeQuery([], async () => {
+    const { data, error } = await supabase
+      .from("operational_logs")
+      .select(
+        "area, code, diagnostic_id, http_status, level, message, metadata, request_path, created_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(60)
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return (data ?? []).map((row) => ({
+      area: row.area,
+      code: row.code,
+      diagnosticId: row.diagnostic_id,
+      httpStatus: row.http_status,
+      level: row.level,
+      message: row.message,
+      metadata: row.metadata,
+      path: row.request_path,
+      timestamp: row.created_at
+    }))
+  })
+
   for (const result of [
     counts,
     dbProbe,
     recentExtensionConnections,
     recentSyncEvents,
-    recentAiUsage
+    recentAiUsage,
+    storedLogs
   ]) {
     if (result.error) {
       warnings.push(result.error)
@@ -349,17 +387,27 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     },
     counts: counts.data,
     health,
-    logs: buildAdminLogs({
-      checkedAt,
-      health,
-      recentAiUsage: recentAiUsage.data,
-      recentExtensionConnections: recentExtensionConnections.data,
-      recentSyncEvents: recentSyncEvents.data,
-      warnings
-    }),
+    logs:
+      storedLogs.data.length > 0
+        ? storedLogs.data.map((item) => ({
+            area: item.area,
+            event: item.code,
+            message: item.message,
+            severity: item.level,
+            timestamp: item.timestamp
+          }))
+        : buildAdminLogs({
+            checkedAt,
+            health,
+            recentAiUsage: recentAiUsage.data,
+            recentExtensionConnections: recentExtensionConnections.data,
+            recentSyncEvents: recentSyncEvents.data,
+            warnings
+          }),
     recentAiUsage: recentAiUsage.data,
     recentExtensionConnections: recentExtensionConnections.data,
     recentSyncEvents: recentSyncEvents.data,
+    storedLogs: storedLogs.data,
     warnings
   }
 }

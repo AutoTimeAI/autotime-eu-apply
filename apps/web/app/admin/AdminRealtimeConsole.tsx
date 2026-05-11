@@ -294,7 +294,10 @@ export function AdminRealtimeConsole({
               <p className="eyebrow">Logs</p>
               <h2>Live event stream</h2>
             </div>
-            <span>{overview.logs.length} entries</span>
+            <span>
+              {overview.logs.length} entries
+              {overview.storedLogs.length > 0 ? " / persisted" : " / computed"}
+            </span>
           </div>
           <ol className="admin-log-stream">
             {overview.logs.map((entry) => (

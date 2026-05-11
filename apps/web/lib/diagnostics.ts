@@ -122,10 +122,17 @@ export function logDiagnostic(
   diagnostic: DiagnosticPayload,
   details?: Record<string, unknown>
 ): void {
+  const sanitizedDetails = sanitizeDetails(details)
   const payload = {
     ...diagnostic,
-    details: sanitizeDetails(details),
+    details: sanitizedDetails,
     diagnosticId: diagnostic.id
+  }
+
+  if (process.env.NEXT_RUNTIME !== "edge") {
+    void import("./operational-logs").then(({ persistOperationalLog }) =>
+      persistOperationalLog({ details: sanitizedDetails, diagnostic })
+    ).catch(() => undefined)
   }
 
   if (diagnostic.level === "severe") {
