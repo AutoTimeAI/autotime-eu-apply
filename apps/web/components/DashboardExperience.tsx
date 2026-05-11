@@ -2028,6 +2028,7 @@ export default function HomePage({
   const applicationSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
+  const hasUnsyncedDashboardChangesRef = useRef(false)
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
     useState<OnlineAnalyticsReport | null>(null)
   const [onlineAnalyticsStatus, setOnlineAnalyticsStatus] = useState("")
@@ -2445,6 +2446,10 @@ export default function HomePage({
       silent?: boolean
       successMessage?: string
     } = {}) => {
+      if (silent && hasUnsyncedDashboardChangesRef.current) {
+        return
+      }
+
       try {
         const response = await fetch("/api/sync/dashboard", {
           cache: "no-store"
@@ -2789,7 +2794,9 @@ export default function HomePage({
 
   const syncDashboardToCloud = async () => {
     setCloudSyncConsent(true)
-    await syncDashboardStateToCloud(state)
+    hasUnsyncedDashboardChangesRef.current = true
+    const synced = await syncDashboardStateToCloud(state)
+    hasUnsyncedDashboardChangesRef.current = !synced
   }
 
   const scheduleDashboardSync = (
@@ -2799,13 +2806,17 @@ export default function HomePage({
       successMessage?: string
     }
   ) => {
+    hasUnsyncedDashboardChangesRef.current = true
+
     if (applicationSyncTimeoutRef.current) {
       clearTimeout(applicationSyncTimeoutRef.current)
     }
 
     applicationSyncTimeoutRef.current = setTimeout(() => {
       applicationSyncTimeoutRef.current = null
-      void syncDashboardStateToCloud(nextState, messages)
+      void syncDashboardStateToCloud(nextState, messages).then((synced) => {
+        hasUnsyncedDashboardChangesRef.current = !synced
+      })
     }, 900)
   }
 
@@ -2869,10 +2880,12 @@ export default function HomePage({
       nextState,
       "Application saved with evidence and outcome records"
     )
-    await syncDashboardStateToCloud(nextState, {
+    hasUnsyncedDashboardChangesRef.current = true
+    const synced = await syncDashboardStateToCloud(nextState, {
       failureMessage: "Application saved locally. Dashboard sync failed",
       successMessage: "Application saved and synced to dashboard"
     })
+    hasUnsyncedDashboardChangesRef.current = !synced
     openDashboardView("applications")
   }
 
