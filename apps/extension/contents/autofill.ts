@@ -2314,13 +2314,11 @@ function bindWidgetEvents(
     event.preventDefault()
     event.stopPropagation()
 
-    const dashboardWindow = window.open(
-      `${appUrl}/dashboard`,
-      "_blank",
-      "noopener,noreferrer"
-    )
+    const dashboardWindow = window.open(`${appUrl}/dashboard`, "_blank")
 
-    if (!dashboardWindow) {
+    if (dashboardWindow) {
+      dashboardWindow.opener = null
+    } else {
       window.location.href = `${appUrl}/dashboard`
     }
   })
