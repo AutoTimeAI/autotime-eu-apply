@@ -2613,14 +2613,24 @@ export default function HomePage({
     key: K,
     value: ReusableAnswers[K]
   ) => {
+    let nextState: CompanionDashboardState | null = null
+
     setState((current) => {
       const next = {
         ...current,
         reusableAnswers: { ...current.reusableAnswers, [key]: value }
       }
       saveState(next, userId)
+      nextState = next
       return next
     })
+
+    if (nextState) {
+      scheduleDashboardSync(nextState, {
+        failureMessage: "Answer saved locally. Dashboard sync failed",
+        successMessage: "Answer saved and synced to dashboard"
+      })
+    }
   }
 
   const setOfficialSourceReviewed = (reviewed: boolean) => {
