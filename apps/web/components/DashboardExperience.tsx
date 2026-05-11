@@ -3897,12 +3897,12 @@ export default function HomePage({
           <p className="eyebrow">Sync</p>
           <h2>
             {cloudSyncReadiness.configured
-              ? "Cloud sync is being prepared"
+              ? "Account sync is available"
               : "Your data is saved on this browser"}
           </h2>
           <p>
-            AutoTime is local-first today. Export a backup when you want to move
-            data between browsers, and use account sync when it is fully ready.
+            Profile evidence stays local while you edit. Use account sync when
+            you want this profile available from your dashboard account.
           </p>
         </div>
         <div className="sync-status-grid">
@@ -4030,6 +4030,39 @@ export default function HomePage({
       {!isOverview && currentTab === "profile" && (
         <section className="workspace-grid">
           <div className="input-column">
+            <div className="profile-form-toolbar">
+              <div>
+                <p className="eyebrow">Profile evidence</p>
+                <h2>Candidate details</h2>
+                <p>Saved locally as you type.</p>
+              </div>
+              <div className="profile-form-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={saveDashboard}
+                >
+                  Save locally
+                </button>
+                <button type="button" onClick={syncProfileToCloud}>
+                  Sync profile
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={loadProfileFromCloud}
+                >
+                  Load synced
+                </button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={exportDashboard}
+                >
+                  Export backup
+                </button>
+              </div>
+            </div>
             <label>
               Full name
               <input

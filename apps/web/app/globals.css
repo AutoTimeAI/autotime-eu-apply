@@ -1810,6 +1810,34 @@ h4 {
   line-height: 1.55;
 }
 
+.profile-form-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, auto);
+  gap: 12px;
+  align-items: end;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 14px;
+}
+
+.profile-form-toolbar h2 {
+  margin-bottom: 4px;
+}
+
+.profile-form-toolbar p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+}
+
+.profile-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .cloud-sync-panel {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(300px, 0.72fr) minmax(
@@ -4190,6 +4218,7 @@ h4 {
   .auth-demo-panel,
   .workspace-integrity-panel,
   .dashboard-setup-checklist,
+  .profile-form-toolbar,
   .pricing-demo-panel,
   .decision-brief-panel,
   .trust-grid,
@@ -4397,6 +4426,8 @@ h4 {
   .header-actions,
   .header-actions button,
   .command-header-tools .secondary-button,
+  .profile-form-actions,
+  .profile-form-actions button,
   .profile-completion-meter {
     width: 100%;
   }
