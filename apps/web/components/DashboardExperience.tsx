@@ -1394,6 +1394,31 @@ function getNextActionCount(applications: ApplicationRecord[]) {
   ).length
 }
 
+function getNextActionTiming(application: ApplicationRecord) {
+  if (!application.nextActionDate) {
+    return application.nextAction?.trim() ? "No date" : "No action"
+  }
+
+  const dueAt = new Date(`${application.nextActionDate}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const days = Math.round((dueAt.getTime() - today.getTime()) / 86400000)
+
+  if (Number.isNaN(days)) {
+    return "Date needs review"
+  }
+
+  if (days < 0) {
+    return `${Math.abs(days)}d overdue`
+  }
+
+  if (days === 0) {
+    return "Due today"
+  }
+
+  return `${days}d left`
+}
+
 function getOutcomeAnalytics(outcomeRecords: OutcomeRecord[]) {
   const tracked = outcomeRecords.filter(
     (record) => record.outcomeReason !== "Unknown" || record.status !== "Saved"
@@ -1974,6 +1999,11 @@ export default function HomePage({
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
     useState<OnlineAnalyticsReport | null>(null)
   const [onlineAnalyticsStatus, setOnlineAnalyticsStatus] = useState("")
+  const [applicationSearchQuery, setApplicationSearchQuery] = useState("")
+  const [applicationStatusFilter, setApplicationStatusFilter] =
+    useState<ApplicationStatus | "all">("all")
+  const [applicationOutcomeFilter, setApplicationOutcomeFilter] =
+    useState<ApplicationOutcomeReason | "all">("all")
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -2016,6 +2046,38 @@ export default function HomePage({
     () => getNextActionCount(state.applications),
     [state.applications]
   )
+  const filteredApplications = useMemo(() => {
+    const query = applicationSearchQuery.trim().toLowerCase()
+
+    return state.applications.filter((application) => {
+      const matchesStatus =
+        applicationStatusFilter === "all" ||
+        application.status === applicationStatusFilter
+      const matchesOutcome =
+        applicationOutcomeFilter === "all" ||
+        (application.outcomeReason ?? "Unknown") === applicationOutcomeFilter
+      const matchesQuery =
+        !query ||
+        [
+          application.roleTitle,
+          application.title,
+          application.company,
+          application.source,
+          application.url,
+          application.nextAction,
+          application.notes
+        ]
+          .filter((value): value is string => Boolean(value))
+          .some((value) => value.toLowerCase().includes(query))
+
+      return matchesStatus && matchesOutcome && matchesQuery
+    })
+  }, [
+    applicationOutcomeFilter,
+    applicationSearchQuery,
+    applicationStatusFilter,
+    state.applications
+  ])
   const riskLabel = useMemo(() => getRiskLabel(state), [state])
   const decisionBrief = useMemo(
     () =>
@@ -4687,14 +4749,80 @@ export default function HomePage({
           </section>
           ) : null}
           {showApplicationList && (
+          <>
+          <section className="application-command-strip" aria-label="Application filters">
+            <label>
+              Search
+              <input
+                placeholder="Role, company, source, next action"
+                value={applicationSearchQuery}
+                onChange={(event) =>
+                  setApplicationSearchQuery(event.target.value)
+                }
+              />
+            </label>
+            <label>
+              Status
+              <select
+                value={applicationStatusFilter}
+                onChange={(event) =>
+                  setApplicationStatusFilter(
+                    event.target.value as ApplicationStatus | "all"
+                  )
+                }
+              >
+                <option value="all">All statuses</option>
+                {applicationStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Outcome
+              <select
+                value={applicationOutcomeFilter}
+                onChange={(event) =>
+                  setApplicationOutcomeFilter(
+                    event.target.value as ApplicationOutcomeReason | "all"
+                  )
+                }
+              >
+                <option value="all">All outcomes</option>
+                {applicationOutcomeReasons.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {reason}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <strong>{filteredApplications.length}</strong>
+              <span>shown of {state.applications.length}</span>
+            </div>
+          </section>
           <div className="application-table">
-            {state.applications.length ? (
-              state.applications.map((application) => (
+            {filteredApplications.length ? (
+              filteredApplications.map((application) => (
                 <article className="application-row" key={application.id}>
                   <div>
-                    <strong>
-                      {application.roleTitle || application.title}
-                    </strong>
+                    <div className="application-row-header">
+                      <strong>
+                        {application.roleTitle || application.title}
+                      </strong>
+                      <span
+                        className={`action-timing ${
+                          getNextActionTiming(application).includes("overdue")
+                            ? "overdue"
+                            : getNextActionTiming(application) === "Due today"
+                              ? "due"
+                              : ""
+                        }`}
+                      >
+                        {getNextActionTiming(application)}
+                      </span>
+                    </div>
                     <span>{application.company || "Unknown company"}</span>
                     <small>{application.url}</small>
                     {application.fitDecision ? (
@@ -4793,13 +4921,20 @@ export default function HomePage({
               ))
             ) : (
               <div className="empty-state rich-empty-state">
-                <strong>No saved jobs yet</strong>
+                <strong>
+                  {state.applications.length
+                    ? "No jobs match these filters"
+                    : "No saved jobs yet"}
+                </strong>
                 <p>
-                  Check a role, then save it with a next action and status.
+                  {state.applications.length
+                    ? "Clear filters or search for another role, company or action."
+                    : "Track a role from the extension or save a checked job here, then manage the next action in this dashboard."}
                 </p>
               </div>
             )}
           </div>
+          </>
           )}
         </section>
       )}

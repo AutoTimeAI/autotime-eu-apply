@@ -2133,6 +2133,45 @@ h4 {
   padding: 3px 8px;
 }
 
+.application-command-strip {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(150px, 0.42fr) minmax(190px, 0.55fr) auto;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.application-command-strip label {
+  margin: 0;
+}
+
+.application-command-strip > div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  min-width: 128px;
+  padding: 10px 12px;
+}
+
+.application-command-strip strong,
+.application-command-strip span {
+  display: block;
+}
+
+.application-command-strip strong {
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+
+.application-command-strip span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
 .application-row {
   display: grid;
   grid-template-columns:
@@ -2147,6 +2186,13 @@ h4 {
   padding: 12px;
 }
 
+.application-row-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .application-row div,
 .application-row strong,
 .application-row span,
@@ -2156,6 +2202,31 @@ h4 {
 
 .application-row strong {
   color: var(--ink);
+}
+
+.application-row .action-timing {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1;
+  margin-top: 0;
+  padding: 6px 8px;
+}
+
+.application-row .action-timing.due {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.application-row .action-timing.overdue {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .application-row span {
