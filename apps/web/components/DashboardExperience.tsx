@@ -2915,24 +2915,64 @@ export default function HomePage({
     )
   }
 
-  const deleteApplication = (id: string) => {
+  const removeApplicationFromState = (
+    currentState: CompanionDashboardState,
+    id: string
+  ): CompanionDashboardState => ({
+    ...currentState,
+    applications: currentState.applications.filter(
+      (application) => application.id !== id
+    ),
+    evidenceRecords: (currentState.evidenceRecords ?? []).filter(
+      (record) => record.applicationId !== id
+    ),
+    outcomeRecords: (currentState.outcomeRecords ?? []).filter(
+      (record) => record.applicationId !== id
+    ),
+    interviewPrepPacks: currentState.interviewPrepPacks.filter(
+      (pack) => pack.applicationId !== id
+    )
+  })
+
+  const deleteApplication = async (id: string) => {
+    const application = state.applications.find((item) => item.id === id)
+
+    if (!application) {
+      return
+    }
+
+    try {
+      const response = await fetch("/api/sync/dashboard", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "x-autotime-source": "web"
+        },
+        body: JSON.stringify({
+          applicationId: application.id,
+          url: application.url
+        })
+      })
+      const body = (await response.json()) as {
+        error: string | null
+      }
+
+      if (!response.ok || body.error) {
+        setStatus(body.error ?? "Could not delete application from dashboard")
+        return
+      }
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not delete application from dashboard"
+      )
+      return
+    }
+
     persist(
-      {
-        ...state,
-        applications: state.applications.filter(
-          (application) => application.id !== id
-        ),
-        evidenceRecords: (state.evidenceRecords ?? []).filter(
-          (record) => record.applicationId !== id
-        ),
-        outcomeRecords: (state.outcomeRecords ?? []).filter(
-          (record) => record.applicationId !== id
-        ),
-        interviewPrepPacks: state.interviewPrepPacks.filter(
-          (pack) => pack.applicationId !== id
-        )
-      },
-      "Application removed"
+      removeApplicationFromState(state, id),
+      "Application permanently deleted"
     )
   }
 

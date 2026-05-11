@@ -29,6 +29,10 @@ type DashboardSyncData = {
   synced: true
 }
 
+type DashboardDeleteData = {
+  deleted: true
+}
+
 type DashboardReadData = {
   dashboard: Pick<
     CompanionDashboardState,
@@ -48,6 +52,13 @@ const dashboardWorkflowSchema = companionDashboardStateSchema.pick({
   evidenceRecords: true,
   outcomeRecords: true,
   interviewPrepPacks: true
+})
+
+const dashboardDeleteSchema = z.object({
+  applicationId: z.string().trim().min(1).optional(),
+  url: z.string().trim().min(1).optional()
+}).refine((value) => value.applicationId || value.url, {
+  message: "applicationId or url is required"
 })
 
 type DashboardWorkflowPayload = z.infer<typeof dashboardWorkflowSchema>
@@ -525,14 +536,48 @@ export async function POST(
     const applicationUrlKeys = payload.applications.map((application) =>
       normalizeApplicationUrlKey(application.url || application.id)
     )
+    const tombstoneResult = applicationUrlKeys.length
+      ? await supabase
+          .from("deleted_application_tombstones")
+          .select("url_key")
+          .eq("user_id", auth.user.id)
+          .in("url_key", applicationUrlKeys)
+      : { data: [], error: null }
+
+    if (tombstoneResult.error) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.tombstones.failed",
+        data: null,
+        error: tombstoneResult.error.message,
+        log: true,
+        request,
+        status: 500
+      })
+    }
+
+    const deletedUrlKeys = new Set(
+      (tombstoneResult.data ?? []).map((row) => row.url_key)
+    )
+    const activeApplications = payload.applications.filter(
+      (application) =>
+        !deletedUrlKeys.has(
+          normalizeApplicationUrlKey(application.url || application.id)
+        )
+    )
     const applicationIdMap = new Map<string, string>()
 
-    if (applicationUrlKeys.length) {
+    if (activeApplications.length) {
       const { data, error } = await supabase
         .from("applications")
         .select("id, url_key")
         .eq("user_id", auth.user.id)
-        .in("url_key", applicationUrlKeys)
+        .in(
+          "url_key",
+          activeApplications.map((application) =>
+            normalizeApplicationUrlKey(application.url || application.id)
+          )
+        )
 
       if (error) {
         return diagnosticJson({
@@ -550,7 +595,7 @@ export async function POST(
         (data ?? []).map((row) => [row.url_key, row.id])
       )
 
-      for (const application of payload.applications) {
+      for (const application of activeApplications) {
         const existingId = existingByUrlKey.get(
           normalizeApplicationUrlKey(application.url || application.id)
         )
@@ -584,11 +629,11 @@ export async function POST(
       })
     }
 
-    if (payload.applications.length) {
+    if (activeApplications.length) {
       const { error } = await supabase
         .from("applications")
         .upsert(
-          payload.applications.map((item) =>
+          activeApplications.map((item) =>
             mapApplicationToRow(
               auth.user.id,
               item,
@@ -612,11 +657,24 @@ export async function POST(
       }
     }
 
-    if (payload.evidenceRecords?.length) {
+    const activeApplicationIds = new Set(
+      activeApplications.map((application) => application.id)
+    )
+    const activeEvidenceRecords = (payload.evidenceRecords ?? []).filter(
+      (record) => !record.applicationId || activeApplicationIds.has(record.applicationId)
+    )
+    const activeOutcomeRecords = (payload.outcomeRecords ?? []).filter((record) =>
+      activeApplicationIds.has(record.applicationId)
+    )
+    const activeInterviewPrepPacks = payload.interviewPrepPacks.filter((pack) =>
+      activeApplicationIds.has(pack.applicationId)
+    )
+
+    if (activeEvidenceRecords.length) {
       const { error } = await supabase
         .from("evidence_records")
         .upsert(
-          payload.evidenceRecords.map((item) =>
+          activeEvidenceRecords.map((item) =>
             mapEvidenceToRow(auth.user.id, item, applicationIdMap)
           ),
           { onConflict: "id" }
@@ -635,11 +693,11 @@ export async function POST(
       }
     }
 
-    if (payload.outcomeRecords?.length) {
+    if (activeOutcomeRecords.length) {
       const { error } = await supabase
         .from("outcome_records")
         .upsert(
-          payload.outcomeRecords.map((item) =>
+          activeOutcomeRecords.map((item) =>
             mapOutcomeToRow(auth.user.id, item, applicationIdMap)
           ),
           { onConflict: "user_id,application_id" }
@@ -658,11 +716,11 @@ export async function POST(
       }
     }
 
-    if (payload.interviewPrepPacks.length) {
+    if (activeInterviewPrepPacks.length) {
       const { error } = await supabase
         .from("interview_prep_packs")
         .upsert(
-          payload.interviewPrepPacks.map((item) =>
+          activeInterviewPrepPacks.map((item) =>
             mapPrepPackToRow(
               auth.user.id,
               item,
@@ -688,7 +746,13 @@ export async function POST(
 
     const syncEvents = mapSyncEvents({
       applicationIdMap,
-      payload,
+      payload: {
+        ...payload,
+        applications: activeApplications,
+        evidenceRecords: activeEvidenceRecords,
+        outcomeRecords: activeOutcomeRecords,
+        interviewPrepPacks: activeInterviewPrepPacks
+      },
       sourceSurface,
       userId: auth.user.id
     })
@@ -752,6 +816,170 @@ export async function POST(
     return diagnosticJson({
       area: "sync",
       code: "sync.dashboard.failed",
+      data: null,
+      error: message,
+      log: true,
+      request,
+      status: 500
+    })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest
+): Promise<NextResponse<ApiResponse<DashboardDeleteData>>> {
+  try {
+    const auth = await requireAuthenticatedUser(request)
+
+    if (!auth.user) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.auth.blocked",
+        data: null,
+        error: auth.error,
+        request,
+        status: auth.status
+      })
+    }
+
+    const body = dashboardDeleteSchema.parse(await request.json())
+    const supabase = createAdminClient()
+    const sourceSurface = getSourceSurface(request)
+    const existingQuery = supabase
+      .from("applications")
+      .select("id, url_key")
+      .eq("user_id", auth.user.id)
+
+    const { data: existingApplications, error: readError } = body.url
+      ? await existingQuery.eq("url_key", normalizeApplicationUrlKey(body.url))
+      : await existingQuery.eq("id", body.applicationId ?? "")
+
+    if (readError) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.delete.read.failed",
+        data: null,
+        error: readError.message,
+        log: true,
+        request,
+        status: 500
+      })
+    }
+
+    const targetApplications = existingApplications ?? []
+    const targetIds = targetApplications.map((application) => application.id)
+    const urlKey =
+      targetApplications[0]?.url_key ??
+      normalizeApplicationUrlKey(body.url ?? body.applicationId ?? "")
+
+    const tombstoneResult = await supabase
+      .from("deleted_application_tombstones")
+      .upsert(
+        {
+          user_id: auth.user.id,
+          application_id: targetIds[0] ?? body.applicationId ?? null,
+          url_key: urlKey,
+          source_surface: sourceSurface,
+          reason: "user_deleted"
+        },
+        { onConflict: "user_id,url_key" }
+      )
+
+    if (tombstoneResult.error) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.delete.tombstone.failed",
+        data: null,
+        error: tombstoneResult.error.message,
+        log: true,
+        request,
+        status: 500
+      })
+    }
+
+    if (targetIds.length) {
+      const [prepResult, outcomeResult, evidenceResult] = await Promise.all([
+        supabase
+          .from("interview_prep_packs")
+          .delete()
+          .eq("user_id", auth.user.id)
+          .in("application_id", targetIds),
+        supabase
+          .from("outcome_records")
+          .delete()
+          .eq("user_id", auth.user.id)
+          .in("application_id", targetIds),
+        supabase
+          .from("evidence_records")
+          .delete()
+          .eq("user_id", auth.user.id)
+          .in("application_id", targetIds)
+      ])
+      const childError = [prepResult.error, outcomeResult.error, evidenceResult.error].find(Boolean)
+
+      if (childError) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.delete.children.failed",
+          data: null,
+          error: childError.message,
+          log: true,
+          request,
+          status: 500
+        })
+      }
+
+      const deleteResult = await supabase
+        .from("applications")
+        .delete()
+        .eq("user_id", auth.user.id)
+        .in("id", targetIds)
+
+      if (deleteResult.error) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.delete.application.failed",
+          data: null,
+          error: deleteResult.error.message,
+          log: true,
+          request,
+          status: 500
+        })
+      }
+    }
+
+    await supabase.from("sync_events").insert({
+      action: "deleted",
+      entity_id: targetIds[0] ?? body.applicationId ?? urlKey,
+      entity_type: "application",
+      message: "Application deleted from dashboard.",
+      source_surface: sourceSurface,
+      user_id: auth.user.id
+    })
+
+    return jsonResponse({
+      data: { deleted: true },
+      error: null,
+      status: 200
+    })
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.delete.request.invalid",
+        data: null,
+        error: "Invalid dashboard delete body",
+        request,
+        status: 400
+      })
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Dashboard delete failed"
+
+    return diagnosticJson({
+      area: "sync",
+      code: "sync.dashboard.delete.failed",
       data: null,
       error: message,
       log: true,

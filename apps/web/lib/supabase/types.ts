@@ -423,6 +423,36 @@ export type Database = {
         }
         Relationships: []
       }
+      deleted_application_tombstones: {
+        Row: {
+          id: string
+          user_id: string
+          application_id: string | null
+          url_key: string
+          deleted_at: string
+          source_surface: SourceSurface
+          reason: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          application_id?: string | null
+          url_key: string
+          deleted_at?: string
+          source_surface?: SourceSurface
+          reason?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          application_id?: string | null
+          url_key?: string
+          deleted_at?: string
+          source_surface?: SourceSurface
+          reason?: string | null
+        }
+        Relationships: []
+      }
       evidence_records: {
         Row: {
           id: string
