@@ -614,12 +614,26 @@ function SidePanelApp() {
     setApplicationSyncState(await getApplicationSyncState())
 
     try {
-      await syncApplicationsToDashboard({
+      const syncResult = await syncApplicationsToDashboard({
         applications: applicationsToSync,
         reusableAnswers: savedReusableAnswers ?? reusableAnswers,
         session: accountSession
       })
-      await updateApplicationSyncState(applicationIds, "synced")
+      const deletedApplicationIds = syncResult.deletedApplicationIds ?? []
+      const syncedApplicationIds = applicationIds.filter(
+        (id) => !deletedApplicationIds.includes(id)
+      )
+
+      await Promise.all(
+        deletedApplicationIds.map((id) => deleteApplication(id))
+      )
+
+      if (syncedApplicationIds.length) {
+        await updateApplicationSyncState(syncedApplicationIds, "synced")
+      }
+      if (deletedApplicationIds.length) {
+        setApplications(await getApplications())
+      }
       setApplicationSyncState(await getApplicationSyncState())
       return { synced: true }
     } catch (error: unknown) {

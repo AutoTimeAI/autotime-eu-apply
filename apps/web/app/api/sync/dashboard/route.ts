@@ -26,6 +26,7 @@ type ApiResponse<T> = {
 }
 
 type DashboardSyncData = {
+  deletedApplicationIds: string[]
   synced: true
 }
 
@@ -559,6 +560,13 @@ export async function POST(
     const deletedUrlKeys = new Set(
       (tombstoneResult.data ?? []).map((row) => row.url_key)
     )
+    const deletedApplicationIds = payload.applications
+      .filter((application) =>
+        deletedUrlKeys.has(
+          normalizeApplicationUrlKey(application.url || application.id)
+        )
+      )
+      .map((application) => application.id)
     const activeApplications = payload.applications.filter(
       (application) =>
         !deletedUrlKeys.has(
@@ -794,7 +802,7 @@ export async function POST(
     }
 
     return jsonResponse({
-      data: { synced: true },
+      data: { deletedApplicationIds, synced: true },
       error: null,
       status: 200
     })

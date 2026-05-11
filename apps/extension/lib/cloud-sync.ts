@@ -34,6 +34,7 @@ type DashboardReadResponse = {
 }
 
 type DashboardSyncResponse = {
+  deletedApplicationIds?: string[]
   synced: true
 }
 
@@ -145,5 +146,5 @@ export async function syncApplicationsToDashboard({
     body: JSON.stringify(payload)
   })
 
-  await parseSyncResponse<DashboardSyncResponse>(writeResponse)
+  return parseSyncResponse<DashboardSyncResponse>(writeResponse)
 }

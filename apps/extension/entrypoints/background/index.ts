@@ -1,6 +1,7 @@
 import { defineBackground } from "wxt/utils/define-background"
 import { appUrl } from "../../lib/openai"
 import {
+  deleteApplication,
   getApplications,
   getAccountSession,
   getApplicationSyncState,
@@ -101,18 +102,32 @@ async function syncApplicationsWithState({
       status: "info",
       details: { applicationCount: applications.length }
     })
-    await syncApplicationsToDashboard({
+    const syncResult = await syncApplicationsToDashboard({
       applications,
       reusableAnswers: await getReusableAnswers(),
       session
     })
-    await updateApplicationSyncState(applicationIds, "synced")
+    const deletedApplicationIds = syncResult.deletedApplicationIds ?? []
+    const syncedApplicationIds = applicationIds.filter(
+      (id) => !deletedApplicationIds.includes(id)
+    )
+
+    await Promise.all(
+      deletedApplicationIds.map((id) => deleteApplication(id))
+    )
+
+    if (syncedApplicationIds.length) {
+      await updateApplicationSyncState(syncedApplicationIds, "synced")
+    }
     await logDiagnosticEvent({
       area: "sync",
       event: completedEvent,
       message: "Locally saved jobs synced to dashboard.",
       status: "success",
-      details: { applicationCount: applications.length }
+      details: {
+        applicationCount: syncedApplicationIds.length,
+        deletedApplicationCount: deletedApplicationIds.length
+      }
     })
     return undefined
   } catch (error: unknown) {
