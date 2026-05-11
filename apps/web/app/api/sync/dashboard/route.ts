@@ -638,6 +638,26 @@ export async function POST(
       }
     }
 
+    if (sourceSurface === "extension") {
+      const { error } = await supabase
+        .from("extension_connections")
+        .update({ last_synced_at: new Date().toISOString() })
+        .eq("user_id", auth.user.id)
+        .is("revoked_at", null)
+
+      if (error) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.extension-touch.failed",
+          data: null,
+          error: error.message,
+          log: true,
+          request,
+          status: 500
+        })
+      }
+    }
+
     return jsonResponse({
       data: { synced: true },
       error: null,
