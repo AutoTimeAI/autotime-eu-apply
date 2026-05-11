@@ -14,6 +14,7 @@ import {
   getLinkedInManualInputMessage,
   inferJobPageDetails,
   isLinkedInUrl,
+  parseLinkedInPageTitle,
   type JobPageDetails
 } from "../lib/job-page"
 import { hasApplicationWithUrl } from "../lib/applications"
@@ -878,6 +879,9 @@ function detectJobPage(): JobPageResponse {
     getMetaContent(["og:title", "twitter:title"]) ||
     document.title ||
     jsonLdTitle
+  const linkedInPageTitle = isLinkedInPage
+    ? parseLinkedInPageTitle(pageTitle)
+    : { company: "", title: "" }
   const company =
     getJsonLdText(jsonLdHiringOrganization) ||
     getFirstText([
@@ -900,7 +904,9 @@ function detectJobPage(): JobPageResponse {
       ["Company", "Organization", "Organisation", "Employer"],
       isLikelyVisibleCompany
     ) ||
-    (isLinkedInPage ? parseLinkedInTopCardCompany() : "")
+    (isLinkedInPage
+      ? parseLinkedInTopCardCompany() || linkedInPageTitle.company
+      : "")
   const location =
     jsonLdLocationText ||
     (isLinkedInPage
@@ -946,6 +952,7 @@ function detectJobPage(): JobPageResponse {
         "[data-ui='job-title']",
         "[data-automation-id='jobPostingHeader']"
       ], isLikelyVisibleTitle) ||
+      (isLinkedInPage ? linkedInPageTitle.title : "") ||
       getExactLabeledText(
         ["Job title", "Role title", "Position", "Title"],
         isLikelyVisibleTitle

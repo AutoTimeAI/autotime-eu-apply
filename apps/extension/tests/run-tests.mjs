@@ -23,7 +23,8 @@ import {
   getLinkedInManualInputMessage,
   getJobPlatform,
   inferJobPageDetails,
-  isLinkedInUrl
+  isLinkedInUrl,
+  parseLinkedInPageTitle
 } from "../lib/job-page.ts"
 import {
   inferJobFitAnalysis,
@@ -451,6 +452,22 @@ test("rejects widget fallback text and urls as job details", () => {
   assert.equal(details.company, "")
   assert.equal(details.location, "")
   assert.equal(details.url, noisyUrl)
+})
+
+test("reads exact LinkedIn title and company from page title", () => {
+  assert.deepEqual(
+    parseLinkedInPageTitle(
+      "Application Support Specialist (L2/L3) | SOFYNE | LinkedIn"
+    ),
+    {
+      company: "SOFYNE",
+      title: "Application Support Specialist (L2/L3)"
+    }
+  )
+  assert.deepEqual(parseLinkedInPageTitle("Application Support - LinkedIn"), {
+    company: "",
+    title: ""
+  })
 })
 
 test("does not split priority platform page titles into guessed fields", () => {

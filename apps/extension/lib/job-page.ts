@@ -143,6 +143,28 @@ export function getLinkedInCanonicalJobUrl(url = "") {
   return cleanText(url)
 }
 
+export function parseLinkedInPageTitle(value = "") {
+  const parts = value
+    .split("|")
+    .map((part) => cleanText(part))
+    .filter(Boolean)
+
+  if (
+    parts.length < 3 ||
+    !/^linkedin$/i.test(parts[parts.length - 1] ?? "")
+  ) {
+    return { company: "", title: "" }
+  }
+
+  const title = parts[0] ?? ""
+  const company = parts[1] ?? ""
+
+  return {
+    company: isLikelyShortFieldValue(company, 8, 100) ? company : "",
+    title: isLikelyShortFieldValue(title, 12, 120) ? title : ""
+  }
+}
+
 export function getLinkedInManualInputMessage() {
   return "LinkedIn stays manual: AutoTime can import visible job details, but will not auto-submit or fill applications."
 }
