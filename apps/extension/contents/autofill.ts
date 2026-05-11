@@ -1574,9 +1574,11 @@ function getWidgetMarkup({
 
       .action {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: end;
-        gap: 5px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: center;
+        gap: 8px;
+        position: relative;
+        z-index: 2;
         padding: 8px 12px 12px;
         border-top: 1px solid #bdd4dc;
         background: rgba(255, 255, 255, 0.92);
@@ -1634,7 +1636,8 @@ function getWidgetMarkup({
       }
 
       .dashboard-button {
-        justify-self: start;
+        width: 100%;
+        min-width: 0;
         min-height: 34px;
         border-color: #bdd4dc;
         background: #ffffff;
@@ -1649,9 +1652,12 @@ function getWidgetMarkup({
 
       .track-copy {
         display: grid;
-        justify-self: end;
-        justify-items: end;
-        gap: 5px;
+        min-width: 0;
+      }
+
+      .track-copy button {
+        width: 100%;
+        min-width: 0;
       }
 
       .resize-handle {
@@ -1750,10 +1756,10 @@ function getWidgetMarkup({
         </aside>
       </div>
       <div class="action">
-        <button class="dashboard-button" data-autotime-open-dashboard type="button">OPEN DASHBOARD</button>
         <div class="track-copy">
           <button data-autotime-track-job type="button">TRACK JOB</button>
         </div>
+        <button class="dashboard-button" data-autotime-open-dashboard type="button">OPEN DASHBOARD</button>
       </div>
       <button class="resize-handle" data-autotime-resize-widget type="button" title="Resize widget" aria-label="Resize widget"></button>
     </section>
