@@ -2301,8 +2301,9 @@ export default function HomePage({
           ? "Tracker"
           : "Interview"
   const showHeaderJobActions =
-    isOverview || currentTab === "jobs" || currentTab === "applications"
-  const showExecutivePanel = isOverview || currentTab === "jobs"
+    profileBridgeReady &&
+    (isOverview || currentTab === "jobs" || currentTab === "applications")
+  const showExecutivePanel = isOverview || (profileBridgeReady && currentTab === "jobs")
   const showProfileSettingsPanel =
     activeFocus === "autofill-profile" || activeFocus === "settings"
   const showProfileCloudSync =
@@ -2311,6 +2312,8 @@ export default function HomePage({
     activeFocus === "insights" && !selectedApplication
   const showApplicationList = activeFocus !== "insights" && !selectedApplication
   const showInterviewPrepPacks = activeFocus === "interview-prep"
+  const isProfileGateRequired =
+    !profileBridgeReady && !isOverview && currentTab !== "profile"
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const decisionTone =
     decisionBrief.contentGate === "ready"
@@ -3613,7 +3616,9 @@ export default function HomePage({
     interviewBuddyOutputs.strongFinalAnswer.trim()
   )
   const actionPanelTitle =
-    isOverview
+    isProfileGateRequired
+      ? "Complete your profile first."
+      : isOverview
       ? "What do you want to do now?"
       : currentTab === "jobs"
       ? "Paste a job and see if it is worth applying."
@@ -3623,7 +3628,11 @@ export default function HomePage({
           ? "Review saved jobs and update the next step."
           : "Prepare a clearer interview answer."
   const actionPanelStateLabel =
-    isOverview
+    isProfileGateRequired
+      ? `${profileBridgeIssues.length} required profile item${
+          profileBridgeIssues.length === 1 ? " is" : "s are"
+        } missing`
+      : isOverview
       ? profileBridgeReady
         ? "Your profile is ready for job checks"
         : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing`
@@ -3645,6 +3654,8 @@ export default function HomePage({
   const actionPanelStatus =
     isCopilotThinking
       ? "Working"
+      : isProfileGateRequired
+        ? "Profile required"
       : isOverview && !profileBridgeReady
         ? "Start here"
         : currentTab === "jobs" && !hasJobDraft(state.jobAnalysis)
@@ -3844,13 +3855,21 @@ export default function HomePage({
                   <a className="secondary-button" href="/dashboard/autofill-profile">
                     Finish profile
                   </a>
-                  <a className="secondary-button" href="/dashboard/jobs">
-                    Check job
-                  </a>
-                  <a className="secondary-button" href="/dashboard/applications">
-                    Open tracker
-                  </a>
+                  {profileBridgeReady ? (
+                    <>
+                      <a className="secondary-button" href="/dashboard/jobs">
+                        Check job
+                      </a>
+                      <a className="secondary-button" href="/dashboard/applications">
+                        Open tracker
+                      </a>
+                    </>
+                  ) : null}
                 </>
+              ) : isProfileGateRequired ? (
+                <a className="secondary-button" href="/dashboard/autofill-profile">
+                  Complete profile
+                </a>
               ) : currentTab === "jobs" ? (
                 <button
                   disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
@@ -3898,6 +3917,29 @@ export default function HomePage({
               )}
             </div>
           </section>
+
+          {isProfileGateRequired ? (
+            <section className="profile-required-panel" aria-label="Profile required">
+              <div>
+                <p className="eyebrow">Profile required</p>
+                <h2>Finish your profile to continue</h2>
+                <p>
+                  AutoTime needs your target role, CV text and work-right details
+                  before it can check jobs, track applications or prepare
+                  interview answers.
+                </p>
+              </div>
+              <ul className="bullets-list">
+                {profileBridgeIssues.map((issue) => (
+                  <li key={issue}>Add {issue}</li>
+                ))}
+              </ul>
+              <a className="secondary-button" href="/dashboard/autofill-profile">
+                Complete profile
+              </a>
+            </section>
+          ) : (
+          <>
 
       {!isOverview && currentTab === "profile" && showProfileSettingsPanel && (
       <section className="market-context-panel" aria-label="Profile settings">
@@ -5683,6 +5725,9 @@ export default function HomePage({
           )}
         </section>
       )}
+
+          </>
+          )}
 
         </div>
       </div>

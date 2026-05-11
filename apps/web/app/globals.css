@@ -722,6 +722,36 @@ h4 {
   gap: 8px;
 }
 
+.profile-required-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(201, 84, 60, 0.28);
+  border-left: 4px solid var(--red);
+  border-radius: 8px;
+  background: #fff8f6;
+  box-shadow: var(--shadow-tight);
+  padding: 18px;
+}
+
+.profile-required-panel h2,
+.profile-required-panel p {
+  margin: 0;
+}
+
+.profile-required-panel h2 {
+  color: var(--ink);
+}
+
+.profile-required-panel p:not(.eyebrow) {
+  max-width: 720px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.profile-required-panel a {
+  width: fit-content;
+}
+
 .workspace-integrity-panel {
   display: grid;
   grid-template-columns: minmax(200px, 0.3fr) minmax(0, 1fr);
