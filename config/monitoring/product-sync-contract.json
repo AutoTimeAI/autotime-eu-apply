@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "flowId": "extension-dashboard-db-sync",
+  "principles": [
+    "Local-first capture: Track Job must write to Chrome local storage before any network call.",
+    "Durable state: every tracked job has local sync metadata: pending, synced, or failed.",
+    "Idempotent server writes: dashboard sync merges by normalized job URL before writing.",
+    "Basic sync is free: dashboard sync is not Pro gated.",
+    "Recoverable failures stay local and retryable.",
+    "Every fallback or failure emits a structured diagnostic log."
+  ],
+  "states": {
+    "pending": "Saved locally and waiting for dashboard sync.",
+    "synced": "Saved locally and last dashboard sync completed.",
+    "failed": "Saved locally but last dashboard sync failed."
+  },
+  "requiredSignals": [
+    "track-job-saved-local",
+    "track-job-sync-pending",
+    "track-job-sync-completed",
+    "track-job-sync-failed",
+    "connect-sync-started",
+    "connect-sync-completed",
+    "connect-sync-failed"
+  ],
+  "storage": {
+    "chromeLocalKeys": [
+      "saved-applications",
+      "application-sync-state",
+      "account-session",
+      "diagnostic-log"
+    ],
+    "databaseTables": [
+      "applications",
+      "sync_events",
+      "extension_connections",
+      "operational_logs"
+    ]
+  },
+  "adminRules": [
+    "Admin panel should show persisted operational logs when available.",
+    "Admin panel can fall back to computed signals when no persisted logs exist yet.",
+    "Admin UI must not reveal admin email or private auth details."
+  ]
+}

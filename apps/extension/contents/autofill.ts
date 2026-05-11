@@ -6,6 +6,7 @@ import {
   getProfile,
   getReusableAnswers,
   saveApplication,
+  updateApplicationSyncState,
   type AccountSession,
   type ApplicationRecord
 } from "../lib/storage"
@@ -290,6 +291,16 @@ async function syncTrackedApplicationsToDashboard(
   applications: ApplicationRecord[]
 ) {
   const session = await getAccountSession()
+  const applicationIds = applications.map((application) => application.id)
+
+  await updateApplicationSyncState(applicationIds, "pending")
+  void logDiagnosticEvent({
+    area: "sync",
+    event: "track-job-sync-pending",
+    message: "Tracked jobs marked pending before dashboard sync.",
+    status: "info",
+    details: { applicationCount: applications.length }
+  })
 
   if (!session?.authToken.trim()) {
     return {
@@ -304,10 +315,27 @@ async function syncTrackedApplicationsToDashboard(
       reusableAnswers: await getReusableAnswers(),
       session
     })
+    await updateApplicationSyncState(applicationIds, "synced")
+    void logDiagnosticEvent({
+      area: "sync",
+      event: "track-job-sync-completed",
+      message: "Tracked jobs synced to dashboard.",
+      status: "success",
+      details: { applicationCount: applications.length }
+    })
     return { synced: true }
   } catch (error: unknown) {
+    const reason = formatSyncFailureMessage(getErrorMessage(error))
+    await updateApplicationSyncState(applicationIds, "failed", { error: reason })
+    void logDiagnosticEvent({
+      area: "sync",
+      event: "track-job-sync-failed",
+      message: reason,
+      status: "warning",
+      details: { applicationCount: applications.length }
+    })
     return {
-      reason: formatSyncFailureMessage(getErrorMessage(error)),
+      reason,
       synced: false
     }
   }

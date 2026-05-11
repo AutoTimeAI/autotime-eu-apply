@@ -66,6 +66,18 @@ export type DiagnosticLogEntry = {
   status: "info" | "success" | "warning" | "error"
 }
 
+export type ApplicationSyncStatus = "pending" | "synced" | "failed"
+
+export type ApplicationSyncState = {
+  attempts: number
+  applicationId: string
+  lastError?: string
+  lastSyncedAt?: string
+  lastTriedAt?: string
+  status: ApplicationSyncStatus
+  updatedAt: string
+}
+
 type LegacyApplicationStatus =
   | ApplicationStatus
   | "draft"
@@ -156,6 +168,7 @@ const TRACKER_DRAFT_KEY = "tracker-draft"
 const AI_USAGE_LOG_KEY = "ai-usage-log"
 const ACCOUNT_SESSION_KEY = "account-session"
 const DIAGNOSTIC_LOG_KEY = "diagnostic-log"
+const APPLICATION_SYNC_STATE_KEY = "application-sync-state"
 const LEGACY_OPENAI_SETTINGS_KEY = "openai-settings"
 const MAX_DIAGNOSTIC_LOG_ENTRIES = 150
 
@@ -431,6 +444,27 @@ function normalizeDiagnosticLogEntry(
   }
 }
 
+function normalizeApplicationSyncState(
+  entry: Partial<ApplicationSyncState>,
+  applicationId: string
+): ApplicationSyncState {
+  const now = new Date().toISOString()
+  const status =
+    entry.status === "synced" || entry.status === "failed"
+      ? entry.status
+      : "pending"
+
+  return {
+    attempts: Number.isFinite(entry.attempts) ? Number(entry.attempts) : 0,
+    applicationId,
+    lastError: entry.lastError,
+    lastSyncedAt: entry.lastSyncedAt,
+    lastTriedAt: entry.lastTriedAt,
+    status,
+    updatedAt: entry.updatedAt ?? now
+  }
+}
+
 export async function saveProfile(profile: CandidateProfile) {
   await chrome.storage.local.set({ [PROFILE_KEY]: profile })
 }
@@ -559,6 +593,54 @@ export async function logDiagnosticEvent(
 
 export async function clearDiagnosticLog() {
   await chrome.storage.local.remove(DIAGNOSTIC_LOG_KEY)
+}
+
+export async function getApplicationSyncState(): Promise<
+  Record<string, ApplicationSyncState>
+> {
+  const result = await chrome.storage.local.get(APPLICATION_SYNC_STATE_KEY)
+  const raw =
+    (result[APPLICATION_SYNC_STATE_KEY] as
+      | Record<string, Partial<ApplicationSyncState>>
+      | undefined) ?? {}
+
+  return Object.fromEntries(
+    Object.entries(raw).map(([applicationId, entry]) => [
+      applicationId,
+      normalizeApplicationSyncState(entry, applicationId)
+    ])
+  )
+}
+
+export async function updateApplicationSyncState(
+  applicationIds: string[],
+  status: ApplicationSyncStatus,
+  options: { error?: string } = {}
+) {
+  const existing = await getApplicationSyncState()
+  const now = new Date().toISOString()
+
+  for (const applicationId of applicationIds) {
+    const current = existing[applicationId]
+    existing[applicationId] = {
+      attempts:
+        status === "pending"
+          ? (current?.attempts ?? 0) + 1
+          : (current?.attempts ?? 0),
+      applicationId,
+      lastError: status === "failed" ? options.error : undefined,
+      lastSyncedAt: status === "synced" ? now : current?.lastSyncedAt,
+      lastTriedAt:
+        status === "pending" || status === "failed"
+          ? now
+          : current?.lastTriedAt,
+      status,
+      updatedAt: now
+    }
+  }
+
+  await chrome.storage.local.set({ [APPLICATION_SYNC_STATE_KEY]: existing })
+  return existing
 }
 
 export async function saveAccountSession(session: AccountSession) {

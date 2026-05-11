@@ -6,6 +6,7 @@ import {
   getReusableAnswers,
   logDiagnosticEvent,
   saveAccountSession,
+  updateApplicationSyncState,
   type AccountSession
 } from "../../lib/storage"
 import { syncApplicationsToDashboard } from "../../lib/cloud-sync"
@@ -178,7 +179,9 @@ export default defineBackground(() => {
           let syncError: string | undefined
 
           if (applications.length > 0) {
+            const applicationIds = applications.map((application) => application.id)
             try {
+              await updateApplicationSyncState(applicationIds, "pending")
               await logDiagnosticEvent({
                 area: "sync",
                 event: "connect-sync-started",
@@ -191,6 +194,7 @@ export default defineBackground(() => {
                 reusableAnswers: await getReusableAnswers(),
                 session
               })
+              await updateApplicationSyncState(applicationIds, "synced")
               await logDiagnosticEvent({
                 area: "sync",
                 event: "connect-sync-completed",
@@ -200,6 +204,9 @@ export default defineBackground(() => {
               })
             } catch (error: unknown) {
               syncError = getErrorMessage(error)
+              await updateApplicationSyncState(applicationIds, "failed", {
+                error: syncError
+              })
               await logDiagnosticEvent({
                 area: "sync",
                 event: "connect-sync-failed",
