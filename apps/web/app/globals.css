@@ -2295,6 +2295,13 @@ h4 {
   color: #b91c1c;
 }
 
+.application-next-action-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 0.58fr);
+  gap: 8px;
+  align-items: end;
+}
+
 .application-row span {
   margin-top: 4px;
   color: #3a4659;
@@ -4173,6 +4180,10 @@ h4 {
   .online-analytics-results,
   .pipeline-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .application-next-action-fields {
+    grid-template-columns: 1fr;
   }
 
   .context-controls {

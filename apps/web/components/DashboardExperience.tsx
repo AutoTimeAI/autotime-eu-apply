@@ -4695,6 +4695,18 @@ export default function HomePage({
                   />
                 </label>
                 <label>
+                  Due date
+                  <input
+                    type="date"
+                    value={selectedApplication.nextActionDate ?? ""}
+                    onChange={(event) =>
+                      updateApplication(selectedApplication.id, {
+                        nextActionDate: event.target.value || undefined
+                      })
+                    }
+                  />
+                </label>
+                <label>
                   Outcome learning
                   <textarea
                     value={selectedApplication.notes ?? ""}
@@ -4910,17 +4922,31 @@ export default function HomePage({
                       ))}
                     </select>
                   </label>
-                  <label>
-                    Next action
-                    <input
-                      value={application.nextAction ?? ""}
-                      onChange={(event) =>
-                        updateApplication(application.id, {
-                          nextAction: event.target.value
-                        })
-                      }
-                    />
-                  </label>
+                  <div className="application-next-action-fields">
+                    <label>
+                      Next action
+                      <input
+                        value={application.nextAction ?? ""}
+                        onChange={(event) =>
+                          updateApplication(application.id, {
+                            nextAction: event.target.value
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Due date
+                      <input
+                        type="date"
+                        value={application.nextActionDate ?? ""}
+                        onChange={(event) =>
+                          updateApplication(application.id, {
+                            nextActionDate: event.target.value || undefined
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
                   <label>
                     Outcome
                     <select
