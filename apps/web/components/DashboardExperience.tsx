@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { z } from "zod"
 import {
   companionDashboardStateSchema,
@@ -30,6 +30,14 @@ import {
 import { useDashboardPlan } from "./UserNav"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
+type DashboardWorkflowSnapshot = Pick<
+  CompanionDashboardState,
+  | "reusableAnswers"
+  | "applications"
+  | "evidenceRecords"
+  | "outcomeRecords"
+  | "interviewPrepPacks"
+>
 type DashboardFocus =
   | "dashboard"
   | "job-inbox"
@@ -2426,55 +2434,111 @@ export default function HomePage({
     }
   ]
 
-  useEffect(() => {
-    const localState = getStoredState(userId)
-    setState(localState)
-    setProductContext(getStoredProductContext(userId))
-    setTrustState(getStoredTrustState(userId))
+  const loadDashboardSnapshot = useCallback(
+    async ({
+      silent = false,
+      successMessage = "Synced dashboard workflow loaded"
+    }: {
+      silent?: boolean
+      successMessage?: string
+    } = {}) => {
+      if (!cloudSyncReadiness.configured) {
+        if (!silent) {
+          setStatus(
+            `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+          )
+        }
+        return
+      }
 
-    if (!cloudSyncReadiness.configured) {
-      return
-    }
-
-    let cancelled = false
-
-    fetch("/api/sync/dashboard")
-      .then(async (response) => {
+      try {
+        const response = await fetch("/api/sync/dashboard", {
+          cache: "no-store"
+        })
         const body = (await response.json()) as {
           data: {
-            dashboard: Pick<
-              CompanionDashboardState,
-              | "reusableAnswers"
-              | "applications"
-              | "evidenceRecords"
-              | "outcomeRecords"
-              | "interviewPrepPacks"
-            >
+            dashboard: DashboardWorkflowSnapshot
           } | null
           error: string | null
         }
 
-        if (!response.ok || body.error || !body.data?.dashboard || cancelled) {
+        if (!response.ok || body.error) {
+          if (!silent) {
+            setStatus(body.error ?? "Could not load synced dashboard")
+          }
           return
         }
 
-        const nextState = {
-          ...localState,
-          ...body.data.dashboard,
-          evidenceRecords: body.data.dashboard.evidenceRecords ?? [],
-          outcomeRecords: body.data.dashboard.outcomeRecords ?? []
+        if (!body.data?.dashboard) {
+          if (!silent) {
+            setStatus("No synced dashboard workflow found for this account yet")
+          }
+          return
         }
-        setState(nextState)
-        saveState(nextState, userId)
-      })
-      .catch(() => {
-        // Keep local-first behavior if cloud sync is unavailable.
-      })
+
+        const dashboard = body.data.dashboard
+        setState((current) => {
+          const nextState = {
+            ...current,
+            ...dashboard,
+            evidenceRecords: dashboard.evidenceRecords ?? [],
+            outcomeRecords: dashboard.outcomeRecords ?? []
+          }
+          saveState(nextState, userId)
+          return nextState
+        })
+
+        if (!silent) {
+          setStatus(successMessage)
+        }
+      } catch (error: unknown) {
+        if (!silent) {
+          setStatus(
+            error instanceof Error
+              ? error.message
+              : "Could not load synced dashboard"
+          )
+        }
+      }
+    },
+    [cloudSyncReadiness.configured, cloudSyncReadiness.issues, userId]
+  )
+
+  useEffect(() => {
+    setState(getStoredState(userId))
+    setProductContext(getStoredProductContext(userId))
+    setTrustState(getStoredTrustState(userId))
+    void loadDashboardSnapshot({ silent: true })
+  }, [loadDashboardSnapshot, userId])
+
+  useEffect(() => {
+    if (!cloudSyncReadiness.configured) {
+      return
+    }
+
+    const refreshSyncedWorkflow = () => {
+      void loadDashboardSnapshot({ silent: true })
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        refreshSyncedWorkflow()
+      }
+    }
+
+    window.addEventListener("focus", refreshSyncedWorkflow)
+    document.addEventListener("visibilitychange", refreshWhenVisible)
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        refreshSyncedWorkflow()
+      }
+    }, 15000)
 
     return () => {
-      cancelled = true
+      window.removeEventListener("focus", refreshSyncedWorkflow)
+      document.removeEventListener("visibilitychange", refreshWhenVisible)
+      window.clearInterval(intervalId)
     }
-  }, [userId])
+  }, [cloudSyncReadiness.configured, loadDashboardSnapshot])
 
   const persist = (next: CompanionDashboardState, message: string) => {
     setState(next)
@@ -2725,55 +2789,9 @@ export default function HomePage({
   }
 
   const loadDashboardFromCloud = async () => {
-    if (!cloudSyncReadiness.configured) {
-      setStatus(
-        `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
-      )
-      return
-    }
-
-    try {
-      const response = await fetch("/api/sync/dashboard")
-      const body = (await response.json()) as {
-        data: {
-          dashboard: Pick<
-            CompanionDashboardState,
-            | "reusableAnswers"
-            | "applications"
-            | "evidenceRecords"
-            | "outcomeRecords"
-            | "interviewPrepPacks"
-          >
-        } | null
-        error: string | null
-      }
-
-      if (!response.ok || body.error) {
-        setStatus(body.error ?? "Could not load synced dashboard")
-        return
-      }
-
-      if (!body.data?.dashboard) {
-        setStatus("No synced dashboard workflow found for this account yet")
-        return
-      }
-
-      persist(
-        {
-          ...state,
-          ...body.data.dashboard,
-          evidenceRecords: body.data.dashboard.evidenceRecords ?? [],
-          outcomeRecords: body.data.dashboard.outcomeRecords ?? []
-        },
-        "Synced dashboard workflow loaded"
-      )
-    } catch (error: unknown) {
-      setStatus(
-        error instanceof Error
-          ? error.message
-          : "Could not load synced dashboard"
-      )
-    }
+    await loadDashboardSnapshot({
+      successMessage: "Synced dashboard workflow loaded"
+    })
   }
 
   const saveApplicationFromJob = () => {
