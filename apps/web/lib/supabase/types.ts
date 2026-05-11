@@ -354,6 +354,7 @@ export type Database = {
           user_id: string
           title: string
           url: string
+          url_key: string
           company: string | null
           role_title: string | null
           source: string | null
@@ -377,6 +378,7 @@ export type Database = {
           user_id: string
           title: string
           url?: string
+          url_key: string
           company?: string | null
           role_title?: string | null
           source?: string | null
@@ -400,6 +402,7 @@ export type Database = {
           user_id?: string
           title?: string
           url?: string
+          url_key?: string
           company?: string | null
           role_title?: string | null
           source?: string | null

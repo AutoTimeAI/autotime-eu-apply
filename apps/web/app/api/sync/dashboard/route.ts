@@ -68,6 +68,18 @@ function dateToNull(value: string | undefined): string | null {
   return trimmed.length ? trimmed : null
 }
 
+function normalizeApplicationUrlKey(url: string) {
+  try {
+    const parsed = new URL(url)
+    parsed.hash = ""
+    parsed.hostname = parsed.hostname.toLowerCase()
+    parsed.pathname = parsed.pathname.replace(/\/+$/, "")
+    return parsed.toString().replace(/\/$/, "").toLowerCase()
+  } catch {
+    return url.trim().toLowerCase().replace(/\/$/, "")
+  }
+}
+
 function mapReusableAnswersToRow(
   userId: string,
   answers: ReusableAnswers,
@@ -91,13 +103,15 @@ function mapReusableAnswersToRow(
 function mapApplicationToRow(
   userId: string,
   application: ApplicationRecord,
-  sourceSurface: SourceSurface
+  sourceSurface: SourceSurface,
+  idOverride?: string
 ): Database["public"]["Tables"]["applications"]["Insert"] {
   return {
-    id: application.id,
+    id: idOverride ?? application.id,
     user_id: userId,
     title: application.title,
     url: application.url,
+    url_key: normalizeApplicationUrlKey(application.url || application.id),
     company: emptyToNull(application.company),
     role_title: emptyToNull(application.roleTitle),
     source: emptyToNull(application.source),
@@ -119,12 +133,15 @@ function mapApplicationToRow(
 
 function mapEvidenceToRow(
   userId: string,
-  record: EvidenceRecord
+  record: EvidenceRecord,
+  applicationIdMap: Map<string, string> = new Map()
 ): Database["public"]["Tables"]["evidence_records"]["Insert"] {
   return {
     id: record.id,
     user_id: userId,
-    application_id: record.applicationId ?? null,
+    application_id: record.applicationId
+      ? applicationIdMap.get(record.applicationId) ?? record.applicationId
+      : null,
     job_url: emptyToNull(record.jobUrl),
     check_key: record.checkKey,
     check_label: record.checkLabel,
@@ -143,12 +160,14 @@ function mapEvidenceToRow(
 
 function mapOutcomeToRow(
   userId: string,
-  record: OutcomeRecord
+  record: OutcomeRecord,
+  applicationIdMap: Map<string, string> = new Map()
 ): Database["public"]["Tables"]["outcome_records"]["Insert"] {
   return {
     id: record.id,
     user_id: userId,
-    application_id: record.applicationId,
+    application_id:
+      applicationIdMap.get(record.applicationId) ?? record.applicationId,
     role_title: record.roleTitle,
     company: emptyToNull(record.company),
     country: emptyToNull(record.country),
@@ -171,12 +190,13 @@ function mapOutcomeToRow(
 function mapPrepPackToRow(
   userId: string,
   pack: InterviewPrepPack,
-  sourceSurface: SourceSurface
+  sourceSurface: SourceSurface,
+  applicationIdMap: Map<string, string> = new Map()
 ): Database["public"]["Tables"]["interview_prep_packs"]["Insert"] {
   return {
     id: pack.id,
     user_id: userId,
-    application_id: pack.applicationId,
+    application_id: applicationIdMap.get(pack.applicationId) ?? pack.applicationId,
     role_summary: pack.roleSummary,
     positioning_statement: pack.positioningStatement,
     fit_and_gap_recap: pack.fitAndGapRecap,
@@ -200,10 +220,12 @@ function getSourceSurface(request: NextRequest): SourceSurface {
 }
 
 function mapSyncEvents({
+  applicationIdMap,
   payload,
   sourceSurface,
   userId
 }: {
+  applicationIdMap?: Map<string, string>
   payload: DashboardWorkflowPayload
   sourceSurface: SourceSurface
   userId: string
@@ -222,7 +244,7 @@ function mapSyncEvents({
   for (const application of payload.applications) {
     events.push({
       action: "updated",
-      entity_id: application.id,
+      entity_id: applicationIdMap?.get(application.id) ?? application.id,
       entity_type: "application",
       message: "Application synced to dashboard.",
       source_surface: sourceSurface,
@@ -500,6 +522,44 @@ export async function POST(
     const payload = dashboardWorkflowSchema.parse(await request.json())
     const supabase = createAdminClient()
     const sourceSurface = getSourceSurface(request)
+    const applicationUrlKeys = payload.applications.map((application) =>
+      normalizeApplicationUrlKey(application.url || application.id)
+    )
+    const applicationIdMap = new Map<string, string>()
+
+    if (applicationUrlKeys.length) {
+      const { data, error } = await supabase
+        .from("applications")
+        .select("id, url_key")
+        .eq("user_id", auth.user.id)
+        .in("url_key", applicationUrlKeys)
+
+      if (error) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.application-identity.failed",
+          data: null,
+          error: error.message,
+          log: true,
+          request,
+          status: 500
+        })
+      }
+
+      const existingByUrlKey = new Map(
+        (data ?? []).map((row) => [row.url_key, row.id])
+      )
+
+      for (const application of payload.applications) {
+        const existingId = existingByUrlKey.get(
+          normalizeApplicationUrlKey(application.url || application.id)
+        )
+
+        if (existingId) {
+          applicationIdMap.set(application.id, existingId)
+        }
+      }
+    }
 
     const reusableAnswersResult = await supabase
       .from("reusable_answers")
@@ -529,9 +589,14 @@ export async function POST(
         .from("applications")
         .upsert(
           payload.applications.map((item) =>
-            mapApplicationToRow(auth.user.id, item, sourceSurface)
+            mapApplicationToRow(
+              auth.user.id,
+              item,
+              sourceSurface,
+              applicationIdMap.get(item.id)
+            )
           ),
-          { onConflict: "id" }
+          { onConflict: "user_id,url_key" }
         )
 
       if (error) {
@@ -552,7 +617,7 @@ export async function POST(
         .from("evidence_records")
         .upsert(
           payload.evidenceRecords.map((item) =>
-            mapEvidenceToRow(auth.user.id, item)
+            mapEvidenceToRow(auth.user.id, item, applicationIdMap)
           ),
           { onConflict: "id" }
         )
@@ -575,7 +640,7 @@ export async function POST(
         .from("outcome_records")
         .upsert(
           payload.outcomeRecords.map((item) =>
-            mapOutcomeToRow(auth.user.id, item)
+            mapOutcomeToRow(auth.user.id, item, applicationIdMap)
           ),
           { onConflict: "user_id,application_id" }
         )
@@ -598,7 +663,12 @@ export async function POST(
         .from("interview_prep_packs")
         .upsert(
           payload.interviewPrepPacks.map((item) =>
-            mapPrepPackToRow(auth.user.id, item, sourceSurface)
+            mapPrepPackToRow(
+              auth.user.id,
+              item,
+              sourceSurface,
+              applicationIdMap
+            )
           ),
           { onConflict: "user_id,application_id" }
         )
@@ -617,6 +687,7 @@ export async function POST(
     }
 
     const syncEvents = mapSyncEvents({
+      applicationIdMap,
       payload,
       sourceSurface,
       userId: auth.user.id
