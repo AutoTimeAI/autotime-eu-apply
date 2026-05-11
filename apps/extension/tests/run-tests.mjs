@@ -296,6 +296,8 @@ test("reads explicit job page fields without title fallbacks", () => {
       heading: "Staff Backend Engineer",
       company: "Example Co",
       location: "London, United Kingdom",
+      salary: "GBP 50000-60000 YEAR",
+      employmentType: "FULL_TIME",
       url: "https://jobs.example.co/backend"
     }),
     {
@@ -303,6 +305,8 @@ test("reads explicit job page fields without title fallbacks", () => {
       company: "Example Co",
       location: "London, United Kingdom",
       jobDescription: "",
+      salary: "GBP 50000-60000 YEAR",
+      employmentType: "FULL_TIME",
       url: "https://jobs.example.co/backend",
       source: "jobs.example.co",
       platform: "Generic",
@@ -658,6 +662,8 @@ test("formats imported job page notes from detected metadata", () => {
       company: "Example Co",
       location: "London, United Kingdom",
       jobDescription: "",
+      salary: "GBP 50000-60000 YEAR",
+      employmentType: "FULL_TIME",
       url: "https://jobs.example.co/backend",
       source: "jobs.example.co",
       platform: "Generic",
@@ -665,6 +671,8 @@ test("formats imported job page notes from detected metadata", () => {
     }),
     [
       "Location: London, United Kingdom",
+      "Salary: GBP 50000-60000 YEAR",
+      "Employment type: FULL_TIME",
       "Source: jobs.example.co",
       "Page title: Backend Engineer | Example Jobs"
     ].join("\n")

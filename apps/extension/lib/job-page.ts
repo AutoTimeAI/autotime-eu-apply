@@ -7,6 +7,8 @@ export type JobPageDetails = {
   source: string
   platform: JobPlatform
   pageTitle: string
+  salary?: string
+  employmentType?: string
 }
 
 export type JobPlatform =
@@ -30,6 +32,8 @@ type JobPageTextInput = {
   company?: string
   location?: string
   description?: string
+  employmentType?: string
+  salary?: string
   url?: string
   source?: string
 }
@@ -314,6 +318,8 @@ export function inferJobPageDetails(
   const roleTitle = getLikelyRoleTitle(input.heading)
   const company = getLikelyCompany(input.company)
   const jobDescription = cleanText(input.description)
+  const salary = cleanText(input.salary)
+  const employmentType = cleanText(input.employmentType)
   const location =
     getLikelyLocation(input.location) || inferLocationSignalFromText(input.description)
 
@@ -325,13 +331,17 @@ export function inferJobPageDetails(
     url,
     source: cleanText(input.source) || getHostname(url),
     platform,
-    pageTitle: cleanText(input.title)
+    pageTitle: cleanText(input.title),
+    ...(salary ? { salary } : {}),
+    ...(employmentType ? { employmentType } : {})
   }
 }
 
 export function formatJobPageNotes(details: JobPageDetails) {
   return [
     details.location && `Location: ${details.location}`,
+    details.salary && `Salary: ${details.salary}`,
+    details.employmentType && `Employment type: ${details.employmentType}`,
     details.platform !== "Generic" && `Platform: ${details.platform}`,
     details.source && `Source: ${details.source}`,
     details.pageTitle && `Page title: ${details.pageTitle}`

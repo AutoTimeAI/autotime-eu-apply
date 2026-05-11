@@ -856,6 +856,58 @@ function getJsonLdAddressText(value: unknown): string {
     .join(", ")
 }
 
+function getJsonLdEmploymentType(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(getJsonLdEmploymentType).filter(Boolean).join(", ")
+  }
+
+  return getJsonLdText(value)
+}
+
+function getJsonLdScalarText(value: unknown) {
+  if (typeof value === "number") {
+    return String(value)
+  }
+
+  return getJsonLdText(value)
+}
+
+function getJsonLdSalaryText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(getJsonLdSalaryText).find(Boolean) ?? ""
+  }
+
+  if (typeof value === "number") {
+    return String(value)
+  }
+
+  if (typeof value === "string") {
+    return cleanVisibleText(value)
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const item = value as Record<string, unknown>
+  const nestedValue = item.value
+  const valueRecord =
+    typeof nestedValue === "object" && nestedValue !== null
+      ? (nestedValue as Record<string, unknown>)
+      : null
+  const minValue = getJsonLdScalarText(valueRecord?.minValue ?? item.minValue)
+  const maxValue = getJsonLdScalarText(valueRecord?.maxValue ?? item.maxValue)
+  const directValue = getJsonLdScalarText(valueRecord?.value ?? nestedValue)
+  const valueText =
+    minValue && maxValue
+      ? `${minValue}-${maxValue}`
+      : directValue || minValue || maxValue
+  const currency = getJsonLdScalarText(item.currency ?? valueRecord?.currency)
+  const unitText = getJsonLdScalarText(valueRecord?.unitText ?? item.unitText)
+
+  return [currency, valueText, unitText].filter(Boolean).join(" ")
+}
+
 function detectJobPage(): JobPageResponse {
   const jsonLdPosting = getJsonLdJobPosting()
   const isLinkedInPage = isLinkedInUrl(window.location.href)
@@ -872,6 +924,10 @@ function detectJobPage(): JobPageResponse {
     typeof jsonLdPosting?.description === "string"
       ? getHtmlText(jsonLdPosting.description)
       : ""
+  const jsonLdSalary = getJsonLdSalaryText(jsonLdPosting?.baseSalary)
+  const jsonLdEmploymentType = getJsonLdEmploymentType(
+    jsonLdPosting?.employmentType
+  )
 
   // These selectors cover common job-board conventions. Page titles are kept
   // for notes only and are not split into guessed job fields.
@@ -958,7 +1014,9 @@ function detectJobPage(): JobPageResponse {
         isLikelyVisibleTitle
       ),
     company,
+    employmentType: jsonLdEmploymentType,
     location,
+    salary: jsonLdSalary,
     description:
       jsonLdDescription || getJobDescription(),
     url: isLinkedInPage
