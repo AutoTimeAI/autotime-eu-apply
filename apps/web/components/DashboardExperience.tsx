@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { z } from "zod"
 import {
   companionDashboardStateSchema,
@@ -2025,6 +2025,9 @@ export default function HomePage({
   const [isCopilotThinking, setIsCopilotThinking] = useState(false)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
+  const applicationSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
     useState<OnlineAnalyticsReport | null>(null)
   const [onlineAnalyticsStatus, setOnlineAnalyticsStatus] = useState("")
@@ -2730,19 +2733,18 @@ export default function HomePage({
     persist(state, "Dashboard saved locally")
   }
 
-  const syncDashboardToCloud = async () => {
-    if (!cloudSyncReadiness.configured) {
-      setStatus(
-        `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
-      )
-      return
-    }
-
-    if (!cloudSyncConsent) {
-      setStatus("Cloud dashboard sync requires your consent.")
-      return
-    }
-
+  const syncDashboardStateToCloud = async (
+    nextState: CompanionDashboardState,
+    {
+      failureMessage = "Dashboard saved locally. Sync failed",
+      silent = false,
+      successMessage = "Dashboard workflow synced to your account"
+    }: {
+      failureMessage?: string
+      silent?: boolean
+      successMessage?: string
+    } = {}
+  ) => {
     try {
       const response = await fetch("/api/sync/dashboard", {
         method: "POST",
@@ -2751,11 +2753,11 @@ export default function HomePage({
           "x-autotime-source": "web"
         },
         body: JSON.stringify({
-          reusableAnswers: state.reusableAnswers,
-          applications: state.applications,
-          evidenceRecords: state.evidenceRecords ?? [],
-          outcomeRecords: state.outcomeRecords ?? [],
-          interviewPrepPacks: state.interviewPrepPacks
+          reusableAnswers: nextState.reusableAnswers,
+          applications: nextState.applications,
+          evidenceRecords: nextState.evidenceRecords ?? [],
+          outcomeRecords: nextState.outcomeRecords ?? [],
+          interviewPrepPacks: nextState.interviewPrepPacks
         })
       })
       const body = (await response.json()) as {
@@ -2763,17 +2765,57 @@ export default function HomePage({
       }
 
       if (!response.ok || body.error) {
-        setStatus(body.error ?? "Dashboard sync failed")
-        return
+        if (!silent) {
+          setStatus(`${failureMessage}: ${body.error ?? "Dashboard sync failed"}`)
+        }
+        return false
       }
 
-      setStatus("Dashboard workflow synced to your account")
+      if (!silent) {
+        setStatus(successMessage)
+      }
+      return true
     } catch (error: unknown) {
-      setStatus(
-        error instanceof Error ? error.message : "Dashboard sync failed"
-      )
+      if (!silent) {
+        setStatus(
+          `${failureMessage}: ${
+            error instanceof Error ? error.message : "Dashboard sync failed"
+          }`
+        )
+      }
+      return false
     }
   }
+
+  const syncDashboardToCloud = async () => {
+    setCloudSyncConsent(true)
+    await syncDashboardStateToCloud(state)
+  }
+
+  const scheduleDashboardSync = (
+    nextState: CompanionDashboardState,
+    messages?: {
+      failureMessage?: string
+      successMessage?: string
+    }
+  ) => {
+    if (applicationSyncTimeoutRef.current) {
+      clearTimeout(applicationSyncTimeoutRef.current)
+    }
+
+    applicationSyncTimeoutRef.current = setTimeout(() => {
+      applicationSyncTimeoutRef.current = null
+      void syncDashboardStateToCloud(nextState, messages)
+    }, 900)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (applicationSyncTimeoutRef.current) {
+        clearTimeout(applicationSyncTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const loadDashboardFromCloud = async () => {
     await loadDashboardSnapshot({
@@ -2781,7 +2823,7 @@ export default function HomePage({
     })
   }
 
-  const saveApplicationFromJob = () => {
+  const saveApplicationFromJob = async () => {
     if (!hasJobDraft(state.jobAnalysis)) {
       setStatus("Add a job title, company, URL or job description before saving")
       return
@@ -2806,8 +2848,7 @@ export default function HomePage({
       },
       fitEvaluation
     )
-    persist(
-      {
+    const nextState = {
         ...state,
         applications: [application, ...state.applications],
         evidenceRecords: [
@@ -2822,9 +2863,16 @@ export default function HomePage({
           createOutcomeRecord(application),
           ...(state.outcomeRecords ?? [])
         ]
-      },
+      }
+
+    persist(
+      nextState,
       "Application saved with evidence and outcome records"
     )
+    await syncDashboardStateToCloud(nextState, {
+      failureMessage: "Application saved locally. Dashboard sync failed",
+      successMessage: "Application saved and synced to dashboard"
+    })
     openDashboardView("applications")
   }
 
@@ -2898,8 +2946,7 @@ export default function HomePage({
       ? updateOutcomeRecordFromApplication(existingOutcome, updatedApplication)
       : null
 
-    persist(
-      {
+    const nextState = {
         ...state,
         applications: updatedApplications,
         outcomeRecords: updatedOutcome
@@ -2910,9 +2957,16 @@ export default function HomePage({
               )
             ]
           : (state.outcomeRecords ?? [])
-      },
+      }
+
+    persist(
+      nextState,
       "Application and outcome record updated"
     )
+    scheduleDashboardSync(nextState, {
+      failureMessage: "Application updated locally. Dashboard sync failed",
+      successMessage: "Application updated and synced to dashboard"
+    })
   }
 
   const removeApplicationFromState = (
