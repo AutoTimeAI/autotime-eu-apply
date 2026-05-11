@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import type { ReactNode } from "react"
+import { isAdminUser } from "../../lib/admin-access"
 import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate"
 import { createServerClient } from "../../lib/supabase/server"
 import { getTestAuthUser } from "../../lib/test-auth"
@@ -55,7 +56,7 @@ export default async function DashboardLayout({
               </span>
             </a>
             <DashboardTopNav />
-            <UserNav email={email} plan={plan} />
+            <UserNav email={email} isAdmin={isAdminUser(user)} plan={plan} />
           </header>
           {plan === "free" ? (
             <UpgradeBanner remainingCalls={remainingCalls} />

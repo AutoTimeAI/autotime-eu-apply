@@ -12,6 +12,7 @@ type DashboardPlanContextValue = {
 
 type UserNavProps = {
   email: string
+  isAdmin?: boolean
   plan: SubscriptionPlan
 }
 
@@ -88,7 +89,7 @@ export function DashboardTopNav() {
   )
 }
 
-export function UserNav({ email, plan }: UserNavProps) {
+export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const planLabel = plan === "pro" ? "Pro" : "Free"
@@ -205,6 +206,11 @@ export function UserNav({ email, plan }: UserNavProps) {
       </button>
       {isOpen ? (
         <div className="user-nav-menu">
+          {isAdmin ? (
+            <a className="secondary-button" href="/admin">
+              Admin panel
+            </a>
+          ) : null}
           <button
             className="secondary-button"
             type="button"

@@ -7,8 +7,10 @@ import type { Database } from "./lib/supabase/types"
 import { getTestAuthUser } from "./lib/test-auth"
 
 const protectedRoutePrefixes = [
+  "/admin",
   "/dashboard",
   "/diagnostics",
+  "/api/admin",
   "/api/ai",
   "/api/diagnostics",
   "/api/stripe"
