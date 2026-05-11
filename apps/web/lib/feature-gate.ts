@@ -1,4 +1,5 @@
 import { createAdminClient } from "./supabase/admin"
+import { createDiagnostic, logDiagnostic } from "./diagnostics"
 import type { SubscriptionPlan, SubscriptionStatus } from "./supabase/types"
 import { getTestAuthPlan, isTestAuthUserId } from "./test-auth"
 
@@ -147,7 +148,20 @@ export async function trackAiCall(
     const message =
       error instanceof Error ? error.message : "Unable to track AI usage"
 
-    throw new Error(message)
+    logDiagnostic(
+      createDiagnostic({
+        area: "ai",
+        code: "ai.usage.track.failed",
+        message,
+        status: 500
+      }),
+      {
+        costUsd: opts.costUsd,
+        feature: opts.feature,
+        model: opts.model,
+        userId
+      }
+    )
   }
 }
 
