@@ -240,38 +240,85 @@ const commandSidebarItems: Array<{
   focus: DashboardFocus
   label: string
   routeId: DashboardTab | "overview"
+  section: string
 }> = [
-  { href: "/dashboard", focus: "dashboard", label: "Dashboard", routeId: "overview" },
+  {
+    href: "/dashboard",
+    focus: "dashboard",
+    label: "Dashboard",
+    routeId: "overview",
+    section: "Overview"
+  },
   {
     href: "/dashboard/inbox",
     focus: "job-inbox",
     label: "Job Inbox",
-    routeId: "applications"
+    routeId: "applications",
+    section: "Jobs"
   },
-  { href: "/dashboard/match-score", focus: "match-score", label: "Match Score", routeId: "jobs" },
-  { href: "/dashboard/cv-tailor", focus: "cv-tailor", label: "CV Evidence", routeId: "profile" },
+  {
+    href: "/dashboard/match-score",
+    focus: "match-score",
+    label: "AI Role Check",
+    routeId: "jobs",
+    section: "Jobs"
+  },
+  {
+    href: "/dashboard/cv-tailor",
+    focus: "cv-tailor",
+    label: "CV Evidence",
+    routeId: "profile",
+    section: "Profile"
+  },
   {
     href: "/dashboard/application-answers",
     focus: "application-answers",
     label: "Application Answers",
-    routeId: "profile"
+    routeId: "profile",
+    section: "Profile"
   },
   {
     href: "/dashboard/autofill-profile",
     focus: "autofill-profile",
     label: "Profile Evidence",
-    routeId: "profile"
+    routeId: "profile",
+    section: "Profile"
   },
   {
     href: "/dashboard/applications",
     focus: "application-tracker",
     label: "Application Tracker",
-    routeId: "applications"
+    routeId: "applications",
+    section: "Applications"
   },
-  { href: "/dashboard/follow-ups", focus: "follow-ups", label: "Follow-ups", routeId: "applications" },
-  { href: "/dashboard/interview", focus: "interview-prep", label: "Interview Prep", routeId: "interview" },
-  { href: "/dashboard/insights", focus: "insights", label: "Insights", routeId: "applications" },
-  { href: "/dashboard/settings", focus: "settings", label: "Settings", routeId: "profile" }
+  {
+    href: "/dashboard/follow-ups",
+    focus: "follow-ups",
+    label: "Follow-ups",
+    routeId: "applications",
+    section: "Applications"
+  },
+  {
+    href: "/dashboard/insights",
+    focus: "insights",
+    label: "Insights",
+    routeId: "applications",
+    section: "Applications"
+  },
+  {
+    href: "/dashboard/interview",
+    focus: "interview-prep",
+    label: "Interview Prep",
+    routeId: "interview",
+    section: "Interview"
+  },
+  {
+    href: "/dashboard/settings",
+    focus: "settings",
+    label: "Settings",
+    routeId: "profile",
+    section: "Settings"
+  }
 ]
 
 const dashboardFocusCopy: Record<
@@ -2256,19 +2303,31 @@ export default function HomePage({
     commandNavIndex >= 0 && commandNavIndex < commandSidebarItems.length - 1
       ? commandSidebarItems[commandNavIndex + 1]
       : null
-  const activeSidebarLabel = {
-    dashboard: "Dashboard",
-    "job-inbox": "Job Inbox",
-    "match-score": "Match Score",
-    "cv-tailor": "CV Evidence",
-    "application-answers": "Application Answers",
-    "autofill-profile": "Profile Evidence",
-    "application-tracker": "Application Tracker",
-    "follow-ups": "Follow-ups",
-    "interview-prep": "Interview Prep",
-    insights: "Insights",
-    settings: "Settings"
-  }[activeFocus]
+  const activeSidebarLabel =
+    commandSidebarItems.find((item) => item.focus === activeFocus)?.label ??
+    focusCopy.title
+  const commandSidebarSections = commandSidebarItems.reduce<
+    Array<{ label: string; items: typeof commandSidebarItems }>
+  >((sections, item) => {
+    const section = sections.find((current) => current.label === item.section)
+
+    if (section) {
+      section.items.push(item)
+    } else {
+      sections.push({ label: item.section, items: [item] })
+    }
+
+    return sections
+  }, [])
+  const actionPanelEyebrow = isOverview
+    ? "Workspace Actions"
+    : currentTab === "jobs"
+      ? "AI Role Check"
+      : currentTab === "profile"
+        ? "Profile Actions"
+        : currentTab === "applications"
+          ? "Application Actions"
+          : "Interview Buddy"
   const showHeaderJobActions =
     isOverview || currentTab === "jobs" || currentTab === "applications"
   const showExecutivePanel = isOverview || currentTab === "jobs"
@@ -3771,15 +3830,24 @@ export default function HomePage({
         <aside className="command-sidebar" aria-label="Command centre navigation">
           <p>Workspace</p>
           <nav>
-            {commandSidebarItems.map((item) => (
-              <a
-                aria-current={activeSidebarLabel === item.label ? "page" : undefined}
-                className={activeSidebarLabel === item.label ? "active" : undefined}
-                href={item.href}
-                key={item.label}
-              >
-                {item.label}
-              </a>
+            {commandSidebarSections.map((section) => (
+              <div className="command-sidebar-group" key={section.label}>
+                <span>{section.label}</span>
+                {section.items.map((item) => (
+                  <a
+                    aria-current={
+                      activeSidebarLabel === item.label ? "page" : undefined
+                    }
+                    className={
+                      activeSidebarLabel === item.label ? "active" : undefined
+                    }
+                    href={item.href}
+                    key={item.label}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
             ))}
           </nav>
         </aside>
@@ -3813,9 +3881,7 @@ export default function HomePage({
           <section className="ai-copilot-panel" aria-label="Guided actions">
             <div className="ai-copilot-header">
               <div>
-                <p className="eyebrow">
-                  {currentTab === "jobs" ? "AI Role Check" : "Guided Actions"}
-                </p>
+                <p className="eyebrow">{actionPanelEyebrow}</p>
                 <h2>{actionPanelTitle}</h2>
                 <p>{actionPanelStateLabel}</p>
               </div>

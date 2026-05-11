@@ -625,7 +625,7 @@ h4 {
 
 .command-sidebar nav {
   display: grid;
-  gap: 4px;
+  gap: 12px;
 }
 
 .command-sidebar a {
@@ -636,6 +636,20 @@ h4 {
   font-weight: 650;
   padding: 9px 10px;
   text-decoration: none;
+}
+
+.command-sidebar-group {
+  display: grid;
+  gap: 4px;
+}
+
+.command-sidebar-group > span {
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .command-sidebar a:hover,
@@ -4306,14 +4320,14 @@ h4 {
   }
 
   .command-sidebar nav {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     overflow-x: clip;
     padding-bottom: 2px;
   }
 
-  .command-sidebar a {
-    flex: 1 1 150px;
+  .command-sidebar-group {
+    align-content: start;
   }
 }
 
