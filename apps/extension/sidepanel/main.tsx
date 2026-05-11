@@ -346,6 +346,27 @@ function SidePanelApp() {
     }
 
     loadProfile()
+
+    const refreshAccountSession = () => {
+      void loadAccountSession()
+    }
+
+    const handleStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string
+    ) => {
+      if (areaName === "local" && changes["account-session"]) {
+        refreshAccountSession()
+      }
+    }
+
+    window.addEventListener("focus", refreshAccountSession)
+    chrome.storage.onChanged.addListener(handleStorageChange)
+
+    return () => {
+      window.removeEventListener("focus", refreshAccountSession)
+      chrome.storage.onChanged.removeListener(handleStorageChange)
+    }
   }, [])
 
   const updateField = <K extends keyof CandidateProfile>(

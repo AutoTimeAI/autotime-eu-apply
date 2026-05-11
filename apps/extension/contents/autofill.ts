@@ -1857,6 +1857,17 @@ function startJobWidgetAutoShowMonitor() {
   checkPage()
 }
 
+function accountSessionsMatch(
+  current: AccountSession | null,
+  next: AccountSession | null
+) {
+  return (
+    (current?.authToken ?? "") === (next?.authToken ?? "") &&
+    (current?.email ?? "") === (next?.email ?? "") &&
+    (current?.plan ?? "free") === (next?.plan ?? "free")
+  )
+}
+
 function initializeMovableJobWidget() {
   if (document.getElementById(widgetHostId)) {
     showAutotimeWidget?.()
@@ -1981,6 +1992,7 @@ function initializeMovableJobWidget() {
 
   const refreshInterval = window.setInterval(() => {
     const nextDetails = detectJobPage()
+    let shouldRender = false
 
     if (
       nextDetails.url !== details.url ||
@@ -1990,6 +2002,17 @@ function initializeMovableJobWidget() {
       nextDetails.jobDescription !== details.jobDescription
     ) {
       details = nextDetails
+      shouldRender = true
+    }
+
+    void getAccountSession().then((nextSession) => {
+      if (!accountSessionsMatch(accountSession, nextSession)) {
+        accountSession = nextSession
+        render()
+      }
+    })
+
+    if (shouldRender) {
       render()
     }
   }, 2500)
@@ -2002,6 +2025,24 @@ function initializeMovableJobWidget() {
     host.dataset.autotimeMinimized = String(isMinimized)
     saveWidgetPlacement({ closed: isClosed })
   })
+
+  const handleStorageChange = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    areaName: string
+  ) => {
+    if (areaName !== "local" || !changes["account-session"]) {
+      return
+    }
+
+    void getAccountSession().then((session) => {
+      if (!accountSessionsMatch(accountSession, session)) {
+        accountSession = session
+        render()
+      }
+    })
+  }
+
+  chrome.storage.onChanged.addListener(handleStorageChange)
 
   void getAccountSession().then((session) => {
     accountSession = session

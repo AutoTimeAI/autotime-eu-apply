@@ -16,7 +16,6 @@ import {
 } from "shared"
 import { getRequestUser } from "../../../../lib/api-auth"
 import { diagnosticJson } from "../../../../lib/diagnostics"
-import { isProUser } from "../../../../lib/feature-gate"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import type { Database } from "../../../../lib/supabase/types"
 
@@ -292,19 +291,11 @@ function rowToPrepPack(
   })
 }
 
-async function requireProUser(request: NextRequest) {
+async function requireAuthenticatedUser(request: NextRequest) {
   const { user, error } = await getRequestUser(request)
 
   if (error || !user) {
     return { error: "Unauthorised", status: 401 as const, user: null }
-  }
-
-  if (!(await isProUser(user.id))) {
-    return {
-      error: "Cloud dashboard sync requires a Pro plan",
-      status: 403 as const,
-      user: null
-    }
   }
 
   return { error: null, status: 200 as const, user }
@@ -314,7 +305,7 @@ export async function GET(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<DashboardReadData>>> {
   try {
-    const auth = await requireProUser(request)
+    const auth = await requireAuthenticatedUser(request)
 
     if (!auth.user) {
       return diagnosticJson({
@@ -415,7 +406,7 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<DashboardSyncData>>> {
   try {
-    const auth = await requireProUser(request)
+    const auth = await requireAuthenticatedUser(request)
 
     if (!auth.user) {
       return diagnosticJson({
