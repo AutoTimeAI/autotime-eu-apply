@@ -3289,22 +3289,27 @@ export default function HomePage({
     )
   }
 
-  const saveInterviewPrepPack = (
+  const saveInterviewPrepPack = async (
     pack: CompanionDashboardState["interviewPrepPacks"][number],
     message: string
   ) => {
-    persist(
-      {
-        ...state,
-        interviewPrepPacks: [
-          pack,
-          ...state.interviewPrepPacks.filter(
-            (current) => current.applicationId !== pack.applicationId
-          )
-        ]
-      },
-      message
-    )
+    const nextState = {
+      ...state,
+      interviewPrepPacks: [
+        pack,
+        ...state.interviewPrepPacks.filter(
+          (current) => current.applicationId !== pack.applicationId
+        )
+      ]
+    }
+
+    persist(nextState, message)
+    hasUnsyncedDashboardChangesRef.current = true
+    const synced = await syncDashboardStateToCloud(nextState, {
+      failureMessage: "Interview prep saved locally. Dashboard sync failed",
+      successMessage: "Interview prep saved and synced to dashboard"
+    })
+    hasUnsyncedDashboardChangesRef.current = !synced
     openDashboardView("interview")
   }
 
@@ -3325,7 +3330,7 @@ export default function HomePage({
       state.profile,
       state.jobAnalysis
     )
-    saveInterviewPrepPack(pack, "Interview prep pack generated")
+    void saveInterviewPrepPack(pack, "Interview prep pack generated")
   }
 
   const exportDashboard = () => {
@@ -3404,6 +3409,11 @@ export default function HomePage({
       }
 
       persist(result.data, "Dashboard imported")
+      scheduleDashboardSync(result.data, {
+        failureMessage: "Dashboard imported locally. Dashboard sync failed",
+        successMessage: "Dashboard imported and synced"
+      })
+      scheduleProfileSync(result.data.profile)
       setImportJson("")
     } catch {
       setStatus("Import failed: invalid JSON")
