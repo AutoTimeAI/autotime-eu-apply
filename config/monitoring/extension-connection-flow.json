@@ -1,0 +1,120 @@
+{
+  "flowId": "extension-dashboard-connection",
+  "version": 1,
+  "owner": "AutoTime",
+  "purpose": "Monitor dashboard sign-in, extension connection, local job tracking, and dashboard sync flow.",
+  "logStore": {
+    "extension": "chrome.storage.local:diagnostic-log",
+    "maxEntries": 150,
+    "exportName": "autotime-diagnostic-log.json"
+  },
+  "privacy": {
+    "logPolicy": "Do not log account tokens, authorization headers, passwords, or secrets.",
+    "redactedDetailKeys": [
+      "token",
+      "secret",
+      "password",
+      "authorization"
+    ]
+  },
+  "expectedFlows": [
+    {
+      "name": "Dashboard connects extension",
+      "events": [
+        "ping-received",
+        "account-session-saved",
+        "connect-sync-started",
+        "connect-sync-completed",
+        "account-connected-broadcast"
+      ],
+      "notes": "connect-sync-started and connect-sync-completed only appear when local tracked jobs exist."
+    },
+    {
+      "name": "Widget receives connected session",
+      "events": [
+        "account-connected-received"
+      ],
+      "notes": "This proves the active job-board widget heard the dashboard connection broadcast."
+    },
+    {
+      "name": "Track job locally first",
+      "events": [
+        "track-job-saved-local"
+      ],
+      "notes": "Basic job tracking is not Pro gated. Sync depends only on a valid dashboard session."
+    },
+    {
+      "name": "Profile sync from side panel",
+      "events": [
+        "profile-sync-started",
+        "profile-sync-completed"
+      ],
+      "notes": "Used when the side panel syncs profile settings to the dashboard."
+    }
+  ],
+  "dashboardTimeline": [
+    {
+      "step": "Check extension reachability",
+      "success": "Extension replied to AUTOTIME_PING.",
+      "failure": "Extension ID is missing, stale, disabled, or Chrome messaging is blocked."
+    },
+    {
+      "step": "Check signed-in dashboard account",
+      "success": "Dashboard session and account profile were read.",
+      "failure": "User is not signed in, account row is missing, or Supabase returned an error."
+    },
+    {
+      "step": "Send account session to extension",
+      "success": "Extension stored the dashboard session and returned AUTOTIME_CONNECT_ACCOUNT ok.",
+      "failure": "Extension background script rejected the message, storage failed, or sync failed."
+    },
+    {
+      "step": "Record dashboard audit",
+      "success": "Dashboard wrote an extension connection audit row.",
+      "failure": "Connection can still work; audit failure is non-blocking but should be investigated."
+    }
+  ],
+  "failureEvents": {
+    "external-message-untrusted": {
+      "severity": "warning",
+      "meaning": "A non-dashboard origin tried to message the extension.",
+      "operatorAction": "Check allowed dashboard origins and extension externally_connectable configuration."
+    },
+    "connect-invalid-message": {
+      "severity": "error",
+      "meaning": "Dashboard sent a malformed connect payload.",
+      "operatorAction": "Inspect the dashboard connection timeline and deployed web bundle version."
+    },
+    "account-session-save-failed": {
+      "severity": "error",
+      "meaning": "The extension could not persist the dashboard session.",
+      "operatorAction": "Export the diagnostic log, reload the extension, and check Chrome storage availability."
+    },
+    "connect-sync-failed": {
+      "severity": "error",
+      "meaning": "Extension stored the session but could not sync local tracked jobs.",
+      "operatorAction": "Inspect response details, check dashboard API auth, and retry from the widget or side panel."
+    },
+    "account-connected-broadcast-failed": {
+      "severity": "warning",
+      "meaning": "The extension connected but could not notify active tabs.",
+      "operatorAction": "Refresh the job-board tab; dashboard sync should still work from stored session."
+    },
+    "track-job-missing-url": {
+      "severity": "error",
+      "meaning": "Detected job data did not include a usable URL.",
+      "operatorAction": "Check extractor output for the specific job board and add board-specific parsing if needed."
+    },
+    "profile-sync-failed": {
+      "severity": "error",
+      "meaning": "Side panel profile sync to dashboard failed.",
+      "operatorAction": "Check session state, dashboard API response, and exported diagnostic log."
+    }
+  },
+  "operatingRules": [
+    "Track Job always saves locally first.",
+    "Free and Pro users both sync basic tracked jobs when a dashboard session exists.",
+    "Only advanced features are Pro gated.",
+    "Every failed connection path should leave a diagnostic event with a human-readable reason."
+  ]
+}
