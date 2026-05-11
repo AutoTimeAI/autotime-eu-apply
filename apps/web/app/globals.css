@@ -811,6 +811,54 @@ h4 {
   margin-bottom: 18px;
 }
 
+.today-focus-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  border: 1px solid #bedbd7;
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: #f7fbfa;
+  box-shadow: var(--shadow-tight);
+  padding: 18px;
+}
+
+.today-focus-panel h2,
+.today-focus-panel p {
+  margin: 0;
+}
+
+.today-focus-panel h2 {
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 1.35rem;
+}
+
+.today-focus-panel p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.today-focus-panel a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 800;
+  padding: 10px 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.today-focus-panel a:hover {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
 .overview-workflow-map {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4232,6 +4280,7 @@ h4 {
   .auth-demo-panel,
   .workspace-integrity-panel,
   .dashboard-setup-checklist,
+  .today-focus-panel,
   .profile-form-toolbar,
   .pricing-demo-panel,
   .decision-brief-panel,

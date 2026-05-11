@@ -327,8 +327,8 @@ const dashboardFocusCopy: Record<
 > = {
   dashboard: {
     eyebrow: "Dashboard",
-    title: "Evidence Workspace",
-    body: "Profile evidence, job decisions, applications and interview prep with clear limits."
+    title: "Your Job Search Desk",
+    body: "A calmer place to check roles, save applications, and keep the next step visible."
   },
   "job-inbox": {
     eyebrow: "Job Inbox",
@@ -2546,6 +2546,41 @@ export default function HomePage({
           : "No urgent follow-up is waiting from saved applications."
     }
   ]
+  const todayAction = !profileBridgeReady
+    ? {
+        body: `${profileBridgeIssues.length} profile item${
+          profileBridgeIssues.length === 1 ? "" : "s"
+        } missing. Start here so role checks have the right evidence.`,
+        cta: "Complete profile",
+        href: "/dashboard/autofill-profile",
+        label: "Best next step",
+        title: "Finish your profile evidence"
+      }
+    : state.applications.length === 0
+      ? {
+          body: "Track a job from the extension or check one manually, then save it into your tracker.",
+          cta: "Check a job",
+          href: "/dashboard/jobs",
+          label: "Best next step",
+          title: "Add your first role"
+        }
+      : activeActionCount > 0
+        ? {
+            body: `${activeActionCount} saved role${
+              activeActionCount === 1 ? " needs" : "s need"
+            } a follow-up or status update.`,
+            cta: "Open follow-ups",
+            href: "/dashboard/follow-ups",
+            label: "Best next step",
+            title: "Move the next action forward"
+          }
+        : {
+            body: "Your saved workflow is tidy. Review recent roles or check another job when you are ready.",
+            cta: "Review applications",
+            href: "/dashboard/applications",
+            label: "Best next step",
+            title: "Keep your tracker current"
+          }
 
   const loadDashboardSnapshot = useCallback(
     async ({
@@ -4202,10 +4237,18 @@ export default function HomePage({
 
       {isOverview && (
         <section className="command-centre-overview" aria-label="Homepage sections">
+          <div className="today-focus-panel">
+            <div>
+              <p className="eyebrow">{todayAction.label}</p>
+              <h2>{todayAction.title}</h2>
+              <p>{todayAction.body}</p>
+            </div>
+            <a href={todayAction.href}>{todayAction.cta}</a>
+          </div>
           <div className="section-intro">
             <p className="eyebrow">Dashboard</p>
-            <h2>Workflow at a glance</h2>
-            <p>See what is ready, what needs evidence, and where to go next.</p>
+            <h2>Where things stand</h2>
+            <p>Scan the essentials, then continue with one clear action.</p>
           </div>
           <div className="overview-workflow-map" aria-label="Application workflow">
             {overviewWorkflowItems.map((item) => (
