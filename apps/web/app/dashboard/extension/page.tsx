@@ -17,6 +17,13 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value))
 }
 
+function formatEventLabel(value: string) {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
 export default async function DashboardExtensionPage() {
   const supabase = await createServerClient()
   const {
@@ -51,22 +58,35 @@ export default async function DashboardExtensionPage() {
   const latestExtensionSync = syncEvents.find(
     (item) => item.source_surface === "extension"
   )
+  const extensionEvents = syncEvents.filter(
+    (item) => item.source_surface === "extension"
+  )
   const healthLabel = activeConnection
     ? activeConnection.last_synced_at
       ? "Connected and syncing"
       : "Connected, waiting for first sync"
     : "Not connected"
+  const healthTone = activeConnection
+    ? activeConnection.last_synced_at
+      ? "healthy"
+      : "warning"
+    : "critical"
 
   return (
     <main className="dashboard-shell">
       <section className="extension-download-panel">
-        <div className="section-intro">
-          <p className="eyebrow">Chrome extension</p>
-          <h1>Download AutoTime EU Apply</h1>
-          <p>
-            Private beta users can install manually in Chrome Developer mode
-            while Chrome Web Store approval is in progress.
-          </p>
+        <div className="extension-health-hero">
+          <div>
+            <p className="eyebrow">Chrome extension</p>
+            <h1>Extension connection</h1>
+            <p>
+              Install the extension, connect this dashboard account, and keep
+              tracked jobs synced into Applications.
+            </p>
+          </div>
+          <span className={`extension-health-pill ${healthTone}`}>
+            {healthLabel}
+          </span>
         </div>
 
         <div className="sync-status-grid" aria-label="Extension sync health">
@@ -83,7 +103,11 @@ export default async function DashboardExtensionPage() {
             <span>Last extension sync</span>
           </div>
           <div>
-            <strong>{latestExtensionSync?.entity_type ?? "None yet"}</strong>
+            <strong>
+              {latestExtensionSync
+                ? formatEventLabel(latestExtensionSync.entity_type)
+                : "None yet"}
+            </strong>
             <span>Latest synced entity</span>
           </div>
         </div>
@@ -96,7 +120,7 @@ export default async function DashboardExtensionPage() {
         )}
 
         <div className="extension-distribution-grid">
-          <section className="extension-install-steps">
+          <section className="extension-install-steps extension-action-card">
             <p className="eyebrow">Private beta</p>
             <h2>Manual developer-mode install</h2>
             <p>
@@ -115,35 +139,68 @@ export default async function DashboardExtensionPage() {
                 Connect installed extension
               </a>
             </div>
+          </section>
+
+          <section className="extension-install-steps extension-action-card">
+            <p className="eyebrow">Setup checklist</p>
+            <h2>Install path</h2>
             <ol>
-              <li>Download the extension zip from this page.</li>
-              <li>Unzip it on your computer.</li>
-              <li>Open Chrome and go to chrome://extensions.</li>
-              <li>Turn on Developer mode.</li>
-              <li>Click Load unpacked and select the unzipped folder.</li>
-              <li>Open the extension Account tab and connect it to AutoTime.</li>
+              <li>Download and unzip the extension package.</li>
+              <li>Open Chrome extensions and enable Developer mode.</li>
+              <li>Load the unzipped folder as an unpacked extension.</li>
+              <li>Open the extension Account tab and connect AutoTime.</li>
             </ol>
-            <p>
-              This is a developer preview install path. Public customers should
-              use the Chrome Web Store listing once approved.
-            </p>
+          </section>
+        </div>
+
+        <div className="extension-distribution-grid two-column">
+          <section className="extension-install-steps">
+            <p className="eyebrow">Connections</p>
+            <h2>Recent browser connections</h2>
+            {connections.length ? (
+              <div className="extension-connection-list">
+                {connections.map((connection) => (
+                  <article
+                    key={`${connection.extension_id}-${connection.last_connected_at}`}
+                  >
+                    <strong>
+                      {connection.browser_label ?? "Chrome extension"}
+                    </strong>
+                    <span>
+                      {connection.revoked_at ? "Revoked" : "Active"} ·{" "}
+                      {connection.extension_id ?? "Extension ID unavailable"}
+                    </span>
+                    <small>
+                      Connected {formatDate(connection.last_connected_at)}
+                    </small>
+                    <small>
+                      Last sync {formatDate(connection.last_synced_at)}
+                    </small>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p>No browser connection has been recorded yet.</p>
+            )}
           </section>
 
           <section className="extension-install-steps">
             <p className="eyebrow">Recent activity</p>
             <h2>Extension sync events</h2>
-            {syncEvents.length ? (
-              <ol>
-                {syncEvents.map((event) => (
-                  <li
+            {extensionEvents.length ? (
+              <div className="extension-event-list">
+                {extensionEvents.map((event) => (
+                  <article
                     key={`${event.created_at}-${event.entity_type}-${event.action}`}
                   >
-                    {formatDate(event.created_at)} - {event.source_surface}{" "}
-                    {event.entity_type} {event.action}
-                    {event.message ? `: ${event.message}` : ""}
-                  </li>
+                    <strong>
+                      {formatEventLabel(event.entity_type)} {event.action}
+                    </strong>
+                    <span>{formatDate(event.created_at)}</span>
+                    <p>{event.message || "Synced from extension."}</p>
+                  </article>
                 ))}
-              </ol>
+              </div>
             ) : (
               <p>No sync events recorded yet.</p>
             )}

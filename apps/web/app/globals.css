@@ -3117,6 +3117,55 @@ h4 {
   padding: 20px;
 }
 
+.extension-health-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px;
+}
+
+.extension-health-hero h1 {
+  margin: 0 0 8px;
+}
+
+.extension-health-hero p:not(.eyebrow) {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.extension-health-pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.extension-health-pill.healthy {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.extension-health-pill.warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.extension-health-pill.critical {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .extension-download-actions {
   display: flex;
   flex-wrap: wrap;
@@ -3129,6 +3178,10 @@ h4 {
   gap: 16px;
 }
 
+.extension-distribution-grid.two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .extension-install-steps {
   display: grid;
   gap: 12px;
@@ -3136,6 +3189,10 @@ h4 {
   border-radius: 8px;
   background: var(--surface-raised);
   padding: 16px;
+}
+
+.extension-action-card {
+  align-content: start;
 }
 
 .extension-install-steps h2 {
@@ -3159,6 +3216,43 @@ h4 {
 
 .extension-install-steps p {
   margin: 0;
+}
+
+.extension-connection-list,
+.extension-event-list {
+  display: grid;
+  gap: 10px;
+}
+
+.extension-connection-list article,
+.extension-event-list article {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.extension-connection-list strong,
+.extension-event-list strong {
+  color: var(--ink);
+}
+
+.extension-connection-list span,
+.extension-connection-list small,
+.extension-event-list span,
+.extension-event-list p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.extension-connection-list span,
+.extension-event-list span {
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .faq-section {
