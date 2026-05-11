@@ -4,7 +4,6 @@ import { candidateProfileSchema } from "shared"
 import { getRequestUser } from "../../../../lib/api-auth"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { diagnosticJson } from "../../../../lib/diagnostics"
-import { isProUser } from "../../../../lib/feature-gate"
 import { readSyncedProfile, syncProfile } from "../../../../lib/cloud-sync"
 
 type ApiResponse<T> = {
@@ -66,17 +65,6 @@ export async function GET(
       })
     }
 
-    if (!(await isProUser(user.id))) {
-      return diagnosticJson({
-        area: "sync",
-        code: "sync.profile.plan.not-pro",
-        data: null,
-        error: "Cloud sync requires a Pro plan",
-        request,
-        status: 403
-      })
-    }
-
     const result = await readSyncedProfile(createAdminClient(), user.id)
 
     if (!result.success) {
@@ -126,17 +114,6 @@ export async function POST(
         error: "Unauthorised",
         request,
         status: 401
-      })
-    }
-
-    if (!(await isProUser(user.id))) {
-      return diagnosticJson({
-        area: "sync",
-        code: "sync.profile.plan.not-pro",
-        data: null,
-        error: "Cloud sync requires a Pro plan",
-        request,
-        status: 403
       })
     }
 
@@ -206,17 +183,6 @@ export async function DELETE(
         error: "Unauthorised",
         request,
         status: 401
-      })
-    }
-
-    if (!(await isProUser(user.id))) {
-      return diagnosticJson({
-        area: "sync",
-        code: "sync.profile.plan.not-pro",
-        data: null,
-        error: "Cloud sync requires a Pro plan",
-        request,
-        status: 403
       })
     }
 

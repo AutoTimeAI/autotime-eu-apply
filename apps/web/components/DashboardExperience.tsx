@@ -2309,10 +2309,10 @@ export default function HomePage({
   const workspaceIntegrityItems = [
     {
       label: "Storage",
-      value: cloudSyncReadiness.configured ? "Sync gated" : "Local only",
-      tone: cloudSyncReadiness.configured ? "warn" : "good",
+      value: cloudSyncReadiness.configured ? "Account sync" : "Local only",
+      tone: cloudSyncReadiness.configured ? "good" : "neutral",
       body: cloudSyncReadiness.configured
-        ? "Uploads require consent, a signed-in account and plan checks."
+        ? "Uploads require consent and a signed-in account."
         : "No remote upload is enabled from this browser session."
     },
     {
@@ -3177,7 +3177,7 @@ export default function HomePage({
   const explainCloudSyncTrack = () => {
     setStatus(
       cloudSyncReadiness.configured
-        ? "Cloud sync is ready for signed-in profile upload and download. Database writes require user consent and an authenticated account."
+        ? "Cloud sync is ready for signed-in profile upload and download."
         : `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
     )
   }
@@ -3978,8 +3978,8 @@ export default function HomePage({
               : "Your data is saved on this browser"}
           </h2>
           <p>
-            Profile evidence stays local while you edit. Use account sync when
-            you want this profile available from your dashboard account.
+            Profile evidence saves in this browser first. Use account sync when
+            you want it available from your signed-in dashboard account.
           </p>
         </div>
         <div className="sync-status-grid">
