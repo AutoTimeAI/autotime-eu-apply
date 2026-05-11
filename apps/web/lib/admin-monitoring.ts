@@ -67,8 +67,12 @@ export type AdminOverview = {
   }>
   logs: Array<{
     area: string
+    diagnosticId?: string | null
     event: string
+    httpStatus?: number | null
     message: string
+    metadata?: unknown
+    path?: string | null
     severity: "severe" | "warn" | "info"
     timestamp: string
   }>
@@ -391,8 +395,12 @@ export async function getAdminOverview(): Promise<AdminOverview> {
       storedLogs.data.length > 0
         ? storedLogs.data.map((item) => ({
             area: item.area,
+            diagnosticId: item.diagnosticId,
             event: item.code,
+            httpStatus: item.httpStatus,
             message: item.message,
+            metadata: item.metadata,
+            path: item.path,
             severity: item.level,
             timestamp: item.timestamp
           }))

@@ -52,6 +52,20 @@ function getSeverityLabel(severity: AdminOverview["logs"][number]["severity"]) {
   return severity
 }
 
+function formatLogMetadata(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return ""
+  }
+
+  return Object.entries(metadata as Record<string, unknown>)
+    .filter(([, value]) =>
+      ["boolean", "number", "string"].includes(typeof value) || value === null
+    )
+    .slice(0, 4)
+    .map(([key, value]) => `${key}: ${String(value)}`)
+    .join(" / ")
+}
+
 function getFixHint(entry: AdminOverview["logs"][number]) {
   if (entry.severity === "severe") {
     return "Check the failing API, environment variables, and production logs first."
@@ -390,7 +404,19 @@ export function AdminRealtimeConsole({
                   {getSeverityLabel(entry.severity)}
                 </span>
                 <p>{entry.message}</p>
-                <small>{entry.area}</small>
+                <small>
+                  {[
+                    entry.area,
+                    entry.httpStatus ? `HTTP ${entry.httpStatus}` : null,
+                    entry.path,
+                    entry.diagnosticId ? `diag ${entry.diagnosticId}` : null
+                  ]
+                    .filter(Boolean)
+                    .join(" / ")}
+                </small>
+                {formatLogMetadata(entry.metadata) ? (
+                  <small>{formatLogMetadata(entry.metadata)}</small>
+                ) : null}
                 <em>{getFixHint(entry)}</em>
               </li>
             ))}
