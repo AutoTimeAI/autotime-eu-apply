@@ -35,6 +35,10 @@ function isProtectedPath(pathname: string): boolean {
     return false
   }
 
+  if (pathname === "/admin/login") {
+    return false
+  }
+
   return protectedRoutePrefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )
@@ -107,7 +111,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       data: { user }
     } = await supabase.auth.getUser()
     if (isProtectedPath(pathname) && !user) {
-      const loginUrl = new URL("/login", request.url)
+      const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login"
+      const loginUrl = new URL(loginPath, request.url)
       loginUrl.searchParams.set(
         "redirectTo",
         `${pathname}${request.nextUrl.search}`
@@ -149,7 +154,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
         })
       )
 
-      return NextResponse.redirect(new URL("/login", request.url))
+      const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login"
+
+      return NextResponse.redirect(new URL(loginPath, request.url))
     }
 
     if (error instanceof Error) {

@@ -3707,6 +3707,72 @@ h4 {
   overflow-wrap: anywhere;
 }
 
+.admin-login-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 28px;
+  background:
+    linear-gradient(135deg, rgba(13, 23, 40, 0.98), rgba(11, 95, 89, 0.92)),
+    #0d1728;
+}
+
+.admin-login-panel {
+  display: grid;
+  width: min(980px, 100%);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.admin-login-copy,
+.admin-login-card {
+  display: grid;
+  align-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef7f5;
+  backdrop-filter: blur(18px);
+  padding: 28px;
+}
+
+.admin-login-copy h1 {
+  margin: 0 0 12px;
+  color: #ffffff;
+  font-size: 2.35rem;
+}
+
+.admin-login-copy p:not(.eyebrow),
+.admin-login-card p {
+  margin: 0;
+  color: rgba(238, 247, 245, 0.78);
+  line-height: 1.62;
+}
+
+.admin-login-copy .eyebrow {
+  color: #9ee1d4;
+}
+
+.admin-login-card {
+  gap: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+}
+
+.admin-login-card h2 {
+  margin: 14px 0 8px;
+}
+
+.admin-login-card p {
+  color: var(--muted);
+}
+
+.admin-login-actions {
+  display: grid;
+  gap: 10px;
+}
+
 .consent-banner {
   position: fixed;
   right: 18px;
@@ -3911,6 +3977,7 @@ h4 {
   .admin-console-hero,
   .admin-command-strip,
   .admin-console-grid,
+  .admin-login-panel,
   .admin-health-grid,
   .admin-metric-grid,
   .admin-config-grid,
