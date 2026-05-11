@@ -5,9 +5,7 @@ import { publicEnv } from "../../../lib/env"
 import { createBrowserClient } from "../../../lib/supabase/client"
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "Admin sign-in could not be started."
+  return "Admin access only."
 }
 
 function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
@@ -32,7 +30,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
       })
 
       if (error) {
-        setStatus(error.message)
+        setStatus("Admin access only.")
       }
     } catch (error: unknown) {
       setStatus(getErrorMessage(error))
@@ -53,7 +51,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
 
       window.location.replace("/admin/login")
     } catch (error: unknown) {
-      setStatus(error instanceof Error ? error.message : "Sign out failed.")
+      setStatus("Admin access only.")
     }
   }
 

@@ -51,7 +51,7 @@ export function AdminRealtimeConsole({
   initialOverview: AdminOverview
 }) {
   const [overview, setOverview] = useState(initialOverview)
-  const [error, setError] = useState<string | null>(null)
+  const [hasRefreshAlert, setHasRefreshAlert] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdatedAt, setLastUpdatedAt] = useState(initialOverview.checkedAt)
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -69,7 +69,7 @@ export function AdminRealtimeConsole({
   const refresh = useCallback(async () => {
     try {
       setIsRefreshing(true)
-      setError(null)
+      setHasRefreshAlert(false)
 
       const response = await fetch("/api/admin/overview", {
         cache: "no-store",
@@ -80,18 +80,14 @@ export function AdminRealtimeConsole({
       const payload = (await response.json()) as AdminApiResponse
 
       if (!response.ok || !payload.data) {
-        setError(payload.error ?? "Admin overview failed to refresh.")
+        setHasRefreshAlert(true)
         return
       }
 
       setOverview(payload.data)
       setLastUpdatedAt(payload.data.checkedAt)
-    } catch (refreshError: unknown) {
-      setError(
-        refreshError instanceof Error
-          ? refreshError.message
-          : "Admin overview failed to refresh."
-      )
+    } catch {
+      setHasRefreshAlert(true)
     } finally {
       setIsRefreshing(false)
     }
@@ -121,8 +117,8 @@ export function AdminRealtimeConsole({
           </p>
         </div>
         <div className="admin-console-actions">
-          <span className={error ? "admin-live-pill issue" : "admin-live-pill"}>
-            {error ? "Attention" : "Live"}
+          <span className={hasRefreshAlert ? "admin-live-pill issue" : "admin-live-pill"}>
+            {hasRefreshAlert ? "Admin access" : "Live"}
           </span>
           <button
             className="secondary-button"
@@ -180,10 +176,9 @@ export function AdminRealtimeConsole({
         </label>
       </section>
 
-      {error ? (
+      {hasRefreshAlert ? (
         <section className="admin-alert-panel">
-          <strong>Refresh failed</strong>
-          <p>{error}</p>
+          <strong>Admin access only.</strong>
         </section>
       ) : null}
 
