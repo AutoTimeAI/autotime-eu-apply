@@ -22,10 +22,13 @@
 
 html,
 body {
+  width: 100%;
+  max-width: 100%;
   min-height: 100%;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   background:
     radial-gradient(circle at 15% 0%, rgba(49, 95, 186, 0.1), transparent 26rem),
     linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 251, 0.8)),
@@ -45,6 +48,7 @@ body {
 
 * {
   box-sizing: border-box;
+  min-width: 0;
 }
 
 img,
@@ -52,6 +56,10 @@ svg,
 canvas,
 video {
   max-width: 100%;
+}
+
+body {
+  position: relative;
 }
 
 button,
@@ -192,6 +200,7 @@ h4 {
 
 .dashboard-shell {
   width: min(1280px, calc(100% - 36px));
+  max-width: 100%;
   margin: 0 auto;
   padding: 28px 0 42px;
 }
@@ -2502,6 +2511,8 @@ h4 {
 }
 
 .dashboard-app-shell {
+  max-width: 100%;
+  overflow-x: clip;
   min-height: 100vh;
   padding-top: 14px;
 }
@@ -2512,6 +2523,7 @@ h4 {
   z-index: 20;
   display: flex;
   width: min(1280px, calc(100% - 36px));
+  max-width: 100%;
   margin: 0 auto;
   align-items: center;
   justify-content: space-between;
@@ -2528,6 +2540,7 @@ h4 {
   display: flex;
   flex: 1;
   flex-wrap: wrap;
+  min-width: 0;
   justify-content: center;
   gap: 6px;
 }
@@ -3680,13 +3693,15 @@ h4 {
 }
 
 .admin-table-shell {
-  overflow-x: auto;
+  max-width: 100%;
+  overflow-x: clip;
   border: 1px solid var(--border);
   border-radius: 8px;
 }
 
 .admin-table-shell table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: var(--surface-raised);
 }
@@ -4263,12 +4278,13 @@ h4 {
 
   .command-sidebar nav {
     display: flex;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow-x: clip;
     padding-bottom: 2px;
   }
 
   .command-sidebar a {
-    flex: 0 0 auto;
+    flex: 1 1 150px;
   }
 }
 
