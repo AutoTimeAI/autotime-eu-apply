@@ -737,24 +737,28 @@ h4 {
 
 .integrity-grid article.tone-good,
 .overview-workflow-map a.tone-good,
+.dashboard-setup-grid a.tone-good,
 .command-centre-card.tone-good {
   border-left-color: var(--green);
 }
 
 .integrity-grid article.tone-warn,
 .overview-workflow-map a.tone-warn,
+.dashboard-setup-grid a.tone-warn,
 .command-centre-card.tone-warn {
   border-left-color: var(--amber);
 }
 
 .integrity-grid article.tone-blocked,
 .overview-workflow-map a.tone-blocked,
+.dashboard-setup-grid a.tone-blocked,
 .command-centre-card.tone-blocked {
   border-left-color: var(--red);
 }
 
 .integrity-grid article.tone-neutral,
 .overview-workflow-map a.tone-neutral,
+.dashboard-setup-grid a.tone-neutral,
 .command-centre-card.tone-neutral {
   border-left-color: var(--blue);
 }
@@ -841,6 +845,68 @@ h4 {
   margin: 0;
   color: var(--muted);
   font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.dashboard-setup-checklist {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.22fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-tight);
+  padding: 14px;
+}
+
+.dashboard-setup-checklist h3 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.dashboard-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-setup-grid a {
+  display: grid;
+  gap: 6px;
+  min-height: 100px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border-strong);
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+  padding: 12px;
+  text-decoration: none;
+}
+
+.dashboard-setup-grid a:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.dashboard-setup-grid span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.dashboard-setup-grid strong {
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.dashboard-setup-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
   line-height: 1.4;
 }
 
@@ -4082,6 +4148,7 @@ h4 {
   .auth-shell,
   .auth-demo-panel,
   .workspace-integrity-panel,
+  .dashboard-setup-checklist,
   .pricing-demo-panel,
   .decision-brief-panel,
   .trust-grid,
@@ -4099,6 +4166,7 @@ h4 {
   .decision-columns,
   .integrity-grid,
   .overview-workflow-map,
+  .dashboard-setup-grid,
   .command-centre-grid,
   .command-action-dock,
   .analytics-grid,
@@ -4230,6 +4298,7 @@ h4 {
   .command-action-dock,
   .integrity-grid,
   .overview-workflow-map,
+  .dashboard-setup-grid,
   .interview-buddy-layout,
   .extension-distribution-grid,
   .job-check-field-grid,

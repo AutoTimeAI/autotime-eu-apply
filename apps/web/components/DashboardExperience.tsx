@@ -2335,6 +2335,47 @@ export default function HomePage({
       tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral"
     }
   ]
+  const setupChecklistItems = [
+    {
+      href: "/dashboard/autofill-profile",
+      label: "Profile evidence",
+      value: profileBridgeReady ? "Ready" : "Needs input",
+      detail: profileBridgeReady
+        ? "Core evidence is present"
+        : `${profileBridgeIssues.length} profile field${profileBridgeIssues.length === 1 ? "" : "s"} missing`,
+      tone: profileBridgeReady ? "good" : "warn"
+    },
+    {
+      href: "/dashboard/extension",
+      label: "Extension",
+      value: state.applications.length > 0 ? "Receiving jobs" : "Connect",
+      detail:
+        state.applications.length > 0
+          ? "Tracked jobs can appear here"
+          : "Open extension health",
+      tone: state.applications.length > 0 ? "good" : "neutral"
+    },
+    {
+      href: "/dashboard/applications",
+      label: "First tracked job",
+      value: state.applications.length > 0 ? `${state.applications.length} saved` : "Not yet",
+      detail:
+        state.applications.length > 0
+          ? "Application tracker has data"
+          : "Track a role from the extension",
+      tone: state.applications.length > 0 ? "good" : "warn"
+    },
+    {
+      href: "/dashboard/follow-ups",
+      label: "Next action",
+      value: activeActionCount > 0 ? `${activeActionCount} due` : "Clear",
+      detail:
+        activeActionCount > 0
+          ? "Follow-up queue needs attention"
+          : "No urgent action waiting",
+      tone: activeActionCount > 0 ? "warn" : "good"
+    }
+  ]
   const commandQuickActions = [
     {
       href: "/dashboard/inbox",
@@ -3697,6 +3738,21 @@ export default function HomePage({
                 <p>{item.detail}</p>
               </a>
             ))}
+          </div>
+          <div className="dashboard-setup-checklist" aria-label="Setup status">
+            <div>
+              <p className="eyebrow">Setup</p>
+              <h3>Account path</h3>
+            </div>
+            <div className="dashboard-setup-grid">
+              {setupChecklistItems.map((item) => (
+                <a className={`tone-${item.tone}`} href={item.href} key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  <p>{item.detail}</p>
+                </a>
+              ))}
+            </div>
           </div>
           <div className="command-centre-grid">
             {commandCentreCards.map((card) => (
