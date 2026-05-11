@@ -1,6 +1,12 @@
 import { defineBackground } from "wxt/utils/define-background"
 import { appUrl } from "../../lib/openai"
-import { saveAccountSession, type AccountSession } from "../../lib/storage"
+import {
+  getApplications,
+  getReusableAnswers,
+  saveAccountSession,
+  type AccountSession
+} from "../../lib/storage"
+import { syncApplicationsToDashboard } from "../../lib/cloud-sync"
 
 type ExternalMessage = {
   authToken?: unknown
@@ -88,7 +94,23 @@ export default defineBackground(() => {
       }
 
       void saveAccountSession(session)
-        .then(() => sendResponse({ ok: true }))
+        .then(async () => {
+          const applications = await getApplications()
+
+          if (applications.length > 0) {
+            try {
+              await syncApplicationsToDashboard({
+                applications,
+                reusableAnswers: await getReusableAnswers(),
+                session
+              })
+            } catch {
+              // Keep account connection successful; saved jobs can retry sync later.
+            }
+          }
+
+          sendResponse({ ok: true })
+        })
         .catch(() =>
           sendResponse({ error: "Could not save account session", ok: false })
         )

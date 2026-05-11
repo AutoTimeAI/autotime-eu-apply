@@ -1239,6 +1239,12 @@ function getWidgetMarkup({
   status: string
 }) {
   const isProCustomer = accountSession?.plan === "pro"
+  const isDashboardConnected = Boolean(accountSession?.authToken.trim())
+  const dashboardUrl = isDashboardConnected
+    ? `${appUrl}/dashboard`
+    : `${appUrl}/extension/connect?extensionId=${encodeURIComponent(
+        chrome.runtime.id
+      )}`
   const hasParsedDescription = Boolean(details?.jobDescription.trim())
   const basicInsights = getBasicInsights(details)
   const deepInsights = getDeepInsights(details)
@@ -1260,7 +1266,7 @@ function getWidgetMarkup({
       : normalizedStatus.includes("saved locally") ||
           normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
-        ? "Sign in from the dashboard to sync this job."
+        ? "Connect the extension from the dashboard to sync this job."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
           : "Check the visible job page and try again."
@@ -1696,7 +1702,7 @@ function getWidgetMarkup({
         </div>
         <div class="header-actions" aria-label="Widget actions">
           <button class="header-action-button" data-autotime-track-job type="button">TRACK JOB</button>
-          <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard type="button">DASHBOARD</button>
+          <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard data-autotime-dashboard-url="${escapeHtml(dashboardUrl)}" type="button">${isDashboardConnected ? "DASHBOARD" : "CONNECT"}</button>
         </div>
       </div>
       ${
@@ -1766,7 +1772,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
     const syncStatus = await syncTrackedApplicationsToDashboard(applications)
     return syncStatus === "Synced to dashboard."
       ? "This job is already tracked and synced to dashboard"
-      : "This job is already saved locally. Sign in to sync to dashboard"
+      : "This job is already saved locally. Connect extension to sync to dashboard"
   }
 
   const record = createApplicationRecord(details)
@@ -1779,7 +1785,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
 
   return syncStatus === "Synced to dashboard."
     ? "Job tracked and synced to dashboard"
-    : "Job saved locally. Sign in to sync to dashboard"
+    : "Job saved locally. Connect extension to sync to dashboard"
 }
 
 function isLikelyJobUrl(url = window.location.href) {
@@ -2320,12 +2326,14 @@ function bindWidgetEvents(
     event.preventDefault()
     event.stopPropagation()
 
-    const dashboardWindow = window.open(`${appUrl}/dashboard`, "_blank")
+    const dashboardUrl =
+      dashboardButton.dataset.autotimeDashboardUrl || `${appUrl}/dashboard`
+    const dashboardWindow = window.open(dashboardUrl, "_blank")
 
     if (dashboardWindow) {
       dashboardWindow.opener = null
     } else {
-      window.location.href = `${appUrl}/dashboard`
+      window.location.href = dashboardUrl
     }
   })
 }

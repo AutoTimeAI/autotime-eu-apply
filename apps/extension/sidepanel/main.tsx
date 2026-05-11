@@ -570,7 +570,7 @@ function SidePanelApp() {
       setTrackedJobDetails(details)
       if (!accountSession?.authToken.trim()) {
         setApplicationsStatus(
-          "This job is already saved locally. Sign in to sync to dashboard"
+          "This job is already saved locally. Connect extension to sync to dashboard"
         )
         setTimeout(() => setApplicationsStatus(""), 4500)
         return
@@ -617,7 +617,7 @@ function SidePanelApp() {
     setApplications((current) => [record, ...current])
 
     if (!accountSession?.authToken.trim()) {
-      setApplicationsStatus("Job saved locally. Sign in to sync to dashboard")
+      setApplicationsStatus("Job saved locally. Connect extension to sync to dashboard")
       setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }
