@@ -394,6 +394,7 @@ test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://uk.indeed.com/viewjob?jk=123"), "Indeed")
   assert.equal(getJobPlatform("https://de.indeed.com/viewjob?jk=123"), "Indeed")
   assert.equal(getJobPlatform("https://eures.europa.eu/jobs/application-support"), "EURES")
+  assert.equal(getJobPlatform("https://eures.ec.europa.eu/jobs/application-support"), "EURES")
   assert.equal(getJobPlatform("https://www.eurotechjobs.com/job/123"), "EuroTechJobs")
   assert.equal(getJobPlatform("https://www.eurojobs.com/jobs/123"), "EuroJobs")
   assert.equal(getJobPlatform("https://www.nextleveljobs.eu/jobs/123"), "NextLevelJobs")
@@ -434,6 +435,7 @@ test("detects Tier 1 EU JSON-LD boards as priority platforms", () => {
     ["https://www.stepstone.de/stellenangebote--application-support", "Stepstone"],
     ["https://ie.indeed.com/viewjob?jk=abc123", "Indeed"],
     ["https://eures.europa.eu/jobs/application-support", "EURES"],
+    ["https://eures.ec.europa.eu/jobs/application-support", "EURES"],
     ["https://www.eurotechjobs.com/job/123/application-support", "EuroTechJobs"],
     ["https://www.eurojobs.com/job/123", "EuroJobs"],
     ["https://nextleveljobs.eu/jobs/123", "NextLevelJobs"],

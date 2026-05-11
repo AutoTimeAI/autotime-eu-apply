@@ -251,7 +251,7 @@ export function getJobPlatform(url = ""): JobPlatform {
     return "Indeed"
   }
 
-  if (isHostname(hostname, "eures.europa.eu")) {
+  if (isHostname(hostname, "eures.europa.eu") || isHostname(hostname, "eures.ec.europa.eu")) {
     return "EURES"
   }
 
