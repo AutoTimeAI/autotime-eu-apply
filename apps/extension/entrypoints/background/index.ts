@@ -2,6 +2,7 @@ import { defineBackground } from "wxt/utils/define-background"
 import { appUrl } from "../../lib/openai"
 import {
   getApplications,
+  getAccountSession,
   getReusableAnswers,
   saveAccountSession,
   type AccountSession
@@ -16,9 +17,11 @@ type ExternalMessage = {
 }
 
 type ExternalResponse = {
+  connected?: boolean
   error?: string
   ok: boolean
   syncError?: string
+  version?: string
 }
 
 function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
@@ -51,6 +54,20 @@ function parseAccountSession(message: ExternalMessage): AccountSession | null {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Dashboard sync failed"
+}
+
+async function broadcastAccountConnected() {
+  const tabs = await chrome.tabs.query({})
+
+  await Promise.allSettled(
+    tabs
+      .filter((tab) => tab.id)
+      .map((tab) =>
+        chrome.tabs.sendMessage(tab.id as number, {
+          type: "AUTOTIME_ACCOUNT_CONNECTED"
+        })
+      )
+  )
 }
 
 async function showWidgetInTab(tab: chrome.tabs.Tab) {
@@ -91,6 +108,26 @@ export default defineBackground(() => {
         return false
       }
 
+      if (message.type === "AUTOTIME_PING") {
+        void getAccountSession()
+          .then((session) =>
+            sendResponse({
+              connected: Boolean(session?.authToken.trim()),
+              ok: true,
+              version: chrome.runtime.getManifest().version
+            })
+          )
+          .catch(() =>
+            sendResponse({
+              connected: false,
+              ok: true,
+              version: chrome.runtime.getManifest().version
+            })
+          )
+
+        return true
+      }
+
       const session = parseAccountSession(message)
 
       if (!session) {
@@ -114,6 +151,8 @@ export default defineBackground(() => {
               syncError = getErrorMessage(error)
             }
           }
+
+          await broadcastAccountConnected()
 
           sendResponse({ ok: true, syncError })
         })

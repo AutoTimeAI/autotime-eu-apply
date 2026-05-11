@@ -2054,6 +2054,20 @@ function initializeMovableJobWidget() {
 
   chrome.storage.onChanged.addListener(handleStorageChange)
 
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type !== "AUTOTIME_ACCOUNT_CONNECTED") {
+      return false
+    }
+
+    void getAccountSession().then((session) => {
+      accountSession = session
+      render()
+      sendResponse({ ok: true })
+    })
+
+    return true
+  })
+
   void getAccountSession().then((session) => {
     accountSession = session
     render()

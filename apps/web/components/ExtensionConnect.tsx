@@ -20,10 +20,16 @@ type ExtensionConnectMessage = {
   type: "AUTOTIME_CONNECT_ACCOUNT"
 }
 
+type ExtensionPingMessage = {
+  type: "AUTOTIME_PING"
+}
+
 type ExtensionResponse = {
+  connected?: boolean
   error?: string
   ok?: boolean
   syncError?: string
+  version?: string
 }
 
 type ExtensionRuntime = {
@@ -32,7 +38,7 @@ type ExtensionRuntime = {
   }
   sendMessage: (
     extensionId: string,
-    message: ExtensionConnectMessage,
+    message: ExtensionConnectMessage | ExtensionPingMessage,
     callback: (response?: ExtensionResponse) => void
   ) => void
 }
@@ -46,6 +52,22 @@ type ChromeWindow = Window & {
 function getChromeRuntime(): ExtensionRuntime | null {
   const chromeWindow = window as ChromeWindow
   return chromeWindow.chrome?.runtime ?? null
+}
+
+function formatRuntimeError(message: string) {
+  if (/receiving end does not exist/i.test(message)) {
+    return "AutoTime extension is not reachable. Reload the extension in Chrome, then open CONNECT from the job-page widget again."
+  }
+
+  if (/does not exist/i.test(message)) {
+    return "Chrome could not find this extension ID. Open CONNECT from the installed AutoTime widget so the current extension ID is used."
+  }
+
+  if (/not allowed|access|permission/i.test(message)) {
+    return "Chrome blocked dashboard-to-extension messaging. Reload the extension and confirm the dashboard URL is allowed."
+  }
+
+  return message
 }
 
 async function getAccount(accessToken: string): Promise<AccountMeResponse> {
@@ -83,7 +105,7 @@ async function recordExtensionConnection(
 
 function sendToExtension(
   extensionId: string,
-  message: ExtensionConnectMessage
+  message: ExtensionConnectMessage | ExtensionPingMessage
 ): Promise<ExtensionResponse> {
   return new Promise((resolve, reject) => {
     const runtime = getChromeRuntime()
@@ -97,7 +119,7 @@ function sendToExtension(
       const runtimeError = runtime.lastError?.message
 
       if (runtimeError) {
-        reject(new Error(runtimeError))
+        reject(new Error(formatRuntimeError(runtimeError)))
         return
       }
 
@@ -109,6 +131,10 @@ function sendToExtension(
       resolve(response)
     })
   })
+}
+
+async function pingExtension(extensionId: string) {
+  return sendToExtension(extensionId, { type: "AUTOTIME_PING" })
 }
 
 export default function ExtensionConnect() {
@@ -129,9 +155,12 @@ export default function ExtensionConnect() {
       setStatus(null)
 
       if (!extensionId.trim()) {
-        setStatus("Open this page from the AutoTime extension Account tab.")
+        setStatus("Open CONNECT from the AutoTime job-page widget or extension Account tab.")
         return
       }
+
+      setStatus("Checking installed extension...")
+      await pingExtension(extensionId)
 
       const supabase = createBrowserClient()
       const {
@@ -144,6 +173,7 @@ export default function ExtensionConnect() {
         return
       }
 
+      setStatus("Connecting dashboard account to extension...")
       const account = await getAccount(session.access_token)
 
       if (!account.data) {
