@@ -3,9 +3,7 @@ import { createRoot } from "react-dom/client"
 import "../styles/globals.css"
 import {
   formatJobPageNotes,
-  getLinkedInManualInputMessage,
-  inferJobPageDetails,
-  isLinkedInUrl
+  inferJobPageDetails
 } from "../lib/job-page"
 import { generateApplicationContentDraft } from "../lib/content-generation"
 import {
@@ -759,12 +757,6 @@ function SidePanelApp() {
       return
     }
 
-    if (isLinkedInUrl(activeTab.url)) {
-      setStatus(getLinkedInManualInputMessage())
-      setTimeout(() => setStatus(""), 3500)
-      return
-    }
-
     try {
       await ensureContentScriptReady(activeTab.id)
       const response = (await chrome.tabs.sendMessage(activeTab.id, {
@@ -893,12 +885,6 @@ function SidePanelApp() {
     if (!activeTab?.id) {
       setContentStatus("Could not access current tab")
       setTimeout(() => setContentStatus(""), 2500)
-      return
-    }
-
-    if (isLinkedInUrl(activeTab.url)) {
-      setContentStatus(getLinkedInManualInputMessage())
-      setTimeout(() => setContentStatus(""), 3500)
       return
     }
 

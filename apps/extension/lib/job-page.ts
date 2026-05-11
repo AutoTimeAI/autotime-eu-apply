@@ -170,7 +170,7 @@ export function parseLinkedInPageTitle(value = "") {
 }
 
 export function getLinkedInManualInputMessage() {
-  return "LinkedIn stays manual: AutoTime can import visible job details, but will not auto-submit or fill applications."
+  return "LinkedIn stays scoped: AutoTime can import visible job details and fill Easy Apply fields only when the modal is open, but will not auto-submit."
 }
 
 function cleanRoleTitle(value = "") {

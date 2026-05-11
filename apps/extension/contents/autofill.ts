@@ -11,7 +11,6 @@ import {
 import {
   formatJobPageNotes,
   getLinkedInCanonicalJobUrl,
-  getLinkedInManualInputMessage,
   inferJobPageDetails,
   isLinkedInUrl,
   parseLinkedInPageTitle,
@@ -1034,12 +1033,38 @@ function detectJobPage(): JobPageResponse {
   return details
 }
 
-async function autofillProfile(): Promise<AutofillResponse> {
-  if (isLinkedInUrl(window.location.href)) {
+function getLinkedInEasyApplyModal() {
+  return document.querySelector<HTMLElement>(
+    '.jobs-easy-apply-modal, [data-test-modal-id="easy-apply-modal"]'
+  )
+}
+
+function getAutofillRoot(): ParentNode | AutofillResponse {
+  if (!isLinkedInUrl(window.location.href)) {
+    return document
+  }
+
+  const modal = getLinkedInEasyApplyModal()
+
+  if (!modal) {
     return {
       filledFields: [],
-      message: getLinkedInManualInputMessage()
+      message: "Open the LinkedIn Easy Apply modal before filling."
     }
+  }
+
+  return modal
+}
+
+function isAutofillResponse(value: ParentNode | AutofillResponse): value is AutofillResponse {
+  return "filledFields" in value
+}
+
+async function autofillProfile(): Promise<AutofillResponse> {
+  const root = getAutofillRoot()
+
+  if (isAutofillResponse(root)) {
+    return root
   }
 
   const profile = await getProfile()
@@ -1056,7 +1081,7 @@ async function autofillProfile(): Promise<AutofillResponse> {
   const answerValues = answers ? getReusableAnswerValues(answers) : null
   const filledFields: string[] = []
 
-  document.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
+  root.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
     if (!profileValues || !canFill(input)) {
       return
     }
@@ -1070,7 +1095,7 @@ async function autofillProfile(): Promise<AutofillResponse> {
       filledFields.push(field)
     })
 
-  document
+  root
     .querySelectorAll<HTMLTextAreaElement>("textarea")
     .forEach((textarea) => {
       if (!answerValues || !canFillTextarea(textarea)) {
@@ -1090,11 +1115,10 @@ async function autofillProfile(): Promise<AutofillResponse> {
 }
 
 async function insertApplicationContent(): Promise<AutofillResponse> {
-  if (isLinkedInUrl(window.location.href)) {
-    return {
-      filledFields: [],
-      message: getLinkedInManualInputMessage()
-    }
+  const root = getAutofillRoot()
+
+  if (isAutofillResponse(root)) {
+    return root
   }
 
   const content = await getApplicationContentDraft()
@@ -1109,7 +1133,7 @@ async function insertApplicationContent(): Promise<AutofillResponse> {
   const contentValues = getApplicationContentValues(content)
   const filledFields: string[] = []
 
-  document
+  root
     .querySelectorAll<HTMLTextAreaElement>("textarea")
     .forEach((textarea) => {
       if (!canFillTextarea(textarea)) {
