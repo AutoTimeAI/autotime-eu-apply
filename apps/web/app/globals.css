@@ -3624,6 +3624,14 @@ h4 {
   align-content: center;
 }
 
+.auth-privacy-note {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin-top: 4px;
+  text-align: center;
+}
+
 .faq-item p {
   margin: 0;
   color: var(--muted);

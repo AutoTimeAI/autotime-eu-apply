@@ -9,7 +9,7 @@ type AdminApiResponse = {
   status: number
 }
 
-const refreshIntervalMs = 15000
+const refreshIntervalMs = 300000
 const severityFilters = ["all", "severe", "warn", "info"] as const
 
 type SeverityFilter = (typeof severityFilters)[number]
