@@ -104,6 +104,13 @@ type DecisionBrief = {
   missingInputs: string[]
 }
 
+type ProfileQualitySignal = {
+  label: string
+  score: number
+  status: "ready" | "needs-check" | "blocked"
+  detail: string
+}
+
 type OfficialSource = {
   label: string
   url: string
@@ -139,6 +146,15 @@ type InterviewBuddyOutputKey =
   | "strongFinalAnswer"
 
 type InterviewBuddyOutputs = Record<InterviewBuddyOutputKey, string>
+
+type InterviewCoachMeta = {
+  evidenceScore: number
+  riskFlags: string[]
+  missingEvidence: string[]
+  followUpDrills: string[]
+  boundaryNote: string
+  source: "ai" | "local"
+}
 
 type ReusableAnswerKey = keyof ReusableAnswers
 
@@ -194,6 +210,7 @@ const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const trustStateStorageKey = "autotime-v2-trust-state"
 const syncPreferenceStorageKey = "autotime-v2-sync-preferences"
+const walkthroughStorageKey = "autotime-v2-first-login-walkthrough-seen"
 const profileExecutionThreshold = PROFILE_EXECUTION_THRESHOLD
 
 function getUserScopedStorageKey(baseKey: string, userId: string) {
@@ -202,11 +219,13 @@ function getUserScopedStorageKey(baseKey: string, userId: string) {
 
 const applicationStatuses: ApplicationStatus[] = [
   "Saved",
-  "Applying",
+  "Checking fit",
+  "Ready to apply",
   "Applied",
   "Interview",
+  "Offer",
   "Rejected",
-  "Closed"
+  "Archived"
 ]
 
 const applicationOutcomeReasons: ApplicationOutcomeReason[] = [
@@ -239,61 +258,63 @@ const emptyInterviewBuddyOutputs: InterviewBuddyOutputs = {
   strongFinalAnswer: ""
 }
 
+const emptyInterviewCoachMeta: InterviewCoachMeta = {
+  evidenceScore: 0,
+  riskFlags: [],
+  missingEvidence: [],
+  followUpDrills: [],
+  boundaryNote:
+    "AutoTime keeps interview prep evidence-first. Add your real notes, then review before using.",
+  source: "local"
+}
+
 const commandSidebarItems: Array<{
   href: string
   focus: DashboardFocus
   label: string
   routeId: DashboardTab | "overview"
-  section: string
 }> = [
   {
     href: "/dashboard",
     focus: "dashboard",
     label: "Today",
-    routeId: "overview",
-    section: "Overview"
+    routeId: "overview"
   },
   {
     href: "/dashboard/inbox",
     focus: "job-inbox",
     label: "Saved Jobs",
-    routeId: "applications",
-    section: "Jobs"
+    routeId: "applications"
   },
   {
     href: "/dashboard/match-score",
     focus: "match-score",
     label: "Check a Job",
-    routeId: "jobs",
-    section: "Jobs"
+    routeId: "jobs"
   },
   {
     href: "/dashboard/autofill-profile",
     focus: "autofill-profile",
     label: "My Profile",
-    routeId: "profile",
-    section: "Profile"
+    routeId: "profile"
   },
   {
     href: "/dashboard/applications",
     focus: "application-tracker",
     label: "Tracker",
-    routeId: "applications",
-    section: "Tracker"
+    routeId: "applications"
   },
   {
     href: "/dashboard/interview",
     focus: "interview-prep",
     label: "Interview",
-    routeId: "interview",
-    section: "Interview"
+    routeId: "interview"
   },
   {
     href: "/dashboard/settings",
     focus: "settings",
     label: "Settings",
-    routeId: "profile",
-    section: "Settings"
+    routeId: "profile"
   }
 ]
 
@@ -839,16 +860,47 @@ function isLegacySampleState(state: CompanionDashboardState) {
   )
 }
 
+function normalizeLegacyDashboardState(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) {
+    return value
+  }
+
+  const record = value as Record<string, unknown>
+  const normalizeStatus = (status: unknown) =>
+    status === "Applying"
+      ? "Ready to apply"
+      : status === "Closed"
+        ? "Archived"
+        : status
+  const normalizeItems = (items: unknown) =>
+    Array.isArray(items)
+      ? items.map((item) =>
+          typeof item === "object" && item !== null
+            ? {
+                ...item,
+                status: normalizeStatus((item as Record<string, unknown>).status)
+              }
+            : item
+        )
+      : items
+
+  return {
+    ...record,
+    applications: normalizeItems(record.applications),
+    outcomeRecords: normalizeItems(record.outcomeRecords)
+  }
+}
+
 function getStoredState(userId: string) {
   if (typeof window === "undefined") {
     return defaultState
   }
 
   try {
-    const parsed = JSON.parse(
+    const parsed = normalizeLegacyDashboardState(JSON.parse(
       window.localStorage.getItem(getUserScopedStorageKey(storageKey, userId)) ??
         "null"
-    )
+    ))
     const result = companionDashboardStateSchema.safeParse(parsed)
     return result.success && !isLegacySampleState(result.data)
       ? {
@@ -1165,6 +1217,45 @@ function createInterviewBuddyOutputs({
   }
 }
 
+function createLocalInterviewCoachMeta({
+  draft,
+  profile,
+  question
+}: {
+  draft: string
+  profile: CandidateProfile
+  question: string
+}): InterviewCoachMeta {
+  const missingEvidence = [
+    !profile.experienceHighlights.trim() && "Add experience highlights",
+    !profile.projectSummaries.trim() && "Add one project or delivery example",
+    !profile.workRightDetails.trim() && "Add verified work-right details",
+    !draft.match(/\b(result|impact|improved|reduced|increased|delivered|saved|launched)\b/i) &&
+      "Add a concrete outcome or result"
+  ].filter(Boolean) as string[]
+  const riskFlags = [
+    isImmigrationRelatedQuestion(question) &&
+      "Work-right answer needs official-source verification",
+    draft.match(/\b(always|guarantee|expert in everything|perfect)\b/i) &&
+      "Avoid overclaiming; keep the answer credible"
+  ].filter(Boolean) as string[]
+
+  return {
+    evidenceScore: Math.max(25, 90 - missingEvidence.length * 15 - riskFlags.length * 10),
+    riskFlags,
+    missingEvidence,
+    followUpDrills: [
+      "Prepare one measurable result you can explain in under 30 seconds.",
+      "Prepare one trade-off or mistake and what you changed afterwards.",
+      "Prepare the honest boundary: what you know, what you would verify, and what you would not claim."
+    ],
+    boundaryNote:
+      getInterviewBuddyDisclaimer(question) ||
+      "Use this as preparation, not a script. Keep the final answer truthful and editable.",
+    source: "local"
+  }
+}
+
 function getFitScore(profile: CandidateProfile, job: JobAnalysisDraft) {
   const profileSignals = getWordSignals(
     [profile.baseCvText, profile.experienceHighlights, profile.projectSummaries]
@@ -1215,11 +1306,221 @@ function getApplicationSourceLabel(application: ApplicationRecord) {
   return application.source || getHostname(application.url) || "Manual entry"
 }
 
+function getApplicationCaptureMode(application: ApplicationRecord) {
+  const wasEditedAfterCapture = Boolean(
+    application.updatedAt &&
+      new Date(application.updatedAt).getTime() -
+        new Date(application.createdAt).getTime() >
+        1000
+  )
+
+  if (wasEditedAfterCapture && hasApplicationJobText(application)) {
+    return {
+      className: "edited",
+      detail: "Captured job was edited after initial save",
+      label: "Edited after capture"
+    }
+  }
+
+  if (/\b(import|csv|json|backup)\b/i.test(application.source ?? "")) {
+    return {
+      className: "imported",
+      detail: "Imported into dashboard from an external file or backup",
+      label: "Imported"
+    }
+  }
+
+  if (
+    application.notes?.includes("Platform:") ||
+    application.notes?.includes("Page title:")
+  ) {
+    return {
+      className: "automatic",
+      detail: "Parsed from browser extension",
+      label: "Extension parsed"
+    }
+  }
+
+  if (hasApplicationJobText(application)) {
+    return {
+      className: "tracked",
+      detail: "Loaded from saved tracker text",
+      label: "Tracked job"
+    }
+  }
+
+  return {
+    className: "manual",
+    detail: "Created or edited in dashboard",
+    label: "Manual dashboard"
+  }
+}
+
 function hasJobDraft(job: JobAnalysisDraft) {
   return Boolean(
     job.jobTitle.trim() || job.company.trim() || job.jobDescription.trim() ||
       job.jobUrl.trim()
   )
+}
+
+function scoreTextEvidence(text: string, strongLength: number) {
+  const length = text.trim().length
+
+  if (length >= strongLength) {
+    return 100
+  }
+
+  if (length >= strongLength / 2) {
+    return 70
+  }
+
+  if (length >= 40) {
+    return 45
+  }
+
+  return 15
+}
+
+function getSignalStatus(score: number): ProfileQualitySignal["status"] {
+  if (score >= 75) {
+    return "ready"
+  }
+
+  if (score >= 45) {
+    return "needs-check"
+  }
+
+  return "blocked"
+}
+
+function getProfileQualitySignals(
+  profile: CandidateProfile,
+  reusableAnswers: ReusableAnswers
+): ProfileQualitySignal[] {
+  const evidenceScore = Math.round(
+    (scoreTextEvidence(profile.baseCvText, 1200) +
+      scoreTextEvidence(profile.experienceHighlights, 500) +
+      scoreTextEvidence(profile.projectSummaries, 500)) /
+      3
+  )
+  const workRightScore = profile.workRightDetails.trim()
+    ? profile.sponsorshipNeeded
+      ? 70
+      : 90
+    : 15
+  const roleFocusScore =
+    profile.targetRoles.trim() && profile.targetCountries.trim()
+      ? 90
+      : profile.targetRoles.trim() || profile.targetCountries.trim()
+        ? 55
+        : 20
+  const cvFactsScore = profile.baseCvText.trim()
+    ? scoreTextEvidence(profile.baseCvText, 1000)
+    : 10
+  const allowedClaimInputs = [
+    profile.baseCvText,
+    profile.experienceHighlights,
+    profile.projectSummaries,
+    reusableAnswers.strengthsAnswer,
+    reusableAnswers.workAuthorisationAnswer
+  ].filter((value) => value.trim().length > 60).length
+  const claimBoundaryScore = Math.min(100, allowedClaimInputs * 22)
+
+  return [
+    {
+      detail:
+        evidenceScore >= 75
+          ? "Enough profile evidence for grounded job checks."
+          : "Add CV text, project summaries and experience highlights.",
+      label: "Evidence strength",
+      score: evidenceScore,
+      status: getSignalStatus(evidenceScore)
+    },
+    {
+      detail:
+        workRightScore >= 75
+          ? "Work-right context is available for EU checks."
+          : "Add only verified work-right, sponsorship and relocation facts.",
+      label: "Work-right readiness",
+      score: workRightScore,
+      status: getSignalStatus(workRightScore)
+    },
+    {
+      detail:
+        roleFocusScore >= 75
+          ? "Target roles and countries are clear."
+          : "Add target role families and countries before checking roles.",
+      label: "Role focus clarity",
+      score: roleFocusScore,
+      status: getSignalStatus(roleFocusScore)
+    },
+    {
+      detail:
+        cvFactsScore >= 75
+          ? "CV facts are available for fit and interview evidence."
+          : "Paste enough factual CV content to support recommendations.",
+      label: "CV facts available",
+      score: cvFactsScore,
+      status: getSignalStatus(cvFactsScore)
+    },
+    {
+      detail:
+        claimBoundaryScore >= 75
+          ? "AI can use saved claims with clearer boundaries."
+          : "AutoTime will avoid unsupported claims until more evidence exists.",
+      label: "Allowed AI claims",
+      score: claimBoundaryScore,
+      status: getSignalStatus(claimBoundaryScore)
+    }
+  ]
+}
+
+function hasApplicationJobText(application: ApplicationRecord) {
+  return Boolean(application.notes?.trim() && application.notes.trim().length > 80)
+}
+
+function inferWorkModeFromApplication(application: ApplicationRecord): JobAnalysisDraft["workMode"] {
+  const text = [application.title, application.roleTitle, application.notes]
+    .filter(Boolean)
+    .join(" ")
+
+  if (/\bhybrid\b/i.test(text)) {
+    return "hybrid"
+  }
+
+  if (/\bremote|work from home|telecommute\b/i.test(text)) {
+    return "remote"
+  }
+
+  if (/\bon-?site|office based|office-based\b/i.test(text)) {
+    return "onsite"
+  }
+
+  return "unknown"
+}
+
+function createJobAnalysisFromApplication(
+  application: ApplicationRecord
+): JobAnalysisDraft {
+  const captureMode = getApplicationCaptureMode(application)
+
+  return {
+    ...emptyJobAnalysis,
+    jobTitle: application.roleTitle || application.title,
+    company: application.company ?? "",
+    jobUrl: application.url,
+    location: "",
+    workMode: inferWorkModeFromApplication(application),
+    jobDescription: application.notes ?? "",
+    notes: [
+      `Input mode: ${captureMode.label}`,
+      application.source && `Source: ${application.source}`,
+      application.status && `Tracker status: ${application.status}`,
+      application.nextAction && `Next action: ${application.nextAction}`
+    ]
+      .filter(Boolean)
+      .join("\n")
+  }
 }
 
 function createApplication(
@@ -1235,6 +1536,7 @@ function createApplication(
     url: job.jobUrl || "Manual dashboard entry",
     source: getHostname(job.jobUrl),
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     status: "Saved",
     nextAction: fitEvaluation.nextBestAction,
     nextActionDate: "",
@@ -1367,7 +1669,7 @@ function createOutcomeRecord(application: ApplicationRecord): OutcomeRecord {
     appliedAt: application.status === "Applied" ? now : undefined,
     interviewAt: application.status === "Interview" ? now : undefined,
     closedAt:
-      application.status === "Rejected" || application.status === "Closed"
+      application.status === "Rejected" || application.status === "Archived"
         ? now
         : undefined,
     notes: application.notes,
@@ -1401,7 +1703,7 @@ function updateOutcomeRecordFromApplication(
       (application.status === "Interview" ? now : undefined),
     closedAt:
       base.closedAt ??
-      (application.status === "Rejected" || application.status === "Closed"
+      (application.status === "Rejected" || application.status === "Archived"
         ? now
         : undefined),
     notes: application.notes,
@@ -1485,7 +1787,7 @@ function getReadinessScore(state: CompanionDashboardState, fitScore: number) {
 function getNextActionCount(applications: ApplicationRecord[]) {
   return applications.filter(
     (application) =>
-      application.status !== "Closed" &&
+      application.status !== "Archived" &&
       application.status !== "Rejected" &&
       (application.nextAction?.trim() || application.status === "Saved")
   ).length
@@ -2090,11 +2392,14 @@ export default function HomePage({
   const [interviewDraftAnswer, setInterviewDraftAnswer] = useState("")
   const [interviewBuddyOutputs, setInterviewBuddyOutputs] =
     useState<InterviewBuddyOutputs>(emptyInterviewBuddyOutputs)
+  const [interviewCoachMeta, setInterviewCoachMeta] =
+    useState<InterviewCoachMeta>(emptyInterviewCoachMeta)
   const [isCopilotThinking, setIsCopilotThinking] = useState(false)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const [syncPreferences, setSyncPreferences] =
     useState<SyncPreferences>(defaultSyncPreferences)
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
+  const [showFirstRunWalkthrough, setShowFirstRunWalkthrough] = useState(false)
   const applicationSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
@@ -2117,6 +2422,14 @@ export default function HomePage({
   const outcomeLearningSignals = useMemo(
     () => getOutcomeLearningSignals(state.applications),
     [state.applications]
+  )
+  const profileQualitySignals = useMemo(
+    () => getProfileQualitySignals(state.profile, state.reusableAnswers),
+    [state.profile, state.reusableAnswers]
+  )
+  const profileQualityScore = Math.round(
+    profileQualitySignals.reduce((sum, item) => sum + item.score, 0) /
+      profileQualitySignals.length
   )
   const fitEvaluation = useMemo(
     () =>
@@ -2184,6 +2497,30 @@ export default function HomePage({
     applicationStatusFilter,
     state.applications
   ])
+  const trackedJobSourceOptions = useMemo(
+    () => state.applications.filter(hasApplicationJobText).slice(0, 12),
+    [state.applications]
+  )
+  const latestTrackedJobSource = trackedJobSourceOptions[0] ?? null
+  const currentJobInputMode = state.jobAnalysis.notes.includes(
+    "Input mode: Extension parsed"
+  )
+    ? {
+        className: "automatic",
+        detail: "Loaded from extension-parsed job details",
+        label: "Extension parsed"
+      }
+    : state.jobAnalysis.notes.includes("Input mode: Tracked job")
+      ? {
+          className: "tracked",
+          detail: "Loaded from a saved tracker record",
+          label: "Tracked job"
+        }
+      : {
+          className: "manual",
+          detail: "Manual dashboard fields or paste fallback",
+          label: "Manual dashboard"
+        }
   const riskLabel = useMemo(() => getRiskLabel(state), [state])
   const decisionBrief = useMemo(
     () =>
@@ -2281,31 +2618,9 @@ export default function HomePage({
   const isOverview = view === "overview"
   const activeFocus = focus ?? defaultDashboardFocusByView[view]
   const focusCopy = dashboardFocusCopy[activeFocus]
-  const commandNavIndex = commandSidebarItems.findIndex(
-    (item) => item.focus === activeFocus
-  )
-  const previousCommandItem =
-    commandNavIndex > 0 ? commandSidebarItems[commandNavIndex - 1] : null
-  const nextCommandItem =
-    commandNavIndex >= 0 && commandNavIndex < commandSidebarItems.length - 1
-      ? commandSidebarItems[commandNavIndex + 1]
-      : null
   const activeSidebarLabel =
     commandSidebarItems.find((item) => item.focus === activeFocus)?.label ??
     focusCopy.title
-  const commandSidebarSections = commandSidebarItems.reduce<
-    Array<{ label: string; items: typeof commandSidebarItems }>
-  >((sections, item) => {
-    const section = sections.find((current) => current.label === item.section)
-
-    if (section) {
-      section.items.push(item)
-    } else {
-      sections.push({ label: item.section, items: [item] })
-    }
-
-    return sections
-  }, [])
   const actionPanelEyebrow = isOverview
     ? "Quick actions"
     : currentTab === "jobs"
@@ -2405,14 +2720,18 @@ export default function HomePage({
       body: `${state.applications.length} saved jobs and ${interviewApplications.length} interviews.`
     }
   ]
-  const overviewWorkflowItems = [
+  const onboardingSteps = [
     {
       href: "/dashboard/autofill-profile",
-      label: "1. Profile",
-      value: `${readinessScore}%`,
-      detail: profileReadyForExecution
+      step: "Step 1",
+      title: "Build your evidence profile",
+      status: profileReadyForExecution
         ? "Ready"
-        : `${profileCompletionGap}% to unlock`,
+        : `${profileCompletionGap}% left`,
+      detail: profileReadyForExecution
+        ? "Your profile can support job checks, tracker actions and AI coaching."
+        : `Reach ${profileExecutionThreshold}% to unlock evidence-led execution tools.`,
+      cta: profileReadyForExecution ? "Review profile" : "Complete profile",
       tone: profileReadyForExecution
         ? "good"
         : readinessScore >= 50
@@ -2420,66 +2739,68 @@ export default function HomePage({
           : "blocked"
     },
     {
+      href: "/dashboard/extension",
+      step: "Step 2",
+      title: "Connect the extension",
+      status: state.applications.length > 0 ? "Capturing jobs" : "Not connected",
+      detail:
+        state.applications.length > 0
+          ? "Tracked roles are reaching your dashboard."
+          : "Install and connect the browser extension so job descriptions can be parsed automatically.",
+      cta: state.applications.length > 0 ? "View connection" : "Connect extension",
+      tone: state.applications.length > 0 ? "good" : "neutral"
+    },
+    {
       href: "/dashboard/match-score",
-      label: "2. Check job",
-      value: `${fitEvaluation.overallScore}/100`,
-      detail: fitEvaluation.decision,
-      tone: decisionTone
+      step: "Step 3",
+      title: "Check one quality role",
+      status: hasJobDraft(state.jobAnalysis)
+        ? `${fitEvaluation.overallScore}/100 match`
+        : "Waiting for a role",
+      detail: hasJobDraft(state.jobAnalysis)
+        ? fitEvaluation.decision
+        : "Load an extension-parsed job or paste a JD manually before applying.",
+      cta: "Check job fit",
+      tone: hasJobDraft(state.jobAnalysis) ? decisionTone : "neutral"
     },
     {
       href: "/dashboard/applications",
-      label: "3. Track",
-      value: `${state.applications.length}`,
-      detail: `${statusCounts.Applied + statusCounts.Interview} progressed`,
-      tone: state.applications.length > 0 ? "good" : "neutral"
+      step: "Step 4",
+      title: "Track the next action",
+      status:
+        state.applications.length > 0
+          ? `${state.applications.length} saved`
+          : "No saved jobs yet",
+      detail:
+        activeActionCount > 0
+          ? `${activeActionCount} follow-up${activeActionCount === 1 ? "" : "s"} need attention.`
+          : state.applications.length > 0
+            ? "Keep status, notes and next steps visible in the tracker."
+            : "Save your first role before managing tracker stages.",
+      cta: "Open tracker",
+      tone:
+        activeActionCount > 0
+          ? "warn"
+          : state.applications.length > 0
+            ? "good"
+            : "neutral"
     },
     {
       href: "/dashboard/interview",
-      label: "4. Interview",
-      value: `${state.interviewPrepPacks.length}`,
-      detail: `${interviewApplications.length} interview roles`,
-      tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral"
-    }
-  ]
-  const setupChecklistItems = [
-    {
-      href: "/dashboard/autofill-profile",
-      label: "Profile",
-      value: profileReadyForExecution ? "Ready" : `${readinessScore}% done`,
-      detail: profileReadyForExecution
-        ? "Ready for job checks"
-        : `Reach ${profileExecutionThreshold}% before using tools`,
-      tone: profileReadyForExecution ? "good" : "warn"
-    },
-    {
-      href: "/dashboard/extension",
-      label: "Extension",
-      value: state.applications.length > 0 ? "Receiving jobs" : "Connect",
+      step: "Step 5",
+      title: "Prepare evidence-led interviews",
+      status:
+        interviewApplications.length > 0
+          ? `${interviewApplications.length} interview role${
+              interviewApplications.length === 1 ? "" : "s"
+            }`
+          : "Not ready yet",
       detail:
-        state.applications.length > 0
-          ? "Tracked jobs are reaching the dashboard"
-          : "Connect Chrome to sync tracked jobs",
-      tone: state.applications.length > 0 ? "good" : "neutral"
-    },
-    {
-      href: "/dashboard/applications",
-      label: "First saved job",
-      value: state.applications.length > 0 ? `${state.applications.length} saved` : "Not yet",
-      detail:
-        state.applications.length > 0
-          ? "Tracker has data"
-          : "Track a role from the extension",
-      tone: state.applications.length > 0 ? "good" : "warn"
-    },
-    {
-      href: "/dashboard/follow-ups",
-      label: "Next action",
-      value: activeActionCount > 0 ? `${activeActionCount} due` : "Clear",
-      detail:
-        activeActionCount > 0
-          ? "Follow-up queue needs attention"
-          : "No urgent action waiting",
-      tone: activeActionCount > 0 ? "warn" : "good"
+        interviewApplications.length > 0
+          ? "Generate coaching from your profile evidence and tracked role context."
+          : "Move a tracked application to Interview before generating prep packs.",
+      cta: "Open interview coach",
+      tone: interviewApplications.length > 0 ? "good" : "neutral"
     }
   ]
   const commandQuickActions = [
@@ -2512,11 +2833,11 @@ export default function HomePage({
   ]
   const todayAction = !profileReadyForExecution
     ? {
-        body: `Your profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% before using job checks, tracker or interview prep.`,
-        cta: "Finish profile",
+        body: `Locked until your evidence profile reaches ${profileExecutionThreshold}%. This keeps job checks, tracker actions and interview answers grounded in your real proof.`,
+        cta: "Unlock profile",
         href: "/dashboard/autofill-profile",
-        label: "Best next step",
-        title: "Complete 90% of your profile"
+        label: "Locked",
+        title: "Evidence gate is active"
       }
     : state.applications.length === 0
       ? {
@@ -2718,6 +3039,11 @@ export default function HomePage({
     setState(getStoredState(userId))
     setProductContext(getStoredProductContext(userId))
     setTrustState(getStoredTrustState(userId))
+    setShowFirstRunWalkthrough(
+      window.localStorage.getItem(
+        getUserScopedStorageKey(walkthroughStorageKey, userId)
+      ) !== "true"
+    )
     const storedSyncPreferences = getStoredSyncPreferences(userId)
     setSyncPreferences(storedSyncPreferences)
     setCloudSyncConsent(storedSyncPreferences.profileAccountSyncEnabled)
@@ -2974,6 +3300,27 @@ export default function HomePage({
       saveState(next, userId)
       return next
     })
+  }
+
+  const loadTrackedJobForCheck = (applicationId: string) => {
+    const application = state.applications.find(
+      (item) => item.id === applicationId
+    )
+
+    if (!application) {
+      setStatus("Tracked job was not found")
+      return
+    }
+
+    const next = {
+      ...state,
+      jobAnalysis: createJobAnalysisFromApplication(application)
+    }
+
+    setState(next)
+    saveState(next, userId)
+    setStatus("Parsed job details loaded from tracked job")
+    setTimeout(() => setStatus(""), 3000)
   }
 
   const updateReusableAnswer = <K extends keyof ReusableAnswers>(
@@ -3356,8 +3703,11 @@ export default function HomePage({
       return
     }
 
+    const updatedAt = new Date().toISOString()
     const updatedApplications = state.applications.map((application) =>
-      application.id === id ? { ...application, ...changes } : application
+      application.id === id
+        ? { ...application, ...changes, updatedAt }
+        : application
     )
     const updatedApplication = updatedApplications.find(
       (application) => application.id === id
@@ -3485,7 +3835,7 @@ export default function HomePage({
     openDashboardView("interview")
   }
 
-  const generateInterviewPrep = (application: ApplicationRecord) => {
+  const generateInterviewPrep = async (application: ApplicationRecord) => {
     if (!requireProfileExecutionReady()) {
       return
     }
@@ -3501,12 +3851,58 @@ export default function HomePage({
       return
     }
 
-    const pack = createLocalInterviewPrepPack(
+    const localPack = createLocalInterviewPrepPack(
       application,
       state.profile,
       state.jobAnalysis
     )
-    void saveInterviewPrepPack(pack, "Interview prep pack generated")
+
+    setIsCopilotThinking(true)
+    setStatus("AI is preparing an evidence-checked interview pack...")
+
+    try {
+      const response = await fetch("/api/ai/interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          application,
+          job: state.jobAnalysis,
+          profile: state.profile,
+          reusableAnswers: state.reusableAnswers
+        })
+      })
+      const body = (await response.json()) as {
+        data: {
+          pack?: CompanionDashboardState["interviewPrepPacks"][number]
+          upgradeUrl?: string
+        } | null
+        error: string | null
+      }
+
+      if (!response.ok || !body.data?.pack) {
+        if (body.data?.upgradeUrl) {
+          setStatus(`${body.error ?? "Upgrade required"} Local prep pack saved.`)
+        } else {
+          setStatus(body.error ?? "AI prep unavailable. Local prep pack saved.")
+        }
+        await saveInterviewPrepPack(localPack, "Local interview prep pack generated")
+        return
+      }
+
+      await saveInterviewPrepPack(
+        body.data.pack,
+        "AI interview prep pack generated and saved"
+      )
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error
+          ? `AI prep unavailable. Local prep pack saved: ${error.message}`
+          : "AI prep unavailable. Local prep pack saved."
+      )
+      await saveInterviewPrepPack(localPack, "Local interview prep pack generated")
+    } finally {
+      setIsCopilotThinking(false)
+    }
   }
 
   const exportDashboard = () => {
@@ -3673,7 +4069,7 @@ export default function HomePage({
   )
   const actionPanelTitle =
     isProfileGateRequired
-      ? "Complete your profile first."
+      ? "Evidence gate is locked."
       : isOverview
       ? "What do you want to do now?"
       : currentTab === "jobs"
@@ -3685,7 +4081,7 @@ export default function HomePage({
           : "Prepare a clearer interview answer."
   const actionPanelStateLabel =
     isProfileGateRequired
-      ? `Profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% to continue.`
+      ? `Your profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% so AutoTime can use verified candidate evidence instead of generic advice.`
       : isOverview
       ? profileReadyForExecution
         ? "Your profile is ready for job checks"
@@ -3709,7 +4105,7 @@ export default function HomePage({
     isCopilotThinking
       ? "Working"
       : isProfileGateRequired
-        ? "90% required"
+        ? "Locked"
       : isOverview && !profileReadyForExecution
         ? "Start here"
         : currentTab === "jobs" && !hasJobDraft(state.jobAnalysis)
@@ -3718,7 +4114,7 @@ export default function HomePage({
           ? "Incomplete"
           : "Ready"
 
-  const generateInterviewBuddyAnswers = () => {
+  const generateInterviewBuddyAnswers = async () => {
     if (!requireProfileExecutionReady()) {
       return
     }
@@ -3740,6 +4136,99 @@ export default function HomePage({
 
     if (validationError) {
       setInterviewBuddyOutputs(emptyInterviewBuddyOutputs)
+      setInterviewCoachMeta(emptyInterviewCoachMeta)
+      setStatus(validationError)
+      return
+    }
+
+    const localOutputs = createInterviewBuddyOutputs({
+      draft: interviewDraftAnswer,
+      profile: state.profile,
+      question: activeInterviewQuestion
+    })
+    const localCoachMeta = createLocalInterviewCoachMeta({
+      draft: interviewDraftAnswer,
+      profile: state.profile,
+      question: activeInterviewQuestion
+    })
+
+    setIsCopilotThinking(true)
+    setStatus("AI Interview Coach is checking evidence and boundaries...")
+
+    try {
+      const response = await fetch("/api/ai/interview-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draft: interviewDraftAnswer,
+          job: state.jobAnalysis,
+          profile: state.profile,
+          question: activeInterviewQuestion,
+          reusableAnswers: state.reusableAnswers
+        })
+      })
+      const body = (await response.json()) as {
+        data: {
+          coach?: InterviewBuddyOutputs & Omit<InterviewCoachMeta, "source">
+          upgradeUrl?: string
+        } | null
+        error: string | null
+      }
+
+      if (!response.ok || !body.data?.coach) {
+        if (body.data?.upgradeUrl) {
+          setStatus(`${body.error ?? "Upgrade required"} Open pricing to continue.`)
+        } else {
+          setStatus(body.error ?? "AI coach unavailable. Local evidence check used.")
+        }
+        setInterviewBuddyOutputs(localOutputs)
+        setInterviewCoachMeta(localCoachMeta)
+        return
+      }
+
+      const coach = body.data.coach
+      setInterviewBuddyOutputs({
+        professionalAnswer: coach.professionalAnswer || localOutputs.professionalAnswer,
+        naturalAnswer: coach.naturalAnswer || localOutputs.naturalAnswer,
+        lightFunnyAnswer: coach.lightFunnyAnswer || localOutputs.lightFunnyAnswer,
+        strongFinalAnswer: coach.strongFinalAnswer || localOutputs.strongFinalAnswer
+      })
+      setInterviewCoachMeta({
+        evidenceScore: coach.evidenceScore,
+        riskFlags: coach.riskFlags,
+        missingEvidence: coach.missingEvidence,
+        followUpDrills: coach.followUpDrills,
+        boundaryNote: coach.boundaryNote,
+        source: "ai"
+      })
+      setStatus("AI Interview Coach generated an evidence-checked answer")
+      setTimeout(() => setStatus(""), 3000)
+    } catch (error: unknown) {
+      setInterviewBuddyOutputs(localOutputs)
+      setInterviewCoachMeta(localCoachMeta)
+      setStatus(
+        error instanceof Error
+          ? `AI coach unavailable. Local evidence check used: ${error.message}`
+          : "AI coach unavailable. Local evidence check used."
+      )
+    } finally {
+      setIsCopilotThinking(false)
+    }
+  }
+
+  const generateLocalInterviewBuddyAnswers = () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
+    const validationError = validateInterviewBuddyInput({
+      draft: interviewDraftAnswer,
+      question: activeInterviewQuestion
+    })
+
+    if (validationError) {
+      setInterviewBuddyOutputs(emptyInterviewBuddyOutputs)
+      setInterviewCoachMeta(emptyInterviewCoachMeta)
       setStatus(validationError)
       return
     }
@@ -3751,8 +4240,14 @@ export default function HomePage({
         question: activeInterviewQuestion
       })
     )
-    setStatus("Interview Buddy answers generated from your draft")
-    setTimeout(() => setStatus(""), 3000)
+    setInterviewCoachMeta(
+      createLocalInterviewCoachMeta({
+        draft: interviewDraftAnswer,
+        profile: state.profile,
+        question: activeInterviewQuestion
+      })
+    )
+    setStatus("Local evidence check generated from your draft")
   }
 
   const saveFinalInterviewAnswer = () => {
@@ -3791,6 +4286,14 @@ export default function HomePage({
     window.speechSynthesis.speak(utterance)
   }
 
+  const dismissFirstRunWalkthrough = () => {
+    window.localStorage.setItem(
+      getUserScopedStorageKey(walkthroughStorageKey, userId),
+      "true"
+    )
+    setShowFirstRunWalkthrough(false)
+  }
+
   return (
     <main className="dashboard-shell">
       <header className="app-header">
@@ -3823,55 +4326,92 @@ export default function HomePage({
         {showExecutivePanel ? (
         <div className={`executive-panel tone-${decisionTone}`} aria-label="Dashboard summary">
           <div>
-            <small>Profile</small>
-            <strong>{readinessScore}</strong>
+            <small>Profile readiness</small>
+            <strong>{readinessScore}%</strong>
+            <span>
+              {profileReadyForExecution
+                ? "Ready for evidence-led checks"
+                : `${profileCompletionGap}% left to unlock tools`}
+            </span>
           </div>
           <div>
-            <small>Job score</small>
-            <strong>{fitEvaluation.overallScore}</strong>
+            <small>Job match score</small>
+            <strong>{fitEvaluation.overallScore}/100</strong>
+            <span>
+              {hasJobDraft(state.jobAnalysis)
+                ? fitEvaluation.decision
+                : "Load or paste a job to score"}
+            </span>
           </div>
           <p>
-            <small>Latest check</small>
-            <span>{fitEvaluation.decision}</span>
+            <small>Next best action</small>
+            <span>
+              {profileReadyForExecution
+                ? fitEvaluation.decision
+                : "Improve profile evidence before checking more jobs"}
+            </span>
           </p>
         </div>
         ) : null}
       </header>
 
-      <div className="dashboard-page-nav">
-        <nav className="page-arrow-nav" aria-label="Page step controls">
-          {activeFocus !== "dashboard" ? (
-            <a className="page-arrow-button" href="/dashboard">
-              <span aria-hidden="true">{"\u2302"}</span>
-              <span>Dashboard</span>
-            </a>
-          ) : null}
-          {previousCommandItem ? (
-            <a className="page-arrow-button" href={previousCommandItem.href}>
-              <span aria-hidden="true">{"\u2190"}</span>
-              <span>Back</span>
-              <small>{previousCommandItem.label}</small>
-            </a>
-          ) : (
-            <span className="page-arrow-button disabled">
-              <span aria-hidden="true">{"\u2190"}</span>
-              <span>Back</span>
-            </span>
-          )}
-          {nextCommandItem ? (
-            <a className="page-arrow-button" href={nextCommandItem.href}>
-              <span>Next</span>
-              <small>{nextCommandItem.label}</small>
-              <span aria-hidden="true">{"\u2192"}</span>
-            </a>
-          ) : (
-            <span className="page-arrow-button disabled">
-              <span>Next</span>
-              <span aria-hidden="true">{"\u2192"}</span>
-            </span>
-          )}
-        </nav>
-      </div>
+      {showFirstRunWalkthrough ? (
+        <div
+          className="walkthrough-backdrop"
+          role="presentation"
+          onClick={dismissFirstRunWalkthrough}
+        >
+          <section
+            aria-labelledby="first-run-walkthrough-title"
+            aria-modal="true"
+            className="walkthrough-dialog"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="walkthrough-copy">
+              <p className="eyebrow">First login walkthrough</p>
+              <h2 id="first-run-walkthrough-title">
+                See the AutoTime workflow before you start
+              </h2>
+              <p>
+                Better applications beat more applications. Watch the short
+                product walkthrough, then start with your evidence profile so
+                job checks, tracker actions and AI coaching make sense from the
+                first role.
+              </p>
+            </div>
+            <video
+              controls
+              preload="metadata"
+              src="/demo/autotime-first-user-demo.mp4"
+            >
+              Your browser does not support the walkthrough video.
+            </video>
+            <div className="walkthrough-steps" aria-label="AutoTime setup order">
+              <span>1. Profile evidence</span>
+              <span>2. Extension capture</span>
+              <span>3. Quality job check</span>
+              <span>4. Tracker next action</span>
+              <span>5. Interview coach</span>
+            </div>
+            <div className="walkthrough-actions">
+              <a
+                href="/dashboard/autofill-profile"
+                onClick={dismissFirstRunWalkthrough}
+              >
+                Start setup
+              </a>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={dismissFirstRunWalkthrough}
+              >
+                Continue to dashboard
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {status && <p className="status-banner">{status}</p>}
 
@@ -3879,24 +4419,19 @@ export default function HomePage({
         <aside className="command-sidebar" aria-label="Command centre navigation">
           <p>Your work</p>
           <nav>
-            {commandSidebarSections.map((section) => (
-              <div className="command-sidebar-group" key={section.label}>
-                <span>{section.label}</span>
-                {section.items.map((item) => (
-                  <a
-                    aria-current={
-                      activeSidebarLabel === item.label ? "page" : undefined
-                    }
-                    className={
-                      activeSidebarLabel === item.label ? "active" : undefined
-                    }
-                    href={item.href}
-                    key={item.label}
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </div>
+            {commandSidebarItems.map((item) => (
+              <a
+                aria-current={
+                  activeSidebarLabel === item.label ? "page" : undefined
+                }
+                className={
+                  activeSidebarLabel === item.label ? "active" : undefined
+                }
+                href={item.href}
+                key={item.label}
+              >
+                {item.label}
+              </a>
             ))}
           </nav>
         </aside>
@@ -3909,7 +4444,9 @@ export default function HomePage({
                 <h2>{actionPanelTitle}</h2>
                 <p>{actionPanelStateLabel}</p>
               </div>
-              <span>{actionPanelStatus}</span>
+              <span className={isProfileGateRequired ? "status-lock-pill" : undefined}>
+                {actionPanelStatus}
+              </span>
             </div>
             <div className="ai-action-row">
               {isOverview ? (
@@ -3981,23 +4518,31 @@ export default function HomePage({
           </section>
 
           {isProfileGateRequired ? (
-            <section className="profile-required-panel" aria-label="Profile required">
-              <div>
-                <p className="eyebrow">Profile required</p>
-                <h2>Finish your profile to continue</h2>
-                <p>
-                  Your profile is {readinessScore}% complete. Complete at least{" "}
-                  {profileExecutionThreshold}% before AutoTime checks jobs,
-                  tracks applications or prepares interview answers.
-                </p>
+            <section
+              className="profile-required-panel locked"
+              aria-label="Profile evidence gate locked"
+            >
+              <div className="profile-required-heading">
+                <span className="profile-lock-symbol" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Profile evidence gate</p>
+                  <h2>Locked until your candidate evidence is ready</h2>
+                  <p>
+                    Your profile is {readinessScore}% complete. AutoTime unlocks
+                    job checks, tracker actions and AI interview coaching at{" "}
+                    {profileExecutionThreshold}% so every recommendation is tied
+                    to real role proof, work-right context and candidate facts.
+                  </p>
+                </div>
               </div>
-              <ul className="bullets-list">
+              <ul className="bullets-list lock-proof-list">
                 {profileGateItems.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
+                <li>AI answers stay inside claims your profile can support.</li>
               </ul>
               <a className="secondary-button" href="/dashboard/autofill-profile">
-                Complete profile
+                Unlock profile
               </a>
             </section>
           ) : (
@@ -4266,16 +4811,22 @@ export default function HomePage({
             <a href={todayAction.href}>{todayAction.cta}</a>
           </div>
           <div className="section-intro">
-            <p className="eyebrow">Today</p>
-            <h2>Your job search path</h2>
-            <p>Start from the left and keep moving one step at a time.</p>
+            <p className="eyebrow">Clear onboarding</p>
+            <h2>Follow the AutoTime order</h2>
+            <p>
+              Complete each step once, then repeat the quality loop: capture the
+              right role, check fit, track the next action and prepare with
+              evidence.
+            </p>
           </div>
           <div className="overview-workflow-map" aria-label="Application workflow">
-            {overviewWorkflowItems.map((item) => (
-              <a className={`tone-${item.tone}`} href={item.href} key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
+            {onboardingSteps.map((item) => (
+              <a className={`tone-${item.tone}`} href={item.href} key={item.title}>
+                <span>{item.step}</span>
+                <strong>{item.title}</strong>
+                <em>{item.status}</em>
                 <p>{item.detail}</p>
+                <b>{item.cta}</b>
               </a>
             ))}
           </div>
@@ -4290,21 +4841,6 @@ export default function HomePage({
           </div>
           <details className="dashboard-more-details">
             <summary>More details</summary>
-            <div className="dashboard-setup-checklist" aria-label="Setup status">
-              <div>
-                <p className="eyebrow">Setup</p>
-                <h3>Account path</h3>
-              </div>
-              <div className="dashboard-setup-grid">
-                {setupChecklistItems.map((item) => (
-                  <a className={`tone-${item.tone}`} href={item.href} key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <p>{item.detail}</p>
-                  </a>
-                ))}
-              </div>
-            </div>
             <div className="command-centre-grid">
               {commandCentreCards.map((card) => (
                 <article className={`command-centre-card tone-${card.tone}`} key={card.title}>
@@ -4336,13 +4872,18 @@ export default function HomePage({
         <div>
           <p className="eyebrow">Profile readiness</p>
           <h2>
+            {!profileReadyForExecution ? (
+              <span className="inline-lock-symbol" aria-hidden="true" />
+            ) : null}
             {profileReadyForExecution
               ? "Profile is ready"
-              : "Complete 90% of your profile"}
+              : "Evidence gate locked until 90%"}
           </h2>
           <p>
             Complete at least {profileExecutionThreshold}% of your profile before
-            using job checks, tracker actions or interview prep.
+            using job checks, tracker actions or interview prep. This keeps the
+            workflow competitor-grade: specific, evidence-led and safe from
+            generic AI claims.
           </p>
         </div>
         {profileReadyForExecution ? (
@@ -4467,6 +5008,38 @@ export default function HomePage({
       )}
 
       {!isOverview && currentTab === "applications" && (
+      <section className="tracker-pipeline-panel" aria-label="Tracker pipeline">
+        <div className="section-heading">
+          <p className="eyebrow">Tracker pipeline</p>
+          <h2>From saved role to final outcome</h2>
+          <p>
+            Every job keeps status, source, notes, next action and due date so
+            the workflow stays human-led and auditable.
+          </p>
+        </div>
+        <div className="tracker-pipeline-grid">
+          {applicationStatuses.map((status) => (
+            <button
+              className={
+                applicationStatusFilter === status ? "active" : undefined
+              }
+              key={status}
+              type="button"
+              onClick={() =>
+                setApplicationStatusFilter(
+                  applicationStatusFilter === status ? "all" : status
+                )
+              }
+            >
+              <span>{status}</span>
+              <strong>{statusCounts[status]}</strong>
+            </button>
+          ))}
+        </div>
+      </section>
+      )}
+
+      {!isOverview && currentTab === "applications" && (
       <section
         className="metrics-strip"
         aria-label="Job search progress"
@@ -4476,7 +5049,13 @@ export default function HomePage({
         >
           <span>{state.applications.length}</span>
           <small>Saved jobs</small>
-          <p>{statusCounts.Applied + statusCounts.Interview} in progress</p>
+          <p>
+            {statusCounts["Ready to apply"] +
+              statusCounts.Applied +
+              statusCounts.Interview +
+              statusCounts.Offer}{" "}
+            active beyond saved
+          </p>
         </div>
         <div
           className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
@@ -4606,6 +5185,39 @@ export default function HomePage({
           </div>
 
           <div className="output-column">
+            <section className="panel profile-quality-panel">
+              <div className="section-heading">
+                <p className="eyebrow">Profile quality score</p>
+                <h2>{profileQualityScore}/100 evidence quality</h2>
+                <p>
+                  Completion shows how much is filled. Quality shows whether AI
+                  and job checks have enough proof to stay specific.
+                </p>
+              </div>
+              <div className="profile-quality-list">
+                {profileQualitySignals.map((signal) => (
+                  <article
+                    className={`profile-quality-item ${signal.status}`}
+                    key={signal.label}
+                  >
+                    <div>
+                      <strong>{signal.label}</strong>
+                      <span>{signal.score}/100</span>
+                    </div>
+                    <p>{signal.detail}</p>
+                  </article>
+                ))}
+              </div>
+              <div className="ai-claim-boundary">
+                <strong>AI claim boundary</strong>
+                <p>
+                  Allowed: facts saved in your CV, profile evidence, reusable
+                  answers and parsed job text. Not allowed: invented experience,
+                  unverified work-right claims, hidden job-site actions or
+                  unsupported salary/sponsorship promises.
+                </p>
+              </div>
+            </section>
             <section className="panel">
               <div className="section-heading">
                 <p className="eyebrow">Profile summary</p>
@@ -4662,13 +5274,89 @@ export default function HomePage({
         <section className="workspace-grid job-check-grid">
           <div className="input-column job-check-input">
             <div className="section-heading">
-              <p className="eyebrow">Role input</p>
+              <p className="eyebrow">Role source</p>
               <h2>Check one job before you apply</h2>
               <p>
-                Add the title, company, link and enough job text for the model
-                to check fit, work-right risk and next action.
+                Start from a job parsed by the extension. Manual fields are a
+                fallback for roles you have not tracked yet.
               </p>
             </div>
+            <section
+              className="job-source-panel"
+              aria-label="Tracked job source"
+            >
+              <div className="job-source-heading">
+                <div>
+                  <strong>
+                    {latestTrackedJobSource
+                      ? "Use a tracked job"
+                      : "No tracked JD available yet"}
+                  </strong>
+                  <p>
+                    {latestTrackedJobSource
+                      ? "These jobs came from the extension or saved tracker. Loading one fills the role details and JD text for analysis."
+                      : "Open a job page in the extension and track it, or paste the JD manually below."}
+                  </p>
+                </div>
+                <span
+                  className={`source-mode-pill ${currentJobInputMode.className}`}
+                  title={currentJobInputMode.detail}
+                >
+                  {currentJobInputMode.label}
+                </span>
+              </div>
+              <div className="job-source-note">
+                <p>
+                  Current input: {currentJobInputMode.detail}
+                </p>
+              </div>
+              {trackedJobSourceOptions.length ? (
+                <div className="job-source-actions">
+                  <select
+                    aria-label="Choose tracked job to analyse"
+                    defaultValue=""
+                    onChange={(event) => {
+                      if (event.target.value) {
+                        loadTrackedJobForCheck(event.target.value)
+                        event.target.value = ""
+                      }
+                    }}
+                  >
+                    <option value="">Load tracked job...</option>
+                    {trackedJobSourceOptions.map((application) => (
+                      <option key={application.id} value={application.id}>
+                        {[
+                          application.roleTitle || application.title,
+                          application.company,
+                          getApplicationSourceLabel(application)
+                        ]
+                          .filter(Boolean)
+                          .join(" - ")}
+                      </option>
+                    ))}
+                  </select>
+                  {latestTrackedJobSource ? (
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() =>
+                        loadTrackedJobForCheck(latestTrackedJobSource.id)
+                      }
+                    >
+                      Use latest
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <a className="secondary-button" href="/dashboard/extension">
+                  Connect extension
+                </a>
+              )}
+            </section>
+            <p className="job-check-save-note">
+              Automatic means the JD was parsed from the browser extension.
+              Manual means this role was typed or pasted in the dashboard.
+            </p>
             <div className="job-check-field-grid">
             <label>
               Job title
@@ -4699,7 +5387,7 @@ export default function HomePage({
               Job description
               <textarea
                 className="job-description-input"
-                placeholder="Paste the role description, requirements, location, sponsorship notes and salary details."
+                placeholder="Manual fallback: paste the role description, requirements, location, sponsorship notes and salary details if this job was not parsed from the extension."
                 value={state.jobAnalysis.jobDescription}
                 onChange={(event) =>
                   updateJob("jobDescription", event.target.value)
@@ -4728,6 +5416,43 @@ export default function HomePage({
               <div className="section-heading">
                 <p className="eyebrow">Live result</p>
                 <h2>{fitEvaluation.decision}</h2>
+                <span
+                  className={`source-mode-pill ${currentJobInputMode.className}`}
+                  title={currentJobInputMode.detail}
+                >
+                  {currentJobInputMode.label}
+                </span>
+              </div>
+              <div className="ai-audit-summary" aria-label="Job check AI audit">
+                <article>
+                  <span>Evidence used</span>
+                  <strong>{decisionBrief.evidenceFound.length}</strong>
+                  <p>
+                    {decisionBrief.evidenceFound[0] ||
+                      "No strong evidence found yet."}
+                  </p>
+                </article>
+                <article>
+                  <span>Missing</span>
+                  <strong>{decisionBrief.missingInputs.length}</strong>
+                  <p>
+                    {decisionBrief.missingInputs[0] ||
+                      "Core inputs are present."}
+                  </p>
+                </article>
+                <article>
+                  <span>Risk flags</span>
+                  <strong>{decisionBrief.risks.length}</strong>
+                  <p>{decisionBrief.risks[0] || "No major risk flagged yet."}</p>
+                </article>
+                <article>
+                  <span>Do not claim</span>
+                  <strong>{decisionBrief.confidence}</strong>
+                  <p>
+                    Do not claim work-right, sponsorship, salary or experience
+                    details that are not in the profile or parsed JD.
+                  </p>
+                </article>
               </div>
               <div className="fit-gate-banner">
                 <strong>{fitEvaluation.overallScore}</strong>
@@ -5217,8 +5942,12 @@ export default function HomePage({
                 </div>
                 <dl className="summary-list">
                   <div>
-                    <dt>Job score</dt>
-                    <dd>{selectedApplication.fitScore ?? "Not scored"}</dd>
+                    <dt>Job match score</dt>
+                    <dd>
+                      {typeof selectedApplication.fitScore === "number"
+                        ? `${selectedApplication.fitScore}/100`
+                        : "Not scored yet"}
+                    </dd>
                   </div>
                   <div>
                     <dt>Recommendation</dt>
@@ -5461,6 +6190,14 @@ export default function HomePage({
                         {application.roleTitle || application.title}
                       </strong>
                       <span
+                        className={`source-mode-pill ${
+                          getApplicationCaptureMode(application).className
+                        }`}
+                        title={getApplicationCaptureMode(application).detail}
+                      >
+                        {getApplicationCaptureMode(application).label}
+                      </span>
+                      <span
                         className={`action-timing ${
                           getNextActionTiming(application).includes("overdue")
                             ? "overdue"
@@ -5481,12 +6218,15 @@ export default function HomePage({
                     <small>{application.url}</small>
                     {application.fitDecision ? (
                       <small>
-                        Job score {application.fitScore ?? 0} -{" "}
-                        {application.fitDecision}
+                        Match score{" "}
+                        {typeof application.fitScore === "number"
+                          ? `${application.fitScore}/100`
+                          : "not scored yet"}
+                        . Recommendation: {application.fitDecision}
                         {application.contentGate === "stretch"
-                          ? " - stretch"
+                          ? ". Stretch role"
                           : application.contentGate === "blocked"
-                            ? " - blocked"
+                            ? ". Blocked until risks are reviewed"
                             : ""}
                       </small>
                     ) : null}
@@ -5620,10 +6360,11 @@ export default function HomePage({
       {!isOverview && currentTab === "interview" && (
         <section className="prep-section full-width-section">
           <div className="section-intro">
-            <p className="eyebrow">Interview Buddy</p>
-            <h2>Shape a rough answer into interview-ready versions</h2>
+            <p className="eyebrow">AI Interview Coach</p>
+            <h2>Prepare answers from evidence, not guesswork</h2>
             <p>
-              Rewrite your draft using saved profile evidence.
+              AutoTime checks your rough answer against saved profile evidence,
+              job context and work-right boundaries before shaping it.
             </p>
           </div>
 
@@ -5633,11 +6374,12 @@ export default function HomePage({
               aria-label="Interview Buddy input"
             >
               <div className="buddy-character-panel">
-                <span aria-hidden="true">:)</span>
+                <span aria-hidden="true">AI</span>
                 <div>
-                  <strong>Buddy check</strong>
+                  <strong>Evidence-first answer coach</strong>
                   <p>
-                    Keep it specific. A rough draft is enough.
+                    Start with honest notes. The coach improves structure, flags
+                    missing proof and keeps your answer within what you can verify.
                   </p>
                 </div>
               </div>
@@ -5673,7 +6415,7 @@ export default function HomePage({
               <label>
                 Rough draft answer
                 <textarea
-                  placeholder="Write the factual version first."
+                  placeholder="Write the factual version first: situation, what you did, result, and anything you must not overclaim."
                   value={interviewDraftAnswer}
                   onChange={(event) =>
                     setInterviewDraftAnswer(event.target.value)
@@ -5688,8 +6430,20 @@ export default function HomePage({
               ) : null}
 
               <div className="header-actions">
-                <button type="button" onClick={generateInterviewBuddyAnswers}>
-                  Generate answers
+                <button
+                  disabled={isCopilotThinking}
+                  type="button"
+                  onClick={generateInterviewBuddyAnswers}
+                >
+                  {isCopilotThinking ? "Coaching..." : "Run AI Coach"}
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={isCopilotThinking}
+                  type="button"
+                  onClick={generateLocalInterviewBuddyAnswers}
+                >
+                  Local evidence check
                 </button>
                 <button
                   className="secondary-button"
@@ -5706,12 +6460,65 @@ export default function HomePage({
               className="interview-buddy-output"
               aria-label="Interview Buddy outputs"
             >
+              <div className="interview-coach-audit">
+                <article>
+                  <span>Source</span>
+                  <strong>{currentJobInputMode.label}</strong>
+                  <p>{currentJobInputMode.detail}</p>
+                </article>
+                <article>
+                  <span>Evidence score</span>
+                  <strong>{interviewCoachMeta.evidenceScore}/100</strong>
+                  <p>
+                    {interviewCoachMeta.source === "ai"
+                      ? "AI checked against your saved evidence."
+                      : "Local readiness estimate before AI coaching."}
+                  </p>
+                </article>
+                <article>
+                  <span>Risk flags</span>
+                  <strong>{interviewCoachMeta.riskFlags.length}</strong>
+                  <p>
+                    {interviewCoachMeta.riskFlags[0] ||
+                      "No obvious overclaim or work-right risk flagged yet."}
+                  </p>
+                </article>
+                <article>
+                  <span>Missing proof</span>
+                  <strong>{interviewCoachMeta.missingEvidence.length}</strong>
+                  <p>
+                    {interviewCoachMeta.missingEvidence[0] ||
+                      "Enough draft evidence to shape an answer."}
+                  </p>
+                </article>
+                <article>
+                  <span>Evidence used</span>
+                  <strong>
+                    {[
+                      state.profile.baseCvText.trim() && "CV",
+                      state.profile.experienceHighlights.trim() && "Profile",
+                      state.jobAnalysis.jobDescription.trim() && "JD",
+                      interviewDraftAnswer.trim() && "Draft"
+                    ].filter(Boolean).length}
+                  </strong>
+                  <p>
+                    Uses profile evidence, parsed/manual JD context and your
+                    rough answer where available.
+                  </p>
+                </article>
+              </div>
+
+              <article className="interview-coach-brief">
+                <strong>AutoTime boundary</strong>
+                <p>{interviewCoachMeta.boundaryNote}</p>
+              </article>
+
               {(
                 [
-                  ["professionalAnswer", "Professional answer"],
-                  ["naturalAnswer", "Natural answer"],
-                  ["lightFunnyAnswer", "Light funny version"],
-                  ["strongFinalAnswer", "Strong final interview answer"]
+                  ["professionalAnswer", "Boardroom version"],
+                  ["naturalAnswer", "Human version"],
+                  ["lightFunnyAnswer", "Warm version"],
+                  ["strongFinalAnswer", "Final evidence-led answer"]
                 ] as Array<[InterviewBuddyOutputKey, string]>
               ).map(([key, label]) => (
                 <article className="buddy-answer-card" key={key}>
@@ -5728,10 +6535,26 @@ export default function HomePage({
                   </div>
                   <p>
                     {interviewBuddyOutputs[key] ||
-                      "Generate answers to see this version."}
+                      "Run the coach to see this version."}
                   </p>
                 </article>
               ))}
+
+              <article className="interview-coach-brief">
+                <strong>Follow-up drills</strong>
+                {interviewCoachMeta.followUpDrills.length ? (
+                  <ul className="bullets-list">
+                    {interviewCoachMeta.followUpDrills.map((drill) => (
+                      <li key={drill}>{drill}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>
+                    Run the coach to get targeted follow-up questions and
+                    practice prompts.
+                  </p>
+                )}
+              </article>
             </section>
           </div>
 

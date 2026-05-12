@@ -1,7 +1,8 @@
 import { PublicNav } from "../../components/PublicNav"
 import { PricingCards } from "../../components/PricingCard"
+import { PricingFaq } from "../../components/PricingFaq"
 import { getServerEnv } from "../../lib/env"
-import { getUserPlan } from "../../lib/feature-gate"
+import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate"
 import { createServerClient } from "../../lib/supabase/server"
 import type { SubscriptionPlan } from "../../lib/supabase/types"
 import { getTestAuthUser } from "../../lib/test-auth"
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic"
 type PricingAccount = {
   email: string
   plan: SubscriptionPlan
+  remainingAiCalls: number | null
 }
 
 async function getPricingAccount(): Promise<PricingAccount | null> {
@@ -20,7 +22,8 @@ async function getPricingAccount(): Promise<PricingAccount | null> {
     if (testUser) {
       return {
         email: testUser.email ?? "account",
-        plan: await getUserPlan(testUser.id)
+        plan: await getUserPlan(testUser.id),
+        remainingAiCalls: await getRemainingAiCalls(testUser.id)
       }
     }
 
@@ -34,9 +37,12 @@ async function getPricingAccount(): Promise<PricingAccount | null> {
       return null
     }
 
+    const plan = await getUserPlan(user.id)
+
     return {
       email: user.email ?? "account",
-      plan: await getUserPlan(user.id)
+      plan,
+      remainingAiCalls: plan === "free" ? await getRemainingAiCalls(user.id) : null
     }
   } catch (error: unknown) {
     return null
@@ -121,19 +127,60 @@ export default async function PricingPage() {
         proFeatures={proFeatures}
       />
 
+      <section className="pricing-gate-panel" aria-label="Plan gate clarity">
+        <div className="section-heading">
+          <p className="eyebrow">No hidden surprise</p>
+          <h2>What is locked, why, and what Pro unlocks</h2>
+          <p>
+            Free keeps the core workflow usable. Pro removes limits when you are
+            actively applying and need unlimited AI plus full workflow sync.
+          </p>
+        </div>
+        <div className="pricing-gate-grid">
+          <article>
+            <span>Remaining AI calls</span>
+            <strong>
+              {account
+                ? account.plan === "pro"
+                  ? "Unlimited"
+                  : `${account.remainingAiCalls ?? 0} this month`
+                : "Sign in to view"}
+            </strong>
+            <p>Free includes limited AI analysis so you can validate quality.</p>
+          </article>
+          <article>
+            <span>Locked on Free</span>
+            <strong>Advanced AI + full sync</strong>
+            <p>
+              Application content, interview prep packs, unlimited AI and full
+              profile/workflow cloud sync require Pro.
+            </p>
+          </article>
+          <article>
+            <span>Why it is locked</span>
+            <strong>Cost and evidence control</strong>
+            <p>
+              AI usage has real compute cost, and Pro features rely on stronger
+              account-level workflow persistence.
+            </p>
+          </article>
+          <article>
+            <span>Upgrade unlocks</span>
+            <strong>More intelligence, same control</strong>
+            <p>
+              You still review everything. AutoTime does not auto-submit or hide
+              job-site actions behind the upgrade.
+            </p>
+          </article>
+        </div>
+      </section>
+
       <section className="faq-section">
         <div className="section-heading">
           <p className="eyebrow">FAQ</p>
           <h2>Clear answers before you subscribe</h2>
         </div>
-        <div className="faq-grid">
-          {faqs.map((faq) => (
-            <article className="faq-item" key={faq.question}>
-              <h3>{faq.question}</h3>
-              <p>{faq.answer}</p>
-            </article>
-          ))}
-        </div>
+        <PricingFaq faqs={faqs} />
       </section>
     </main>
   )

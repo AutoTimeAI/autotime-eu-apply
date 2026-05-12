@@ -35,6 +35,18 @@ export type ServerAIResult<T> = {
   costUsd: number
 }
 
+export type InterviewAnswerCoachResult = {
+  evidenceScore: number
+  riskFlags: string[]
+  missingEvidence: string[]
+  professionalAnswer: string
+  naturalAnswer: string
+  lightFunnyAnswer: string
+  strongFinalAnswer: string
+  followUpDrills: string[]
+  boundaryNote: string
+}
+
 export class RateLimitError extends Error {
   constructor(message: string) {
     super(message)
@@ -85,6 +97,18 @@ const interviewPrepPackPartialSchema = z.object({
   skillsToRevise: z.array(z.string()).optional(),
   questionsToAskEmployer: z.array(z.string()).optional(),
   finalPrepChecklist: z.array(z.string()).optional()
+})
+
+const interviewAnswerCoachSchema = z.object({
+  evidenceScore: z.number().optional(),
+  riskFlags: z.array(z.string()).optional(),
+  missingEvidence: z.array(z.string()).optional(),
+  professionalAnswer: z.string().optional(),
+  naturalAnswer: z.string().optional(),
+  lightFunnyAnswer: z.string().optional(),
+  strongFinalAnswer: z.string().optional(),
+  followUpDrills: z.array(z.string()).optional(),
+  boundaryNote: z.string().optional()
 })
 
 let openAIClient: OpenAI | null = null
@@ -190,6 +214,29 @@ function normaliseInterviewPrepPack({
     finalPrepChecklist: toStringArray(value.finalPrepChecklist),
     createdAt: fallback.createdAt,
     updatedAt: now
+  }
+}
+
+function normaliseInterviewAnswerCoach(
+  value: z.infer<typeof interviewAnswerCoachSchema>
+): InterviewAnswerCoachResult {
+  const evidenceScore =
+    typeof value.evidenceScore === "number"
+      ? Math.max(0, Math.min(100, Math.round(value.evidenceScore)))
+      : 50
+
+  return {
+    evidenceScore,
+    riskFlags: toStringArray(value.riskFlags),
+    missingEvidence: toStringArray(value.missingEvidence),
+    professionalAnswer: toStringValue(value.professionalAnswer),
+    naturalAnswer: toStringValue(value.naturalAnswer),
+    lightFunnyAnswer: toStringValue(value.lightFunnyAnswer),
+    strongFinalAnswer: toStringValue(value.strongFinalAnswer),
+    followUpDrills: toStringArray(value.followUpDrills),
+    boundaryNote:
+      toStringValue(value.boundaryNote) ||
+      "Use this as interview preparation only. Keep every claim truthful and verifiable."
   }
 }
 
@@ -329,5 +376,40 @@ export async function generateInterviewPrepWithOpenAI({
       fallback: fallbackPack,
       value: result.value
     })
+  }
+}
+
+export async function generateInterviewAnswerWithOpenAI({
+  draft,
+  job,
+  profile,
+  question,
+  reusableAnswers
+}: {
+  draft: string
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+  question: string
+  reusableAnswers: ReusableAnswers
+}): Promise<ServerAIResult<InterviewAnswerCoachResult>> {
+  const result = await createJsonResponse({
+    instructions: [
+      "You are AutoTime Interview Coach for UK/EU cross-border job candidates.",
+      "Return only valid JSON with keys evidenceScore, riskFlags, missingEvidence, professionalAnswer, naturalAnswer, lightFunnyAnswer, strongFinalAnswer, followUpDrills, boundaryNote.",
+      "All list keys must be string arrays. evidenceScore is 0-100.",
+      "Follow AutoTime's motto: evidence first, transparent limits, user control, no hidden claims.",
+      "Use only the user's rough draft, saved profile, reusable answers and job text.",
+      "Do not invent achievements, employers, qualifications, salary, work rights, sponsorship status, relocation facts or outcomes.",
+      "If evidence is missing, say what is missing instead of filling the gap.",
+      "For visa, sponsorship, work-right or immigration questions, give career-prep wording only and include a boundary note to verify official sources or qualified advice.",
+      "Make the answers specific, mature and interview-ready, but still sound like the candidate."
+    ].join(" "),
+    input: { draft, job, profile, question, reusableAnswers },
+    schema: interviewAnswerCoachSchema
+  })
+
+  return {
+    ...result,
+    value: normaliseInterviewAnswerCoach(result.value)
   }
 }

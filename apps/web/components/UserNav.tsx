@@ -50,11 +50,6 @@ function getInitial(email: string): string {
 }
 
 const dashboardTopNavItems = [
-  { href: "/dashboard", label: "Today" },
-  { href: "/dashboard/jobs", label: "Check Job" },
-  { href: "/dashboard/applications", label: "Tracker" },
-  { href: "/dashboard/profile", label: "Profile" },
-  { href: "/dashboard/interview", label: "Interview" },
   { href: "/dashboard/extension", label: "Extension" },
   { href: "/pricing", label: "Pricing" }
 ]
@@ -71,7 +66,7 @@ export function DashboardTopNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="dashboard-topnav" aria-label="Dashboard">
+    <nav className="dashboard-topnav" aria-label="Global dashboard navigation">
       {dashboardTopNavItems.map((item) => {
         const isActive = isActiveTopNavItem(pathname, item.href)
 

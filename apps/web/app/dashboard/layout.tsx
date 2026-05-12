@@ -51,8 +51,14 @@ export default async function DashboardLayout({
                 src="/brand/autotime-mark.png"
               />
               <span className="brand-text">
-                <span className="brand-name">AutoTime</span>
-                <strong>EU Apply</strong>
+                <span className="brand-title-line">
+                  <span className="brand-name">AutoTime AI</span>
+                </span>
+                <span className="brand-tagline">
+                  <span>Better applications beat more applications.</span>
+                  <span>Know your fit. Position yourself to be hired.</span>
+                  <span>Human-led decisions. AI-powered intelligence.</span>
+                </span>
               </span>
             </a>
             <DashboardTopNav />

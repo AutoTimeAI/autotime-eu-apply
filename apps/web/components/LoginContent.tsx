@@ -1,8 +1,7 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { Suspense, useState } from "react"
-import { publicEnv } from "../lib/env"
+import { Suspense, useEffect, useState } from "react"
 import { createBrowserClient } from "../lib/supabase/client"
 
 type OAuthProvider = "github" | "google"
@@ -15,34 +14,95 @@ function getErrorMessage(error: unknown): string {
 
 function LoginForm() {
   const searchParams = useSearchParams()
+  const authError = searchParams.get("error") || searchParams.get("message")
   const [status, setStatus] = useState<string | null>(
-    searchParams.get("loggedOut") ? "You have been signed out." : null
+    authError
+      ? `Failed: ${authError}`
+      : searchParams.get("sessionExpired")
+        ? "Session expired. Sign in again to continue."
+        : searchParams.get("loggedOut")
+          ? "You have been signed out."
+          : null
+  )
+  const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(
+    null
   )
   const redirectTo = searchParams.get("redirectTo") || "/dashboard"
 
+  useEffect(() => {
+    let isMounted = true
+    const supabase = createBrowserClient()
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!isMounted) {
+        return
+      }
+
+      if (error) {
+        setStatus(`Failed: ${error.message}`)
+        return
+      }
+
+      if (data.session) {
+        setStatus("Already signed in. Redirecting to dashboard...")
+        window.location.replace(redirectTo)
+      }
+    })
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        setStatus("Signed in. Redirecting to dashboard...")
+        window.location.replace(redirectTo)
+      }
+
+      if (event === "SIGNED_OUT") {
+        setStatus("Session expired. Sign in again to continue.")
+        setPendingProvider(null)
+      }
+    })
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [redirectTo])
+
   const handleSignIn = async (provider: OAuthProvider) => {
     try {
-      setStatus(null)
+      setStatus("Opening secure sign-in...")
+      setPendingProvider(provider)
 
       const supabase = createBrowserClient()
-      const callbackUrl = new URL(
-        "/auth/callback",
-        publicEnv.NEXT_PUBLIC_APP_URL
-      )
+      const callbackUrl = new URL("/auth/callback", window.location.origin)
       callbackUrl.searchParams.set("redirectTo", redirectTo)
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: callbackUrl.toString()
+          redirectTo: callbackUrl.toString(),
+          skipBrowserRedirect: true
         }
       })
 
       if (error) {
-        setStatus(error.message)
+        setStatus(`Failed: ${error.message}`)
+        setPendingProvider(null)
+        return
       }
+
+      if (!data.url) {
+        setStatus("Failed: sign-in URL was not returned. Please try again.")
+        setPendingProvider(null)
+        return
+      }
+
+      setStatus("Redirecting to identity provider...")
+      window.location.assign(data.url)
     } catch (error: unknown) {
-      setStatus(getErrorMessage(error))
+      setStatus(`Failed: ${getErrorMessage(error)}`)
+      setPendingProvider(null)
     }
   }
 
@@ -96,17 +156,24 @@ function LoginForm() {
         </div>
 
         <div className="header-actions">
-          <button type="button" onClick={() => handleSignIn("github")}>
-            Sign in with GitHub
+          <button
+            disabled={Boolean(pendingProvider)}
+            type="button"
+            onClick={() => handleSignIn("github")}
+          >
+            {pendingProvider === "github" ? "Opening GitHub..." : "Sign in with GitHub"}
           </button>
           <button
             className="secondary-button"
+            disabled={Boolean(pendingProvider)}
             type="button"
             onClick={() => handleSignIn("google")}
           >
-            Sign in with Google
+            {pendingProvider === "google" ? "Opening Google..." : "Sign in with Google"}
           </button>
         </div>
+
+        {status ? <p className="status-banner">{status}</p> : null}
 
         <p className="auth-privacy-note">
           EU-hosted analytics only · No email used for tracking · Your data is

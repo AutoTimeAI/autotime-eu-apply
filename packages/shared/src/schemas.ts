@@ -2,11 +2,13 @@ import { z } from "zod"
 
 export const applicationStatusSchema = z.enum([
   "Saved",
-  "Applying",
+  "Checking fit",
+  "Ready to apply",
   "Applied",
   "Interview",
+  "Offer",
   "Rejected",
-  "Closed"
+  "Archived"
 ])
 
 export const applicationOutcomeReasonSchema = z.enum([
@@ -164,6 +166,7 @@ export const applicationRecordSchema = z.object({
   roleTitle: z.string().optional(),
   source: z.string().optional(),
   createdAt: z.string(),
+  updatedAt: z.string().optional(),
   status: applicationStatusSchema,
   nextAction: z.string().optional(),
   nextActionDate: z.string().optional(),

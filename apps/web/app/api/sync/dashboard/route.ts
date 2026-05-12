@@ -139,7 +139,8 @@ function mapApplicationToRow(
     job_snapshot: null,
     source_surface: sourceSurface,
     schema_version: 1,
-    created_at: application.createdAt
+    created_at: application.createdAt,
+    updated_at: application.updatedAt ?? new Date().toISOString()
   }
 }
 
@@ -326,6 +327,7 @@ function rowToApplication(
     roleTitle: row.role_title ?? undefined,
     source: row.source ?? undefined,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
     status: row.status,
     nextAction: row.next_action ?? undefined,
     nextActionDate: row.next_action_date ?? undefined,
