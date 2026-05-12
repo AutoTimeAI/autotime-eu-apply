@@ -2776,6 +2776,10 @@ export default function HomePage({
   }
 
   const runOnlineAnalytics = async () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     if (!persistedEvidenceRecords.length && !persistedOutcomeRecords.length) {
       setOnlineAnalyticsStatus("Save a checked job before running analytics.")
       return
@@ -3225,6 +3229,10 @@ export default function HomePage({
   }
 
   const saveApplicationFromJob = async () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     if (!hasJobDraft(state.jobAnalysis)) {
       setStatus("Add a job title, company, URL or job description before saving")
       return
@@ -3280,6 +3288,10 @@ export default function HomePage({
   }
 
   const runAiJobAnalysis = async () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     if (!hasJobDraft(state.jobAnalysis)) {
       setStatus("Add a job title, company, URL or description before asking AI")
       return
@@ -3336,6 +3348,10 @@ export default function HomePage({
     id: string,
     changes: Partial<ApplicationRecord>
   ) => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     const updatedApplications = state.applications.map((application) =>
       application.id === id ? { ...application, ...changes } : application
     )
@@ -3392,6 +3408,10 @@ export default function HomePage({
   })
 
   const deleteApplication = async (id: string) => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     const application = state.applications.find((item) => item.id === id)
 
     if (!application) {
@@ -3437,6 +3457,10 @@ export default function HomePage({
     pack: CompanionDashboardState["interviewPrepPacks"][number],
     message: string
   ) => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     const nextState = {
       ...state,
       interviewPrepPacks: [
@@ -3458,6 +3482,10 @@ export default function HomePage({
   }
 
   const generateInterviewPrep = (application: ApplicationRecord) => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     const guardrails = getInterviewPrepGuardrails({
       application,
       profile: state.profile,
@@ -3622,6 +3650,18 @@ export default function HomePage({
       )
     }
   }
+
+  const requireProfileExecutionReady = () => {
+    if (profileReadyForExecution) {
+      return true
+    }
+
+    setStatus(
+      `Complete at least ${profileExecutionThreshold}% of your profile before using dashboard tools. Current profile: ${readinessScore}%.`
+    )
+    return false
+  }
+
   const activeInterviewQuestion =
     customInterviewQuestion.trim() || interviewQuestion
   const interviewDisclaimer = getInterviewBuddyDisclaimer(activeInterviewQuestion)
@@ -3677,6 +3717,10 @@ export default function HomePage({
           : "Ready"
 
   const generateInterviewBuddyAnswers = () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     if (!activeInterviewQuestion.trim()) {
       setStatus("Choose or type an interview question first")
       return
@@ -3710,6 +3754,10 @@ export default function HomePage({
   }
 
   const saveFinalInterviewAnswer = () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     if (!interviewBuddyOutputs.strongFinalAnswer.trim()) {
       setStatus("Generate a strong final answer before saving")
       return
