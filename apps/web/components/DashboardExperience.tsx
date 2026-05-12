@@ -26,6 +26,10 @@ import {
   getBrowserCloudSyncReadiness,
   prepareProfileSyncAction
 } from "../lib/cloud-sync"
+import {
+  getProfileExecutionLockMessage,
+  PROFILE_EXECUTION_THRESHOLD
+} from "../lib/product-protocols"
 import { useDashboardPlan } from "./UserNav"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
@@ -190,7 +194,7 @@ const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const trustStateStorageKey = "autotime-v2-trust-state"
 const syncPreferenceStorageKey = "autotime-v2-sync-preferences"
-const profileExecutionThreshold = 90
+const profileExecutionThreshold = PROFILE_EXECUTION_THRESHOLD
 
 function getUserScopedStorageKey(baseKey: string, userId: string) {
   return `${baseKey}:${userId}`
@@ -3656,9 +3660,7 @@ export default function HomePage({
       return true
     }
 
-    setStatus(
-      `Complete at least ${profileExecutionThreshold}% of your profile before using dashboard tools. Current profile: ${readinessScore}%.`
-    )
+    setStatus(getProfileExecutionLockMessage(readinessScore))
     return false
   }
 
