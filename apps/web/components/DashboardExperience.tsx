@@ -6,7 +6,6 @@ import {
   companionDashboardStateSchema,
   evaluateCountryFit,
   getCandidateProfileBridgeIssues,
-  hasCandidateProfileBridgeEvidence,
   type ApplicationOutcomeReason,
   type ApplicationRecord,
   type ApplicationStatus,
@@ -191,6 +190,7 @@ const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const trustStateStorageKey = "autotime-v2-trust-state"
 const syncPreferenceStorageKey = "autotime-v2-sync-preferences"
+const profileExecutionThreshold = 90
 
 function getUserScopedStorageKey(baseKey: string, userId: string) {
   return `${baseKey}:${userId}`
@@ -2221,10 +2221,21 @@ export default function HomePage({
     () => getCandidateProfileBridgeIssues(state.profile),
     [state.profile]
   )
-  const profileBridgeReady = useMemo(
-    () => hasCandidateProfileBridgeEvidence(state.profile),
-    [state.profile]
+  const profileReadyForExecution = readinessScore >= profileExecutionThreshold
+  const profileCompletionGap = Math.max(
+    0,
+    profileExecutionThreshold - readinessScore
   )
+  const profileGateItems = [
+    ...profileBridgeIssues.map((issue) => `Add ${issue}`),
+    ...(profileReadyForExecution
+      ? []
+      : [
+          `Reach ${profileExecutionThreshold}% profile completion${
+            profileCompletionGap > 0 ? ` (${profileCompletionGap}% more needed)` : ""
+          }`
+        ])
+  ]
   const cloudSyncReadiness = useMemo(() => getBrowserCloudSyncReadiness(), [])
   const interviewApplications = state.applications.filter(
     (application) => application.status === "Interview"
@@ -2301,9 +2312,10 @@ export default function HomePage({
           ? "Tracker"
           : "Interview"
   const showHeaderJobActions =
-    profileBridgeReady &&
+    profileReadyForExecution &&
     (isOverview || currentTab === "jobs" || currentTab === "applications")
-  const showExecutivePanel = isOverview || (profileBridgeReady && currentTab === "jobs")
+  const showExecutivePanel =
+    isOverview || (profileReadyForExecution && currentTab === "jobs")
   const showProfileSettingsPanel =
     activeFocus === "autofill-profile" || activeFocus === "settings"
   const showProfileCloudSync =
@@ -2313,7 +2325,7 @@ export default function HomePage({
   const showApplicationList = activeFocus !== "insights" && !selectedApplication
   const showInterviewPrepPacks = activeFocus === "interview-prep"
   const isProfileGateRequired =
-    !profileBridgeReady && !isOverview && currentTab !== "profile"
+    !profileReadyForExecution && !isOverview && currentTab !== "profile"
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const decisionTone =
     decisionBrief.contentGate === "ready"
@@ -2394,10 +2406,14 @@ export default function HomePage({
       href: "/dashboard/autofill-profile",
       label: "1. Profile",
       value: `${readinessScore}%`,
-      detail: profileBridgeReady
+      detail: profileReadyForExecution
         ? "Ready"
-        : `${profileBridgeIssues.length} missing`,
-      tone: readinessScore >= 80 ? "good" : readinessScore >= 50 ? "warn" : "blocked"
+        : `${profileCompletionGap}% to unlock`,
+      tone: profileReadyForExecution
+        ? "good"
+        : readinessScore >= 50
+          ? "warn"
+          : "blocked"
     },
     {
       href: "/dashboard/match-score",
@@ -2425,11 +2441,11 @@ export default function HomePage({
     {
       href: "/dashboard/autofill-profile",
       label: "Profile",
-      value: profileBridgeReady ? "Ready" : "Needs input",
-      detail: profileBridgeReady
-        ? "Core evidence is present"
-        : `${profileBridgeIssues.length} profile field${profileBridgeIssues.length === 1 ? "" : "s"} missing`,
-      tone: profileBridgeReady ? "good" : "warn"
+      value: profileReadyForExecution ? "Ready" : `${readinessScore}% done`,
+      detail: profileReadyForExecution
+        ? "Ready for job checks"
+        : `Reach ${profileExecutionThreshold}% before using tools`,
+      tone: profileReadyForExecution ? "good" : "warn"
     },
     {
       href: "/dashboard/extension",
@@ -2490,15 +2506,13 @@ export default function HomePage({
           : "No urgent follow-up is waiting from saved jobs."
     }
   ]
-  const todayAction = !profileBridgeReady
+  const todayAction = !profileReadyForExecution
     ? {
-        body: `${profileBridgeIssues.length} profile item${
-          profileBridgeIssues.length === 1 ? "" : "s"
-        } missing. Add these once so job checks are clearer.`,
+        body: `Your profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% before using job checks, tracker or interview prep.`,
         cta: "Finish profile",
         href: "/dashboard/autofill-profile",
         label: "Best next step",
-        title: "Finish your profile"
+        title: "Complete 90% of your profile"
       }
     : state.applications.length === 0
       ? {
@@ -3629,21 +3643,19 @@ export default function HomePage({
           : "Prepare a clearer interview answer."
   const actionPanelStateLabel =
     isProfileGateRequired
-      ? `${profileBridgeIssues.length} required profile item${
-          profileBridgeIssues.length === 1 ? " is" : "s are"
-        } missing`
+      ? `Profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% to continue.`
       : isOverview
-      ? profileBridgeReady
+      ? profileReadyForExecution
         ? "Your profile is ready for job checks"
-        : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing`
+        : `Profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% for better outcomes.`
       : currentTab === "jobs"
       ? hasJobDraft(state.jobAnalysis)
         ? "Ready to analyse current role"
         : "Waiting for role details"
       : currentTab === "profile"
-        ? profileBridgeReady
-          ? "Profile ready"
-          : `${profileBridgeIssues.length} profile item${profileBridgeIssues.length === 1 ? "" : "s"} missing`
+        ? profileReadyForExecution
+          ? "Profile ready for job checks"
+          : `Profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% to unlock tools.`
         : currentTab === "applications"
           ? activeActionCount > 0
             ? `${activeActionCount} next action${activeActionCount === 1 ? "" : "s"} waiting`
@@ -3655,12 +3667,12 @@ export default function HomePage({
     isCopilotThinking
       ? "Working"
       : isProfileGateRequired
-        ? "Profile required"
-      : isOverview && !profileBridgeReady
+        ? "90% required"
+      : isOverview && !profileReadyForExecution
         ? "Start here"
         : currentTab === "jobs" && !hasJobDraft(state.jobAnalysis)
         ? "Input needed"
-        : currentTab === "profile" && !profileBridgeReady
+        : currentTab === "profile" && !profileReadyForExecution
           ? "Incomplete"
           : "Ready"
 
@@ -3855,7 +3867,7 @@ export default function HomePage({
                   <a className="secondary-button" href="/dashboard/autofill-profile">
                     Finish profile
                   </a>
-                  {profileBridgeReady ? (
+                  {profileReadyForExecution ? (
                     <>
                       <a className="secondary-button" href="/dashboard/jobs">
                         Check job
@@ -3924,14 +3936,14 @@ export default function HomePage({
                 <p className="eyebrow">Profile required</p>
                 <h2>Finish your profile to continue</h2>
                 <p>
-                  AutoTime needs your target role, CV text and work-right details
-                  before it can check jobs, track applications or prepare
-                  interview answers.
+                  Your profile is {readinessScore}% complete. Complete at least{" "}
+                  {profileExecutionThreshold}% before AutoTime checks jobs,
+                  tracks applications or prepares interview answers.
                 </p>
               </div>
               <ul className="bullets-list">
-                {profileBridgeIssues.map((issue) => (
-                  <li key={issue}>Add {issue}</li>
+                {profileGateItems.map((item) => (
+                  <li key={item}>{item}</li>
                 ))}
               </ul>
               <a className="secondary-button" href="/dashboard/autofill-profile">
@@ -4265,7 +4277,7 @@ export default function HomePage({
       {!isOverview && currentTab === "profile" && activeFocus !== "settings" && (
       <section
         className={
-          profileBridgeReady
+          profileReadyForExecution
             ? "profile-bridge-panel ready"
             : "profile-bridge-panel blocked"
         }
@@ -4274,16 +4286,16 @@ export default function HomePage({
         <div>
           <p className="eyebrow">Profile readiness</p>
           <h2>
-            {profileBridgeReady
+            {profileReadyForExecution
               ? "Profile is ready"
-              : "Complete your profile"}
+              : "Complete 90% of your profile"}
           </h2>
           <p>
-            Target roles, CV text and work-right details are required before job
-            checks can make clearer recommendations.
+            Complete at least {profileExecutionThreshold}% of your profile before
+            using job checks, tracker actions or interview prep.
           </p>
         </div>
-        {profileBridgeReady ? (
+        {profileReadyForExecution ? (
           <ul className="bullets-list">
             <li>Your profile can support job-fit scores and next steps.</li>
             <li>Work-right and country details are available for checks.</li>
@@ -4291,8 +4303,8 @@ export default function HomePage({
           </ul>
         ) : (
           <ul className="bullets-list">
-            {profileBridgeIssues.map((issue) => (
-              <li key={issue}>Add {issue}</li>
+            {profileGateItems.map((item) => (
+              <li key={item}>{item}</li>
             ))}
           </ul>
         )}
