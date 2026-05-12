@@ -35,9 +35,7 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
             <span className="brand-name">AutoTime AI</span>
           </span>
           <span className="brand-tagline">
-            <span>Better applications beat more applications.</span>
-            <span>Know your fit. Position yourself to be hired.</span>
-            <span>Human-led decisions. AI-powered intelligence.</span>
+            Better applications, not more noise.
           </span>
         </span>
       </Link>

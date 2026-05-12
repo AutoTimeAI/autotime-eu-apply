@@ -4548,6 +4548,64 @@ export default function HomePage({
           ) : (
           <>
 
+      {!isOverview && currentTab === "profile" && activeFocus === "settings" && (
+      <section className="settings-hub-panel" aria-label="Settings overview">
+        <div className="section-intro">
+          <p className="eyebrow">Settings overview</p>
+          <h2>Control how AutoTime works for you</h2>
+          <p>
+            Keep account sync, extension capture, profile defaults and data
+            controls understandable from one place.
+          </p>
+        </div>
+        <div className="settings-hub-grid">
+          <article>
+            <span>Profile quality</span>
+            <strong>{profileQualityScore}/100</strong>
+            <p>
+              Candidate evidence, work-right details and allowed AI claims.
+            </p>
+            <a href="/dashboard/autofill-profile">Edit profile</a>
+          </article>
+          <article>
+            <span>Account sync</span>
+            <strong>{cloudSyncReadiness.modeLabel}</strong>
+            <p>
+              {cloudSyncConsent
+                ? "Profile and workflow sync consent is enabled."
+                : "Browser-first saving is active until you enable sync."}
+            </p>
+            <a href="#account-sync-settings">Review sync</a>
+          </article>
+          <article>
+            <span>Extension</span>
+            <strong>
+              {state.applications.some(
+                (application) =>
+                  getApplicationCaptureMode(application).className === "automatic"
+              )
+                ? "Capturing jobs"
+                : "Not proven yet"}
+            </strong>
+            <p>Connect Chrome to parse JDs and prove job source quality.</p>
+            <a href="/dashboard/extension">Open extension</a>
+          </article>
+          <article>
+            <span>Plan and AI</span>
+            <strong>{isCopilotThinking ? "AI working" : "Ready"}</strong>
+            <p>Manage AI limits, upgrade gates and subscription settings.</p>
+            <a href="/pricing">View pricing</a>
+          </article>
+          <article>
+            <span>Data controls</span>
+            <strong>Export / delete</strong>
+            <p>Export a local backup or delete synced profile data.</p>
+            <a href="#account-sync-settings">Manage data</a>
+          </article>
+        </div>
+      </section>
+      )}
+
       {!isOverview && currentTab === "profile" && showProfileSettingsPanel && (
       <section className="market-context-panel" aria-label="Profile settings">
         <div className="section-intro">
@@ -4909,6 +4967,7 @@ export default function HomePage({
             ? "cloud-sync-panel flagged"
             : "cloud-sync-panel local"
         }
+        id="account-sync-settings"
         aria-label="Sync status"
       >
         <div>
@@ -5085,11 +5144,27 @@ export default function HomePage({
       {!isOverview && currentTab === "profile" && (
         <section className="workspace-grid">
           <div className="input-column">
+            <section className="profile-purpose-panel" aria-label="Profile purpose">
+              <p className="eyebrow">My Profile</p>
+              <h2>Your candidate evidence workspace</h2>
+              <p>
+                This is not a public profile. It is the evidence AutoTime uses
+                to score jobs, explain risks, fill tracker context and keep AI
+                interview answers truthful.
+              </p>
+              <div className="profile-purpose-steps">
+                <span>1. Identity</span>
+                <span>2. Work-right</span>
+                <span>3. Target roles</span>
+                <span>4. CV evidence</span>
+                <span>5. Reusable answers</span>
+              </div>
+            </section>
             <div className="profile-form-toolbar">
               <div>
-                <p className="eyebrow">Profile</p>
-                <h2>Your details</h2>
-                <p>Saved as you type.</p>
+                <p className="eyebrow">Profile controls</p>
+                <h2>Save and sync your evidence</h2>
+                <p>Browser-first by default. Sync only when you choose.</p>
               </div>
               <div className="profile-form-actions">
                 <button
@@ -5118,9 +5193,17 @@ export default function HomePage({
                 </button>
               </div>
             </div>
+
+            <section className="profile-form-section">
+              <div className="section-heading">
+                <p className="eyebrow">Identity</p>
+                <h3>Basic candidate details</h3>
+                <p>Used for summaries and reusable application context.</p>
+              </div>
             <label>
               Full name
               <input
+                placeholder="Your full name"
                 value={state.profile.fullName}
                 onChange={(event) =>
                   updateProfile("fullName", event.target.value)
@@ -5130,6 +5213,7 @@ export default function HomePage({
             <label>
               Current country
               <input
+                placeholder="Example: United Kingdom"
                 value={state.profile.currentCountry}
                 onChange={(event) =>
                   updateProfile("currentCountry", event.target.value)
@@ -5139,15 +5223,25 @@ export default function HomePage({
             <label>
               Current city
               <input
+                placeholder="Example: London"
                 value={state.profile.currentCity}
                 onChange={(event) =>
                   updateProfile("currentCity", event.target.value)
                 }
               />
             </label>
+            </section>
+
+            <section className="profile-form-section">
+              <div className="section-heading">
+                <p className="eyebrow">Search focus</p>
+                <h3>Where and what you want</h3>
+                <p>Helps AutoTime avoid generic job-fit advice.</p>
+              </div>
             <label>
               Target countries
               <input
+                placeholder="Example: UK, Ireland, Netherlands, Germany"
                 value={state.profile.targetCountries}
                 onChange={(event) =>
                   updateProfile("targetCountries", event.target.value)
@@ -5157,12 +5251,21 @@ export default function HomePage({
             <label>
               Target roles
               <input
+                placeholder="Example: Business Analyst, Product Analyst, Application Support"
                 value={state.profile.targetRoles}
                 onChange={(event) =>
                   updateProfile("targetRoles", event.target.value)
                 }
               />
             </label>
+            </section>
+
+            <section className="profile-form-section important">
+              <div className="section-heading">
+                <p className="eyebrow">Work-right evidence</p>
+                <h3>Facts AutoTime must not invent</h3>
+                <p>Add only details you can verify. This drives risk checks.</p>
+              </div>
             <label>
               Work-right details
               <textarea
@@ -5173,15 +5276,25 @@ export default function HomePage({
                 }
               />
             </label>
+            </section>
+
+            <section className="profile-form-section important">
+              <div className="section-heading">
+                <p className="eyebrow">CV evidence</p>
+                <h3>Proof for job checks and AI answers</h3>
+                <p>Paste factual CV text, project evidence and achievements.</p>
+              </div>
             <label>
               CV text
               <textarea
+                placeholder="Paste your CV text or a factual summary of roles, projects, tools, outcomes and responsibilities."
                 value={state.profile.baseCvText}
                 onChange={(event) =>
                   updateProfile("baseCvText", event.target.value)
                 }
               />
             </label>
+            </section>
           </div>
 
           <div className="output-column">
@@ -5190,8 +5303,9 @@ export default function HomePage({
                 <p className="eyebrow">Profile quality score</p>
                 <h2>{profileQualityScore}/100 evidence quality</h2>
                 <p>
-                  Completion shows how much is filled. Quality shows whether AI
-                  and job checks have enough proof to stay specific.
+                  Use this as your readiness map. Green means AutoTime can use
+                  that evidence confidently; amber or red means add more proof
+                  before relying on job checks or AI coaching.
                 </p>
               </div>
               <div className="profile-quality-list">
@@ -5220,10 +5334,22 @@ export default function HomePage({
             </section>
             <section className="panel">
               <div className="section-heading">
-                <p className="eyebrow">Profile summary</p>
-                <h2>Your job-search basics</h2>
+                <p className="eyebrow">At a glance</p>
+                <h2>What AutoTime knows about you</h2>
+                <p>
+                  These are the facts currently available for job-fit and
+                  workflow decisions.
+                </p>
               </div>
               <dl className="summary-list">
+                <div>
+                  <dt>Target roles</dt>
+                  <dd>{state.profile.targetRoles || "Not set"}</dd>
+                </div>
+                <div>
+                  <dt>Target countries</dt>
+                  <dd>{state.profile.targetCountries || "Not set"}</dd>
+                </div>
                 <div>
                   <dt>Current location</dt>
                   <dd>
@@ -5233,23 +5359,36 @@ export default function HomePage({
                   </dd>
                 </div>
                 <div>
-                  <dt>Relocation</dt>
-                  <dd>{state.profile.relocationWillingness}</dd>
+                  <dt>Work-right evidence</dt>
+                  <dd>
+                    {state.profile.workRightDetails
+                      ? "Saved"
+                      : "Missing"}
+                  </dd>
                 </div>
                 <div>
-                  <dt>Notice period</dt>
-                  <dd>{state.profile.noticePeriod || "Not set"}</dd>
+                  <dt>CV evidence</dt>
+                  <dd>
+                    {state.profile.baseCvText.trim()
+                      ? `${state.profile.baseCvText.trim().length} characters saved`
+                      : "Missing"}
+                  </dd>
                 </div>
               </dl>
             </section>
             <section className="panel">
               <div className="section-heading">
                 <p className="eyebrow">Reusable answers</p>
-                <h2>Answers you can reuse</h2>
+                <h2>Reusable answer evidence</h2>
+                <p>
+                  Save reusable wording here only when it is true and supported
+                  by your profile.
+                </p>
               </div>
               <label>
                 Motivation answer
                 <textarea
+                  placeholder="Why this kind of role, company, or market makes sense for you."
                   value={state.reusableAnswers.motivationAnswer}
                   onChange={(event) =>
                     updateReusableAnswer("motivationAnswer", event.target.value)
@@ -5259,6 +5398,7 @@ export default function HomePage({
               <label>
                 Strengths answer
                 <textarea
+                  placeholder="A factual strengths answer backed by experience, projects, tools, or outcomes."
                   value={state.reusableAnswers.strengthsAnswer}
                   onChange={(event) =>
                     updateReusableAnswer("strengthsAnswer", event.target.value)
