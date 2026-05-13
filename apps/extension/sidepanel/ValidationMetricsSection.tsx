@@ -1,5 +1,6 @@
 import type { ApplicationValidationMetrics } from "../lib/applications"
 import { applicationStatuses } from "./constants"
+import { MetricReveal } from "./MetricReveal"
 
 type ValidationMetricsSectionProps = {
   metrics: ApplicationValidationMetrics
@@ -23,27 +24,37 @@ export function ValidationMetricsSection({
       <dl className="profile-summary">
         <div>
           <dt>Total applications tracked</dt>
-          <dd>{metrics.totalApplications}</dd>
+          <dd>
+            <MetricReveal label="Show total applications tracked">
+              {metrics.totalApplications}
+            </MetricReveal>
+          </dd>
         </div>
         <div>
           <dt>Applications with content snapshots</dt>
           <dd>
-            {metrics.applicationsWithContentSnapshots} (
-            {metrics.contentSnapshotCoveragePercent}%)
+            <MetricReveal label="Show content snapshot coverage">
+              {metrics.applicationsWithContentSnapshots} (
+              {metrics.contentSnapshotCoveragePercent}%)
+            </MetricReveal>
           </dd>
         </div>
         <div>
           <dt>Applications with next actions</dt>
           <dd>
-            {metrics.applicationsWithNextActions} (
-            {metrics.nextActionCoveragePercent}%)
+            <MetricReveal label="Show next action coverage">
+              {metrics.applicationsWithNextActions} (
+              {metrics.nextActionCoveragePercent}%)
+            </MetricReveal>
           </dd>
         </div>
         <div>
           <dt>Applied/interview/closed applications with notes</dt>
           <dd>
-            {metrics.applicationsWithOutcomeNotes} (
-            {metrics.outcomeNoteCoveragePercent}%)
+            <MetricReveal label="Show outcome note coverage">
+              {metrics.applicationsWithOutcomeNotes} (
+              {metrics.outcomeNoteCoveragePercent}%)
+            </MetricReveal>
           </dd>
         </div>
       </dl>
@@ -54,7 +65,11 @@ export function ValidationMetricsSection({
           {applicationStatuses.map((status) => (
             <div key={status}>
               <dt>{status}</dt>
-              <dd>{metrics.statusCounts[status]}</dd>
+              <dd>
+                <MetricReveal label={`Show ${status} count`}>
+                  {metrics.statusCounts[status]}
+                </MetricReveal>
+              </dd>
             </div>
           ))}
         </dl>
@@ -67,7 +82,11 @@ export function ValidationMetricsSection({
             {metrics.sourceCounts.map((sourceCount) => (
               <div key={sourceCount.source}>
                 <dt>{sourceCount.source}</dt>
-                <dd>{sourceCount.count}</dd>
+                <dd>
+                  <MetricReveal label={`Show ${sourceCount.source} count`}>
+                    {sourceCount.count}
+                  </MetricReveal>
+                </dd>
               </div>
             ))}
           </dl>

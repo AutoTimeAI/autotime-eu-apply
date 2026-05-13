@@ -50,7 +50,10 @@ function getInitial(email: string): string {
 }
 
 const dashboardTopNavItems = [
-  { href: "/dashboard/extension", label: "Extension" },
+  { href: "/dashboard/match-score", label: "Matches" },
+  { href: "/dashboard/applications", label: "Tracker" },
+  { href: "/dashboard/cv-tailor", label: "Documents" },
+  { href: "/dashboard/extension", label: "Copilot" },
   { href: "/pricing", label: "Pricing" }
 ]
 

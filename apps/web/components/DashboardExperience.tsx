@@ -1,6 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react"
 import { z } from "zod"
 import {
   companionDashboardStateSchema,
@@ -20,7 +27,7 @@ import {
 } from "shared"
 import {
   createLocalInterviewPrepPack,
-  getInterviewPrepGuardrails,
+  getInterviewPrepGuardrails
 } from "../lib/interview-prep"
 import {
   getBrowserCloudSyncReadiness,
@@ -137,6 +144,80 @@ type ReadyToApplyItem = {
   status: "ready" | "needs-check" | "blocked"
   evidence: string
   action: string
+}
+
+function RevealMetric({
+  children,
+  label = "Show value"
+}: {
+  children: ReactNode
+  label?: string
+}) {
+  const [isRevealed, setIsRevealed] = useState(false)
+
+  if (isRevealed) {
+    return <>{children}</>
+  }
+
+  return (
+    <span
+      aria-label={label}
+      className="metric-reveal-button"
+      role="button"
+      tabIndex={0}
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        setIsRevealed(true)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          event.stopPropagation()
+          setIsRevealed(true)
+        }
+      }}
+    >
+      Show value
+    </span>
+  )
+}
+
+function RevealMeter({
+  children,
+  label = "Show meter"
+}: {
+  children: ReactNode
+  label?: string
+}) {
+  const [isRevealed, setIsRevealed] = useState(false)
+
+  if (isRevealed) {
+    return <>{children}</>
+  }
+
+  return (
+    <span
+      aria-label={label}
+      className="meter-reveal-button"
+      role="button"
+      tabIndex={0}
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        setIsRevealed(true)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          event.stopPropagation()
+          setIsRevealed(true)
+        }
+      }}
+    >
+      Show meter
+    </span>
+  )
 }
 
 type InterviewBuddyOutputKey =
@@ -281,34 +362,34 @@ const commandSidebarItems: Array<{
     routeId: "overview"
   },
   {
-    href: "/dashboard/inbox",
-    focus: "job-inbox",
-    label: "Saved Jobs",
-    routeId: "applications"
-  },
-  {
     href: "/dashboard/match-score",
     focus: "match-score",
-    label: "Check a Job",
+    label: "Matches",
     routeId: "jobs"
-  },
-  {
-    href: "/dashboard/autofill-profile",
-    focus: "autofill-profile",
-    label: "My Profile",
-    routeId: "profile"
   },
   {
     href: "/dashboard/applications",
     focus: "application-tracker",
-    label: "Tracker",
+    label: "Job Tracker",
     routeId: "applications"
   },
   {
-    href: "/dashboard/interview",
-    focus: "interview-prep",
-    label: "Interview",
+    href: "/dashboard/cv-tailor",
+    focus: "cv-tailor",
+    label: "Documents",
+    routeId: "profile"
+  },
+  {
+    href: "/dashboard/extension",
+    focus: "job-inbox",
+    label: "Copilot",
     routeId: "interview"
+  },
+  {
+    href: "/dashboard/autofill-profile",
+    focus: "autofill-profile",
+    label: "Profile",
+    routeId: "profile"
   },
   {
     href: "/dashboard/settings",
@@ -324,23 +405,23 @@ const dashboardFocusCopy: Record<
 > = {
   dashboard: {
     eyebrow: "Today",
-    title: "Your Job Search Desk",
-    body: "One place to see what needs attention, check a role, and keep saved jobs moving."
+    title: "Your job search",
+    body: "A simpler home for matches, saved jobs, documents and profile setup."
   },
   "job-inbox": {
-    eyebrow: "Saved Jobs",
-    title: "Saved Jobs",
-    body: "Roles tracked from the extension or saved after a job check."
+    eyebrow: "Copilot",
+    title: "Autofill Copilot",
+    body: "Connect the extension so jobs can be captured and applications can move faster."
   },
   "match-score": {
-    eyebrow: "Check a Job",
-    title: "Check a job before you apply",
-    body: "Paste a role and get a clear apply, stretch or pause recommendation."
+    eyebrow: "Matches",
+    title: "Matches",
+    body: "Check a role against your profile before you spend time applying."
   },
   "cv-tailor": {
-    eyebrow: "CV",
-    title: "CV notes",
-    body: "Save useful CV details for role checks and application answers."
+    eyebrow: "Documents",
+    title: "Documents",
+    body: "Keep CV evidence and reusable application material in one place."
   },
   "application-answers": {
     eyebrow: "Answers",
@@ -349,11 +430,11 @@ const dashboardFocusCopy: Record<
   },
   "autofill-profile": {
     eyebrow: "Profile",
-    title: "My Profile",
-    body: "Add the basics AutoTime needs to check jobs properly."
+    title: "Profile",
+    body: "Add the details AutoTime needs to match jobs and autofill safely."
   },
   "application-tracker": {
-    eyebrow: "Tracker",
+    eyebrow: "Job Tracker",
     title: "Job Tracker",
     body: "See saved jobs, update status and keep next steps visible."
   },
@@ -379,7 +460,10 @@ const dashboardFocusCopy: Record<
   }
 }
 
-const defaultDashboardFocusByView: Record<DashboardTab | "overview", DashboardFocus> = {
+const defaultDashboardFocusByView: Record<
+  DashboardTab | "overview",
+  DashboardFocus
+> = {
   overview: "dashboard",
   profile: "autofill-profile",
   jobs: "match-score",
@@ -676,8 +760,7 @@ const officialSourceFallback: OfficialSource[] = [
   {
     label: "EU immigration portal",
     url: "https://immigration-portal.ec.europa.eu/index_en",
-    note:
-      "Use this as a starting point, then verify the hiring country directly."
+    note: "Use this as a starting point, then verify the hiring country directly."
   }
 ]
 
@@ -759,7 +842,9 @@ const defaultTrustState: TrustState = {
 
 const productContextSchema = z.object({
   roleMarket: z
-    .enum(roleMarkets.map((market) => market.id) as [RoleMarket, ...RoleMarket[]])
+    .enum(
+      roleMarkets.map((market) => market.id) as [RoleMarket, ...RoleMarket[]]
+    )
     .optional(),
   candidatePosition: z
     .enum(
@@ -770,10 +855,12 @@ const productContextSchema = z.object({
     )
     .optional(),
   urgency: z
-    .enum(urgencyOptions.map((option) => option.id) as [
-      CandidateUrgency,
-      ...CandidateUrgency[]
-    ])
+    .enum(
+      urgencyOptions.map((option) => option.id) as [
+        CandidateUrgency,
+        ...CandidateUrgency[]
+      ]
+    )
     .optional(),
   targetCountry: z.string().trim().min(1).optional(),
   experienceLevel: z.string().trim().min(1).optional()
@@ -878,7 +965,9 @@ function normalizeLegacyDashboardState(value: unknown): unknown {
           typeof item === "object" && item !== null
             ? {
                 ...item,
-                status: normalizeStatus((item as Record<string, unknown>).status)
+                status: normalizeStatus(
+                  (item as Record<string, unknown>).status
+                )
               }
             : item
         )
@@ -897,10 +986,13 @@ function getStoredState(userId: string) {
   }
 
   try {
-    const parsed = normalizeLegacyDashboardState(JSON.parse(
-      window.localStorage.getItem(getUserScopedStorageKey(storageKey, userId)) ??
-        "null"
-    ))
+    const parsed = normalizeLegacyDashboardState(
+      JSON.parse(
+        window.localStorage.getItem(
+          getUserScopedStorageKey(storageKey, userId)
+        ) ?? "null"
+      )
+    )
     const result = companionDashboardStateSchema.safeParse(parsed)
     return result.success && !isLegacySampleState(result.data)
       ? {
@@ -1041,9 +1133,7 @@ function normaliseSentence(value: string) {
 }
 
 function getMeaningfulTokens(value: string) {
-  return value
-    .toLowerCase()
-    .match(/[a-z][a-z'-]{2,}/g) ?? []
+  return value.toLowerCase().match(/[a-z][a-z'-]{2,}/g) ?? []
 }
 
 function hasLikelyKeyboardNoise(value: string) {
@@ -1230,8 +1320,9 @@ function createLocalInterviewCoachMeta({
     !profile.experienceHighlights.trim() && "Add experience highlights",
     !profile.projectSummaries.trim() && "Add one project or delivery example",
     !profile.workRightDetails.trim() && "Add verified work-right details",
-    !draft.match(/\b(result|impact|improved|reduced|increased|delivered|saved|launched)\b/i) &&
-      "Add a concrete outcome or result"
+    !draft.match(
+      /\b(result|impact|improved|reduced|increased|delivered|saved|launched)\b/i
+    ) && "Add a concrete outcome or result"
   ].filter(Boolean) as string[]
   const riskFlags = [
     isImmigrationRelatedQuestion(question) &&
@@ -1241,7 +1332,10 @@ function createLocalInterviewCoachMeta({
   ].filter(Boolean) as string[]
 
   return {
-    evidenceScore: Math.max(25, 90 - missingEvidence.length * 15 - riskFlags.length * 10),
+    evidenceScore: Math.max(
+      25,
+      90 - missingEvidence.length * 15 - riskFlags.length * 10
+    ),
     riskFlags,
     missingEvidence,
     followUpDrills: [
@@ -1309,9 +1403,9 @@ function getApplicationSourceLabel(application: ApplicationRecord) {
 function getApplicationCaptureMode(application: ApplicationRecord) {
   const wasEditedAfterCapture = Boolean(
     application.updatedAt &&
-      new Date(application.updatedAt).getTime() -
-        new Date(application.createdAt).getTime() >
-        1000
+    new Date(application.updatedAt).getTime() -
+      new Date(application.createdAt).getTime() >
+      1000
   )
 
   if (wasEditedAfterCapture && hasApplicationJobText(application)) {
@@ -1358,8 +1452,10 @@ function getApplicationCaptureMode(application: ApplicationRecord) {
 
 function hasJobDraft(job: JobAnalysisDraft) {
   return Boolean(
-    job.jobTitle.trim() || job.company.trim() || job.jobDescription.trim() ||
-      job.jobUrl.trim()
+    job.jobTitle.trim() ||
+    job.company.trim() ||
+    job.jobDescription.trim() ||
+    job.jobUrl.trim()
   )
 }
 
@@ -1476,10 +1572,14 @@ function getProfileQualitySignals(
 }
 
 function hasApplicationJobText(application: ApplicationRecord) {
-  return Boolean(application.notes?.trim() && application.notes.trim().length > 80)
+  return Boolean(
+    application.notes?.trim() && application.notes.trim().length > 80
+  )
 }
 
-function inferWorkModeFromApplication(application: ApplicationRecord): JobAnalysisDraft["workMode"] {
+function inferWorkModeFromApplication(
+  application: ApplicationRecord
+): JobAnalysisDraft["workMode"] {
   const text = [application.title, application.roleTitle, application.notes]
     .filter(Boolean)
     .join(" ")
@@ -1696,8 +1796,7 @@ function updateOutcomeRecordFromApplication(
     decisionLabelAtSave: base.decisionLabelAtSave ?? application.fitDecision,
     contentGateAtSave: base.contentGateAtSave ?? application.contentGate,
     appliedAt:
-      base.appliedAt ??
-      (application.status === "Applied" ? now : undefined),
+      base.appliedAt ?? (application.status === "Applied" ? now : undefined),
     interviewAt:
       base.interviewAt ??
       (application.status === "Interview" ? now : undefined),
@@ -1720,7 +1819,9 @@ function getOutcomeLearningSignals(
 
       return {
         totalTracked:
-          reason === "Unknown" ? signals.totalTracked : signals.totalTracked + 1,
+          reason === "Unknown"
+            ? signals.totalTracked
+            : signals.totalTracked + 1,
         interviews:
           application.status === "Interview" || reason === "Interview secured"
             ? signals.interviews + 1
@@ -1851,7 +1952,7 @@ function getRiskLabel(state: CompanionDashboardState) {
   }
 
   if ((state.jobAnalysis.gaps?.length ?? 0) > 0) {
-    return `${state.jobAnalysis.gaps?.length} role risk${state.jobAnalysis.gaps?.length === 1 ? "" : "s"}`
+    return "Role risks logged"
   }
 
   return "No critical gaps logged"
@@ -1921,7 +2022,9 @@ function inferRoleMarketFromText(value: string, fallback: RoleMarket) {
     }))
     .sort((a, b) => b.score - a.score)
 
-  return ranked[0]?.score ? ranked[0].market : getRoleMarket({ roleMarket: fallback })
+  return ranked[0]?.score
+    ? ranked[0].market
+    : getRoleMarket({ roleMarket: fallback })
 }
 
 function inferContextFromResume(
@@ -1929,10 +2032,7 @@ function inferContextFromResume(
   current: ProductContext
 ): ContextSuggestion {
   const words = resumeText.trim().split(/\s+/).filter(Boolean)
-  const inferredMarket = inferRoleMarketFromText(
-    resumeText,
-    current.roleMarket
-  )
+  const inferredMarket = inferRoleMarketFromText(resumeText, current.roleMarket)
   const roleMarket = inferredMarket.id
   const candidatePosition = includesAny(resumeText, [
     "visa",
@@ -1973,9 +2073,7 @@ function inferContextFromResume(
     roleMarket,
     candidatePosition,
     experienceLevel,
-    targetRoles:
-      targetRoles ||
-      inferredMarket.targetRoles,
+    targetRoles: targetRoles || inferredMarket.targetRoles,
     workRightPrompt:
       candidatePosition === "foreign-candidate"
         ? "Confirm visa/work-right status, sponsorship need, relocation timing and eligible countries before applying."
@@ -2025,10 +2123,7 @@ function getDecisionBrief({
       "CV text is missing, so skill and ATS checks cannot be verified.",
     !state.jobAnalysis.jobDescription.trim() &&
       "Job description is missing, so role classification cannot be verified.",
-    (state.jobAnalysis.gaps?.length ?? 0) > 0 &&
-      `${state.jobAnalysis.gaps?.length} saved role gap${
-        state.jobAnalysis.gaps?.length === 1 ? "" : "s"
-      } need review.`
+    (state.jobAnalysis.gaps?.length ?? 0) > 0 && "Saved role gaps need review."
   ].filter(Boolean) as string[]
 
   return {
@@ -2038,7 +2133,7 @@ function getDecisionBrief({
     contentGate: fitEvaluation.contentGate,
     rationale: [
       `Assessment mode: ${getMarketLabel(context)} / ${context.targetCountry}.`,
-      `Decision index: ${fitEvaluation.overallScore}/100. Profile readiness: ${readinessScore}/100.`,
+      "Decision index and profile readiness are available on click in the score panels.",
       fitEvaluation.positioningAngle,
       getUrgencyGuidance(context)
     ],
@@ -2135,7 +2230,8 @@ function getVerificationChecklist({
       evidence: hasJobDescription
         ? "Job text is available for role, skill and sponsorship checks."
         : "No job description has been saved.",
-      limit: "A thin or partial job post can hide sponsorship, location or salary constraints."
+      limit:
+        "A thin or partial job post can hide sponsorship, location or salary constraints."
     },
     {
       id: "work-right",
@@ -2240,13 +2336,9 @@ function getContentGuardrails({
             : "ready",
       reason:
         blockedChecks.length > 0
-          ? `${blockedChecks.length} required check${
-              blockedChecks.length === 1 ? "" : "s"
-            } blocked.`
+          ? "Required checks are blocked."
           : needsCheck.length > 0
-            ? `${needsCheck.length} check${
-                needsCheck.length === 1 ? "" : "s"
-              } still need manual confirmation.`
+            ? "Checks still need manual confirmation."
             : "Core verification checks are ready."
     },
     {
@@ -2289,7 +2381,7 @@ function getReadyToApplyChecklist({
       label: "Score explanation saved",
       status: application.fitDecision ? "ready" : "needs-check",
       evidence: application.fitDecision
-        ? `${application.fitScore ?? 0}/100 - ${application.fitDecision}`
+        ? `Saved recommendation: ${application.fitDecision}`
         : "No saved decision index is attached to this job.",
       action: "Analyse the role before treating this job as ready."
     },
@@ -2302,9 +2394,7 @@ function getReadyToApplyChecklist({
           ? "needs-check"
           : "ready",
       evidence: applicationEvidence.length
-        ? `${applicationEvidence.length} evidence record${
-            applicationEvidence.length === 1 ? "" : "s"
-          } saved.`
+        ? "Evidence records are saved for this job."
         : "No evidence records are saved for this job.",
       action: "Review missing or risk evidence before applying."
     },
@@ -2343,7 +2433,7 @@ function getReadyToApplyChecklist({
       label: "Next action clear",
       status: hasNextAction ? "ready" : "needs-check",
       evidence: hasNextAction
-        ? application.nextAction ?? ""
+        ? (application.nextAction ?? "")
         : "No next action is set.",
       action: "Set the next manual step so the job does not get lost."
     },
@@ -2396,13 +2486,14 @@ export default function HomePage({
     useState<InterviewCoachMeta>(emptyInterviewCoachMeta)
   const [isCopilotThinking, setIsCopilotThinking] = useState(false)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
-  const [syncPreferences, setSyncPreferences] =
-    useState<SyncPreferences>(defaultSyncPreferences)
+  const [syncPreferences, setSyncPreferences] = useState<SyncPreferences>(
+    defaultSyncPreferences
+  )
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
   const [showFirstRunWalkthrough, setShowFirstRunWalkthrough] = useState(false)
-  const applicationSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  )
+  const applicationSyncTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
   const profileSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
@@ -2411,10 +2502,12 @@ export default function HomePage({
     useState<OnlineAnalyticsReport | null>(null)
   const [onlineAnalyticsStatus, setOnlineAnalyticsStatus] = useState("")
   const [applicationSearchQuery, setApplicationSearchQuery] = useState("")
-  const [applicationStatusFilter, setApplicationStatusFilter] =
-    useState<ApplicationStatus | "all">("all")
-  const [applicationOutcomeFilter, setApplicationOutcomeFilter] =
-    useState<ApplicationOutcomeReason | "all">("all")
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState<
+    ApplicationStatus | "all"
+  >("all")
+  const [applicationOutcomeFilter, setApplicationOutcomeFilter] = useState<
+    ApplicationOutcomeReason | "all"
+  >("all")
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -2573,7 +2666,9 @@ export default function HomePage({
       ? []
       : [
           `Reach ${profileExecutionThreshold}% profile completion${
-            profileCompletionGap > 0 ? ` (${profileCompletionGap}% more needed)` : ""
+            profileCompletionGap > 0
+              ? ` (${profileCompletionGap}% more needed)`
+              : ""
           }`
         ])
   ]
@@ -2657,6 +2752,7 @@ export default function HomePage({
     {
       title: "To do",
       value: activeActionCount > 0 ? `${activeActionCount} actions` : "Clear",
+      hideMetric: activeActionCount > 0,
       tone: followUpTone,
       progress: activeActionCount > 0 ? 66 : 100,
       body:
@@ -2667,6 +2763,7 @@ export default function HomePage({
     {
       title: "Latest job check",
       value: `${fitEvaluation.overallScore}/100`,
+      hideMetric: true,
       tone: decisionTone,
       progress: fitEvaluation.overallScore,
       body: fitEvaluation.decision
@@ -2674,16 +2771,23 @@ export default function HomePage({
     {
       title: "Profile",
       value: `${readinessScore}%`,
-      tone: readinessScore >= 80 ? "good" : readinessScore >= 50 ? "warn" : "blocked",
+      hideMetric: true,
+      tone:
+        readinessScore >= 80
+          ? "good"
+          : readinessScore >= 50
+            ? "warn"
+            : "blocked",
       progress: readinessScore,
       body:
         decisionBrief.missingInputs.length > 0
-          ? `${decisionBrief.missingInputs.length} item${decisionBrief.missingInputs.length === 1 ? "" : "s"} missing`
+          ? "Some decision inputs are missing."
           : "Ready for job checks."
     },
     {
       title: "Job risk",
       value: riskLabel,
+      hideMetric: false,
       tone: decisionTone,
       progress:
         decisionBrief.contentGate === "ready"
@@ -2701,13 +2805,18 @@ export default function HomePage({
     {
       title: "Saved Jobs",
       value: `${state.applications.length} jobs`,
+      hideMetric: state.applications.length > 0,
       tone: state.applications.length > 0 ? "good" : "neutral",
       progress: Math.min(100, state.applications.length * 24),
-      body: `${statusCounts.Applied + statusCounts.Interview} progressed beyond saved.`
+      body:
+        statusCounts.Applied + statusCounts.Interview > 0
+          ? "Some saved jobs have progressed."
+          : "No saved jobs have progressed yet."
     },
     {
       title: "Follow-ups",
       value: `${activeActionCount}`,
+      hideMetric: true,
       tone: followUpTone,
       progress: activeActionCount > 0 ? 45 : 100,
       body: "Next steps across saved jobs."
@@ -2715,9 +2824,10 @@ export default function HomePage({
     {
       title: "Interview",
       value: `${state.interviewPrepPacks.length} prep packs`,
+      hideMetric: state.interviewPrepPacks.length > 0,
       tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral",
       progress: Math.min(100, state.interviewPrepPacks.length * 34),
-      body: `${state.applications.length} saved jobs and ${interviewApplications.length} interviews.`
+      body: "Saved jobs and interview stages feed prep."
     }
   ]
   const onboardingSteps = [
@@ -2725,12 +2835,11 @@ export default function HomePage({
       href: "/dashboard/autofill-profile",
       step: "Step 1",
       title: "Build your evidence profile",
-      status: profileReadyForExecution
-        ? "Ready"
-        : `${profileCompletionGap}% left`,
+      status: profileReadyForExecution ? "Ready" : "Needs evidence",
+      hideStatusMetric: !profileReadyForExecution,
       detail: profileReadyForExecution
         ? "Your profile can support job checks, tracker actions and AI coaching."
-        : `Reach ${profileExecutionThreshold}% to unlock evidence-led execution tools.`,
+        : "Complete the profile alert items to unlock evidence-led execution tools.",
       cta: profileReadyForExecution ? "Review profile" : "Complete profile",
       tone: profileReadyForExecution
         ? "good"
@@ -2742,12 +2851,15 @@ export default function HomePage({
       href: "/dashboard/extension",
       step: "Step 2",
       title: "Connect the extension",
-      status: state.applications.length > 0 ? "Capturing jobs" : "Not connected",
+      status:
+        state.applications.length > 0 ? "Capturing jobs" : "Not connected",
+      hideStatusMetric: false,
       detail:
         state.applications.length > 0
           ? "Tracked roles are reaching your dashboard."
           : "Install and connect the browser extension so job descriptions can be parsed automatically.",
-      cta: state.applications.length > 0 ? "View connection" : "Connect extension",
+      cta:
+        state.applications.length > 0 ? "View connection" : "Connect extension",
       tone: state.applications.length > 0 ? "good" : "neutral"
     },
     {
@@ -2757,6 +2869,7 @@ export default function HomePage({
       status: hasJobDraft(state.jobAnalysis)
         ? `${fitEvaluation.overallScore}/100 match`
         : "Waiting for a role",
+      hideStatusMetric: hasJobDraft(state.jobAnalysis),
       detail: hasJobDraft(state.jobAnalysis)
         ? fitEvaluation.decision
         : "Load an extension-parsed job or paste a JD manually before applying.",
@@ -2771,9 +2884,10 @@ export default function HomePage({
         state.applications.length > 0
           ? `${state.applications.length} saved`
           : "No saved jobs yet",
+      hideStatusMetric: state.applications.length > 0,
       detail:
         activeActionCount > 0
-          ? `${activeActionCount} follow-up${activeActionCount === 1 ? "" : "s"} need attention.`
+          ? "Follow-ups need attention."
           : state.applications.length > 0
             ? "Keep status, notes and next steps visible in the tracker."
             : "Save your first role before managing tracker stages.",
@@ -2795,6 +2909,7 @@ export default function HomePage({
               interviewApplications.length === 1 ? "" : "s"
             }`
           : "Not ready yet",
+      hideStatusMetric: interviewApplications.length > 0,
       detail:
         interviewApplications.length > 0
           ? "Generate coaching from your profile evidence and tracked role context."
@@ -2821,10 +2936,7 @@ export default function HomePage({
     {
       href: "/dashboard/follow-ups",
       label: "Follow-ups",
-      title:
-        activeActionCount > 0
-          ? `${activeActionCount} follow-up${activeActionCount === 1 ? "" : "s"} due`
-          : "Follow-ups are clear",
+      title: activeActionCount > 0 ? "Follow-ups due" : "Follow-ups are clear",
       body:
         activeActionCount > 0
           ? "Move the next action forward before it gets buried."
@@ -2833,7 +2945,7 @@ export default function HomePage({
   ]
   const todayAction = !profileReadyForExecution
     ? {
-        body: `Locked until your evidence profile reaches ${profileExecutionThreshold}%. This keeps job checks, tracker actions and interview answers grounded in your real proof.`,
+        body: "Locked until your evidence profile reaches the required readiness. This keeps job checks, tracker actions and interview answers grounded in your real proof.",
         cta: "Unlock profile",
         href: "/dashboard/autofill-profile",
         label: "Locked",
@@ -2849,9 +2961,7 @@ export default function HomePage({
         }
       : activeActionCount > 0
         ? {
-            body: `${activeActionCount} saved role${
-              activeActionCount === 1 ? " needs" : "s need"
-            } a follow-up or status update.`,
+            body: "Saved roles need a follow-up or status update.",
             cta: "Open follow-ups",
             href: "/dashboard/follow-ups",
             label: "Best next step",
@@ -3023,7 +3133,9 @@ export default function HomePage({
         }
         reportClientDiagnostic(
           "sync.profile.client.read-fetch-failed",
-          error instanceof Error ? error.message : "Profile sync read fetch failed",
+          error instanceof Error
+            ? error.message
+            : "Profile sync read fetch failed",
           {
             operation: "profile-read",
             route: "/api/sync/profile"
@@ -3428,13 +3540,16 @@ export default function HomePage({
       return
     }
 
-    saveProductContext({
-      roleMarket: contextSuggestion.roleMarket,
-      candidatePosition: contextSuggestion.candidatePosition,
-      urgency: contextSuggestion.urgency,
-      targetCountry: contextSuggestion.targetCountry,
-      experienceLevel: contextSuggestion.experienceLevel
-    }, userId)
+    saveProductContext(
+      {
+        roleMarket: contextSuggestion.roleMarket,
+        candidatePosition: contextSuggestion.candidatePosition,
+        urgency: contextSuggestion.urgency,
+        targetCountry: contextSuggestion.targetCountry,
+        experienceLevel: contextSuggestion.experienceLevel
+      },
+      userId
+    )
     setProductContext(contextSuggestion)
     const nextState = {
       ...state,
@@ -3494,7 +3609,9 @@ export default function HomePage({
 
       if (!response.ok || body.error) {
         if (!silent) {
-          setStatus(`${failureMessage}: ${body.error ?? "Dashboard sync failed"}`)
+          setStatus(
+            `${failureMessage}: ${body.error ?? "Dashboard sync failed"}`
+          )
         }
         reportClientDiagnostic(
           "sync.dashboard.client.response-failed",
@@ -3585,7 +3702,9 @@ export default function HomePage({
     }
 
     if (!hasJobDraft(state.jobAnalysis)) {
-      setStatus("Add a job title, company, URL or job description before saving")
+      setStatus(
+        "Add a job title, company, URL or job description before saving"
+      )
       return
     }
 
@@ -3609,26 +3728,23 @@ export default function HomePage({
       fitEvaluation
     )
     const nextState = {
-        ...state,
-        applications: [application, ...state.applications],
-        evidenceRecords: [
-          ...createEvidenceRecords({
-            application,
-            fitEvaluation,
-            profile: state.profile
-          }),
-          ...(state.evidenceRecords ?? [])
-        ],
-        outcomeRecords: [
-          createOutcomeRecord(application),
-          ...(state.outcomeRecords ?? [])
-        ]
-      }
+      ...state,
+      applications: [application, ...state.applications],
+      evidenceRecords: [
+        ...createEvidenceRecords({
+          application,
+          fitEvaluation,
+          profile: state.profile
+        }),
+        ...(state.evidenceRecords ?? [])
+      ],
+      outcomeRecords: [
+        createOutcomeRecord(application),
+        ...(state.outcomeRecords ?? [])
+      ]
+    }
 
-    persist(
-      nextState,
-      "Application saved with evidence and outcome records"
-    )
+    persist(nextState, "Application saved with evidence and outcome records")
     hasUnsyncedDashboardChangesRef.current = true
     const synced = await syncDashboardStateToCloud(nextState, {
       failureMessage: "Application saved locally. Dashboard sync failed",
@@ -3689,7 +3805,9 @@ export default function HomePage({
 
       persist(next, "AI Copilot updated the role analysis")
     } catch (error: unknown) {
-      setStatus(error instanceof Error ? error.message : "AI role analysis failed")
+      setStatus(
+        error instanceof Error ? error.message : "AI role analysis failed"
+      )
     } finally {
       setIsCopilotThinking(false)
     }
@@ -3720,22 +3838,19 @@ export default function HomePage({
       : null
 
     const nextState = {
-        ...state,
-        applications: updatedApplications,
-        outcomeRecords: updatedOutcome
-          ? [
-              updatedOutcome,
-              ...(state.outcomeRecords ?? []).filter(
-                (record) => record.applicationId !== id
-              )
-            ]
-          : (state.outcomeRecords ?? [])
-      }
+      ...state,
+      applications: updatedApplications,
+      outcomeRecords: updatedOutcome
+        ? [
+            updatedOutcome,
+            ...(state.outcomeRecords ?? []).filter(
+              (record) => record.applicationId !== id
+            )
+          ]
+        : (state.outcomeRecords ?? [])
+    }
 
-    persist(
-      nextState,
-      "Application and outcome record updated"
-    )
+    persist(nextState, "Application and outcome record updated")
     scheduleDashboardSync(nextState, {
       failureMessage: "Application updated locally. Dashboard sync failed",
       successMessage: "Application updated and synced to dashboard"
@@ -3881,11 +3996,16 @@ export default function HomePage({
 
       if (!response.ok || !body.data?.pack) {
         if (body.data?.upgradeUrl) {
-          setStatus(`${body.error ?? "Upgrade required"} Local prep pack saved.`)
+          setStatus(
+            `${body.error ?? "Upgrade required"} Local prep pack saved.`
+          )
         } else {
           setStatus(body.error ?? "AI prep unavailable. Local prep pack saved.")
         }
-        await saveInterviewPrepPack(localPack, "Local interview prep pack generated")
+        await saveInterviewPrepPack(
+          localPack,
+          "Local interview prep pack generated"
+        )
         return
       }
 
@@ -3899,7 +4019,10 @@ export default function HomePage({
           ? `AI prep unavailable. Local prep pack saved: ${error.message}`
           : "AI prep unavailable. Local prep pack saved."
       )
-      await saveInterviewPrepPack(localPack, "Local interview prep pack generated")
+      await saveInterviewPrepPack(
+        localPack,
+        "Local interview prep pack generated"
+      )
     } finally {
       setIsCopilotThinking(false)
     }
@@ -4062,57 +4185,56 @@ export default function HomePage({
 
   const activeInterviewQuestion =
     customInterviewQuestion.trim() || interviewQuestion
-  const interviewDisclaimer = getInterviewBuddyDisclaimer(activeInterviewQuestion)
+  const interviewDisclaimer = getInterviewBuddyDisclaimer(
+    activeInterviewQuestion
+  )
   const finalAnswerStorageKey = inferReusableAnswerKey(activeInterviewQuestion)
   const hasInterviewBuddyOutputs = Boolean(
     interviewBuddyOutputs.strongFinalAnswer.trim()
   )
-  const actionPanelTitle =
-    isProfileGateRequired
-      ? "Evidence gate is locked."
-      : isOverview
+  const actionPanelTitle = isProfileGateRequired
+    ? "Evidence gate is locked."
+    : isOverview
       ? "What do you want to do now?"
       : currentTab === "jobs"
-      ? "Paste a job and see if it is worth applying."
-      : currentTab === "profile"
-        ? "Add the details AutoTime needs about you."
-        : currentTab === "applications"
-          ? "Review saved jobs and update the next step."
-          : "Prepare a clearer interview answer."
-  const actionPanelStateLabel =
-    isProfileGateRequired
-      ? `Your profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% so AutoTime can use verified candidate evidence instead of generic advice.`
-      : isOverview
+        ? "Paste a job and see if it is worth applying."
+        : currentTab === "profile"
+          ? "Add the details AutoTime needs about you."
+          : currentTab === "applications"
+            ? "Review saved jobs and update the next step."
+            : "Prepare a clearer interview answer."
+  const actionPanelStateLabel = isProfileGateRequired
+    ? "Your profile needs more verified evidence before AutoTime can avoid generic advice."
+    : isOverview
       ? profileReadyForExecution
         ? "Your profile is ready for job checks"
-        : `Profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% for better outcomes.`
+        : "Profile evidence still needs work before the best outcomes."
       : currentTab === "jobs"
-      ? hasJobDraft(state.jobAnalysis)
-        ? "Ready to analyse current role"
-        : "Waiting for role details"
-      : currentTab === "profile"
-        ? profileReadyForExecution
-          ? "Profile ready for job checks"
-          : `Profile is ${readinessScore}% complete. Reach ${profileExecutionThreshold}% to unlock tools.`
-        : currentTab === "applications"
-          ? activeActionCount > 0
-            ? `${activeActionCount} next action${activeActionCount === 1 ? "" : "s"} waiting`
-            : "No urgent next action"
-          : hasInterviewBuddyOutputs
-            ? "Answer draft ready"
-            : "Waiting for your rough answer"
-  const actionPanelStatus =
-    isCopilotThinking
-      ? "Working"
-      : isProfileGateRequired
-        ? "Locked"
+        ? hasJobDraft(state.jobAnalysis)
+          ? "Ready to analyse current role"
+          : "Waiting for role details"
+        : currentTab === "profile"
+          ? profileReadyForExecution
+            ? "Profile ready for job checks"
+            : "Profile evidence still needs work to unlock tools."
+          : currentTab === "applications"
+            ? activeActionCount > 0
+              ? "Next actions are waiting"
+              : "No urgent next action"
+            : hasInterviewBuddyOutputs
+              ? "Answer draft ready"
+              : "Waiting for your rough answer"
+  const actionPanelStatus = isCopilotThinking
+    ? "Working"
+    : isProfileGateRequired
+      ? "Locked"
       : isOverview && !profileReadyForExecution
         ? "Start here"
         : currentTab === "jobs" && !hasJobDraft(state.jobAnalysis)
-        ? "Input needed"
-        : currentTab === "profile" && !profileReadyForExecution
-          ? "Incomplete"
-          : "Ready"
+          ? "Input needed"
+          : currentTab === "profile" && !profileReadyForExecution
+            ? "Incomplete"
+            : "Ready"
 
   const generateInterviewBuddyAnswers = async () => {
     if (!requireProfileExecutionReady()) {
@@ -4177,9 +4299,13 @@ export default function HomePage({
 
       if (!response.ok || !body.data?.coach) {
         if (body.data?.upgradeUrl) {
-          setStatus(`${body.error ?? "Upgrade required"} Open pricing to continue.`)
+          setStatus(
+            `${body.error ?? "Upgrade required"} Open pricing to continue.`
+          )
         } else {
-          setStatus(body.error ?? "AI coach unavailable. Local evidence check used.")
+          setStatus(
+            body.error ?? "AI coach unavailable. Local evidence check used."
+          )
         }
         setInterviewBuddyOutputs(localOutputs)
         setInterviewCoachMeta(localCoachMeta)
@@ -4188,10 +4314,13 @@ export default function HomePage({
 
       const coach = body.data.coach
       setInterviewBuddyOutputs({
-        professionalAnswer: coach.professionalAnswer || localOutputs.professionalAnswer,
+        professionalAnswer:
+          coach.professionalAnswer || localOutputs.professionalAnswer,
         naturalAnswer: coach.naturalAnswer || localOutputs.naturalAnswer,
-        lightFunnyAnswer: coach.lightFunnyAnswer || localOutputs.lightFunnyAnswer,
-        strongFinalAnswer: coach.strongFinalAnswer || localOutputs.strongFinalAnswer
+        lightFunnyAnswer:
+          coach.lightFunnyAnswer || localOutputs.lightFunnyAnswer,
+        strongFinalAnswer:
+          coach.strongFinalAnswer || localOutputs.strongFinalAnswer
       })
       setInterviewCoachMeta({
         evidenceScore: coach.evidenceScore,
@@ -4305,9 +4434,9 @@ export default function HomePage({
             {showHeaderJobActions ? (
               <>
                 {currentTab !== "jobs" ? (
-                <a className="secondary-button" href="/dashboard/jobs">
-                  Check job
-                </a>
+                  <a className="secondary-button" href="/dashboard/jobs">
+                    Check job
+                  </a>
                 ) : null}
                 <a className="secondary-button" href="/dashboard/inbox">
                   Saved Jobs
@@ -4316,42 +4445,33 @@ export default function HomePage({
             ) : null}
             <div className="profile-completion-meter">
               <small>User Profile Completion</small>
-              <strong>{readinessScore}%</strong>
-              <span aria-hidden="true">
-                <i style={{ width: `${readinessScore}%` }} />
-              </span>
+              <strong>
+                <RevealMetric label="Show profile completion">
+                  {readinessScore}%
+                </RevealMetric>
+              </strong>
+              <RevealMeter label="Show profile completion meter">
+                <span aria-hidden="true">
+                  <i style={{ width: `${readinessScore}%` }} />
+                </span>
+              </RevealMeter>
             </div>
           </div>
         </div>
         {showExecutivePanel ? (
-        <div className={`executive-panel tone-${decisionTone}`} aria-label="Dashboard summary">
-          <div>
-            <small>Profile readiness</small>
-            <strong>{readinessScore}%</strong>
-            <span>
-              {profileReadyForExecution
-                ? "Ready for evidence-led checks"
-                : `${profileCompletionGap}% left to unlock tools`}
-            </span>
+          <div
+            className={`executive-panel tone-${decisionTone}`}
+            aria-label="Dashboard summary"
+          >
+            <p>
+              <small>Next best action</small>
+              <span>
+                {profileReadyForExecution
+                  ? fitEvaluation.decision
+                  : "Improve profile evidence before checking more jobs"}
+              </span>
+            </p>
           </div>
-          <div>
-            <small>Job match score</small>
-            <strong>{fitEvaluation.overallScore}/100</strong>
-            <span>
-              {hasJobDraft(state.jobAnalysis)
-                ? fitEvaluation.decision
-                : "Load or paste a job to score"}
-            </span>
-          </div>
-          <p>
-            <small>Next best action</small>
-            <span>
-              {profileReadyForExecution
-                ? fitEvaluation.decision
-                : "Improve profile evidence before checking more jobs"}
-            </span>
-          </p>
-        </div>
         ) : null}
       </header>
 
@@ -4387,7 +4507,10 @@ export default function HomePage({
             >
               Your browser does not support the walkthrough video.
             </video>
-            <div className="walkthrough-steps" aria-label="AutoTime setup order">
+            <div
+              className="walkthrough-steps"
+              aria-label="AutoTime setup order"
+            >
               <span>1. Profile evidence</span>
               <span>2. Extension capture</span>
               <span>3. Quality job check</span>
@@ -4416,8 +4539,11 @@ export default function HomePage({
       {status && <p className="status-banner">{status}</p>}
 
       <div className="command-workspace">
-        <aside className="command-sidebar" aria-label="Command centre navigation">
-          <p>Your work</p>
+        <aside
+          className="command-sidebar"
+          aria-label="Dashboard menu"
+        >
+          <p>Menu</p>
           <nav>
             {commandSidebarItems.map((item) => (
               <a
@@ -4444,14 +4570,21 @@ export default function HomePage({
                 <h2>{actionPanelTitle}</h2>
                 <p>{actionPanelStateLabel}</p>
               </div>
-              <span className={isProfileGateRequired ? "status-lock-pill" : undefined}>
+              <span
+                className={
+                  isProfileGateRequired ? "status-lock-pill" : undefined
+                }
+              >
                 {actionPanelStatus}
               </span>
             </div>
             <div className="ai-action-row">
               {isOverview ? (
                 <>
-                  <a className="secondary-button" href="/dashboard/autofill-profile">
+                  <a
+                    className="secondary-button"
+                    href="/dashboard/autofill-profile"
+                  >
                     Finish profile
                   </a>
                   {profileReadyForExecution ? (
@@ -4459,19 +4592,27 @@ export default function HomePage({
                       <a className="secondary-button" href="/dashboard/jobs">
                         Check job
                       </a>
-                      <a className="secondary-button" href="/dashboard/applications">
+                      <a
+                        className="secondary-button"
+                        href="/dashboard/applications"
+                      >
                         Open tracker
                       </a>
                     </>
                   ) : null}
                 </>
               ) : isProfileGateRequired ? (
-                <a className="secondary-button" href="/dashboard/autofill-profile">
+                <a
+                  className="secondary-button"
+                  href="/dashboard/autofill-profile"
+                >
                   Complete profile
                 </a>
               ) : currentTab === "jobs" ? (
                 <button
-                  disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
+                  disabled={
+                    isCopilotThinking || !hasJobDraft(state.jobAnalysis)
+                  }
                   type="button"
                   onClick={runAiJobAnalysis}
                 >
@@ -4541,2219 +4682,2724 @@ export default function HomePage({
                 ))}
                 <li>AI answers stay inside claims your profile can support.</li>
               </ul>
-              <a className="secondary-button" href="/dashboard/autofill-profile">
+              <a
+                className="secondary-button"
+                href="/dashboard/autofill-profile"
+              >
                 Unlock profile
               </a>
             </section>
           ) : (
-          <>
-
-      {!isOverview && currentTab === "profile" && activeFocus === "settings" && (
-      <section className="settings-hub-panel" aria-label="Settings overview">
-        <div className="section-intro">
-          <p className="eyebrow">Settings overview</p>
-          <h2>Control how AutoTime works for you</h2>
-          <p>
-            Keep account sync, extension capture, profile defaults and data
-            controls understandable from one place.
-          </p>
-        </div>
-        <div className="settings-hub-grid">
-          <article>
-            <span>Profile quality</span>
-            <strong>{profileQualityScore}/100</strong>
-            <p>
-              Candidate evidence, work-right details and allowed AI claims.
-            </p>
-            <a href="/dashboard/autofill-profile">Edit profile</a>
-          </article>
-          <article>
-            <span>Account sync</span>
-            <strong>{cloudSyncReadiness.modeLabel}</strong>
-            <p>
-              {cloudSyncConsent
-                ? "Profile and workflow sync consent is enabled."
-                : "Browser-first saving is active until you enable sync."}
-            </p>
-            <a href="#account-sync-settings">Review sync</a>
-          </article>
-          <article>
-            <span>Extension</span>
-            <strong>
-              {state.applications.some(
-                (application) =>
-                  getApplicationCaptureMode(application).className === "automatic"
-              )
-                ? "Capturing jobs"
-                : "Not proven yet"}
-            </strong>
-            <p>Connect Chrome to parse JDs and prove job source quality.</p>
-            <a href="/dashboard/extension">Open extension</a>
-          </article>
-          <article>
-            <span>Plan and AI</span>
-            <strong>{isCopilotThinking ? "AI working" : "Ready"}</strong>
-            <p>Manage AI limits, upgrade gates and subscription settings.</p>
-            <a href="/pricing">View pricing</a>
-          </article>
-          <article>
-            <span>Data controls</span>
-            <strong>Export / delete</strong>
-            <p>Export a local backup or delete synced profile data.</p>
-            <a href="#account-sync-settings">Manage data</a>
-          </article>
-        </div>
-      </section>
-      )}
-
-      {!isOverview && currentTab === "profile" && showProfileSettingsPanel && (
-      <section className="market-context-panel" aria-label="Profile settings">
-        <div className="section-intro">
-          <p className="eyebrow">Profile settings</p>
-          <h2>Candidate context</h2>
-          <p>Set country, role focus and work-right context for checks.</p>
-        </div>
-
-        <div className="context-grid">
-          <fieldset className="segmented-field">
-            <legend>Target role focus</legend>
-            <div className="segmented-options">
-              {roleMarkets.map((market) => (
-                <button
-                  aria-pressed={productContext.roleMarket === market.id}
-                  className={
-                    productContext.roleMarket === market.id
-                      ? "segment-button active"
-                      : "segment-button"
-                  }
-                  key={market.id}
-                  type="button"
-                  onClick={() => updateProductContext("roleMarket", market.id)}
-                >
-                  <strong>{market.label}</strong>
-                  <span>{market.description}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className="segmented-field">
-            <legend>Work authorisation status</legend>
-            <div className="segmented-options">
-              {candidatePositions.map((position) => (
-                <button
-                  aria-pressed={
-                    productContext.candidatePosition === position.id
-                  }
-                  className={
-                    productContext.candidatePosition === position.id
-                      ? "segment-button active"
-                      : "segment-button"
-                  }
-                  key={position.id}
-                  type="button"
-                  onClick={() =>
-                    updateProductContext("candidatePosition", position.id)
-                  }
-                >
-                  <strong>{position.label}</strong>
-                  <span>{position.description}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="context-controls">
-            <label>
-              Target country
-              <select
-                value={productContext.targetCountry}
-                onChange={(event) =>
-                  updateProductContext("targetCountry", event.target.value)
-                }
-              >
-                {euCountryOptions.map((country) => (
-                  <option key={country} value={country}>
-                    {country}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Experience level
-              <select
-                value={productContext.experienceLevel}
-                onChange={(event) =>
-                  updateProductContext("experienceLevel", event.target.value)
-                }
-              >
-                <option value="Entry-level">Entry-level</option>
-                <option value="Junior">Junior</option>
-                <option value="Mid-level">Mid-level</option>
-                <option value="Senior">Senior</option>
-                <option value="Lead">Lead</option>
-              </select>
-            </label>
-            <label>
-              Search pace
-              <select
-                value={productContext.urgency}
-                onChange={(event) =>
-                  updateProductContext(
-                    "urgency",
-                    event.target.value as CandidateUrgency
-                  )
-                }
-              >
-                {urgencyOptions.map((urgency) => (
-                  <option key={urgency.id} value={urgency.id}>
-                    {urgency.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" onClick={applyMarketContextToProfile}>
-              Use these choices
-            </button>
-          </div>
-        </div>
-
-        <section className="resume-intake-panel" aria-label="CV context review">
-          <div className="section-heading">
-            <p className="eyebrow">CV import</p>
-            <h2>Review CV text</h2>
-            <p>Suggestions stay pending until you approve them.</p>
-          </div>
-          <label>
-            CV or profile text
-            <textarea
-              placeholder="Add CV, resume, or LinkedIn summary text. Suggested profile updates stay pending until you approve them."
-              value={resumeIntake}
-              onChange={(event) => setResumeIntake(event.target.value)}
-            />
-          </label>
-          <div className="header-actions">
-            <button type="button" onClick={reviewResumeForContext}>
-              Review my CV
-            </button>
-            <button
-              className="secondary-button"
-              disabled={!contextSuggestion}
-              type="button"
-              onClick={approveContextSuggestion}
-            >
-              Apply suggestions
-            </button>
-          </div>
-          {contextSuggestion && (
-            <article className="suggestion-card">
-              <div>
-                <span>{contextSuggestion.confidence}</span>
-                <small>suggestion confidence</small>
-              </div>
-              <dl>
-                <div>
-                  <dt>Work authorisation status</dt>
-                  <dd>
-                    {contextSuggestion.candidatePosition === "foreign-candidate"
-                      ? "Foreign / relocating"
-                      : "Native / local"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Target role focus</dt>
-                  <dd>{getMarketLabel(contextSuggestion)}</dd>
-                </div>
-                <div>
-                  <dt>Target roles</dt>
-                  <dd>{contextSuggestion.targetRoles}</dd>
-                </div>
-              </dl>
-              <ul className="bullets-list">
-                {contextSuggestion.reasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-            </article>
-          )}
-        </section>
-
-        <p className="context-guidance">{getCountryGuidance(productContext)}</p>
-      </section>
-      )}
-
-      {currentTab === "jobs" && (
-      <section
-        className="decision-brief-panel job-check-brief"
-        aria-label="UK/EU apply decision brief"
-      >
-        <div>
-          <p className="eyebrow">Job decision</p>
-          <h2>Job check result</h2>
-          <p>Paste a role below to get a practical apply, stretch or pause decision.</p>
-        </div>
-        <div className="decision-score">
-          <strong>{decisionBrief.score}</strong>
-          <span>{decisionBrief.decision}</span>
-          <small>{decisionBrief.confidence} confidence</small>
-          <small>
-            {decisionBrief.contentGate === "ready"
-              ? "No content blocker detected"
-              : decisionBrief.contentGate === "stretch"
-                ? "Stretch label required"
-                : "Content blocked"}
-          </small>
-          <small>Guidance, not a guarantee</small>
-        </div>
-        <div className="decision-columns">
-          <section>
-            <h3>Why</h3>
-            <ul className="bullets-list">
-              {decisionBrief.rationale.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-          <section>
-            <h3>Matched details</h3>
-            <ul className="bullets-list">
-              {decisionBrief.evidenceFound.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-          <section>
-            <h3>Check first</h3>
-            <ul className="bullets-list">
-              {decisionBrief.risks.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-          <section>
-            <h3>Missing info</h3>
-            {decisionBrief.missingInputs.length ? (
-              <ul className="bullets-list">
-                {decisionBrief.missingInputs.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="empty-state">Core job details are present.</p>
-            )}
-          </section>
-          <section>
-            <h3>Next steps</h3>
-            <ul className="bullets-list">
-              {decisionBrief.nextActions.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-        </div>
-        <p className="decision-integrity-note">
-          Use this as guidance before deciding whether to apply.
-        </p>
-      </section>
-      )}
-
-
-      {isOverview && (
-        <section className="command-centre-overview" aria-label="Homepage sections">
-          <div className="today-focus-panel">
-            <div>
-              <p className="eyebrow">{todayAction.label}</p>
-              <h2>{todayAction.title}</h2>
-              <p>{todayAction.body}</p>
-            </div>
-            <a href={todayAction.href}>{todayAction.cta}</a>
-          </div>
-          <div className="section-intro">
-            <p className="eyebrow">Clear onboarding</p>
-            <h2>Follow the AutoTime order</h2>
-            <p>
-              Complete each step once, then repeat the quality loop: capture the
-              right role, check fit, track the next action and prepare with
-              evidence.
-            </p>
-          </div>
-          <div className="overview-workflow-map" aria-label="Application workflow">
-            {onboardingSteps.map((item) => (
-              <a className={`tone-${item.tone}`} href={item.href} key={item.title}>
-                <span>{item.step}</span>
-                <strong>{item.title}</strong>
-                <em>{item.status}</em>
-                <p>{item.detail}</p>
-                <b>{item.cta}</b>
-              </a>
-            ))}
-          </div>
-          <div className="command-action-dock" aria-label="Recommended actions">
-            {commandQuickActions.map((action) => (
-              <a href={action.href} key={action.href}>
-                <span>{action.label}</span>
-                <strong>{action.title}</strong>
-                <p>{action.body}</p>
-              </a>
-            ))}
-          </div>
-          <details className="dashboard-more-details">
-            <summary>More details</summary>
-            <div className="command-centre-grid">
-              {commandCentreCards.map((card) => (
-                <article className={`command-centre-card tone-${card.tone}`} key={card.title}>
-                  <div className="dashboard-card-topline">
-                    <span>{card.title}</span>
-                    <i aria-hidden="true" />
-                  </div>
-                  <strong>{card.value}</strong>
-                  <div className="dashboard-card-meter" aria-hidden="true">
-                    <i style={{ width: `${card.progress}%` }} />
-                  </div>
-                  <p>{card.body}</p>
-                </article>
-              ))}
-            </div>
-          </details>
-        </section>
-      )}
-
-      {!isOverview && currentTab === "profile" && activeFocus !== "settings" && (
-      <section
-        className={
-          profileReadyForExecution
-            ? "profile-bridge-panel ready"
-            : "profile-bridge-panel blocked"
-        }
-        aria-label="Profile readiness"
-      >
-        <div>
-          <p className="eyebrow">Profile readiness</p>
-          <h2>
-            {!profileReadyForExecution ? (
-              <span className="inline-lock-symbol" aria-hidden="true" />
-            ) : null}
-            {profileReadyForExecution
-              ? "Profile is ready"
-              : "Evidence gate locked until 90%"}
-          </h2>
-          <p>
-            Complete at least {profileExecutionThreshold}% of your profile before
-            using job checks, tracker actions or interview prep. This keeps the
-            workflow competitor-grade: specific, evidence-led and safe from
-            generic AI claims.
-          </p>
-        </div>
-        {profileReadyForExecution ? (
-          <ul className="bullets-list">
-            <li>Your profile can support job-fit scores and next steps.</li>
-            <li>Work-right and country details are available for checks.</li>
-            <li>You can export a backup any time.</li>
-          </ul>
-        ) : (
-          <ul className="bullets-list">
-            {profileGateItems.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-      )}
-
-      {!isOverview && currentTab === "profile" && showProfileCloudSync && (
-      <section
-        className={
-          cloudSyncReadiness.configured
-            ? "cloud-sync-panel flagged"
-            : "cloud-sync-panel local"
-        }
-        id="account-sync-settings"
-        aria-label="Sync status"
-      >
-        <div>
-          <p className="eyebrow">Sync</p>
-          <h2>
-            {cloudSyncReadiness.configured
-              ? "Account sync is available"
-              : "Your data is saved on this browser"}
-          </h2>
-          <p>
-            Your profile saves in this browser first. Use account sync when
-            you want it available from your signed-in dashboard account.
-          </p>
-        </div>
-        <div className="sync-status-grid">
-          <div>
-            <strong>{cloudSyncReadiness.modeLabel}</strong>
-            <span>Current mode</span>
-          </div>
-          <div>
-            <strong>{cloudSyncReadiness.accountLabel}</strong>
-            <span>Account shell</span>
-          </div>
-          <div>
-            <strong>{cloudSyncReadiness.sessionLabel}</strong>
-            <span>Auth session</span>
-          </div>
-          <div>
-            <strong>{cloudSyncReadiness.firstSliceLabel}</strong>
-            <span>First sync slice</span>
-          </div>
-          <div>
-            <strong>{cloudSyncReadiness.safetyLabel}</strong>
-            <span>Safety rule</span>
-          </div>
-        </div>
-        <div className="sync-action-stack">
-          <label className="sync-consent-control">
-            <input
-              checked={cloudSyncConsent}
-              disabled={!cloudSyncReadiness.configured}
-              type="checkbox"
-              onChange={(event) =>
-                setProfileAccountSyncEnabled(event.target.checked)
-              }
-            />
-            I consent to sync my candidate profile and dashboard workflow to my
-            authenticated account.
-          </label>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={explainCloudSyncTrack}
-          >
-            Check sync status
-          </button>
-          <button
-            disabled={!cloudSyncReadiness.configured}
-            type="button"
-            onClick={syncProfileToCloud}
-          >
-            Sync profile
-          </button>
-          <button
-            className="secondary-button"
-            disabled={!cloudSyncReadiness.configured}
-            type="button"
-            onClick={loadProfileFromCloud}
-          >
-            Load synced profile
-          </button>
-          <button
-            className="danger-button"
-            disabled={!cloudSyncReadiness.configured}
-            type="button"
-            onClick={deleteProfileForAccount}
-          >
-            Delete synced profile
-          </button>
-          <button
-            disabled={!cloudSyncReadiness.configured}
-            type="button"
-            onClick={syncDashboardToCloud}
-          >
-            Sync saved workflow
-          </button>
-          <button
-            className="secondary-button"
-            disabled={!cloudSyncReadiness.configured}
-            type="button"
-            onClick={loadDashboardFromCloud}
-          >
-            Load synced workflow
-          </button>
-        </div>
-      </section>
-      )}
-
-      {!isOverview && currentTab === "applications" && (
-      <section className="tracker-pipeline-panel" aria-label="Tracker pipeline">
-        <div className="section-heading">
-          <p className="eyebrow">Tracker pipeline</p>
-          <h2>From saved role to final outcome</h2>
-          <p>
-            Every job keeps status, source, notes, next action and due date so
-            the workflow stays human-led and auditable.
-          </p>
-        </div>
-        <div className="tracker-pipeline-grid">
-          {applicationStatuses.map((status) => (
-            <button
-              className={
-                applicationStatusFilter === status ? "active" : undefined
-              }
-              key={status}
-              type="button"
-              onClick={() =>
-                setApplicationStatusFilter(
-                  applicationStatusFilter === status ? "all" : status
-                )
-              }
-            >
-              <span>{status}</span>
-              <strong>{statusCounts[status]}</strong>
-            </button>
-          ))}
-        </div>
-      </section>
-      )}
-
-      {!isOverview && currentTab === "applications" && (
-      <section
-        className="metrics-strip"
-        aria-label="Job search progress"
-      >
-        <div
-          className={`metric-card ${getMetricTone(state.applications.length, 3)}`}
-        >
-          <span>{state.applications.length}</span>
-          <small>Saved jobs</small>
-          <p>
-            {statusCounts["Ready to apply"] +
-              statusCounts.Applied +
-              statusCounts.Interview +
-              statusCounts.Offer}{" "}
-            active beyond saved
-          </p>
-        </div>
-        <div
-          className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
-        >
-          <span>{interviewApplications.length}</span>
-          <small>Interviews</small>
-          <p>
-            {state.interviewPrepPacks.length} prep pack
-            {state.interviewPrepPacks.length === 1 ? "" : "s"} ready
-          </p>
-        </div>
-        <div
-          className={`metric-card ${activeActionCount > 0 ? "neutral" : "warn"}`}
-        >
-          <span>{activeActionCount}</span>
-          <small>Next actions</small>
-          <p>Follow-ups across saved jobs</p>
-        </div>
-        <div className="metric-card warn">
-          <span>{state.jobAnalysis.skills?.length ?? 0}</span>
-          <small>Last check</small>
-          <p>{riskLabel}</p>
-        </div>
-      </section>
-      )}
-
-      {!isOverview && currentTab === "profile" && (
-        <section className="workspace-grid">
-          <div className="input-column">
-            <section className="profile-purpose-panel" aria-label="Profile purpose">
-              <p className="eyebrow">My Profile</p>
-              <h2>Your candidate evidence workspace</h2>
-              <p>
-                This is not a public profile. It is the evidence AutoTime uses
-                to score jobs, explain risks, fill tracker context and keep AI
-                interview answers truthful.
-              </p>
-              <div className="profile-purpose-steps">
-                <span>1. Identity</span>
-                <span>2. Work-right</span>
-                <span>3. Target roles</span>
-                <span>4. CV evidence</span>
-                <span>5. Reusable answers</span>
-              </div>
-            </section>
-            <div className="profile-form-toolbar">
-              <div>
-                <p className="eyebrow">Profile controls</p>
-                <h2>Save and sync your evidence</h2>
-                <p>Browser-first by default. Sync only when you choose.</p>
-              </div>
-              <div className="profile-form-actions">
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={saveDashboard}
-                >
-                  Save locally
-                </button>
-                <button type="button" onClick={syncProfileToCloud}>
-                  Sync profile
-                </button>
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={loadProfileFromCloud}
-                >
-                  Load synced
-                </button>
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={exportDashboard}
-                >
-                  Export backup
-                </button>
-              </div>
-            </div>
-
-            <section className="profile-form-section">
-              <div className="section-heading">
-                <p className="eyebrow">Identity</p>
-                <h3>Basic candidate details</h3>
-                <p>Used for summaries and reusable application context.</p>
-              </div>
-            <label>
-              Full name
-              <input
-                placeholder="Your full name"
-                value={state.profile.fullName}
-                onChange={(event) =>
-                  updateProfile("fullName", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Current country
-              <input
-                placeholder="Example: United Kingdom"
-                value={state.profile.currentCountry}
-                onChange={(event) =>
-                  updateProfile("currentCountry", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Current city
-              <input
-                placeholder="Example: London"
-                value={state.profile.currentCity}
-                onChange={(event) =>
-                  updateProfile("currentCity", event.target.value)
-                }
-              />
-            </label>
-            </section>
-
-            <section className="profile-form-section">
-              <div className="section-heading">
-                <p className="eyebrow">Search focus</p>
-                <h3>Where and what you want</h3>
-                <p>Helps AutoTime avoid generic job-fit advice.</p>
-              </div>
-            <label>
-              Target countries
-              <input
-                placeholder="Example: UK, Ireland, Netherlands, Germany"
-                value={state.profile.targetCountries}
-                onChange={(event) =>
-                  updateProfile("targetCountries", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Target roles
-              <input
-                placeholder="Example: Business Analyst, Product Analyst, Application Support"
-                value={state.profile.targetRoles}
-                onChange={(event) =>
-                  updateProfile("targetRoles", event.target.value)
-                }
-              />
-            </label>
-            </section>
-
-            <section className="profile-form-section important">
-              <div className="section-heading">
-                <p className="eyebrow">Work-right evidence</p>
-                <h3>Facts AutoTime must not invent</h3>
-                <p>Add only details you can verify. This drives risk checks.</p>
-              </div>
-            <label>
-              Work-right details
-              <textarea
-                placeholder="Example: UK citizen, settled/pre-settled status, Skilled Worker visa, EU citizen, or no sponsorship required. Add only facts you can verify."
-                value={state.profile.workRightDetails}
-                onChange={(event) =>
-                  updateProfile("workRightDetails", event.target.value)
-                }
-              />
-            </label>
-            </section>
-
-            <section className="profile-form-section important">
-              <div className="section-heading">
-                <p className="eyebrow">CV evidence</p>
-                <h3>Proof for job checks and AI answers</h3>
-                <p>Paste factual CV text, project evidence and achievements.</p>
-              </div>
-            <label>
-              CV text
-              <textarea
-                placeholder="Paste your CV text or a factual summary of roles, projects, tools, outcomes and responsibilities."
-                value={state.profile.baseCvText}
-                onChange={(event) =>
-                  updateProfile("baseCvText", event.target.value)
-                }
-              />
-            </label>
-            </section>
-          </div>
-
-          <div className="output-column">
-            <section className="panel profile-quality-panel">
-              <div className="section-heading">
-                <p className="eyebrow">Profile quality score</p>
-                <h2>{profileQualityScore}/100 evidence quality</h2>
-                <p>
-                  Use this as your readiness map. Green means AutoTime can use
-                  that evidence confidently; amber or red means add more proof
-                  before relying on job checks or AI coaching.
-                </p>
-              </div>
-              <div className="profile-quality-list">
-                {profileQualitySignals.map((signal) => (
-                  <article
-                    className={`profile-quality-item ${signal.status}`}
-                    key={signal.label}
-                  >
-                    <div>
-                      <strong>{signal.label}</strong>
-                      <span>{signal.score}/100</span>
-                    </div>
-                    <p>{signal.detail}</p>
-                  </article>
-                ))}
-              </div>
-              <div className="ai-claim-boundary">
-                <strong>AI claim boundary</strong>
-                <p>
-                  Allowed: facts saved in your CV, profile evidence, reusable
-                  answers and parsed job text. Not allowed: invented experience,
-                  unverified work-right claims, hidden job-site actions or
-                  unsupported salary/sponsorship promises.
-                </p>
-              </div>
-            </section>
-            <section className="panel">
-              <div className="section-heading">
-                <p className="eyebrow">At a glance</p>
-                <h2>What AutoTime knows about you</h2>
-                <p>
-                  These are the facts currently available for job-fit and
-                  workflow decisions.
-                </p>
-              </div>
-              <dl className="summary-list">
-                <div>
-                  <dt>Target roles</dt>
-                  <dd>{state.profile.targetRoles || "Not set"}</dd>
-                </div>
-                <div>
-                  <dt>Target countries</dt>
-                  <dd>{state.profile.targetCountries || "Not set"}</dd>
-                </div>
-                <div>
-                  <dt>Current location</dt>
-                  <dd>
-                    {[state.profile.currentCity, state.profile.currentCountry]
-                      .filter(Boolean)
-                      .join(", ") || "Not set"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Work-right evidence</dt>
-                  <dd>
-                    {state.profile.workRightDetails
-                      ? "Saved"
-                      : "Missing"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>CV evidence</dt>
-                  <dd>
-                    {state.profile.baseCvText.trim()
-                      ? `${state.profile.baseCvText.trim().length} characters saved`
-                      : "Missing"}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-            <section className="panel">
-              <div className="section-heading">
-                <p className="eyebrow">Reusable answers</p>
-                <h2>Reusable answer evidence</h2>
-                <p>
-                  Save reusable wording here only when it is true and supported
-                  by your profile.
-                </p>
-              </div>
-              <label>
-                Motivation answer
-                <textarea
-                  placeholder="Why this kind of role, company, or market makes sense for you."
-                  value={state.reusableAnswers.motivationAnswer}
-                  onChange={(event) =>
-                    updateReusableAnswer("motivationAnswer", event.target.value)
-                  }
-                />
-              </label>
-              <label>
-                Strengths answer
-                <textarea
-                  placeholder="A factual strengths answer backed by experience, projects, tools, or outcomes."
-                  value={state.reusableAnswers.strengthsAnswer}
-                  onChange={(event) =>
-                    updateReusableAnswer("strengthsAnswer", event.target.value)
-                  }
-                />
-              </label>
-            </section>
-          </div>
-        </section>
-      )}
-
-      {!isOverview && currentTab === "jobs" && (
-        <section className="workspace-grid job-check-grid">
-          <div className="input-column job-check-input">
-            <div className="section-heading">
-              <p className="eyebrow">Role source</p>
-              <h2>Check one job before you apply</h2>
-              <p>
-                Start from a job parsed by the extension. Manual fields are a
-                fallback for roles you have not tracked yet.
-              </p>
-            </div>
-            <section
-              className="job-source-panel"
-              aria-label="Tracked job source"
-            >
-              <div className="job-source-heading">
-                <div>
-                  <strong>
-                    {latestTrackedJobSource
-                      ? "Use a tracked job"
-                      : "No tracked JD available yet"}
-                  </strong>
-                  <p>
-                    {latestTrackedJobSource
-                      ? "These jobs came from the extension or saved tracker. Loading one fills the role details and JD text for analysis."
-                      : "Open a job page in the extension and track it, or paste the JD manually below."}
-                  </p>
-                </div>
-                <span
-                  className={`source-mode-pill ${currentJobInputMode.className}`}
-                  title={currentJobInputMode.detail}
-                >
-                  {currentJobInputMode.label}
-                </span>
-              </div>
-              <div className="job-source-note">
-                <p>
-                  Current input: {currentJobInputMode.detail}
-                </p>
-              </div>
-              {trackedJobSourceOptions.length ? (
-                <div className="job-source-actions">
-                  <select
-                    aria-label="Choose tracked job to analyse"
-                    defaultValue=""
-                    onChange={(event) => {
-                      if (event.target.value) {
-                        loadTrackedJobForCheck(event.target.value)
-                        event.target.value = ""
-                      }
-                    }}
-                  >
-                    <option value="">Load tracked job...</option>
-                    {trackedJobSourceOptions.map((application) => (
-                      <option key={application.id} value={application.id}>
-                        {[
-                          application.roleTitle || application.title,
-                          application.company,
-                          getApplicationSourceLabel(application)
-                        ]
-                          .filter(Boolean)
-                          .join(" - ")}
-                      </option>
-                    ))}
-                  </select>
-                  {latestTrackedJobSource ? (
-                    <button
-                      className="secondary-button"
-                      type="button"
-                      onClick={() =>
-                        loadTrackedJobForCheck(latestTrackedJobSource.id)
-                      }
-                    >
-                      Use latest
-                    </button>
-                  ) : null}
-                </div>
-              ) : (
-                <a className="secondary-button" href="/dashboard/extension">
-                  Connect extension
-                </a>
-              )}
-            </section>
-            <p className="job-check-save-note">
-              Automatic means the JD was parsed from the browser extension.
-              Manual means this role was typed or pasted in the dashboard.
-            </p>
-            <div className="job-check-field-grid">
-            <label>
-              Job title
-              <input
-                placeholder="Business Systems Analyst"
-                value={state.jobAnalysis.jobTitle}
-                onChange={(event) => updateJob("jobTitle", event.target.value)}
-              />
-            </label>
-            <label>
-              Company
-              <input
-                placeholder="Company name"
-                value={state.jobAnalysis.company}
-                onChange={(event) => updateJob("company", event.target.value)}
-              />
-            </label>
-            </div>
-            <label>
-              Job URL
-              <input
-                placeholder="https://..."
-                value={state.jobAnalysis.jobUrl}
-                onChange={(event) => updateJob("jobUrl", event.target.value)}
-              />
-            </label>
-            <label>
-              Job description
-              <textarea
-                className="job-description-input"
-                placeholder="Manual fallback: paste the role description, requirements, location, sponsorship notes and salary details if this job was not parsed from the extension."
-                value={state.jobAnalysis.jobDescription}
-                onChange={(event) =>
-                  updateJob("jobDescription", event.target.value)
-                }
-              />
-            </label>
-            <button
-              disabled={!canSaveCheckedJob}
-              type="button"
-              onClick={saveApplicationFromJob}
-            >
-              {fitEvaluation.contentGate === "ready"
-                ? "Save viable job"
-                : fitEvaluation.contentGate === "stretch"
-                  ? "Save as stretch"
-                  : "Save blocker for review"}
-            </button>
-            <p className="job-check-save-note">
-              Saving moves this checked role into the tracker with the current
-              score, risks and next action attached.
-            </p>
-          </div>
-
-          <div className="output-column job-check-results">
-            <section className="panel country-fit-panel">
-              <div className="section-heading">
-                <p className="eyebrow">Live result</p>
-                <h2>{fitEvaluation.decision}</h2>
-                <span
-                  className={`source-mode-pill ${currentJobInputMode.className}`}
-                  title={currentJobInputMode.detail}
-                >
-                  {currentJobInputMode.label}
-                </span>
-              </div>
-              <div className="ai-audit-summary" aria-label="Job check AI audit">
-                <article>
-                  <span>Evidence used</span>
-                  <strong>{decisionBrief.evidenceFound.length}</strong>
-                  <p>
-                    {decisionBrief.evidenceFound[0] ||
-                      "No strong evidence found yet."}
-                  </p>
-                </article>
-                <article>
-                  <span>Missing</span>
-                  <strong>{decisionBrief.missingInputs.length}</strong>
-                  <p>
-                    {decisionBrief.missingInputs[0] ||
-                      "Core inputs are present."}
-                  </p>
-                </article>
-                <article>
-                  <span>Risk flags</span>
-                  <strong>{decisionBrief.risks.length}</strong>
-                  <p>{decisionBrief.risks[0] || "No major risk flagged yet."}</p>
-                </article>
-                <article>
-                  <span>Do not claim</span>
-                  <strong>{decisionBrief.confidence}</strong>
-                  <p>
-                    Do not claim work-right, sponsorship, salary or experience
-                    details that are not in the profile or parsed JD.
-                  </p>
-                </article>
-              </div>
-              <div className="fit-gate-banner">
-                <strong>{fitEvaluation.overallScore}</strong>
-                <span>
-                  {fitEvaluation.contentGate === "ready"
-                    ? "No content blocker detected by current rules"
-                    : fitEvaluation.contentGate === "stretch"
-                      ? "Stretch application: label the risk"
-                      : "Do not write content yet"}
-                </span>
-              </div>
-              <div className="country-rule-strip">
-                <div>
-                  <strong>{fitEvaluation.countryRule.name}</strong>
-                  <span>{fitEvaluation.countryRule.marketNote}</span>
-                </div>
-                <dl>
-                  <div>
-                    <dt>Sponsorship</dt>
-                    <dd>{fitEvaluation.countryRule.sponsorshipStrictness}</dd>
-                  </div>
-                  <div>
-                    <dt>Relocation</dt>
-                    <dd>{fitEvaluation.countryRule.relocationFriction}</dd>
-                  </div>
-                  <div>
-                    <dt>Outcomes</dt>
-                    <dd>{outcomeLearningSignals.totalTracked}</dd>
-                  </div>
-                </dl>
-              </div>
-              <div className="fit-component-grid">
-                {fitEvaluation.components.map((item) => (
-                  <article className={`fit-component ${item.status}`} key={item.key}>
-                    <div>
-                      <strong>{item.label}</strong>
-                      <span>{item.score}/100</span>
-                    </div>
-                    <small>{item.status}</small>
-                    <p>{item.rationale}</p>
-                    <ul className="component-evidence-list">
-                      {item.evidence.length ? (
-                        item.evidence.map((evidence) => (
-                          <li key={evidence}>{evidence}</li>
-                        ))
-                      ) : (
-                        <li>No direct supporting evidence found yet.</li>
-                      )}
-                    </ul>
-                  </article>
-                ))}
-              </div>
-              {fitEvaluation.blockers.length ? (
-                <ul className="bullets-list blocker-list">
-                  {fitEvaluation.blockers.map((blocker) => (
-                    <li key={blocker}>{blocker}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="empty-state">
-                  No blocker was detected by the current rules. Verify employer
-                  requirements before applying.
-                </p>
-              )}
-              <ul className="evidence-list">
-                {fitEvaluation.evidenceChecklist.slice(0, 4).map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </section>
-            <section className="panel">
-              <div className="section-heading">
-                <p className="eyebrow">Positioning first</p>
-                <h2>
-                  {fitEvaluation.contentGate === "blocked"
-                    ? "Check the blocker before applying"
-                    : "Best angle for this job"}
-                </h2>
-              </div>
-              <p className="large-copy">
-                {fitEvaluation.positioningAngle}
-              </p>
-              <ul className="bullets-list">
-                {[
-                  fitEvaluation.nextBestAction,
-                  ...(state.jobAnalysis.scoreFactors ?? [])
-                ].map((factor) => (
-                  <li key={factor}>{factor}</li>
-                ))}
-              </ul>
-            </section>
-            <section className="panel">
-              <div className="section-heading">
-                <p className="eyebrow">What to check</p>
-                <h2>Skills, location and gaps</h2>
-              </div>
-              <div className="tag-row">
-                {(state.jobAnalysis.skills?.length
-                  ? state.jobAnalysis.skills
-                  : ["No skills detected yet"]
-                ).map((skill) => (
-                  <span className="tag" key={skill}>
-                    {skill}
-                  </span>
-                ))}
-              </div>
-              <ul className="bullets-list">
-                {(state.jobAnalysis.gaps?.length
-                  ? state.jobAnalysis.gaps
-                  : ["No gaps saved yet."]
-                ).map((gap) => (
-                  <li key={gap}>{gap}</li>
-                ))}
-              </ul>
-            </section>
-          </div>
-        </section>
-      )}
-
-      {currentTab === "jobs" && (
-      <details className="audit-details job-check-audit">
-      <summary>Audit and source checks</summary>
-      <section className="trust-grid" aria-label="Evidence and official verification">
-        <section className="evidence-ledger-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Details</p>
-            <h2>Why AutoTime suggested this</h2>
-          </div>
-          <div className="ledger-table">
-            {evidenceLedgerRows.map((row) => (
-              <article className="ledger-row" key={row.id}>
-                <div>
-                  <strong>{row.check}</strong>
-                  <span className={`ledger-status ${row.status}`}>
-                    {row.status}
-                  </span>
-                </div>
-                <p>{row.explanation}</p>
-                <dl>
-                  <div>
-                    <dt>Matched detail</dt>
-                    <dd>{row.evidence.join(" ")}</dd>
-                  </div>
-                  <div>
-                    <dt>Limit</dt>
-                    <dd>{row.limit}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="content-guardrail-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Writing safety</p>
-            <h2>Before generating content</h2>
-          </div>
-          <div className="guardrail-list">
-            {contentGuardrails.map((item) => (
-              <article className="guardrail-item" key={item.label}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <span className={`guardrail-status ${item.status}`}>
-                    {item.status}
-                  </span>
-                </div>
-                <p>{item.reason}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="verification-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Before applying</p>
-            <h2>Manual verification checklist</h2>
-          </div>
-          <div className="verification-list">
-            {verificationChecklist.map((item) => (
-              <article className="verification-item" key={item.id}>
-                <div>
-                  <strong>{item.label}</strong>
-                  <span className={`verification-status ${item.status}`}>
-                    {item.status === "ready"
-                      ? "ready"
-                      : item.status === "blocked"
-                        ? "blocked"
-                        : "check"}
-                  </span>
-                </div>
-                <p>{item.evidence}</p>
-                <small>{item.limit}</small>
-              </article>
-            ))}
-          </div>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={exportDecisionAudit}
-          >
-            Export decision audit
-          </button>
-        </section>
-
-        <section className="official-source-panel">
-          <div className="section-heading">
-            <p className="eyebrow">Official verification</p>
-            <h2>Official sources</h2>
-          </div>
-          <div className="official-source-list">
-            {officialSources.map((source) => (
-              <a
-                href={source.url}
-                key={source.url}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <strong>{source.label}</strong>
-                <span>{source.note}</span>
-              </a>
-            ))}
-          </div>
-          <label className="official-review-control">
-            <input
-              checked={trustState.officialSourceReviewed}
-              type="checkbox"
-              onChange={(event) =>
-                setOfficialSourceReviewed(event.target.checked)
-              }
-            />
-            I have reviewed the official source for this country and understand
-            AutoTime does not authorise work, visa or sponsorship status.
-          </label>
-        </section>
-      </section>
-      </details>
-      )}
-
-      {!isOverview && currentTab === "applications" && (
-        <section className="applications-section full-width-section">
-          <div className="section-intro">
-            <p className="eyebrow">{focusCopy.eyebrow}</p>
-            <h2>{focusCopy.title}</h2>
-            <p>{focusCopy.body}</p>
-          </div>
-          {activeFocus !== "insights" && (
-          <div
-            className="pipeline-summary"
-            aria-label="Application status counts"
-          >
-            {applicationStatuses.map((status) => (
-              <div key={status}>
-                <span>{statusCounts[status]}</span>
-                <small>{status}</small>
-              </div>
-            ))}
-          </div>
-          )}
-          {showApplicationAnalytics && (
-          <>
-          <section
-            className="analytics-grid"
-            aria-label="Evidence and outcome analytics"
-          >
-            <article>
-              <span>{persistedEvidenceRecords.length}</span>
-              <strong>Saved checks</strong>
-              <p>Checks stored from saved jobs and profile details.</p>
-            </article>
-            <article>
-              <span>{outcomeAnalytics.total}</span>
-              <strong>Outcome records</strong>
-              <p>Saved decisions with status and result changes.</p>
-            </article>
-            <article>
-              <span>{outcomeAnalytics.interviews}</span>
-              <strong>Interview signals</strong>
-              <p>Tracked interview outcomes for future calibration.</p>
-            </article>
-            <article>
-              <span>
-                {outcomeAnalytics.calibrationReady ? "Ready" : "Collecting"}
-              </span>
-              <strong>Calibration status</strong>
-              <p>
-                {outcomeAnalytics.calibrationReady
-                  ? "Enough records exist to begin score-band calibration."
-                  : "Decision Index remains non-probability until enough outcomes exist."}
-              </p>
-            </article>
-          </section>
-          <section className="online-analytics-panel">
-            <div className="section-heading">
-              <p className="eyebrow">Python analytics</p>
-              <h2>Online evidence and outcome report</h2>
-              <p>
-                Descriptive analytics from saved records only.
-              </p>
-            </div>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={runOnlineAnalytics}
-            >
-              Run Python analytics
-            </button>
-            {onlineAnalyticsStatus ? (
-              <p className="status-message">{onlineAnalyticsStatus}</p>
-            ) : null}
-            {onlineAnalyticsReport ? (
-              <div className="online-analytics-results">
-                <article>
-                  <span>
-                    {Math.round(
-                      onlineAnalyticsReport.summary.observedInterviewRate
-                    )}
-                    %
-                  </span>
-                  <strong>Observed interview rate</strong>
-                  <p>Based only on tracked outcome records.</p>
-                </article>
-                <article>
-                  <span>
-                    {onlineAnalyticsReport.summary.calibrationReady
-                      ? "Ready"
-                      : "Collecting"}
-                  </span>
-                  <strong>Calibration readiness</strong>
-                  <p>{onlineAnalyticsReport.summary.calibrationStatus}</p>
-                </article>
-                <article>
-                  <span>{onlineAnalyticsReport.summary.interviewSignals}</span>
-                  <strong>Interview signals</strong>
-                  <p>Outcome records marked as interview or final stage.</p>
-                </article>
-                <article>
-                  <span>{onlineAnalyticsReport.mlReadiness.featureRows}</span>
-                  <strong>ML feature rows</strong>
-                  <p>{onlineAnalyticsReport.mlReadiness.allowedOutput}</p>
-                </article>
-                <article>
-                  <span>
-                    {onlineAnalyticsReport.mlReadiness.modelTrainingReady
-                      ? "Ready"
-                      : "Locked"}
-                  </span>
-                  <strong>Model training</strong>
-                  <p>
-                    Blocked output:{" "}
-                    {onlineAnalyticsReport.mlReadiness.blockedOutput}.
-                  </p>
-                </article>
-                <article>
-                  <span>{onlineAnalyticsReport.mlReadiness.stage}</span>
-                  <strong>Learning readiness</strong>
-                  <p>{onlineAnalyticsReport.mlReadiness.message}</p>
-                </article>
-                <div className="score-band-table">
-                  <strong>Score-band outcomes</strong>
-                  {onlineAnalyticsReport.scoreBands.length ? (
-                    onlineAnalyticsReport.scoreBands.map((band) => (
-                      <div key={band.band}>
-                        <span>{band.band}</span>
-                        <span>{band.records} records</span>
-                        <span>{band.interviews} interviews</span>
-                        <span>
-                          {Math.round(band.observedInterviewRate)}% observed
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No score-band outcomes yet.</p>
-                  )}
-                </div>
-                <div className="score-band-table">
-                  <strong>Content gate outcomes</strong>
-                  {onlineAnalyticsReport.contentGates.length ? (
-                    onlineAnalyticsReport.contentGates.map((gate) => (
-                      <div key={gate.gate}>
-                        <span>{gate.gate}</span>
-                        <span>{gate.records} records</span>
-                        <span>{gate.interviews} interviews</span>
-                        <span>
-                          {Math.round(gate.observedInterviewRate)}% observed
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No content-gate outcomes yet.</p>
-                  )}
-                </div>
-                <div className="score-band-table">
-                  <strong>Risk segment outcomes</strong>
-                  {onlineAnalyticsReport.riskSegments.length ? (
-                    onlineAnalyticsReport.riskSegments.map((segment) => (
-                      <div key={segment.segment}>
-                        <span>{segment.segment}</span>
-                        <span>{segment.records} records</span>
-                        <span>{segment.interviews} interviews</span>
-                        <span>
-                          {Math.round(segment.observedInterviewRate)}% observed
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No risk segment outcomes yet.</p>
-                  )}
-                </div>
-                <div className="analytics-limits">
-                  {onlineAnalyticsReport.limits.map((limit) => (
-                    <p key={limit}>{limit}</p>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </section>
-          <section className="evidence-outcome-panel">
-            <div className="section-heading">
-              <p className="eyebrow">Evidence engine</p>
-              <h2>Latest persisted evidence</h2>
-              <p>
-                These records are saved with applications so future scoring can
-                be audited and calibrated against real outcomes.
-              </p>
-            </div>
-            <div className="evidence-record-list">
-              {persistedEvidenceRecords.length ? (
-                persistedEvidenceRecords.slice(0, 6).map((record) => (
-                  <article className="evidence-record-card" key={record.id}>
-                    <div>
-                      <strong>{record.checkLabel}</strong>
-                      <span>{record.status}</span>
-                    </div>
-                    <p>{record.evidenceText}</p>
-                    <small>{record.explanation}</small>
-                    <small>{record.limit}</small>
-                  </article>
-                ))
-              ) : (
-                <p className="empty-state">
-                  Save a checked job to create evidence records.
-                </p>
-              )}
-            </div>
-          </section>
-          </>
-          )}
-          {applicationId && !selectedApplication ? (
-            <section className="job-detail-panel">
-              <div className="section-heading">
-                <p className="eyebrow">Application detail</p>
-                <h2>Job not found</h2>
-                <p>
-                  This job is not in the local dashboard state yet. Load cloud
-                  sync or return to the tracker.
-                </p>
-              </div>
-              <a className="secondary-button" href="/dashboard/applications">
-                Back to applications
-              </a>
-            </section>
-          ) : null}
-          {selectedApplication ? (
-          <section className="job-detail-panel" aria-label="Job detail">
-            <div className="job-detail-header">
-              <div>
-                <p className="eyebrow">Job Detail</p>
-                <h2>
-                  {selectedApplication.roleTitle || selectedApplication.title}
-                </h2>
-                <p>
-                  {selectedApplication.company || "Unknown company"} /{" "}
-                  {selectedApplication.status}
-                </p>
-              </div>
-              <div className={`readiness-pill ${selectedReadyStatus === "Ready to apply" ? "ready" : selectedReadyStatus === "Blocked" ? "blocked" : "needs-check"}`}>
-                {selectedReadyStatus}
-              </div>
-            </div>
-
-            <div className="job-detail-grid">
-              <article className="panel">
-                <div className="section-heading">
-                  <p className="eyebrow">Job check</p>
-                  <h3>Recommendation</h3>
-                </div>
-                <dl className="summary-list">
-                  <div>
-                    <dt>Job match score</dt>
-                    <dd>
-                      {typeof selectedApplication.fitScore === "number"
-                        ? `${selectedApplication.fitScore}/100`
-                        : "Not scored yet"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Recommendation</dt>
-                    <dd>{selectedApplication.fitDecision ?? "Not analysed"}</dd>
-                  </div>
-                  <div>
-                    <dt>Writing status</dt>
-                    <dd>{selectedApplication.contentGate ?? "Not checked"}</dd>
-                  </div>
-                  <div>
-                    <dt>Saved</dt>
-                    <dd>{formatDashboardDate(selectedApplication.createdAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>Source</dt>
-                    <dd>{getApplicationSourceLabel(selectedApplication)}</dd>
-                  </div>
-                  <div>
-                    <dt>URL</dt>
-                    <dd>{selectedApplication.url}</dd>
-                  </div>
-                </dl>
-              </article>
-
-              <article className="panel">
-                <div className="section-heading">
-                  <p className="eyebrow">Workflow</p>
-                  <h3>Current action</h3>
-                </div>
-                <label>
-                  Status
-                  <select
-                    value={selectedApplication.status}
-                    onChange={(event) =>
-                      updateApplication(selectedApplication.id, {
-                        status: event.target.value as ApplicationStatus
-                      })
-                    }
-                  >
-                    {applicationStatuses.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Next action
-                  <input
-                    value={selectedApplication.nextAction ?? ""}
-                    onChange={(event) =>
-                      updateApplication(selectedApplication.id, {
-                        nextAction: event.target.value
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  Due date
-                  <input
-                    type="date"
-                    value={selectedApplication.nextActionDate ?? ""}
-                    onChange={(event) =>
-                      updateApplication(selectedApplication.id, {
-                        nextActionDate: event.target.value || undefined
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  Outcome learning
-                  <textarea
-                    value={selectedApplication.notes ?? ""}
-                    onChange={(event) =>
-                      updateApplication(selectedApplication.id, {
-                        notes: event.target.value
-                      })
-                    }
-                  />
-                </label>
-              </article>
-            </div>
-
-            <section className="ready-checklist" aria-label="Ready to apply checklist">
-              <div className="section-heading">
-                <p className="eyebrow">Ready to Apply</p>
-                <h3>Checklist</h3>
-                <p>
-                  Resolve blocked items before treating this job as ready.
-                </p>
-              </div>
-              <div className="ready-checklist-grid">
-                {selectedReadyChecklist.map((item) => (
-                  <article className={`ready-check-item ${item.status}`} key={item.id}>
-                    <span>{item.status}</span>
-                    <strong>{item.label}</strong>
-                    <p>{item.evidence}</p>
-                    <small>{item.action}</small>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <div className="job-detail-grid">
-              <section className="panel">
-                <div className="section-heading">
-                  <p className="eyebrow">Check details</p>
-                  <h3>Saved notes for this job</h3>
-                </div>
-                <div className="evidence-record-list">
-                  {selectedApplicationEvidence.length ? (
-                    selectedApplicationEvidence.map((record) => (
-                      <article className="evidence-record-card" key={record.id}>
-                        <div>
-                          <strong>{record.checkLabel}</strong>
-                          <span>{record.status}</span>
-                        </div>
-                        <p>{record.evidenceText}</p>
-                        <small>{record.explanation}</small>
-                        <small>{record.limit}</small>
-                      </article>
-                    ))
-                  ) : (
-                    <p className="empty-state">
-                      No saved check details are attached to this job yet.
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              <section className="panel">
-                <div className="section-heading">
-                  <p className="eyebrow">Documents</p>
-                  <h3>Saved application content</h3>
-                </div>
-                {selectedApplication.contentSnapshot ? (
-                  <div className="document-snapshot">
-                    <strong>Saved content snapshot</strong>
-                    <p>{selectedApplication.contentSnapshot.profileSummary}</p>
-                    <small>
-                      Saved{" "}
-                      {new Date(
-                        selectedApplication.contentSnapshot.savedAt
-                      ).toLocaleString()}
-                    </small>
-                  </div>
-                ) : (
-                  <p className="empty-state">
-                    No content snapshot is saved for this job yet.
-                  </p>
-                )}
-                <div className="application-actions">
-                  <a className="secondary-button" href="/dashboard/application-answers">
-                    Write answers
-                  </a>
-                  <button
-                    className="secondary-button"
-                    disabled={selectedApplication.status !== "Interview"}
-                    type="button"
-                    onClick={() => generateInterviewPrep(selectedApplication)}
-                  >
-                    Prep interview
-                  </button>
-                </div>
-                {selectedInterviewPrepPack ? (
-                  <div className="document-snapshot">
-                    <strong>Interview prep ready</strong>
-                    <p>{selectedInterviewPrepPack.roleSummary}</p>
-                    <small>
-                      {selectedInterviewPrepPack.likelyQuestions.length} likely
-                      questions saved
-                    </small>
-                  </div>
-                ) : null}
-              </section>
-            </div>
-          </section>
-          ) : null}
-          {showApplicationList && (
-          <>
-          <section className="application-command-strip" aria-label="Application filters">
-            <label>
-              Search
-              <input
-                placeholder="Role, company, source, next action"
-                value={applicationSearchQuery}
-                onChange={(event) =>
-                  setApplicationSearchQuery(event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Status
-              <select
-                value={applicationStatusFilter}
-                onChange={(event) =>
-                  setApplicationStatusFilter(
-                    event.target.value as ApplicationStatus | "all"
-                  )
-                }
-              >
-                <option value="all">All statuses</option>
-                {applicationStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Outcome
-              <select
-                value={applicationOutcomeFilter}
-                onChange={(event) =>
-                  setApplicationOutcomeFilter(
-                    event.target.value as ApplicationOutcomeReason | "all"
-                  )
-                }
-              >
-                <option value="all">All outcomes</option>
-                {applicationOutcomeReasons.map((reason) => (
-                  <option key={reason} value={reason}>
-                    {reason}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div>
-              <strong>{filteredApplications.length}</strong>
-              <span>shown of {state.applications.length}</span>
-            </div>
-          </section>
-          <div className="application-table">
-            {filteredApplications.length ? (
-              filteredApplications.map((application) => (
-                <article className="application-row" key={application.id}>
-                  <div>
-                    <div className="application-row-header">
-                      <strong>
-                        {application.roleTitle || application.title}
-                      </strong>
-                      <span
-                        className={`source-mode-pill ${
-                          getApplicationCaptureMode(application).className
-                        }`}
-                        title={getApplicationCaptureMode(application).detail}
-                      >
-                        {getApplicationCaptureMode(application).label}
-                      </span>
-                      <span
-                        className={`action-timing ${
-                          getNextActionTiming(application).includes("overdue")
-                            ? "overdue"
-                            : getNextActionTiming(application) === "Due today"
-                              ? "due"
-                              : ""
-                        }`}
-                      >
-                        {getNextActionTiming(application)}
-                      </span>
-                    </div>
-                    <span>{application.company || "Unknown company"}</span>
-                    <div className="application-meta-strip">
-                      <span>{getApplicationSourceLabel(application)}</span>
-                      <span>Saved {formatDashboardDate(application.createdAt)}</span>
-                      <span>{application.status}</span>
-                    </div>
-                    <small>{application.url}</small>
-                    {application.fitDecision ? (
-                      <small>
-                        Match score{" "}
-                        {typeof application.fitScore === "number"
-                          ? `${application.fitScore}/100`
-                          : "not scored yet"}
-                        . Recommendation: {application.fitDecision}
-                        {application.contentGate === "stretch"
-                          ? ". Stretch role"
-                          : application.contentGate === "blocked"
-                            ? ". Blocked until risks are reviewed"
-                            : ""}
-                      </small>
-                    ) : null}
-                  </div>
-                  <label>
-                    Status
-                    <select
-                      value={application.status}
-                      onChange={(event) =>
-                        updateApplication(application.id, {
-                          status: event.target.value as ApplicationStatus
-                        })
-                      }
-                    >
-                      {applicationStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="application-next-action-fields">
-                    <label>
-                      Next action
-                      <input
-                        value={application.nextAction ?? ""}
-                        onChange={(event) =>
-                          updateApplication(application.id, {
-                            nextAction: event.target.value
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      Due date
-                      <input
-                        type="date"
-                        value={application.nextActionDate ?? ""}
-                        onChange={(event) =>
-                          updateApplication(application.id, {
-                            nextActionDate: event.target.value || undefined
-                          })
-                        }
-                      />
-                    </label>
-                  </div>
-                  <label>
-                    Outcome
-                    <select
-                      value={application.outcomeReason ?? "Unknown"}
-                      onChange={(event) =>
-                        updateApplication(application.id, {
-                          outcomeReason: event.target
-                            .value as ApplicationOutcomeReason
-                        })
-                      }
-                    >
-                      {applicationOutcomeReasons.map((reason) => (
-                        <option key={reason} value={reason}>
-                          {reason}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Outcome learning
-                    <input
-                      value={application.notes ?? ""}
-                      onChange={(event) =>
-                        updateApplication(application.id, {
-                          notes: event.target.value
-                        })
-                      }
-                    />
-                  </label>
-                  <div className="application-actions">
-                    <a
-                      className="secondary-button"
-                      href={`/dashboard/applications/${application.id}`}
-                    >
-                      Open
-                    </a>
-                    <button
-                      className="secondary-button"
-                      disabled={application.status !== "Interview"}
-                      type="button"
-                      onClick={() => generateInterviewPrep(application)}
-                    >
-                      Generate Prep
-                    </button>
-                    <button
-                      className="danger-button"
-                      type="button"
-                      onClick={() => deleteApplication(application.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="empty-state rich-empty-state">
-                <strong>
-                  {state.applications.length
-                    ? "No jobs match these filters"
-                    : "No saved jobs yet"}
-                </strong>
-                <p>
-                  {state.applications.length
-                    ? "Clear filters or search for another role, company or action."
-                    : "Tracked roles from the extension and saved role checks appear here."}
-                </p>
-                {!state.applications.length ? (
-                  <div className="empty-state-actions">
-                    <a className="secondary-button" href="/dashboard/extension">
-                      Connect extension
-                    </a>
-                    <a className="secondary-button" href="/dashboard/match-score">
-                      Check a role
-                    </a>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-          </>
-          )}
-        </section>
-      )}
-
-      {!isOverview && currentTab === "interview" && (
-        <section className="prep-section full-width-section">
-          <div className="section-intro">
-            <p className="eyebrow">AI Interview Coach</p>
-            <h2>Prepare answers from evidence, not guesswork</h2>
-            <p>
-              AutoTime checks your rough answer against saved profile evidence,
-              job context and work-right boundaries before shaping it.
-            </p>
-          </div>
-
-          <div className="interview-buddy-layout">
-            <section
-              className="interview-buddy-form"
-              aria-label="Interview Buddy input"
-            >
-              <div className="buddy-character-panel">
-                <span aria-hidden="true">AI</span>
-                <div>
-                  <strong>Evidence-first answer coach</strong>
-                  <p>
-                    Start with honest notes. The coach improves structure, flags
-                    missing proof and keeps your answer within what you can verify.
-                  </p>
-                </div>
-              </div>
-
-              <label>
-                Choose a question
-                <select
-                  value={interviewQuestion}
-                  onChange={(event) => {
-                    setInterviewQuestion(event.target.value)
-                    setCustomInterviewQuestion("")
-                  }}
-                >
-                  {interviewQuestionOptions.map((question) => (
-                    <option key={question} value={question}>
-                      {question}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Or type your own question
-                <input
-                  placeholder="Example: Tell me about a time you handled changing requirements."
-                  value={customInterviewQuestion}
-                  onChange={(event) =>
-                    setCustomInterviewQuestion(event.target.value)
-                  }
-                />
-              </label>
-
-              <label>
-                Rough draft answer
-                <textarea
-                  placeholder="Write the factual version first: situation, what you did, result, and anything you must not overclaim."
-                  value={interviewDraftAnswer}
-                  onChange={(event) =>
-                    setInterviewDraftAnswer(event.target.value)
-                  }
-                />
-              </label>
-
-              {interviewDisclaimer ? (
-                <p className="decision-integrity-note">
-                  {interviewDisclaimer}
-                </p>
-              ) : null}
-
-              <div className="header-actions">
-                <button
-                  disabled={isCopilotThinking}
-                  type="button"
-                  onClick={generateInterviewBuddyAnswers}
-                >
-                  {isCopilotThinking ? "Coaching..." : "Run AI Coach"}
-                </button>
-                <button
-                  className="secondary-button"
-                  disabled={isCopilotThinking}
-                  type="button"
-                  onClick={generateLocalInterviewBuddyAnswers}
-                >
-                  Local evidence check
-                </button>
-                <button
-                  className="secondary-button"
-                  disabled={!hasInterviewBuddyOutputs}
-                  type="button"
-                  onClick={saveFinalInterviewAnswer}
-                >
-                  Save Final Answer
-                </button>
-              </div>
-            </section>
-
-            <section
-              className="interview-buddy-output"
-              aria-label="Interview Buddy outputs"
-            >
-              <div className="interview-coach-audit">
-                <article>
-                  <span>Source</span>
-                  <strong>{currentJobInputMode.label}</strong>
-                  <p>{currentJobInputMode.detail}</p>
-                </article>
-                <article>
-                  <span>Evidence score</span>
-                  <strong>{interviewCoachMeta.evidenceScore}/100</strong>
-                  <p>
-                    {interviewCoachMeta.source === "ai"
-                      ? "AI checked against your saved evidence."
-                      : "Local readiness estimate before AI coaching."}
-                  </p>
-                </article>
-                <article>
-                  <span>Risk flags</span>
-                  <strong>{interviewCoachMeta.riskFlags.length}</strong>
-                  <p>
-                    {interviewCoachMeta.riskFlags[0] ||
-                      "No obvious overclaim or work-right risk flagged yet."}
-                  </p>
-                </article>
-                <article>
-                  <span>Missing proof</span>
-                  <strong>{interviewCoachMeta.missingEvidence.length}</strong>
-                  <p>
-                    {interviewCoachMeta.missingEvidence[0] ||
-                      "Enough draft evidence to shape an answer."}
-                  </p>
-                </article>
-                <article>
-                  <span>Evidence used</span>
-                  <strong>
-                    {[
-                      state.profile.baseCvText.trim() && "CV",
-                      state.profile.experienceHighlights.trim() && "Profile",
-                      state.jobAnalysis.jobDescription.trim() && "JD",
-                      interviewDraftAnswer.trim() && "Draft"
-                    ].filter(Boolean).length}
-                  </strong>
-                  <p>
-                    Uses profile evidence, parsed/manual JD context and your
-                    rough answer where available.
-                  </p>
-                </article>
-              </div>
-
-              <article className="interview-coach-brief">
-                <strong>AutoTime boundary</strong>
-                <p>{interviewCoachMeta.boundaryNote}</p>
-              </article>
-
-              {(
-                [
-                  ["professionalAnswer", "Boardroom version"],
-                  ["naturalAnswer", "Human version"],
-                  ["lightFunnyAnswer", "Warm version"],
-                  ["strongFinalAnswer", "Final evidence-led answer"]
-                ] as Array<[InterviewBuddyOutputKey, string]>
-              ).map(([key, label]) => (
-                <article className="buddy-answer-card" key={key}>
-                  <div>
-                    <h3>{label}</h3>
-                    <button
-                      className="secondary-button"
-                      disabled={!interviewBuddyOutputs[key]}
-                      type="button"
-                      onClick={() => speakInterviewAnswer(interviewBuddyOutputs[key])}
-                    >
-                      Speak
-                    </button>
-                  </div>
-                  <p>
-                    {interviewBuddyOutputs[key] ||
-                      "Run the coach to see this version."}
-                  </p>
-                </article>
-              ))}
-
-              <article className="interview-coach-brief">
-                <strong>Follow-up drills</strong>
-                {interviewCoachMeta.followUpDrills.length ? (
-                  <ul className="bullets-list">
-                    {interviewCoachMeta.followUpDrills.map((drill) => (
-                      <li key={drill}>{drill}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>
-                    Run the coach to get targeted follow-up questions and
-                    practice prompts.
-                  </p>
-                )}
-              </article>
-            </section>
-          </div>
-
-          {showInterviewPrepPacks && (
             <>
-              <div className="section-intro">
-                <p className="eyebrow">Saved prep packs</p>
-                <h2>Prep generated from applications</h2>
-                <p>
-                  Prep packs still use saved profile, job details and application
-                  status. They remain separate from Interview Buddy answers.
-                </p>
-              </div>
-              <div className="prep-grid">
-                {state.interviewPrepPacks.length ? (
-                  state.interviewPrepPacks.map((pack) => (
-                    <article className="prep-card" key={pack.id}>
-                      <h3>{pack.roleSummary}</h3>
-                      <p>{pack.positioningStatement}</p>
-                      <h4>STAR Prompts</h4>
+              {!isOverview &&
+                currentTab === "profile" &&
+                activeFocus === "settings" && (
+                  <section
+                    className="settings-hub-panel"
+                    aria-label="Settings overview"
+                  >
+                    <div className="section-intro">
+                      <p className="eyebrow">Settings overview</p>
+                      <h2>Control how AutoTime works for you</h2>
+                      <p>
+                        Keep account sync, extension capture, profile defaults
+                        and data controls understandable from one place.
+                      </p>
+                    </div>
+                    <div className="settings-hub-grid">
+                      <article>
+                        <span>Profile quality</span>
+                        <strong>
+                          <RevealMetric label="Show profile quality score">
+                            {profileQualityScore}/100
+                          </RevealMetric>
+                        </strong>
+                        <p>
+                          Candidate evidence, work-right details and allowed AI
+                          claims.
+                        </p>
+                        <a href="/dashboard/autofill-profile">Edit profile</a>
+                      </article>
+                      <article>
+                        <span>Account sync</span>
+                        <strong>{cloudSyncReadiness.modeLabel}</strong>
+                        <p>
+                          {cloudSyncConsent
+                            ? "Profile and workflow sync consent is enabled."
+                            : "Browser-first saving is active until you enable sync."}
+                        </p>
+                        <a href="#account-sync-settings">Review sync</a>
+                      </article>
+                      <article>
+                        <span>Extension</span>
+                        <strong>
+                          {state.applications.some(
+                            (application) =>
+                              getApplicationCaptureMode(application)
+                                .className === "automatic"
+                          )
+                            ? "Capturing jobs"
+                            : "Not proven yet"}
+                        </strong>
+                        <p>
+                          Connect Chrome to parse JDs and prove job source
+                          quality.
+                        </p>
+                        <a href="/dashboard/extension">Open extension</a>
+                      </article>
+                      <article>
+                        <span>Plan and AI</span>
+                        <strong>
+                          {isCopilotThinking ? "AI working" : "Ready"}
+                        </strong>
+                        <p>
+                          Manage AI limits, upgrade gates and subscription
+                          settings.
+                        </p>
+                        <a href="/pricing">View pricing</a>
+                      </article>
+                      <article>
+                        <span>Data controls</span>
+                        <strong>Export / delete</strong>
+                        <p>
+                          Export a local backup or delete synced profile data.
+                        </p>
+                        <a href="#account-sync-settings">Manage data</a>
+                      </article>
+                    </div>
+                  </section>
+                )}
+
+              {!isOverview &&
+                currentTab === "profile" &&
+                showProfileSettingsPanel && (
+                  <section
+                    className="market-context-panel"
+                    aria-label="Profile settings"
+                  >
+                    <div className="section-intro">
+                      <p className="eyebrow">Profile settings</p>
+                      <h2>Candidate context</h2>
+                      <p>
+                        Set country, role focus and work-right context for
+                        checks.
+                      </p>
+                    </div>
+
+                    <div className="context-grid">
+                      <fieldset className="segmented-field">
+                        <legend>Target role focus</legend>
+                        <div className="segmented-options">
+                          {roleMarkets.map((market) => (
+                            <button
+                              aria-pressed={
+                                productContext.roleMarket === market.id
+                              }
+                              className={
+                                productContext.roleMarket === market.id
+                                  ? "segment-button active"
+                                  : "segment-button"
+                              }
+                              key={market.id}
+                              type="button"
+                              onClick={() =>
+                                updateProductContext("roleMarket", market.id)
+                              }
+                            >
+                              <strong>{market.label}</strong>
+                              <span>{market.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      <fieldset className="segmented-field">
+                        <legend>Work authorisation status</legend>
+                        <div className="segmented-options">
+                          {candidatePositions.map((position) => (
+                            <button
+                              aria-pressed={
+                                productContext.candidatePosition === position.id
+                              }
+                              className={
+                                productContext.candidatePosition === position.id
+                                  ? "segment-button active"
+                                  : "segment-button"
+                              }
+                              key={position.id}
+                              type="button"
+                              onClick={() =>
+                                updateProductContext(
+                                  "candidatePosition",
+                                  position.id
+                                )
+                              }
+                            >
+                              <strong>{position.label}</strong>
+                              <span>{position.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      <div className="context-controls">
+                        <label>
+                          Target country
+                          <select
+                            value={productContext.targetCountry}
+                            onChange={(event) =>
+                              updateProductContext(
+                                "targetCountry",
+                                event.target.value
+                              )
+                            }
+                          >
+                            {euCountryOptions.map((country) => (
+                              <option key={country} value={country}>
+                                {country}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Experience level
+                          <select
+                            value={productContext.experienceLevel}
+                            onChange={(event) =>
+                              updateProductContext(
+                                "experienceLevel",
+                                event.target.value
+                              )
+                            }
+                          >
+                            <option value="Entry-level">Entry-level</option>
+                            <option value="Junior">Junior</option>
+                            <option value="Mid-level">Mid-level</option>
+                            <option value="Senior">Senior</option>
+                            <option value="Lead">Lead</option>
+                          </select>
+                        </label>
+                        <label>
+                          Search pace
+                          <select
+                            value={productContext.urgency}
+                            onChange={(event) =>
+                              updateProductContext(
+                                "urgency",
+                                event.target.value as CandidateUrgency
+                              )
+                            }
+                          >
+                            {urgencyOptions.map((urgency) => (
+                              <option key={urgency.id} value={urgency.id}>
+                                {urgency.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={applyMarketContextToProfile}
+                        >
+                          Use these choices
+                        </button>
+                      </div>
+                    </div>
+
+                    <section
+                      className="resume-intake-panel"
+                      aria-label="CV context review"
+                    >
+                      <div className="section-heading">
+                        <p className="eyebrow">CV import</p>
+                        <h2>Review CV text</h2>
+                        <p>Suggestions stay pending until you approve them.</p>
+                      </div>
+                      <label>
+                        CV or profile text
+                        <textarea
+                          placeholder="Add CV, resume, or LinkedIn summary text. Suggested profile updates stay pending until you approve them."
+                          value={resumeIntake}
+                          onChange={(event) =>
+                            setResumeIntake(event.target.value)
+                          }
+                        />
+                      </label>
+                      <div className="header-actions">
+                        <button type="button" onClick={reviewResumeForContext}>
+                          Review my CV
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={!contextSuggestion}
+                          type="button"
+                          onClick={approveContextSuggestion}
+                        >
+                          Apply suggestions
+                        </button>
+                      </div>
+                      {contextSuggestion && (
+                        <article className="suggestion-card">
+                          <div>
+                            <span>{contextSuggestion.confidence}</span>
+                            <small>suggestion confidence</small>
+                          </div>
+                          <dl>
+                            <div>
+                              <dt>Work authorisation status</dt>
+                              <dd>
+                                {contextSuggestion.candidatePosition ===
+                                "foreign-candidate"
+                                  ? "Foreign / relocating"
+                                  : "Native / local"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Target role focus</dt>
+                              <dd>{getMarketLabel(contextSuggestion)}</dd>
+                            </div>
+                            <div>
+                              <dt>Target roles</dt>
+                              <dd>{contextSuggestion.targetRoles}</dd>
+                            </div>
+                          </dl>
+                          <ul className="bullets-list">
+                            {contextSuggestion.reasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </article>
+                      )}
+                    </section>
+
+                    <p className="context-guidance">
+                      {getCountryGuidance(productContext)}
+                    </p>
+                  </section>
+                )}
+
+              {currentTab === "jobs" && (
+                <section
+                  className="decision-brief-panel job-check-brief"
+                  aria-label="UK/EU apply decision brief"
+                >
+                  <div>
+                    <p className="eyebrow">Job decision</p>
+                    <h2>Job check result</h2>
+                    <p>
+                      Paste a role below to get a practical apply, stretch or
+                      pause decision.
+                    </p>
+                  </div>
+                  <div className="decision-score">
+                    <strong>
+                      <RevealMetric label="Show decision score">
+                        {decisionBrief.score}
+                      </RevealMetric>
+                    </strong>
+                    <span>{decisionBrief.decision}</span>
+                    <small>{decisionBrief.confidence} confidence</small>
+                    <small>
+                      {decisionBrief.contentGate === "ready"
+                        ? "No content blocker detected"
+                        : decisionBrief.contentGate === "stretch"
+                          ? "Stretch label required"
+                          : "Content blocked"}
+                    </small>
+                    <small>Guidance, not a guarantee</small>
+                  </div>
+                  <div className="decision-columns">
+                    <section>
+                      <h3>Why</h3>
                       <ul className="bullets-list">
-                        {pack.starAnswerPrompts.map((prompt) => (
-                          <li key={prompt}>{prompt}</li>
-                        ))}
-                      </ul>
-                      <h4>Likely Questions</h4>
-                      <ul className="bullets-list">
-                        {pack.likelyQuestions.map((question) => (
-                          <li key={question}>{question}</li>
-                        ))}
-                      </ul>
-                      <h4>Employer Questions</h4>
-                      <ul className="bullets-list">
-                        {pack.questionsToAskEmployer.map((question) => (
-                          <li key={question}>{question}</li>
-                        ))}
-                      </ul>
-                      <h4>Final Checklist</h4>
-                      <ul className="bullets-list">
-                        {pack.finalPrepChecklist.map((item) => (
+                        {decisionBrief.rationale.map((item) => (
                           <li key={item}>{item}</li>
                         ))}
                       </ul>
-                    </article>
-                  ))
-                ) : (
-                  <p className="empty-state">
-                    Move an application to Interview, then generate a prep pack.
+                    </section>
+                    <section>
+                      <h3>Matched details</h3>
+                      <ul className="bullets-list">
+                        {decisionBrief.evidenceFound.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </section>
+                    <section>
+                      <h3>Check first</h3>
+                      <ul className="bullets-list">
+                        {decisionBrief.risks.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </section>
+                    <section>
+                      <h3>Missing info</h3>
+                      {decisionBrief.missingInputs.length ? (
+                        <ul className="bullets-list">
+                          {decisionBrief.missingInputs.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="empty-state">
+                          Core job details are present.
+                        </p>
+                      )}
+                    </section>
+                    <section>
+                      <h3>Next steps</h3>
+                      <ul className="bullets-list">
+                        {decisionBrief.nextActions.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </section>
+                  </div>
+                  <p className="decision-integrity-note">
+                    Use this as guidance before deciding whether to apply.
                   </p>
+                </section>
+              )}
+
+              {isOverview && (
+                <section
+                  className="command-centre-overview"
+                  aria-label="Homepage sections"
+                >
+                  <div className="today-focus-panel">
+                    <div>
+                      <p className="eyebrow">{todayAction.label}</p>
+                      <h2>{todayAction.title}</h2>
+                      <p>{todayAction.body}</p>
+                    </div>
+                    <a href={todayAction.href}>{todayAction.cta}</a>
+                  </div>
+                  <div className="section-intro">
+                    <p className="eyebrow">Clear onboarding</p>
+                    <h2>Follow the AutoTime order</h2>
+                    <p>
+                      Complete each step once, then repeat the quality loop:
+                      capture the right role, check fit, track the next action
+                      and prepare with evidence.
+                    </p>
+                  </div>
+                  <div
+                    className="overview-workflow-map"
+                    aria-label="Application workflow"
+                  >
+                    {onboardingSteps.map((item) => (
+                      <a
+                        className={`tone-${item.tone}`}
+                        href={item.href}
+                        key={item.title}
+                      >
+                        <span>{item.step}</span>
+                        <strong>{item.title}</strong>
+                        <em>
+                          {item.hideStatusMetric ? (
+                            <RevealMetric label={`Show ${item.title} status`}>
+                              {item.status}
+                            </RevealMetric>
+                          ) : (
+                            item.status
+                          )}
+                        </em>
+                        <p>{item.detail}</p>
+                        <b>{item.cta}</b>
+                      </a>
+                    ))}
+                  </div>
+                  <div
+                    className="command-action-dock"
+                    aria-label="Recommended actions"
+                  >
+                    {commandQuickActions.map((action) => (
+                      <a href={action.href} key={action.href}>
+                        <span>{action.label}</span>
+                        <strong>{action.title}</strong>
+                        <p>{action.body}</p>
+                      </a>
+                    ))}
+                  </div>
+                  <details className="dashboard-more-details">
+                    <summary>More details</summary>
+                    <div className="command-centre-grid">
+                      {commandCentreCards.map((card) => (
+                        <article
+                          className={`command-centre-card tone-${card.tone}`}
+                          key={card.title}
+                        >
+                          <div className="dashboard-card-topline">
+                            <span>{card.title}</span>
+                            <i aria-hidden="true" />
+                          </div>
+                          <strong>
+                            {card.hideMetric ? (
+                              <RevealMetric label={`Show ${card.title} value`}>
+                                {card.value}
+                              </RevealMetric>
+                            ) : (
+                              card.value
+                            )}
+                          </strong>
+                          {card.hideMetric ? (
+                            <RevealMeter label={`Show ${card.title} meter`}>
+                              <div
+                                className="dashboard-card-meter"
+                                aria-hidden="true"
+                              >
+                                <i style={{ width: `${card.progress}%` }} />
+                              </div>
+                            </RevealMeter>
+                          ) : (
+                            <div
+                              className="dashboard-card-meter"
+                              aria-hidden="true"
+                            >
+                              <i style={{ width: `${card.progress}%` }} />
+                            </div>
+                          )}
+                          <p>{card.body}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </details>
+                </section>
+              )}
+
+              {!isOverview &&
+                currentTab === "profile" &&
+                activeFocus !== "settings" && (
+                  <section
+                    className={
+                      profileReadyForExecution
+                        ? "profile-bridge-panel ready"
+                        : "profile-bridge-panel blocked"
+                    }
+                    aria-label="Profile readiness"
+                  >
+                    <div>
+                      <p className="eyebrow">Profile readiness</p>
+                      <h2>
+                        {!profileReadyForExecution ? (
+                          <span
+                            className="inline-lock-symbol"
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                        {profileReadyForExecution
+                          ? "Profile is ready"
+                          : "Evidence gate locked until 90%"}
+                      </h2>
+                      <p>
+                        Complete at least {profileExecutionThreshold}% of your
+                        profile before using job checks, tracker actions or
+                        interview prep. This keeps the workflow
+                        competitor-grade: specific, evidence-led and safe from
+                        generic AI claims.
+                      </p>
+                    </div>
+                    {profileReadyForExecution ? (
+                      <ul className="bullets-list">
+                        <li>
+                          Your profile can support job-fit scores and next
+                          steps.
+                        </li>
+                        <li>
+                          Work-right and country details are available for
+                          checks.
+                        </li>
+                        <li>You can export a backup any time.</li>
+                      </ul>
+                    ) : (
+                      <ul className="bullets-list">
+                        {profileGateItems.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
                 )}
-              </div>
+
+              {!isOverview &&
+                currentTab === "profile" &&
+                showProfileCloudSync && (
+                  <section
+                    className={
+                      cloudSyncReadiness.configured
+                        ? "cloud-sync-panel flagged"
+                        : "cloud-sync-panel local"
+                    }
+                    id="account-sync-settings"
+                    aria-label="Sync status"
+                  >
+                    <div>
+                      <p className="eyebrow">Sync</p>
+                      <h2>
+                        {cloudSyncReadiness.configured
+                          ? "Account sync is available"
+                          : "Your data is saved on this browser"}
+                      </h2>
+                      <p>
+                        Your profile saves in this browser first. Use account
+                        sync when you want it available from your signed-in
+                        dashboard account.
+                      </p>
+                    </div>
+                    <div className="sync-status-grid">
+                      <div>
+                        <strong>{cloudSyncReadiness.modeLabel}</strong>
+                        <span>Current mode</span>
+                      </div>
+                      <div>
+                        <strong>{cloudSyncReadiness.accountLabel}</strong>
+                        <span>Account shell</span>
+                      </div>
+                      <div>
+                        <strong>{cloudSyncReadiness.sessionLabel}</strong>
+                        <span>Auth session</span>
+                      </div>
+                      <div>
+                        <strong>{cloudSyncReadiness.firstSliceLabel}</strong>
+                        <span>First sync slice</span>
+                      </div>
+                      <div>
+                        <strong>{cloudSyncReadiness.safetyLabel}</strong>
+                        <span>Safety rule</span>
+                      </div>
+                    </div>
+                    <div className="sync-action-stack">
+                      <label className="sync-consent-control">
+                        <input
+                          checked={cloudSyncConsent}
+                          disabled={!cloudSyncReadiness.configured}
+                          type="checkbox"
+                          onChange={(event) =>
+                            setProfileAccountSyncEnabled(event.target.checked)
+                          }
+                        />
+                        I consent to sync my candidate profile and dashboard
+                        workflow to my authenticated account.
+                      </label>
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={explainCloudSyncTrack}
+                      >
+                        Check sync status
+                      </button>
+                      <button
+                        disabled={!cloudSyncReadiness.configured}
+                        type="button"
+                        onClick={syncProfileToCloud}
+                      >
+                        Sync profile
+                      </button>
+                      <button
+                        className="secondary-button"
+                        disabled={!cloudSyncReadiness.configured}
+                        type="button"
+                        onClick={loadProfileFromCloud}
+                      >
+                        Load synced profile
+                      </button>
+                      <button
+                        className="danger-button"
+                        disabled={!cloudSyncReadiness.configured}
+                        type="button"
+                        onClick={deleteProfileForAccount}
+                      >
+                        Delete synced profile
+                      </button>
+                      <button
+                        disabled={!cloudSyncReadiness.configured}
+                        type="button"
+                        onClick={syncDashboardToCloud}
+                      >
+                        Sync saved workflow
+                      </button>
+                      <button
+                        className="secondary-button"
+                        disabled={!cloudSyncReadiness.configured}
+                        type="button"
+                        onClick={loadDashboardFromCloud}
+                      >
+                        Load synced workflow
+                      </button>
+                    </div>
+                  </section>
+                )}
+
+              {!isOverview && currentTab === "applications" && (
+                <section
+                  className="tracker-pipeline-panel"
+                  aria-label="Tracker pipeline"
+                >
+                  <div className="section-heading">
+                    <p className="eyebrow">Tracker pipeline</p>
+                    <h2>From saved role to final outcome</h2>
+                    <p>
+                      Every job keeps status, source, notes, next action and due
+                      date so the workflow stays human-led and auditable.
+                    </p>
+                  </div>
+                  <div className="tracker-pipeline-grid">
+                    {applicationStatuses.map((status) => (
+                      <button
+                        className={
+                          applicationStatusFilter === status
+                            ? "active"
+                            : undefined
+                        }
+                        key={status}
+                        type="button"
+                        onClick={() =>
+                          setApplicationStatusFilter(
+                            applicationStatusFilter === status ? "all" : status
+                          )
+                        }
+                      >
+                        <span>{status}</span>
+                        <strong>
+                          <RevealMetric label={`Show ${status} count`}>
+                            {statusCounts[status]}
+                          </RevealMetric>
+                        </strong>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {!isOverview && currentTab === "applications" && (
+                <section
+                  className="metrics-strip"
+                  aria-label="Job search progress"
+                >
+                  <div
+                    className={`metric-card ${getMetricTone(state.applications.length, 3)}`}
+                  >
+                    <span>
+                      <RevealMetric label="Show saved jobs count">
+                        {state.applications.length}
+                      </RevealMetric>
+                    </span>
+                    <small>Saved jobs</small>
+                    <p>Some jobs may be active beyond saved.</p>
+                  </div>
+                  <div
+                    className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
+                  >
+                    <span>
+                      <RevealMetric label="Show interview count">
+                        {interviewApplications.length}
+                      </RevealMetric>
+                    </span>
+                    <small>Interviews</small>
+                    <p>Prep packs appear here when ready</p>
+                  </div>
+                  <div
+                    className={`metric-card ${activeActionCount > 0 ? "neutral" : "warn"}`}
+                  >
+                    <span>
+                      <RevealMetric label="Show next action count">
+                        {activeActionCount}
+                      </RevealMetric>
+                    </span>
+                    <small>Next actions</small>
+                    <p>Follow-ups across saved jobs</p>
+                  </div>
+                  <div className="metric-card warn">
+                    <span>
+                      <RevealMetric label="Show last check skill count">
+                        {state.jobAnalysis.skills?.length ?? 0}
+                      </RevealMetric>
+                    </span>
+                    <small>Last check</small>
+                    <p>{riskLabel}</p>
+                  </div>
+                </section>
+              )}
+
+              {!isOverview && currentTab === "profile" && (
+                <section className="workspace-grid">
+                  <div className="input-column">
+                    <section
+                      className="profile-purpose-panel"
+                      aria-label="Profile purpose"
+                    >
+                      <p className="eyebrow">My Profile</p>
+                      <h2>Your candidate evidence workspace</h2>
+                      <p>
+                        This is not a public profile. It is the evidence
+                        AutoTime uses to score jobs, explain risks, fill tracker
+                        context and keep AI interview answers truthful.
+                      </p>
+                      <div className="profile-purpose-steps">
+                        <span>1. Identity</span>
+                        <span>2. Work-right</span>
+                        <span>3. Target roles</span>
+                        <span>4. CV evidence</span>
+                        <span>5. Reusable answers</span>
+                      </div>
+                    </section>
+                    <div className="profile-form-toolbar">
+                      <div>
+                        <p className="eyebrow">Profile controls</p>
+                        <h2>Save and sync your evidence</h2>
+                        <p>
+                          Browser-first by default. Sync only when you choose.
+                        </p>
+                      </div>
+                      <div className="profile-form-actions">
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={saveDashboard}
+                        >
+                          Save locally
+                        </button>
+                        <button type="button" onClick={syncProfileToCloud}>
+                          Sync profile
+                        </button>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={loadProfileFromCloud}
+                        >
+                          Load synced
+                        </button>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={exportDashboard}
+                        >
+                          Export backup
+                        </button>
+                      </div>
+                    </div>
+
+                    <section className="profile-form-section">
+                      <div className="section-heading">
+                        <p className="eyebrow">Identity</p>
+                        <h3>Basic candidate details</h3>
+                        <p>
+                          Used for summaries and reusable application context.
+                        </p>
+                      </div>
+                      <label>
+                        Full name
+                        <input
+                          placeholder="Your full name"
+                          value={state.profile.fullName}
+                          onChange={(event) =>
+                            updateProfile("fullName", event.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        Current country
+                        <input
+                          placeholder="Example: United Kingdom"
+                          value={state.profile.currentCountry}
+                          onChange={(event) =>
+                            updateProfile("currentCountry", event.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        Current city
+                        <input
+                          placeholder="Example: London"
+                          value={state.profile.currentCity}
+                          onChange={(event) =>
+                            updateProfile("currentCity", event.target.value)
+                          }
+                        />
+                      </label>
+                    </section>
+
+                    <section className="profile-form-section">
+                      <div className="section-heading">
+                        <p className="eyebrow">Search focus</p>
+                        <h3>Where and what you want</h3>
+                        <p>Helps AutoTime avoid generic job-fit advice.</p>
+                      </div>
+                      <label>
+                        Target countries
+                        <input
+                          placeholder="Example: UK, Ireland, Netherlands, Germany"
+                          value={state.profile.targetCountries}
+                          onChange={(event) =>
+                            updateProfile("targetCountries", event.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        Target roles
+                        <input
+                          placeholder="Example: Business Analyst, Product Analyst, Application Support"
+                          value={state.profile.targetRoles}
+                          onChange={(event) =>
+                            updateProfile("targetRoles", event.target.value)
+                          }
+                        />
+                      </label>
+                    </section>
+
+                    <section className="profile-form-section important">
+                      <div className="section-heading">
+                        <p className="eyebrow">Work-right evidence</p>
+                        <h3>Facts AutoTime must not invent</h3>
+                        <p>
+                          Add only details you can verify. This drives risk
+                          checks.
+                        </p>
+                      </div>
+                      <label>
+                        Work-right details
+                        <textarea
+                          placeholder="Example: UK citizen, settled/pre-settled status, Skilled Worker visa, EU citizen, or no sponsorship required. Add only facts you can verify."
+                          value={state.profile.workRightDetails}
+                          onChange={(event) =>
+                            updateProfile(
+                              "workRightDetails",
+                              event.target.value
+                            )
+                          }
+                        />
+                      </label>
+                    </section>
+
+                    <section className="profile-form-section important">
+                      <div className="section-heading">
+                        <p className="eyebrow">CV evidence</p>
+                        <h3>Proof for job checks and AI answers</h3>
+                        <p>
+                          Paste factual CV text, project evidence and
+                          achievements.
+                        </p>
+                      </div>
+                      <label>
+                        CV text
+                        <textarea
+                          placeholder="Paste your CV text or a factual summary of roles, projects, tools, outcomes and responsibilities."
+                          value={state.profile.baseCvText}
+                          onChange={(event) =>
+                            updateProfile("baseCvText", event.target.value)
+                          }
+                        />
+                      </label>
+                    </section>
+                  </div>
+
+                  <div className="output-column">
+                    <section className="panel profile-quality-panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Profile quality score</p>
+                        <h2>
+                          <RevealMetric label="Show profile quality score">
+                            {profileQualityScore}/100
+                          </RevealMetric>{" "}
+                          evidence quality
+                        </h2>
+                        <p>
+                          Use this as your readiness map. Green means AutoTime
+                          can use that evidence confidently; amber or red means
+                          add more proof before relying on job checks or AI
+                          coaching.
+                        </p>
+                      </div>
+                      <div className="profile-quality-list">
+                        {profileQualitySignals.map((signal) => (
+                          <article
+                            className={`profile-quality-item ${signal.status}`}
+                            key={signal.label}
+                          >
+                            <div>
+                              <strong>{signal.label}</strong>
+                              <span>
+                                <RevealMetric
+                                  label={`Show ${signal.label} score`}
+                                >
+                                  {signal.score}/100
+                                </RevealMetric>
+                              </span>
+                            </div>
+                            <p>{signal.detail}</p>
+                          </article>
+                        ))}
+                      </div>
+                      <div className="ai-claim-boundary">
+                        <strong>AI claim boundary</strong>
+                        <p>
+                          Allowed: facts saved in your CV, profile evidence,
+                          reusable answers and parsed job text. Not allowed:
+                          invented experience, unverified work-right claims,
+                          hidden job-site actions or unsupported
+                          salary/sponsorship promises.
+                        </p>
+                      </div>
+                    </section>
+                    <section className="panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">At a glance</p>
+                        <h2>What AutoTime knows about you</h2>
+                        <p>
+                          These are the facts currently available for job-fit
+                          and workflow decisions.
+                        </p>
+                      </div>
+                      <dl className="summary-list">
+                        <div>
+                          <dt>Target roles</dt>
+                          <dd>{state.profile.targetRoles || "Not set"}</dd>
+                        </div>
+                        <div>
+                          <dt>Target countries</dt>
+                          <dd>{state.profile.targetCountries || "Not set"}</dd>
+                        </div>
+                        <div>
+                          <dt>Current location</dt>
+                          <dd>
+                            {[
+                              state.profile.currentCity,
+                              state.profile.currentCountry
+                            ]
+                              .filter(Boolean)
+                              .join(", ") || "Not set"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Work-right evidence</dt>
+                          <dd>
+                            {state.profile.workRightDetails
+                              ? "Saved"
+                              : "Missing"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>CV evidence</dt>
+                          <dd>
+                            {state.profile.baseCvText.trim() ? (
+                              <RevealMetric label="Show CV evidence character count">
+                                {state.profile.baseCvText.trim().length}{" "}
+                                characters saved
+                              </RevealMetric>
+                            ) : (
+                              "Missing"
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+                    </section>
+                    <section className="panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Reusable answers</p>
+                        <h2>Reusable answer evidence</h2>
+                        <p>
+                          Save reusable wording here only when it is true and
+                          supported by your profile.
+                        </p>
+                      </div>
+                      <label>
+                        Motivation answer
+                        <textarea
+                          placeholder="Why this kind of role, company, or market makes sense for you."
+                          value={state.reusableAnswers.motivationAnswer}
+                          onChange={(event) =>
+                            updateReusableAnswer(
+                              "motivationAnswer",
+                              event.target.value
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        Strengths answer
+                        <textarea
+                          placeholder="A factual strengths answer backed by experience, projects, tools, or outcomes."
+                          value={state.reusableAnswers.strengthsAnswer}
+                          onChange={(event) =>
+                            updateReusableAnswer(
+                              "strengthsAnswer",
+                              event.target.value
+                            )
+                          }
+                        />
+                      </label>
+                    </section>
+                  </div>
+                </section>
+              )}
+
+              {!isOverview && currentTab === "jobs" && (
+                <section className="workspace-grid job-check-grid">
+                  <div className="input-column job-check-input">
+                    <div className="section-heading">
+                      <p className="eyebrow">Role source</p>
+                      <h2>Check one job before you apply</h2>
+                      <p>
+                        Start from a job parsed by the extension. Manual fields
+                        are a fallback for roles you have not tracked yet.
+                      </p>
+                    </div>
+                    <section
+                      className="job-source-panel"
+                      aria-label="Tracked job source"
+                    >
+                      <div className="job-source-heading">
+                        <div>
+                          <strong>
+                            {latestTrackedJobSource
+                              ? "Use a tracked job"
+                              : "No tracked JD available yet"}
+                          </strong>
+                          <p>
+                            {latestTrackedJobSource
+                              ? "These jobs came from the extension or saved tracker. Loading one fills the role details and JD text for analysis."
+                              : "Open a job page in the extension and track it, or paste the JD manually below."}
+                          </p>
+                        </div>
+                        <span
+                          className={`source-mode-pill ${currentJobInputMode.className}`}
+                          title={currentJobInputMode.detail}
+                        >
+                          {currentJobInputMode.label}
+                        </span>
+                      </div>
+                      <div className="job-source-note">
+                        <p>Current input: {currentJobInputMode.detail}</p>
+                      </div>
+                      {trackedJobSourceOptions.length ? (
+                        <div className="job-source-actions">
+                          <select
+                            aria-label="Choose tracked job to analyse"
+                            defaultValue=""
+                            onChange={(event) => {
+                              if (event.target.value) {
+                                loadTrackedJobForCheck(event.target.value)
+                                event.target.value = ""
+                              }
+                            }}
+                          >
+                            <option value="">Load tracked job...</option>
+                            {trackedJobSourceOptions.map((application) => (
+                              <option
+                                key={application.id}
+                                value={application.id}
+                              >
+                                {[
+                                  application.roleTitle || application.title,
+                                  application.company,
+                                  getApplicationSourceLabel(application)
+                                ]
+                                  .filter(Boolean)
+                                  .join(" - ")}
+                              </option>
+                            ))}
+                          </select>
+                          {latestTrackedJobSource ? (
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              onClick={() =>
+                                loadTrackedJobForCheck(
+                                  latestTrackedJobSource.id
+                                )
+                              }
+                            >
+                              Use latest
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <a
+                          className="secondary-button"
+                          href="/dashboard/extension"
+                        >
+                          Connect extension
+                        </a>
+                      )}
+                    </section>
+                    <p className="job-check-save-note">
+                      Automatic means the JD was parsed from the browser
+                      extension. Manual means this role was typed or pasted in
+                      the dashboard.
+                    </p>
+                    <div className="job-check-field-grid">
+                      <label>
+                        Job title
+                        <input
+                          placeholder="Business Systems Analyst"
+                          value={state.jobAnalysis.jobTitle}
+                          onChange={(event) =>
+                            updateJob("jobTitle", event.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        Company
+                        <input
+                          placeholder="Company name"
+                          value={state.jobAnalysis.company}
+                          onChange={(event) =>
+                            updateJob("company", event.target.value)
+                          }
+                        />
+                      </label>
+                    </div>
+                    <label>
+                      Job URL
+                      <input
+                        placeholder="https://..."
+                        value={state.jobAnalysis.jobUrl}
+                        onChange={(event) =>
+                          updateJob("jobUrl", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      Job description
+                      <textarea
+                        className="job-description-input"
+                        placeholder="Manual fallback: paste the role description, requirements, location, sponsorship notes and salary details if this job was not parsed from the extension."
+                        value={state.jobAnalysis.jobDescription}
+                        onChange={(event) =>
+                          updateJob("jobDescription", event.target.value)
+                        }
+                      />
+                    </label>
+                    <button
+                      disabled={!canSaveCheckedJob}
+                      type="button"
+                      onClick={saveApplicationFromJob}
+                    >
+                      {fitEvaluation.contentGate === "ready"
+                        ? "Save viable job"
+                        : fitEvaluation.contentGate === "stretch"
+                          ? "Save as stretch"
+                          : "Save blocker for review"}
+                    </button>
+                    <p className="job-check-save-note">
+                      Saving moves this checked role into the tracker with the
+                      current score, risks and next action attached.
+                    </p>
+                  </div>
+
+                  <div className="output-column job-check-results">
+                    <section className="panel country-fit-panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Live result</p>
+                        <h2>{fitEvaluation.decision}</h2>
+                        <span
+                          className={`source-mode-pill ${currentJobInputMode.className}`}
+                          title={currentJobInputMode.detail}
+                        >
+                          {currentJobInputMode.label}
+                        </span>
+                      </div>
+                      <div
+                        className="ai-audit-summary"
+                        aria-label="Job check AI audit"
+                      >
+                        <article>
+                          <span>Evidence used</span>
+                          <strong>
+                            <RevealMetric label="Show evidence used count">
+                              {decisionBrief.evidenceFound.length}
+                            </RevealMetric>
+                          </strong>
+                          <p>
+                            {decisionBrief.evidenceFound[0] ||
+                              "No strong evidence found yet."}
+                          </p>
+                        </article>
+                        <article>
+                          <span>Missing</span>
+                          <strong>
+                            <RevealMetric label="Show missing input count">
+                              {decisionBrief.missingInputs.length}
+                            </RevealMetric>
+                          </strong>
+                          <p>
+                            {decisionBrief.missingInputs[0] ||
+                              "Core inputs are present."}
+                          </p>
+                        </article>
+                        <article>
+                          <span>Risk flags</span>
+                          <strong>
+                            <RevealMetric label="Show risk flag count">
+                              {decisionBrief.risks.length}
+                            </RevealMetric>
+                          </strong>
+                          <p>
+                            {decisionBrief.risks[0] ||
+                              "No major risk flagged yet."}
+                          </p>
+                        </article>
+                        <article>
+                          <span>Do not claim</span>
+                          <strong>{decisionBrief.confidence}</strong>
+                          <p>
+                            Do not claim work-right, sponsorship, salary or
+                            experience details that are not in the profile or
+                            parsed JD.
+                          </p>
+                        </article>
+                      </div>
+                      <div className="fit-gate-banner">
+                        <strong>
+                          <RevealMetric label="Show job fit score">
+                            {fitEvaluation.overallScore}
+                          </RevealMetric>
+                        </strong>
+                        <span>
+                          {fitEvaluation.contentGate === "ready"
+                            ? "No content blocker detected by current rules"
+                            : fitEvaluation.contentGate === "stretch"
+                              ? "Stretch application: label the risk"
+                              : "Do not write content yet"}
+                        </span>
+                      </div>
+                      <div className="country-rule-strip">
+                        <div>
+                          <strong>{fitEvaluation.countryRule.name}</strong>
+                          <span>{fitEvaluation.countryRule.marketNote}</span>
+                        </div>
+                        <dl>
+                          <div>
+                            <dt>Sponsorship</dt>
+                            <dd>
+                              {fitEvaluation.countryRule.sponsorshipStrictness}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Relocation</dt>
+                            <dd>
+                              {fitEvaluation.countryRule.relocationFriction}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Outcomes</dt>
+                            <dd>
+                              <RevealMetric label="Show tracked outcome count">
+                                {outcomeLearningSignals.totalTracked}
+                              </RevealMetric>
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+                      <div className="fit-component-grid">
+                        {fitEvaluation.components.map((item) => (
+                          <article
+                            className={`fit-component ${item.status}`}
+                            key={item.key}
+                          >
+                            <div>
+                              <strong>{item.label}</strong>
+                              <span>
+                                <RevealMetric
+                                  label={`Show ${item.label} score`}
+                                >
+                                  {item.score}/100
+                                </RevealMetric>
+                              </span>
+                            </div>
+                            <small>{item.status}</small>
+                            <p>{item.rationale}</p>
+                            <ul className="component-evidence-list">
+                              {item.evidence.length ? (
+                                item.evidence.map((evidence) => (
+                                  <li key={evidence}>{evidence}</li>
+                                ))
+                              ) : (
+                                <li>
+                                  No direct supporting evidence found yet.
+                                </li>
+                              )}
+                            </ul>
+                          </article>
+                        ))}
+                      </div>
+                      {fitEvaluation.blockers.length ? (
+                        <ul className="bullets-list blocker-list">
+                          {fitEvaluation.blockers.map((blocker) => (
+                            <li key={blocker}>{blocker}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="empty-state">
+                          No blocker was detected by the current rules. Verify
+                          employer requirements before applying.
+                        </p>
+                      )}
+                      <ul className="evidence-list">
+                        {fitEvaluation.evidenceChecklist
+                          .slice(0, 4)
+                          .map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                      </ul>
+                    </section>
+                    <section className="panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Positioning first</p>
+                        <h2>
+                          {fitEvaluation.contentGate === "blocked"
+                            ? "Check the blocker before applying"
+                            : "Best angle for this job"}
+                        </h2>
+                      </div>
+                      <p className="large-copy">
+                        {fitEvaluation.positioningAngle}
+                      </p>
+                      <ul className="bullets-list">
+                        {[
+                          fitEvaluation.nextBestAction,
+                          ...(state.jobAnalysis.scoreFactors ?? [])
+                        ].map((factor) => (
+                          <li key={factor}>{factor}</li>
+                        ))}
+                      </ul>
+                    </section>
+                    <section className="panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">What to check</p>
+                        <h2>Skills, location and gaps</h2>
+                      </div>
+                      <div className="tag-row">
+                        {(state.jobAnalysis.skills?.length
+                          ? state.jobAnalysis.skills
+                          : ["No skills detected yet"]
+                        ).map((skill) => (
+                          <span className="tag" key={skill}>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                      <ul className="bullets-list">
+                        {(state.jobAnalysis.gaps?.length
+                          ? state.jobAnalysis.gaps
+                          : ["No gaps saved yet."]
+                        ).map((gap) => (
+                          <li key={gap}>{gap}</li>
+                        ))}
+                      </ul>
+                    </section>
+                  </div>
+                </section>
+              )}
+
+              {currentTab === "jobs" && (
+                <details className="audit-details job-check-audit">
+                  <summary>Audit and source checks</summary>
+                  <section
+                    className="trust-grid"
+                    aria-label="Evidence and official verification"
+                  >
+                    <section className="evidence-ledger-panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Details</p>
+                        <h2>Why AutoTime suggested this</h2>
+                      </div>
+                      <div className="ledger-table">
+                        {evidenceLedgerRows.map((row) => (
+                          <article className="ledger-row" key={row.id}>
+                            <div>
+                              <strong>{row.check}</strong>
+                              <span className={`ledger-status ${row.status}`}>
+                                {row.status}
+                              </span>
+                            </div>
+                            <p>{row.explanation}</p>
+                            <dl>
+                              <div>
+                                <dt>Matched detail</dt>
+                                <dd>{row.evidence.join(" ")}</dd>
+                              </div>
+                              <div>
+                                <dt>Limit</dt>
+                                <dd>{row.limit}</dd>
+                              </div>
+                            </dl>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="content-guardrail-panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Writing safety</p>
+                        <h2>Before generating content</h2>
+                      </div>
+                      <div className="guardrail-list">
+                        {contentGuardrails.map((item) => (
+                          <article className="guardrail-item" key={item.label}>
+                            <div>
+                              <strong>{item.label}</strong>
+                              <span
+                                className={`guardrail-status ${item.status}`}
+                              >
+                                {item.status}
+                              </span>
+                            </div>
+                            <p>{item.reason}</p>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="verification-panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Before applying</p>
+                        <h2>Manual verification checklist</h2>
+                      </div>
+                      <div className="verification-list">
+                        {verificationChecklist.map((item) => (
+                          <article className="verification-item" key={item.id}>
+                            <div>
+                              <strong>{item.label}</strong>
+                              <span
+                                className={`verification-status ${item.status}`}
+                              >
+                                {item.status === "ready"
+                                  ? "ready"
+                                  : item.status === "blocked"
+                                    ? "blocked"
+                                    : "check"}
+                              </span>
+                            </div>
+                            <p>{item.evidence}</p>
+                            <small>{item.limit}</small>
+                          </article>
+                        ))}
+                      </div>
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={exportDecisionAudit}
+                      >
+                        Export decision audit
+                      </button>
+                    </section>
+
+                    <section className="official-source-panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Official verification</p>
+                        <h2>Official sources</h2>
+                      </div>
+                      <div className="official-source-list">
+                        {officialSources.map((source) => (
+                          <a
+                            href={source.url}
+                            key={source.url}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            <strong>{source.label}</strong>
+                            <span>{source.note}</span>
+                          </a>
+                        ))}
+                      </div>
+                      <label className="official-review-control">
+                        <input
+                          checked={trustState.officialSourceReviewed}
+                          type="checkbox"
+                          onChange={(event) =>
+                            setOfficialSourceReviewed(event.target.checked)
+                          }
+                        />
+                        I have reviewed the official source for this country and
+                        understand AutoTime does not authorise work, visa or
+                        sponsorship status.
+                      </label>
+                    </section>
+                  </section>
+                </details>
+              )}
+
+              {!isOverview && currentTab === "applications" && (
+                <section className="applications-section full-width-section">
+                  <div className="section-intro">
+                    <p className="eyebrow">{focusCopy.eyebrow}</p>
+                    <h2>{focusCopy.title}</h2>
+                    <p>{focusCopy.body}</p>
+                  </div>
+                  {activeFocus !== "insights" && (
+                    <div
+                      className="pipeline-summary"
+                      aria-label="Application status counts"
+                    >
+                      {applicationStatuses.map((status) => (
+                        <div key={status}>
+                          <span>
+                            <RevealMetric label={`Show ${status} count`}>
+                              {statusCounts[status]}
+                            </RevealMetric>
+                          </span>
+                          <small>{status}</small>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showApplicationAnalytics && (
+                    <>
+                      <section
+                        className="analytics-grid"
+                        aria-label="Evidence and outcome analytics"
+                      >
+                        <article>
+                          <span>
+                            <RevealMetric label="Show saved check count">
+                              {persistedEvidenceRecords.length}
+                            </RevealMetric>
+                          </span>
+                          <strong>Saved checks</strong>
+                          <p>
+                            Checks stored from saved jobs and profile details.
+                          </p>
+                        </article>
+                        <article>
+                          <span>
+                            <RevealMetric label="Show outcome record count">
+                              {outcomeAnalytics.total}
+                            </RevealMetric>
+                          </span>
+                          <strong>Outcome records</strong>
+                          <p>Saved decisions with status and result changes.</p>
+                        </article>
+                        <article>
+                          <span>
+                            <RevealMetric label="Show interview signal count">
+                              {outcomeAnalytics.interviews}
+                            </RevealMetric>
+                          </span>
+                          <strong>Interview signals</strong>
+                          <p>
+                            Tracked interview outcomes for future calibration.
+                          </p>
+                        </article>
+                        <article>
+                          <span>
+                            {outcomeAnalytics.calibrationReady
+                              ? "Ready"
+                              : "Collecting"}
+                          </span>
+                          <strong>Calibration status</strong>
+                          <p>
+                            {outcomeAnalytics.calibrationReady
+                              ? "Enough records exist to begin score-band calibration."
+                              : "Decision Index remains non-probability until enough outcomes exist."}
+                          </p>
+                        </article>
+                      </section>
+                      <section className="online-analytics-panel">
+                        <div className="section-heading">
+                          <p className="eyebrow">Python analytics</p>
+                          <h2>Online evidence and outcome report</h2>
+                          <p>Descriptive analytics from saved records only.</p>
+                        </div>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={runOnlineAnalytics}
+                        >
+                          Run Python analytics
+                        </button>
+                        {onlineAnalyticsStatus ? (
+                          <p className="status-message">
+                            {onlineAnalyticsStatus}
+                          </p>
+                        ) : null}
+                        {onlineAnalyticsReport ? (
+                          <div className="online-analytics-results">
+                            <article>
+                              <span>
+                                <RevealMetric label="Show observed interview rate">
+                                  {Math.round(
+                                    onlineAnalyticsReport.summary
+                                      .observedInterviewRate
+                                  )}
+                                  %
+                                </RevealMetric>
+                              </span>
+                              <strong>Observed interview rate</strong>
+                              <p>Based only on tracked outcome records.</p>
+                            </article>
+                            <article>
+                              <span>
+                                {onlineAnalyticsReport.summary.calibrationReady
+                                  ? "Ready"
+                                  : "Collecting"}
+                              </span>
+                              <strong>Calibration readiness</strong>
+                              <p>
+                                {
+                                  onlineAnalyticsReport.summary
+                                    .calibrationStatus
+                                }
+                              </p>
+                            </article>
+                            <article>
+                              <span>
+                                <RevealMetric label="Show interview signal count">
+                                  {
+                                    onlineAnalyticsReport.summary
+                                      .interviewSignals
+                                  }
+                                </RevealMetric>
+                              </span>
+                              <strong>Interview signals</strong>
+                              <p>
+                                Outcome records marked as interview or final
+                                stage.
+                              </p>
+                            </article>
+                            <article>
+                              <span>
+                                <RevealMetric label="Show ML feature row count">
+                                  {
+                                    onlineAnalyticsReport.mlReadiness
+                                      .featureRows
+                                  }
+                                </RevealMetric>
+                              </span>
+                              <strong>ML feature rows</strong>
+                              <p>
+                                {
+                                  onlineAnalyticsReport.mlReadiness
+                                    .allowedOutput
+                                }
+                              </p>
+                            </article>
+                            <article>
+                              <span>
+                                {onlineAnalyticsReport.mlReadiness
+                                  .modelTrainingReady
+                                  ? "Ready"
+                                  : "Locked"}
+                              </span>
+                              <strong>Model training</strong>
+                              <p>
+                                Blocked output:{" "}
+                                {
+                                  onlineAnalyticsReport.mlReadiness
+                                    .blockedOutput
+                                }
+                                .
+                              </p>
+                            </article>
+                            <article>
+                              <span>
+                                {onlineAnalyticsReport.mlReadiness.stage}
+                              </span>
+                              <strong>Learning readiness</strong>
+                              <p>{onlineAnalyticsReport.mlReadiness.message}</p>
+                            </article>
+                            <div className="score-band-table">
+                              <strong>Score-band outcomes</strong>
+                              {onlineAnalyticsReport.scoreBands.length ? (
+                                onlineAnalyticsReport.scoreBands.map((band) => (
+                                  <div key={band.band}>
+                                    <span>
+                                      <RevealMetric label="Show score band">
+                                        {band.band}
+                                      </RevealMetric>
+                                    </span>
+                                    <span>
+                                      <RevealMetric
+                                        label={`Show ${band.band} record count`}
+                                      >
+                                        {band.records} records
+                                      </RevealMetric>
+                                    </span>
+                                    <span>
+                                      <RevealMetric
+                                        label={`Show ${band.band} interview count`}
+                                      >
+                                        {band.interviews} interviews
+                                      </RevealMetric>
+                                    </span>
+                                    <span>
+                                      <RevealMetric
+                                        label={`Show ${band.band} observed rate`}
+                                      >
+                                        {Math.round(band.observedInterviewRate)}
+                                        % observed
+                                      </RevealMetric>
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <p>No score-band outcomes yet.</p>
+                              )}
+                            </div>
+                            <div className="score-band-table">
+                              <strong>Content gate outcomes</strong>
+                              {onlineAnalyticsReport.contentGates.length ? (
+                                onlineAnalyticsReport.contentGates.map(
+                                  (gate) => (
+                                    <div key={gate.gate}>
+                                      <span>{gate.gate}</span>
+                                      <span>
+                                        <RevealMetric
+                                          label={`Show ${gate.gate} record count`}
+                                        >
+                                          {gate.records} records
+                                        </RevealMetric>
+                                      </span>
+                                      <span>
+                                        <RevealMetric
+                                          label={`Show ${gate.gate} interview count`}
+                                        >
+                                          {gate.interviews} interviews
+                                        </RevealMetric>
+                                      </span>
+                                      <span>
+                                        <RevealMetric
+                                          label={`Show ${gate.gate} observed rate`}
+                                        >
+                                          {Math.round(
+                                            gate.observedInterviewRate
+                                          )}
+                                          % observed
+                                        </RevealMetric>
+                                      </span>
+                                    </div>
+                                  )
+                                )
+                              ) : (
+                                <p>No content-gate outcomes yet.</p>
+                              )}
+                            </div>
+                            <div className="score-band-table">
+                              <strong>Risk segment outcomes</strong>
+                              {onlineAnalyticsReport.riskSegments.length ? (
+                                onlineAnalyticsReport.riskSegments.map(
+                                  (segment) => (
+                                    <div key={segment.segment}>
+                                      <span>{segment.segment}</span>
+                                      <span>
+                                        <RevealMetric
+                                          label={`Show ${segment.segment} record count`}
+                                        >
+                                          {segment.records} records
+                                        </RevealMetric>
+                                      </span>
+                                      <span>
+                                        <RevealMetric
+                                          label={`Show ${segment.segment} interview count`}
+                                        >
+                                          {segment.interviews} interviews
+                                        </RevealMetric>
+                                      </span>
+                                      <span>
+                                        <RevealMetric
+                                          label={`Show ${segment.segment} observed rate`}
+                                        >
+                                          {Math.round(
+                                            segment.observedInterviewRate
+                                          )}
+                                          % observed
+                                        </RevealMetric>
+                                      </span>
+                                    </div>
+                                  )
+                                )
+                              ) : (
+                                <p>No risk segment outcomes yet.</p>
+                              )}
+                            </div>
+                            <div className="analytics-limits">
+                              {onlineAnalyticsReport.limits.map((limit) => (
+                                <p key={limit}>{limit}</p>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </section>
+                      <section className="evidence-outcome-panel">
+                        <div className="section-heading">
+                          <p className="eyebrow">Evidence engine</p>
+                          <h2>Latest persisted evidence</h2>
+                          <p>
+                            These records are saved with applications so future
+                            scoring can be audited and calibrated against real
+                            outcomes.
+                          </p>
+                        </div>
+                        <div className="evidence-record-list">
+                          {persistedEvidenceRecords.length ? (
+                            persistedEvidenceRecords
+                              .slice(0, 6)
+                              .map((record) => (
+                                <article
+                                  className="evidence-record-card"
+                                  key={record.id}
+                                >
+                                  <div>
+                                    <strong>{record.checkLabel}</strong>
+                                    <span>{record.status}</span>
+                                  </div>
+                                  <p>{record.evidenceText}</p>
+                                  <small>{record.explanation}</small>
+                                  <small>{record.limit}</small>
+                                </article>
+                              ))
+                          ) : (
+                            <p className="empty-state">
+                              Save a checked job to create evidence records.
+                            </p>
+                          )}
+                        </div>
+                      </section>
+                    </>
+                  )}
+                  {applicationId && !selectedApplication ? (
+                    <section className="job-detail-panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Application detail</p>
+                        <h2>Job not found</h2>
+                        <p>
+                          This job is not in the local dashboard state yet. Load
+                          cloud sync or return to the tracker.
+                        </p>
+                      </div>
+                      <a
+                        className="secondary-button"
+                        href="/dashboard/applications"
+                      >
+                        Back to applications
+                      </a>
+                    </section>
+                  ) : null}
+                  {selectedApplication ? (
+                    <section
+                      className="job-detail-panel"
+                      aria-label="Job detail"
+                    >
+                      <div className="job-detail-header">
+                        <div>
+                          <p className="eyebrow">Job Detail</p>
+                          <h2>
+                            {selectedApplication.roleTitle ||
+                              selectedApplication.title}
+                          </h2>
+                          <p>
+                            {selectedApplication.company || "Unknown company"} /{" "}
+                            {selectedApplication.status}
+                          </p>
+                        </div>
+                        <div
+                          className={`readiness-pill ${selectedReadyStatus === "Ready to apply" ? "ready" : selectedReadyStatus === "Blocked" ? "blocked" : "needs-check"}`}
+                        >
+                          {selectedReadyStatus}
+                        </div>
+                      </div>
+
+                      <div className="job-detail-grid">
+                        <article className="panel">
+                          <div className="section-heading">
+                            <p className="eyebrow">Job check</p>
+                            <h3>Recommendation</h3>
+                          </div>
+                          <dl className="summary-list">
+                            <div>
+                              <dt>Job match score</dt>
+                              <dd>
+                                {typeof selectedApplication.fitScore ===
+                                "number" ? (
+                                  <RevealMetric label="Show saved job match score">
+                                    {selectedApplication.fitScore}/100
+                                  </RevealMetric>
+                                ) : (
+                                  "Not scored yet"
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Recommendation</dt>
+                              <dd>
+                                {selectedApplication.fitDecision ??
+                                  "Not analysed"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Writing status</dt>
+                              <dd>
+                                {selectedApplication.contentGate ??
+                                  "Not checked"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Saved</dt>
+                              <dd>
+                                {formatDashboardDate(
+                                  selectedApplication.createdAt
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Source</dt>
+                              <dd>
+                                {getApplicationSourceLabel(selectedApplication)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>URL</dt>
+                              <dd>{selectedApplication.url}</dd>
+                            </div>
+                          </dl>
+                        </article>
+
+                        <article className="panel">
+                          <div className="section-heading">
+                            <p className="eyebrow">Workflow</p>
+                            <h3>Current action</h3>
+                          </div>
+                          <label>
+                            Status
+                            <select
+                              value={selectedApplication.status}
+                              onChange={(event) =>
+                                updateApplication(selectedApplication.id, {
+                                  status: event.target
+                                    .value as ApplicationStatus
+                                })
+                              }
+                            >
+                              {applicationStatuses.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Next action
+                            <input
+                              value={selectedApplication.nextAction ?? ""}
+                              onChange={(event) =>
+                                updateApplication(selectedApplication.id, {
+                                  nextAction: event.target.value
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Due date
+                            <input
+                              type="date"
+                              value={selectedApplication.nextActionDate ?? ""}
+                              onChange={(event) =>
+                                updateApplication(selectedApplication.id, {
+                                  nextActionDate:
+                                    event.target.value || undefined
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Outcome learning
+                            <textarea
+                              value={selectedApplication.notes ?? ""}
+                              onChange={(event) =>
+                                updateApplication(selectedApplication.id, {
+                                  notes: event.target.value
+                                })
+                              }
+                            />
+                          </label>
+                        </article>
+                      </div>
+
+                      <section
+                        className="ready-checklist"
+                        aria-label="Ready to apply checklist"
+                      >
+                        <div className="section-heading">
+                          <p className="eyebrow">Ready to Apply</p>
+                          <h3>Checklist</h3>
+                          <p>
+                            Resolve blocked items before treating this job as
+                            ready.
+                          </p>
+                        </div>
+                        <div className="ready-checklist-grid">
+                          {selectedReadyChecklist.map((item) => (
+                            <article
+                              className={`ready-check-item ${item.status}`}
+                              key={item.id}
+                            >
+                              <span>{item.status}</span>
+                              <strong>{item.label}</strong>
+                              <p>{item.evidence}</p>
+                              <small>{item.action}</small>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+
+                      <div className="job-detail-grid">
+                        <section className="panel">
+                          <div className="section-heading">
+                            <p className="eyebrow">Check details</p>
+                            <h3>Saved notes for this job</h3>
+                          </div>
+                          <div className="evidence-record-list">
+                            {selectedApplicationEvidence.length ? (
+                              selectedApplicationEvidence.map((record) => (
+                                <article
+                                  className="evidence-record-card"
+                                  key={record.id}
+                                >
+                                  <div>
+                                    <strong>{record.checkLabel}</strong>
+                                    <span>{record.status}</span>
+                                  </div>
+                                  <p>{record.evidenceText}</p>
+                                  <small>{record.explanation}</small>
+                                  <small>{record.limit}</small>
+                                </article>
+                              ))
+                            ) : (
+                              <p className="empty-state">
+                                No saved check details are attached to this job
+                                yet.
+                              </p>
+                            )}
+                          </div>
+                        </section>
+
+                        <section className="panel">
+                          <div className="section-heading">
+                            <p className="eyebrow">Documents</p>
+                            <h3>Saved application content</h3>
+                          </div>
+                          {selectedApplication.contentSnapshot ? (
+                            <div className="document-snapshot">
+                              <strong>Saved content snapshot</strong>
+                              <p>
+                                {
+                                  selectedApplication.contentSnapshot
+                                    .profileSummary
+                                }
+                              </p>
+                              <small>
+                                Saved{" "}
+                                {new Date(
+                                  selectedApplication.contentSnapshot.savedAt
+                                ).toLocaleString()}
+                              </small>
+                            </div>
+                          ) : (
+                            <p className="empty-state">
+                              No content snapshot is saved for this job yet.
+                            </p>
+                          )}
+                          <div className="application-actions">
+                            <a
+                              className="secondary-button"
+                              href="/dashboard/application-answers"
+                            >
+                              Write answers
+                            </a>
+                            <button
+                              className="secondary-button"
+                              disabled={
+                                selectedApplication.status !== "Interview"
+                              }
+                              type="button"
+                              onClick={() =>
+                                generateInterviewPrep(selectedApplication)
+                              }
+                            >
+                              Prep interview
+                            </button>
+                          </div>
+                          {selectedInterviewPrepPack ? (
+                            <div className="document-snapshot">
+                              <strong>Interview prep ready</strong>
+                              <p>{selectedInterviewPrepPack.roleSummary}</p>
+                              <small>
+                                <RevealMetric label="Show likely question count">
+                                  {
+                                    selectedInterviewPrepPack.likelyQuestions
+                                      .length
+                                  }{" "}
+                                  likely questions saved
+                                </RevealMetric>
+                              </small>
+                            </div>
+                          ) : null}
+                        </section>
+                      </div>
+                    </section>
+                  ) : null}
+                  {showApplicationList && (
+                    <>
+                      <section
+                        className="application-command-strip"
+                        aria-label="Application filters"
+                      >
+                        <label>
+                          Search
+                          <input
+                            placeholder="Role, company, source, next action"
+                            value={applicationSearchQuery}
+                            onChange={(event) =>
+                              setApplicationSearchQuery(event.target.value)
+                            }
+                          />
+                        </label>
+                        <label>
+                          Status
+                          <select
+                            value={applicationStatusFilter}
+                            onChange={(event) =>
+                              setApplicationStatusFilter(
+                                event.target.value as ApplicationStatus | "all"
+                              )
+                            }
+                          >
+                            <option value="all">All statuses</option>
+                            {applicationStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Outcome
+                          <select
+                            value={applicationOutcomeFilter}
+                            onChange={(event) =>
+                              setApplicationOutcomeFilter(
+                                event.target.value as
+                                  | ApplicationOutcomeReason
+                                  | "all"
+                              )
+                            }
+                          >
+                            <option value="all">All outcomes</option>
+                            {applicationOutcomeReasons.map((reason) => (
+                              <option key={reason} value={reason}>
+                                {reason}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <div>
+                          <strong>
+                            <RevealMetric label="Show filtered application count">
+                              {filteredApplications.length}
+                            </RevealMetric>
+                          </strong>
+                          <span>
+                            shown of{" "}
+                            <RevealMetric label="Show total application count">
+                              {state.applications.length}
+                            </RevealMetric>
+                          </span>
+                        </div>
+                      </section>
+                      <div className="application-table">
+                        {filteredApplications.length ? (
+                          filteredApplications.map((application) => (
+                            <article
+                              className="application-row"
+                              key={application.id}
+                            >
+                              <div>
+                                <div className="application-row-header">
+                                  <strong>
+                                    {application.roleTitle || application.title}
+                                  </strong>
+                                  <span
+                                    className={`source-mode-pill ${
+                                      getApplicationCaptureMode(application)
+                                        .className
+                                    }`}
+                                    title={
+                                      getApplicationCaptureMode(application)
+                                        .detail
+                                    }
+                                  >
+                                    {
+                                      getApplicationCaptureMode(application)
+                                        .label
+                                    }
+                                  </span>
+                                  <span
+                                    className={`action-timing ${
+                                      getNextActionTiming(application).includes(
+                                        "overdue"
+                                      )
+                                        ? "overdue"
+                                        : getNextActionTiming(application) ===
+                                            "Due today"
+                                          ? "due"
+                                          : ""
+                                    }`}
+                                  >
+                                    {getNextActionTiming(application)}
+                                  </span>
+                                </div>
+                                <span>
+                                  {application.company || "Unknown company"}
+                                </span>
+                                <div className="application-meta-strip">
+                                  <span>
+                                    {getApplicationSourceLabel(application)}
+                                  </span>
+                                  <span>
+                                    Saved{" "}
+                                    {formatDashboardDate(application.createdAt)}
+                                  </span>
+                                  <span>{application.status}</span>
+                                </div>
+                                <small>{application.url}</small>
+                                {application.fitDecision ? (
+                                  <small>
+                                    Match score{" "}
+                                    {typeof application.fitScore ===
+                                    "number" ? (
+                                      <RevealMetric label="Show application match score">
+                                        {application.fitScore}/100
+                                      </RevealMetric>
+                                    ) : (
+                                      "not scored yet"
+                                    )}
+                                    . Recommendation: {application.fitDecision}
+                                    {application.contentGate === "stretch"
+                                      ? ". Stretch role"
+                                      : application.contentGate === "blocked"
+                                        ? ". Blocked until risks are reviewed"
+                                        : ""}
+                                  </small>
+                                ) : null}
+                              </div>
+                              <label>
+                                Status
+                                <select
+                                  value={application.status}
+                                  onChange={(event) =>
+                                    updateApplication(application.id, {
+                                      status: event.target
+                                        .value as ApplicationStatus
+                                    })
+                                  }
+                                >
+                                  {applicationStatuses.map((status) => (
+                                    <option key={status} value={status}>
+                                      {status}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <div className="application-next-action-fields">
+                                <label>
+                                  Next action
+                                  <input
+                                    value={application.nextAction ?? ""}
+                                    onChange={(event) =>
+                                      updateApplication(application.id, {
+                                        nextAction: event.target.value
+                                      })
+                                    }
+                                  />
+                                </label>
+                                <label>
+                                  Due date
+                                  <input
+                                    type="date"
+                                    value={application.nextActionDate ?? ""}
+                                    onChange={(event) =>
+                                      updateApplication(application.id, {
+                                        nextActionDate:
+                                          event.target.value || undefined
+                                      })
+                                    }
+                                  />
+                                </label>
+                              </div>
+                              <label>
+                                Outcome
+                                <select
+                                  value={application.outcomeReason ?? "Unknown"}
+                                  onChange={(event) =>
+                                    updateApplication(application.id, {
+                                      outcomeReason: event.target
+                                        .value as ApplicationOutcomeReason
+                                    })
+                                  }
+                                >
+                                  {applicationOutcomeReasons.map((reason) => (
+                                    <option key={reason} value={reason}>
+                                      {reason}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                Outcome learning
+                                <input
+                                  value={application.notes ?? ""}
+                                  onChange={(event) =>
+                                    updateApplication(application.id, {
+                                      notes: event.target.value
+                                    })
+                                  }
+                                />
+                              </label>
+                              <div className="application-actions">
+                                <a
+                                  className="secondary-button"
+                                  href={`/dashboard/applications/${application.id}`}
+                                >
+                                  Open
+                                </a>
+                                <button
+                                  className="secondary-button"
+                                  disabled={application.status !== "Interview"}
+                                  type="button"
+                                  onClick={() =>
+                                    generateInterviewPrep(application)
+                                  }
+                                >
+                                  Generate Prep
+                                </button>
+                                <button
+                                  className="danger-button"
+                                  type="button"
+                                  onClick={() =>
+                                    deleteApplication(application.id)
+                                  }
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </article>
+                          ))
+                        ) : (
+                          <div className="empty-state rich-empty-state">
+                            <strong>
+                              {state.applications.length
+                                ? "No jobs match these filters"
+                                : "No saved jobs yet"}
+                            </strong>
+                            <p>
+                              {state.applications.length
+                                ? "Clear filters or search for another role, company or action."
+                                : "Tracked roles from the extension and saved role checks appear here."}
+                            </p>
+                            {!state.applications.length ? (
+                              <div className="empty-state-actions">
+                                <a
+                                  className="secondary-button"
+                                  href="/dashboard/extension"
+                                >
+                                  Connect extension
+                                </a>
+                                <a
+                                  className="secondary-button"
+                                  href="/dashboard/match-score"
+                                >
+                                  Check a role
+                                </a>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
+
+              {!isOverview && currentTab === "interview" && (
+                <section className="prep-section full-width-section">
+                  <div className="section-intro">
+                    <p className="eyebrow">AI Interview Coach</p>
+                    <h2>Prepare answers from evidence, not guesswork</h2>
+                    <p>
+                      AutoTime checks your rough answer against saved profile
+                      evidence, job context and work-right boundaries before
+                      shaping it.
+                    </p>
+                  </div>
+
+                  <div className="interview-buddy-layout">
+                    <section
+                      className="interview-buddy-form"
+                      aria-label="Interview Buddy input"
+                    >
+                      <div className="buddy-character-panel">
+                        <span aria-hidden="true">AI</span>
+                        <div>
+                          <strong>Evidence-first answer coach</strong>
+                          <p>
+                            Start with honest notes. The coach improves
+                            structure, flags missing proof and keeps your answer
+                            within what you can verify.
+                          </p>
+                        </div>
+                      </div>
+
+                      <label>
+                        Choose a question
+                        <select
+                          value={interviewQuestion}
+                          onChange={(event) => {
+                            setInterviewQuestion(event.target.value)
+                            setCustomInterviewQuestion("")
+                          }}
+                        >
+                          {interviewQuestionOptions.map((question) => (
+                            <option key={question} value={question}>
+                              {question}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        Or type your own question
+                        <input
+                          placeholder="Example: Tell me about a time you handled changing requirements."
+                          value={customInterviewQuestion}
+                          onChange={(event) =>
+                            setCustomInterviewQuestion(event.target.value)
+                          }
+                        />
+                      </label>
+
+                      <label>
+                        Rough draft answer
+                        <textarea
+                          placeholder="Write the factual version first: situation, what you did, result, and anything you must not overclaim."
+                          value={interviewDraftAnswer}
+                          onChange={(event) =>
+                            setInterviewDraftAnswer(event.target.value)
+                          }
+                        />
+                      </label>
+
+                      {interviewDisclaimer ? (
+                        <p className="decision-integrity-note">
+                          {interviewDisclaimer}
+                        </p>
+                      ) : null}
+
+                      <div className="header-actions">
+                        <button
+                          disabled={isCopilotThinking}
+                          type="button"
+                          onClick={generateInterviewBuddyAnswers}
+                        >
+                          {isCopilotThinking ? "Coaching..." : "Run AI Coach"}
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={isCopilotThinking}
+                          type="button"
+                          onClick={generateLocalInterviewBuddyAnswers}
+                        >
+                          Local evidence check
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={!hasInterviewBuddyOutputs}
+                          type="button"
+                          onClick={saveFinalInterviewAnswer}
+                        >
+                          Save Final Answer
+                        </button>
+                      </div>
+                    </section>
+
+                    <section
+                      className="interview-buddy-output"
+                      aria-label="Interview Buddy outputs"
+                    >
+                      <div className="interview-coach-audit">
+                        <article>
+                          <span>Source</span>
+                          <strong>{currentJobInputMode.label}</strong>
+                          <p>{currentJobInputMode.detail}</p>
+                        </article>
+                        <article>
+                          <span>Evidence score</span>
+                          <strong>
+                            <RevealMetric label="Show interview evidence score">
+                              {interviewCoachMeta.evidenceScore}/100
+                            </RevealMetric>
+                          </strong>
+                          <p>
+                            {interviewCoachMeta.source === "ai"
+                              ? "AI checked against your saved evidence."
+                              : "Local readiness estimate before AI coaching."}
+                          </p>
+                        </article>
+                        <article>
+                          <span>Risk flags</span>
+                          <strong>
+                            <RevealMetric label="Show interview risk flag count">
+                              {interviewCoachMeta.riskFlags.length}
+                            </RevealMetric>
+                          </strong>
+                          <p>
+                            {interviewCoachMeta.riskFlags[0] ||
+                              "No obvious overclaim or work-right risk flagged yet."}
+                          </p>
+                        </article>
+                        <article>
+                          <span>Missing proof</span>
+                          <strong>
+                            <RevealMetric label="Show missing proof count">
+                              {interviewCoachMeta.missingEvidence.length}
+                            </RevealMetric>
+                          </strong>
+                          <p>
+                            {interviewCoachMeta.missingEvidence[0] ||
+                              "Enough draft evidence to shape an answer."}
+                          </p>
+                        </article>
+                        <article>
+                          <span>Evidence used</span>
+                          <strong>
+                            <RevealMetric label="Show interview evidence source count">
+                              {
+                                [
+                                  state.profile.baseCvText.trim() && "CV",
+                                  state.profile.experienceHighlights.trim() &&
+                                    "Profile",
+                                  state.jobAnalysis.jobDescription.trim() &&
+                                    "JD",
+                                  interviewDraftAnswer.trim() && "Draft"
+                                ].filter(Boolean).length
+                              }
+                            </RevealMetric>
+                          </strong>
+                          <p>
+                            Uses profile evidence, parsed/manual JD context and
+                            your rough answer where available.
+                          </p>
+                        </article>
+                      </div>
+
+                      <article className="interview-coach-brief">
+                        <strong>AutoTime boundary</strong>
+                        <p>{interviewCoachMeta.boundaryNote}</p>
+                      </article>
+
+                      {(
+                        [
+                          ["professionalAnswer", "Boardroom version"],
+                          ["naturalAnswer", "Human version"],
+                          ["lightFunnyAnswer", "Warm version"],
+                          ["strongFinalAnswer", "Final evidence-led answer"]
+                        ] as Array<[InterviewBuddyOutputKey, string]>
+                      ).map(([key, label]) => (
+                        <article className="buddy-answer-card" key={key}>
+                          <div>
+                            <h3>{label}</h3>
+                            <button
+                              className="secondary-button"
+                              disabled={!interviewBuddyOutputs[key]}
+                              type="button"
+                              onClick={() =>
+                                speakInterviewAnswer(interviewBuddyOutputs[key])
+                              }
+                            >
+                              Speak
+                            </button>
+                          </div>
+                          <p>
+                            {interviewBuddyOutputs[key] ||
+                              "Run the coach to see this version."}
+                          </p>
+                        </article>
+                      ))}
+
+                      <article className="interview-coach-brief">
+                        <strong>Follow-up drills</strong>
+                        {interviewCoachMeta.followUpDrills.length ? (
+                          <ul className="bullets-list">
+                            {interviewCoachMeta.followUpDrills.map((drill) => (
+                              <li key={drill}>{drill}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>
+                            Run the coach to get targeted follow-up questions
+                            and practice prompts.
+                          </p>
+                        )}
+                      </article>
+                    </section>
+                  </div>
+
+                  {showInterviewPrepPacks && (
+                    <>
+                      <div className="section-intro">
+                        <p className="eyebrow">Saved prep packs</p>
+                        <h2>Prep generated from applications</h2>
+                        <p>
+                          Prep packs still use saved profile, job details and
+                          application status. They remain separate from
+                          Interview Buddy answers.
+                        </p>
+                      </div>
+                      <div className="prep-grid">
+                        {state.interviewPrepPacks.length ? (
+                          state.interviewPrepPacks.map((pack) => (
+                            <article className="prep-card" key={pack.id}>
+                              <h3>{pack.roleSummary}</h3>
+                              <p>{pack.positioningStatement}</p>
+                              <h4>STAR Prompts</h4>
+                              <ul className="bullets-list">
+                                {pack.starAnswerPrompts.map((prompt) => (
+                                  <li key={prompt}>{prompt}</li>
+                                ))}
+                              </ul>
+                              <h4>Likely Questions</h4>
+                              <ul className="bullets-list">
+                                {pack.likelyQuestions.map((question) => (
+                                  <li key={question}>{question}</li>
+                                ))}
+                              </ul>
+                              <h4>Employer Questions</h4>
+                              <ul className="bullets-list">
+                                {pack.questionsToAskEmployer.map((question) => (
+                                  <li key={question}>{question}</li>
+                                ))}
+                              </ul>
+                              <h4>Final Checklist</h4>
+                              <ul className="bullets-list">
+                                {pack.finalPrepChecklist.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            </article>
+                          ))
+                        ) : (
+                          <p className="empty-state">
+                            Move an application to Interview, then generate a
+                            prep pack.
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </section>
+              )}
             </>
           )}
-        </section>
-      )}
-
-          </>
-          )}
-
         </div>
       </div>
 

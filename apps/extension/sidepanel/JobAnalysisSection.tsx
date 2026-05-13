@@ -2,6 +2,7 @@ import type { Ref } from "react"
 import type { JobAnalysisDraft } from "../lib/storage"
 import type { JobAnalysisIssue } from "../lib/validation"
 import { getJobIssueForField } from "../lib/validation"
+import { MetricReveal } from "./MetricReveal"
 import { getStatusClassName } from "./utils"
 
 type JobAnalysisSectionProps = {
@@ -69,7 +70,7 @@ function getDescriptionStats(description: string) {
   const text = description.trim()
 
   if (!text) {
-    return { label: "No description", value: "0 words" }
+    return { label: "No description", value: "No words" }
   }
 
   const wordCount = text.split(/\s+/).filter(Boolean).length
@@ -144,9 +145,13 @@ export function JobAnalysisSection({
           <div className="insight-card">
             <span>Fit score</span>
             <strong>
-              {typeof savedDraft?.fitScore === "number"
-                ? `${savedDraft.fitScore}/100`
-                : "Pending"}
+              {typeof savedDraft?.fitScore === "number" ? (
+                <MetricReveal label="Show fit score">
+                  {savedDraft.fitScore}/100
+                </MetricReveal>
+              ) : (
+                "Pending"
+              )}
             </strong>
           </div>
           <div className="insight-card">
@@ -155,7 +160,15 @@ export function JobAnalysisSection({
           </div>
           <div className="insight-card">
             <span>Description</span>
-            <strong>{descriptionStats.value}</strong>
+            <strong>
+              {descriptionStats.value === "No words" ? (
+                descriptionStats.value
+              ) : (
+                <MetricReveal label="Show description word count">
+                  {descriptionStats.value}
+                </MetricReveal>
+              )}
+            </strong>
             <small>{descriptionStats.label}</small>
           </div>
         </div>

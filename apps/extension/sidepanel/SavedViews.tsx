@@ -6,6 +6,7 @@ import type {
   ReusableAnswers,
   TrackerDraft
 } from "../lib/storage"
+import { MetricReveal } from "./MetricReveal"
 
 type SavedViewProps<T> = {
   draft: T | null
@@ -187,9 +188,13 @@ export function JobAnalysisView({
             <div className="insight-card">
               <span>Fit score</span>
               <strong>
-                {typeof draft.fitScore === "number"
-                  ? `${draft.fitScore}/100`
-                  : "Not scored"}
+                {typeof draft.fitScore === "number" ? (
+                  <MetricReveal label="Show fit score">
+                    {draft.fitScore}/100
+                  </MetricReveal>
+                ) : (
+                  "Not scored"
+                )}
               </strong>
             </div>
             <div className="insight-card">
@@ -245,9 +250,13 @@ export function JobAnalysisView({
             <div>
               <dt>Fit score</dt>
               <dd>
-                {typeof draft.fitScore === "number"
-                  ? `${draft.fitScore}/100`
-                  : "Not scored"}
+                {typeof draft.fitScore === "number" ? (
+                  <MetricReveal label="Show fit score">
+                    {draft.fitScore}/100
+                  </MetricReveal>
+                ) : (
+                  "Not scored"
+                )}
               </dd>
             </div>
             <div>
