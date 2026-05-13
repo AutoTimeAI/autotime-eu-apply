@@ -50,19 +50,48 @@ function getInitial(email: string): string {
 }
 
 const dashboardTopNavItems = [
-  { href: "/dashboard/applications", label: "Tracked Jobs" },
-  { href: "/dashboard/match-score", label: "Fit Analysis" },
-  { href: "/dashboard/application-answers", label: "Application Kit" },
+  { href: "/dashboard", label: "Dashboard" },
+  {
+    aliases: ["/dashboard/profile"],
+    href: "/dashboard/autofill-profile",
+    label: "Profile Evidence"
+  },
+  {
+    aliases: ["/dashboard/inbox"],
+    href: "/dashboard/applications",
+    label: "Tracked Jobs"
+  },
+  {
+    aliases: ["/dashboard/jobs"],
+    href: "/dashboard/match-score",
+    label: "Fit Analysis"
+  },
+  {
+    aliases: ["/dashboard/documents"],
+    href: "/dashboard/application-answers",
+    label: "Application Kit"
+  },
   { href: "/dashboard/cv-tailor", label: "Evidence Bank" },
-  { href: "/pricing", label: "Pricing" }
+  { href: "/dashboard/interview", label: "Interview Prep" },
+  { href: "/dashboard/follow-ups", label: "Follow-ups" },
+  { href: "/dashboard/settings", label: "Settings" }
 ]
 
-function isActiveTopNavItem(pathname: string, href: string) {
-  if (href === "/dashboard") {
-    return pathname === href
-  }
+function isPathInSection(pathname: string, sectionPath: string) {
+  return pathname === sectionPath || pathname.startsWith(`${sectionPath}/`)
+}
 
-  return pathname === href || pathname.startsWith(`${href}/`)
+function isActiveTopNavItem(
+  pathname: string,
+  item: (typeof dashboardTopNavItems)[number]
+) {
+  const sectionPaths = [item.href, ...(item.aliases ?? [])]
+
+  return sectionPaths.some((sectionPath) =>
+    sectionPath === "/dashboard"
+      ? pathname === sectionPath
+      : isPathInSection(pathname, sectionPath)
+  )
 }
 
 export function DashboardTopNav() {
@@ -71,7 +100,7 @@ export function DashboardTopNav() {
   return (
     <nav className="dashboard-topnav" aria-label="Global dashboard navigation">
       {dashboardTopNavItems.map((item) => {
-        const isActive = isActiveTopNavItem(pathname, item.href)
+        const isActive = isActiveTopNavItem(pathname, item)
 
         return (
           <a

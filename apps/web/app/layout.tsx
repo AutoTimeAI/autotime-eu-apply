@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   description:
     "Cross-border job application copilot for Europe. Transparent gap scoring, risk flags, and next actions — no auto-submit, no spam.",
   metadataBase: new URL("https://autotime-eu-apply.vercel.app"),
+  icons: {
+    apple: "/icon.png",
+    icon: "/icon.png",
+    shortcut: "/icon.png"
+  },
   openGraph: {
     title: "AutoTime EU Apply — Borderless Apply for Europe",
     description:

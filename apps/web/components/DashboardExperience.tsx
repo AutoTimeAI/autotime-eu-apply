@@ -161,7 +161,7 @@ function RevealMetric({
 
   return (
     <span
-      aria-label={label}
+      aria-label={`Show value: ${label}`}
       className="metric-reveal-button"
       role="button"
       tabIndex={0}
@@ -198,7 +198,7 @@ function RevealMeter({
 
   return (
     <span
-      aria-label={label}
+      aria-label={`Show meter: ${label}`}
       className="meter-reveal-button"
       role="button"
       tabIndex={0}
@@ -360,6 +360,12 @@ const commandSidebarItems: Array<{
     focus: "dashboard",
     label: "Dashboard",
     routeId: "overview"
+  },
+  {
+    href: "/dashboard/autofill-profile",
+    focus: "autofill-profile",
+    label: "Profile Evidence",
+    routeId: "profile"
   },
   {
     href: "/dashboard/applications",
@@ -2951,7 +2957,7 @@ export default function HomePage({
       ? {
           body: "Analyse one role manually or track it from the extension. Tracked jobs will appear in your tracker.",
           cta: "Analyse Fit",
-          href: "/dashboard/jobs",
+          href: "/dashboard/match-score",
           label: "Best next step",
           title: "Save your first job"
         }
@@ -4419,6 +4425,39 @@ export default function HomePage({
     setShowFirstRunWalkthrough(false)
   }
 
+  const profileGatePanel = isProfileGateRequired ? (
+    <section
+      className="profile-required-panel locked"
+      aria-label="Profile evidence gate locked"
+    >
+      <div className="profile-required-heading">
+        <span className="profile-lock-symbol" aria-hidden="true" />
+        <div>
+          <p className="eyebrow">Profile evidence gate</p>
+          <h2>Locked until your candidate evidence is ready</h2>
+          <p>
+            AutoTime unlocks job checks, tracker actions and AI interview
+            coaching once your profile has enough verified evidence, so every
+            recommendation is tied to real role proof, work-right context and
+            candidate facts.
+          </p>
+        </div>
+      </div>
+      <details className="profile-required-details">
+        <summary>View required evidence in order</summary>
+        <ol className="bullets-list lock-proof-list">
+          {profileGateItems.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+          <li>AI answers stay inside claims your profile can support.</li>
+        </ol>
+      </details>
+      <a className="secondary-button" href="/dashboard/autofill-profile">
+        Unlock profile
+      </a>
+    </section>
+  ) : null
+
   return (
     <main className="dashboard-shell">
       <header className="app-header">
@@ -4430,28 +4469,22 @@ export default function HomePage({
             {showHeaderJobActions ? (
               <>
                 {currentTab !== "jobs" ? (
-                  <a className="secondary-button" href="/dashboard/jobs">
+                  <a className="secondary-button" href="/dashboard/match-score">
                     Analyse Fit
                   </a>
                 ) : null}
-                <a className="secondary-button" href="/dashboard/inbox">
+                <a className="secondary-button" href="/dashboard/applications">
                   Tracked Jobs
                 </a>
               </>
             ) : null}
-            <div className="profile-completion-meter">
-              <small>Profile readiness</small>
-              <strong>
-                <RevealMetric label="Show profile completion">
-                  {readinessScore}%
-                </RevealMetric>
-              </strong>
-              <RevealMeter label="Show profile completion meter">
-                <span aria-hidden="true">
-                  <i style={{ width: `${readinessScore}%` }} />
-                </span>
-              </RevealMeter>
-            </div>
+            <details className="profile-completion-meter">
+              <summary>Profile readiness</summary>
+              <strong>{readinessScore}%</strong>
+              <span aria-hidden="true">
+                <i style={{ width: `${readinessScore}%` }} />
+              </span>
+            </details>
           </div>
         </div>
         {showExecutivePanel ? (
@@ -4472,18 +4505,9 @@ export default function HomePage({
       </header>
 
       {showFirstRunWalkthrough ? (
-        <div
-          className="walkthrough-backdrop"
-          role="presentation"
-          onClick={dismissFirstRunWalkthrough}
-        >
-          <section
-            aria-labelledby="first-run-walkthrough-title"
-            aria-modal="true"
-            className="walkthrough-dialog"
-            role="dialog"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <details className="walkthrough-inline-panel">
+          <summary>Setup guide</summary>
+          <section aria-labelledby="first-run-walkthrough-title">
             <div className="walkthrough-copy">
               <p className="eyebrow">First login walkthrough</p>
               <h2 id="first-run-walkthrough-title">
@@ -4503,16 +4527,16 @@ export default function HomePage({
             >
               Your browser does not support the walkthrough video.
             </video>
-            <div
+            <ol
               className="walkthrough-steps"
               aria-label="AutoTime setup order"
             >
-              <span>1. Profile evidence</span>
-              <span>2. Extension capture</span>
-              <span>3. Quality job check</span>
-              <span>4. Tracker next action</span>
-              <span>5. Interview coach</span>
-            </div>
+              <li>Profile evidence</li>
+              <li>Extension capture</li>
+              <li>Quality job check</li>
+              <li>Tracker next action</li>
+              <li>Interview coach</li>
+            </ol>
             <div className="walkthrough-actions">
               <a
                 href="/dashboard/autofill-profile"
@@ -4529,7 +4553,7 @@ export default function HomePage({
               </button>
             </div>
           </section>
-        </div>
+        </details>
       ) : null}
 
       {status && <p className="status-banner">{status}</p>}
@@ -4558,7 +4582,15 @@ export default function HomePage({
           </nav>
         </aside>
 
-        <div className="command-content">
+        <div
+          className={
+            isProfileGateRequired
+              ? "command-content profile-gate-flow"
+              : "command-content"
+          }
+        >
+          {profileGatePanel}
+
           <section className="ai-copilot-panel" aria-label="Guided actions">
             <div className="ai-copilot-header">
               <div>
@@ -4585,7 +4617,7 @@ export default function HomePage({
                   </a>
                   {profileReadyForExecution ? (
                     <>
-                      <a className="secondary-button" href="/dashboard/jobs">
+                      <a className="secondary-button" href="/dashboard/match-score">
                         Analyse Fit
                       </a>
                       <a
@@ -4654,38 +4686,7 @@ export default function HomePage({
             </div>
           </section>
 
-          {isProfileGateRequired ? (
-            <section
-              className="profile-required-panel locked"
-              aria-label="Profile evidence gate locked"
-            >
-              <div className="profile-required-heading">
-                <span className="profile-lock-symbol" aria-hidden="true" />
-                <div>
-                  <p className="eyebrow">Profile evidence gate</p>
-                  <h2>Locked until your candidate evidence is ready</h2>
-                  <p>
-                    AutoTime unlocks job checks, tracker actions and AI
-                    interview coaching once your profile has enough verified
-                    evidence, so every recommendation is tied to real role
-                    proof, work-right context and candidate facts.
-                  </p>
-                </div>
-              </div>
-              <ul className="bullets-list lock-proof-list">
-                {profileGateItems.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-                <li>AI answers stay inside claims your profile can support.</li>
-              </ul>
-              <a
-                className="secondary-button"
-                href="/dashboard/autofill-profile"
-              >
-                Unlock profile
-              </a>
-            </section>
-          ) : (
+          {isProfileGateRequired ? null : (
             <>
               {!isOverview &&
                 currentTab === "profile" &&

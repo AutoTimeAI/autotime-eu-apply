@@ -12,6 +12,11 @@ type PublicNavProps = {
 
 const signedInNavItems = [
   { href: "/dashboard", label: "Dashboard" },
+  {
+    aliases: ["/dashboard/profile"],
+    href: "/dashboard/autofill-profile",
+    label: "Profile Evidence"
+  },
   { href: "/dashboard/applications", label: "Tracked Jobs" },
   { href: "/dashboard/match-score", label: "Fit Analysis" },
   { href: "/dashboard/application-answers", label: "Application Kit" },
@@ -20,6 +25,23 @@ const signedInNavItems = [
   { href: "/dashboard/extension", label: "Extension" },
   { href: "/pricing", label: "Pricing" }
 ]
+
+function isActiveSignedInNavItem(
+  currentPath: string | undefined,
+  item: (typeof signedInNavItems)[number]
+) {
+  if (!currentPath) {
+    return false
+  }
+
+  const sectionPaths = [item.href, ...(item.aliases ?? [])]
+
+  return sectionPaths.some((sectionPath) =>
+    sectionPath === "/dashboard"
+      ? currentPath === sectionPath
+      : currentPath === sectionPath || currentPath.startsWith(`${sectionPath}/`)
+  )
+}
 
 export function PublicNav({ currentPath, user }: PublicNavProps) {
   return (
@@ -43,16 +65,20 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
       <div className="product-nav-links">
         {user ? (
           <>
-            {signedInNavItems.map((item) => (
-              <Link
-                aria-current={currentPath === item.href ? "page" : undefined}
-                className={currentPath === item.href ? "active" : undefined}
-                href={item.href}
-                key={item.href}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {signedInNavItems.map((item) => {
+              const isActive = isActiveSignedInNavItem(currentPath, item)
+
+              return (
+                <Link
+                  aria-current={isActive ? "page" : undefined}
+                  className={isActive ? "active" : undefined}
+                  href={item.href}
+                  key={item.href}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
             <UserNav email={user.email} plan={user.plan} />
           </>
         ) : (
