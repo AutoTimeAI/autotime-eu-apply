@@ -17,9 +17,21 @@ const signedInNavItems = [
     href: "/dashboard/autofill-profile",
     label: "Profile Evidence"
   },
-  { href: "/dashboard/applications", label: "Tracked Jobs" },
-  { href: "/dashboard/match-score", label: "Fit Analysis" },
-  { href: "/dashboard/application-answers", label: "Application Kit" },
+  {
+    aliases: ["/dashboard/inbox"],
+    href: "/dashboard/applications",
+    label: "Tracked Jobs"
+  },
+  {
+    aliases: ["/dashboard/jobs"],
+    href: "/dashboard/match-score",
+    label: "Fit Analysis"
+  },
+  {
+    aliases: ["/dashboard/documents"],
+    href: "/dashboard/application-answers",
+    label: "Application Kit"
+  },
   { href: "/dashboard/cv-tailor", label: "Evidence Bank" },
   { href: "/dashboard/interview", label: "Interview Prep" },
   { href: "/dashboard/extension", label: "Extension" },

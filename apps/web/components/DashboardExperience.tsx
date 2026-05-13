@@ -1879,21 +1879,28 @@ function getStatusCounts(applications: ApplicationRecord[]) {
   )
 }
 
-function getReadinessScore(state: CompanionDashboardState, fitScore: number) {
-  const signals = [
-    state.profile.baseCvText.trim(),
-    state.profile.targetRoles.trim(),
+function getReadinessScore(state: CompanionDashboardState) {
+  const requiredProfileSignals = [
+    state.profile.fullName.trim(),
+    state.profile.currentCountry.trim(),
     state.profile.targetCountries.trim(),
-    state.reusableAnswers.motivationAnswer.trim(),
-    state.reusableAnswers.strengthsAnswer.trim(),
-    state.jobAnalysis.jobDescription.trim(),
-    state.jobAnalysis.positioningAngle?.trim() ?? "",
-    String(state.applications.length || "")
+    state.profile.targetRoles.trim(),
+    state.profile.workRightDetails.trim(),
+    state.profile.baseCvText.trim()
   ]
-  const completed = signals.filter(Boolean).length
+  const reusableSignals = [
+    state.reusableAnswers.motivationAnswer.trim(),
+    state.reusableAnswers.strengthsAnswer.trim()
+  ]
+  const requiredCompleted = requiredProfileSignals.filter(Boolean).length
+  const reusableCompleted = reusableSignals.filter(Boolean).length
+
   return Math.min(
     100,
-    Math.round((completed / signals.length) * 70 + fitScore * 0.3)
+    Math.round(
+      (requiredCompleted / requiredProfileSignals.length) * 90 +
+        (reusableCompleted / reusableSignals.length) * 10
+    )
   )
 }
 
@@ -2558,10 +2565,7 @@ export default function HomePage({
       outcomeLearningSignals
     ]
   )
-  const readinessScore = useMemo(
-    () => getReadinessScore(state, fitScore),
-    [state, fitScore]
-  )
+  const readinessScore = useMemo(() => getReadinessScore(state), [state])
   const statusCounts = useMemo(
     () => getStatusCounts(state.applications),
     [state.applications]
@@ -2985,8 +2989,17 @@ export default function HomePage({
       silent?: boolean
       successMessage?: string
     } = {}) => {
+      if (!cloudSyncReadiness.configured) {
+        if (!silent) {
+          setStatus(
+            `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+          )
+        }
+        return false
+      }
+
       if (silent && hasUnsyncedDashboardChangesRef.current) {
-        return
+        return false
       }
 
       try {
@@ -3013,14 +3026,14 @@ export default function HomePage({
               route: "/api/sync/dashboard"
             }
           )
-          return
+          return false
         }
 
         if (!body.data?.dashboard) {
           if (!silent) {
             setStatus("No synced dashboard workflow found for this account yet")
           }
-          return
+          return false
         }
 
         const dashboard = body.data.dashboard
@@ -3038,6 +3051,7 @@ export default function HomePage({
         if (!silent) {
           setStatus(successMessage)
         }
+        return true
       } catch (error: unknown) {
         if (!silent) {
           setStatus(
@@ -3056,9 +3070,10 @@ export default function HomePage({
             route: "/api/sync/dashboard"
           }
         )
+        return false
       }
     },
-    [userId]
+    [cloudSyncReadiness, userId]
   )
 
   const loadProfileSnapshot = useCallback(
@@ -3590,6 +3605,15 @@ export default function HomePage({
       successMessage?: string
     } = {}
   ) => {
+    if (!cloudSyncReadiness.configured) {
+      if (!silent) {
+        setStatus(
+          `Dashboard saved locally. Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+        )
+      }
+      return false
+    }
+
     try {
       const response = await fetch("/api/sync/dashboard", {
         method: "POST",
@@ -4092,7 +4116,7 @@ export default function HomePage({
 
   const importDashboard = (value: string) => {
     if (!value.trim()) {
-      setStatus("Paste exported V2 dashboard JSON before importing")
+      setStatus("Paste an exported AutoTime backup before importing")
       return
     }
 
@@ -4101,7 +4125,7 @@ export default function HomePage({
       const result = companionDashboardStateSchema.safeParse(parsed)
 
       if (!result.success) {
-        setStatus("Import failed: dashboard JSON does not match V2 schema")
+        setStatus("Import failed: this backup does not match AutoTime data")
         return
       }
 
@@ -4113,7 +4137,7 @@ export default function HomePage({
       scheduleProfileSync(result.data.profile)
       setImportJson("")
     } catch {
-      setStatus("Import failed: invalid JSON")
+      setStatus("Import failed: backup contents could not be read")
     }
   }
 
@@ -5584,6 +5608,32 @@ export default function HomePage({
                           value={state.profile.baseCvText}
                           onChange={(event) =>
                             updateProfile("baseCvText", event.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        Experience highlights
+                        <textarea
+                          placeholder="Add 2-3 factual highlights with tools, responsibilities and outcomes you can defend in an interview."
+                          value={state.profile.experienceHighlights}
+                          onChange={(event) =>
+                            updateProfile(
+                              "experienceHighlights",
+                              event.target.value
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        Project or delivery examples
+                        <textarea
+                          placeholder="Add one project, delivery example or workflow improvement with the problem, action and result."
+                          value={state.profile.projectSummaries}
+                          onChange={(event) =>
+                            updateProfile(
+                              "projectSummaries",
+                              event.target.value
+                            )
                           }
                         />
                       </label>
@@ -7410,7 +7460,7 @@ export default function HomePage({
         <label className="import-control">
           Import backup
           <textarea
-            placeholder="Paste exported AutoTime dashboard JSON"
+            placeholder="Paste exported AutoTime backup contents"
             value={importJson}
             onChange={(event) => setImportJson(event.target.value)}
           />

@@ -108,17 +108,16 @@ function LoginForm() {
 
   return (
     <main className="auth-shell">
-
       <section className="auth-intro" aria-labelledby="auth-intro-title">
         <div>
-          <p className="eyebrow">AutoTime · Borderless Apply</p>
+          <p className="eyebrow">AutoTime - Borderless Apply</p>
           <h1 id="auth-intro-title">
             Your EU job search,<br />
             without the guesswork.
           </h1>
           <p>
             Know your fit before you apply. Transparent gap scoring, risk flags,
-            and next actions — built for cross-border European tech candidates.
+            and next actions, built for cross-border European tech candidates.
             You review everything. Nothing submits without you.
           </p>
         </div>
@@ -127,19 +126,22 @@ function LoginForm() {
           <div>
             <strong>EU cross-border</strong>
             <span>
-              Country fit, visa risk, and market context. No US-only assumptions.
+              Country fit, visa risk, and market context. No US-only
+              assumptions.
             </span>
           </div>
           <div>
             <strong>No auto-submit</strong>
             <span>
-              You approve every application. No bots, no hidden steps, no spam risk.
+              You approve every application. No bots, no hidden steps, no spam
+              risk.
             </span>
           </div>
           <div>
             <strong>Transparent scoring</strong>
             <span>
-              Gaps, risks, and next actions shown clearly before you commit effort.
+              Gaps, risks, and next actions shown clearly before you commit
+              effort.
             </span>
           </div>
         </div>
@@ -150,8 +152,8 @@ function LoginForm() {
           <p className="eyebrow">Sign in</p>
           <h2>Open your dashboard</h2>
           <p>
-            Track roles, check fit, generate interview prep packs — all
-            in one workspace built for the EU market.
+            Track roles, check fit, generate interview prep packs, all in one
+            workspace built for the EU market.
           </p>
         </div>
 
@@ -161,7 +163,9 @@ function LoginForm() {
             type="button"
             onClick={() => handleSignIn("github")}
           >
-            {pendingProvider === "github" ? "Opening GitHub..." : "Sign in with GitHub"}
+            {pendingProvider === "github"
+              ? "Opening GitHub..."
+              : "Sign in with GitHub"}
           </button>
           <button
             className="secondary-button"
@@ -169,18 +173,19 @@ function LoginForm() {
             type="button"
             onClick={() => handleSignIn("google")}
           >
-            {pendingProvider === "google" ? "Opening Google..." : "Sign in with Google"}
+            {pendingProvider === "google"
+              ? "Opening Google..."
+              : "Sign in with Google"}
           </button>
         </div>
 
         {status ? <p className="status-banner">{status}</p> : null}
 
         <p className="auth-privacy-note">
-          EU-hosted analytics only · No email used for tracking · Your data is
-          never sold or shared
+          EU-hosted analytics only - no email used for tracking - your data is
+          never sold or shared.
         </p>
       </section>
-
     </main>
   )
 }

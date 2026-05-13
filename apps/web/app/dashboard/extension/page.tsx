@@ -210,8 +210,8 @@ export default async function DashboardExtensionPage() {
 
         {hasSyncQueryError && (
           <p className="status error">
-            Sync health is partially unavailable. Check admin logs for the
-            database query reason.
+            Sync health is partially unavailable. Reconnect the extension or try
+            again after refreshing the dashboard.
           </p>
         )}
 
