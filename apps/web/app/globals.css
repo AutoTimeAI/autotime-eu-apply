@@ -720,6 +720,69 @@ h4 {
   margin: 0;
 }
 
+.application-kit-workspace,
+.evidence-bank-workspace,
+.application-kit-editor,
+.follow-up-workspace,
+.follow-up-list {
+  display: grid;
+  gap: 14px;
+}
+
+.application-kit-workspace,
+.evidence-bank-workspace {
+  grid-template-columns: minmax(280px, 0.55fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.application-kit-editor {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kit-field-card textarea {
+  min-height: 170px;
+}
+
+.kit-field-card:nth-child(2) {
+  grid-row: span 2;
+}
+
+.kit-field-card:nth-child(2) textarea {
+  min-height: 360px;
+}
+
+.kit-field-heading,
+.follow-up-card {
+  display: grid;
+  gap: 10px;
+}
+
+.kit-field-heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.follow-up-card {
+  grid-template-columns: minmax(220px, 1fr) auto minmax(180px, 0.65fr) minmax(150px, 0.45fr) auto;
+  align-items: end;
+  border: 1px solid rgba(216, 224, 235, 0.84);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 26px rgba(24, 45, 73, 0.055);
+  padding: 12px;
+}
+
+.follow-up-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.follow-up-card span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .audit-details {
   display: grid;
   gap: 12px;
@@ -5213,6 +5276,10 @@ h4 {
   .profile-form-toolbar,
   .pricing-demo-panel,
   .decision-brief-panel,
+  .application-kit-workspace,
+  .evidence-bank-workspace,
+  .application-kit-editor,
+  .follow-up-card,
   .trust-grid,
   .workspace-grid,
   .interview-buddy-layout,

@@ -15,6 +15,7 @@ import {
   getCandidateProfileBridgeIssues,
   type ApplicationOutcomeReason,
   type ApplicationRecord,
+  type ApplicationContentSnapshot,
   type ApplicationStatus,
   type CandidateProfile,
   type CompanionDashboardState,
@@ -48,6 +49,7 @@ type DashboardWorkflowSnapshot = Pick<
   | "outcomeRecords"
   | "interviewPrepPacks"
 >
+type ApplicationContentField = keyof Omit<ApplicationContentSnapshot, "savedAt">
 type DashboardFocus =
   | "dashboard"
   | "job-inbox"
@@ -1667,6 +1669,67 @@ function createApplication(
   }
 }
 
+function createApplicationContentSnapshot({
+  application,
+  job,
+  profile,
+  reusableAnswers
+}: {
+  application: ApplicationRecord
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+  reusableAnswers: ReusableAnswers
+}): ApplicationContentSnapshot {
+  const role = application.roleTitle || application.title || "this role"
+  const company = application.company || "the company"
+  const targetRoles = profile.targetRoles || "relevant technology roles"
+  const profileEvidence =
+    profile.experienceHighlights ||
+    profile.projectSummaries ||
+    profile.baseCvText.slice(0, 420)
+  const positioning =
+    job.positioningAngle ||
+    application.fitDecision ||
+    "evidence-led fit, role understanding and clear next steps"
+  const workRight =
+    reusableAnswers.workAuthorisationAnswer ||
+    profile.workRightDetails ||
+    "Add your verified work-right wording before using this answer."
+  const motivation =
+    reusableAnswers.motivationAnswer ||
+    `I am interested in ${role} at ${company} because the role connects with my target focus in ${targetRoles}.`
+  const strengths =
+    reusableAnswers.strengthsAnswer ||
+    (profileEvidence
+      ? `My strongest relevant evidence is: ${profileEvidence}`
+      : "Add a specific project, outcome or responsibility from your evidence profile before using this answer.")
+  const availability =
+    reusableAnswers.availabilityAnswer ||
+    profile.noticePeriod ||
+    "Add your verified notice period or availability before using this answer."
+
+  return {
+    availabilityAnswer: availability,
+    coverLetter: [
+      `Dear ${company} team,`,
+      "",
+      `I am applying for ${role}. My fit is strongest where the role needs ${positioning}.`,
+      "",
+      strengths,
+      "",
+      `Work-right context: ${workRight}`,
+      "",
+      "I would welcome the chance to discuss how this evidence maps to the role requirements."
+    ].join("\n"),
+    motivationAnswer: motivation,
+    profileSummary:
+      profileEvidence ||
+      "Add profile evidence first, then regenerate this summary from verified facts.",
+    savedAt: new Date().toISOString(),
+    strengthsAnswer: strengths
+  }
+}
+
 function createEvidenceRecords({
   application,
   fitEvaluation,
@@ -2527,6 +2590,10 @@ export default function HomePage({
   const [applicationOutcomeFilter, setApplicationOutcomeFilter] = useState<
     ApplicationOutcomeReason | "all"
   >("all")
+  const [kitApplicationId, setKitApplicationId] = useState("")
+  const [kitDraft, setKitDraft] = useState<ApplicationContentSnapshot | null>(
+    null
+  )
   const fitScore = useMemo(
     () => getFitScore(state.profile, state.jobAnalysis),
     [state.profile, state.jobAnalysis]
@@ -2711,6 +2778,15 @@ export default function HomePage({
     : selectedReadyChecklist.some((item) => item.status === "needs-check")
       ? "Needs tailoring"
       : "Ready to apply"
+  const activeKitApplication =
+    state.applications.find((application) => application.id === kitApplicationId) ??
+    state.applications[0]
+  const followUpApplications = state.applications.filter(
+    (application) =>
+      application.status !== "Archived" &&
+      application.status !== "Rejected" &&
+      (application.nextAction?.trim() || application.status === "Saved")
+  )
   const outcomeAnalytics = useMemo(
     () => getOutcomeAnalytics(persistedOutcomeRecords),
     [persistedOutcomeRecords]
@@ -2742,7 +2818,9 @@ export default function HomePage({
     activeFocus === "autofill-profile" || activeFocus === "settings"
   const showApplicationAnalytics =
     activeFocus === "insights" && !selectedApplication
-  const showApplicationList = activeFocus !== "insights" && !selectedApplication
+  const showFollowUpQueue = activeFocus === "follow-ups" && !selectedApplication
+  const showApplicationList =
+    activeFocus !== "insights" && !showFollowUpQueue && !selectedApplication
   const showInterviewPrepPacks = activeFocus === "interview-prep"
   const isProfileGateRequired =
     !profileReadyForExecution && !isOverview && currentTab !== "profile"
@@ -3716,10 +3794,119 @@ export default function HomePage({
     }
   }, [])
 
+  useEffect(() => {
+    if (activeFocus !== "application-answers") {
+      return
+    }
+
+    if (!activeKitApplication) {
+      setKitApplicationId("")
+      setKitDraft(null)
+      return
+    }
+
+    setKitApplicationId(activeKitApplication.id)
+    setKitDraft(
+      activeKitApplication.contentSnapshot ??
+        createApplicationContentSnapshot({
+          application: activeKitApplication,
+          job: state.jobAnalysis,
+          profile: state.profile,
+          reusableAnswers: state.reusableAnswers
+        })
+    )
+  }, [
+    activeFocus,
+    activeKitApplication?.contentSnapshot,
+    activeKitApplication?.id,
+    state.jobAnalysis,
+    state.profile,
+    state.reusableAnswers
+  ])
+
   const loadDashboardFromCloud = async () => {
     await loadDashboardSnapshot({
       successMessage: "Synced dashboard workflow loaded"
     })
+  }
+
+  const updateKitDraft = (
+    key: ApplicationContentField,
+    value: string
+  ) => {
+    setKitDraft((current) =>
+      current
+        ? {
+            ...current,
+            [key]: value
+          }
+        : current
+    )
+  }
+
+  const regenerateKitDraft = () => {
+    if (!activeKitApplication) {
+      setStatus("Track a job before generating application content")
+      return
+    }
+
+    setKitDraft(
+      createApplicationContentSnapshot({
+        application: activeKitApplication,
+        job: state.jobAnalysis,
+        profile: state.profile,
+        reusableAnswers: state.reusableAnswers
+      })
+    )
+    setStatus("Application Kit draft regenerated from saved evidence")
+  }
+
+  const saveApplicationKitSnapshot = () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
+    if (!activeKitApplication || !kitDraft) {
+      setStatus("Track a job before saving application content")
+      return
+    }
+
+    const snapshot = {
+      ...kitDraft,
+      savedAt: new Date().toISOString()
+    }
+    const nextState = {
+      ...state,
+      applications: state.applications.map((application) =>
+        application.id === activeKitApplication.id
+          ? {
+              ...application,
+              contentSnapshot: snapshot,
+              updatedAt: snapshot.savedAt
+            }
+          : application
+      )
+    }
+
+    persist(nextState, "Application Kit saved to tracked job")
+    scheduleDashboardSync(nextState, {
+      failureMessage: "Application Kit saved locally. Dashboard sync failed",
+      successMessage: "Application Kit saved and synced"
+    })
+  }
+
+  const copyKitField = async (label: string, value: string) => {
+    if (!value.trim()) {
+      setStatus(`${label} is empty`)
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(value)
+      setStatus(`${label} copied`)
+    } catch {
+      setStatus("Copy failed. Select the text and copy it manually.")
+    }
   }
 
   const saveApplicationFromJob = async () => {
@@ -4224,7 +4411,11 @@ export default function HomePage({
       ? "What do you want to do now?"
       : currentTab === "jobs"
         ? "Paste a job and see if it is worth applying."
-        : currentTab === "profile"
+        : activeFocus === "application-answers"
+          ? "Prepare application content for one tracked job."
+          : activeFocus === "cv-tailor"
+            ? "Keep reusable evidence ready for stronger applications."
+            : currentTab === "profile"
           ? "Add the details AutoTime needs about you."
           : currentTab === "applications"
             ? "Review tracked jobs and update the next step."
@@ -4235,11 +4426,17 @@ export default function HomePage({
       ? profileReadyForExecution
         ? "Your profile is ready for job checks"
         : "Profile evidence still needs work before the best outcomes."
-      : currentTab === "jobs"
-        ? hasJobDraft(state.jobAnalysis)
-          ? "Ready to analyse current role"
-          : "Waiting for role details"
-        : currentTab === "profile"
+        : currentTab === "jobs"
+          ? hasJobDraft(state.jobAnalysis)
+            ? "Ready to analyse current role"
+            : "Waiting for role details"
+        : activeFocus === "application-answers"
+          ? activeKitApplication
+            ? "Draft content is tied to a tracked job"
+            : "Track a job before writing application content"
+          : activeFocus === "cv-tailor"
+            ? "Evidence bank is saved with your profile"
+            : currentTab === "profile"
           ? profileReadyForExecution
             ? "Profile ready for job checks"
             : "Profile evidence still needs work to unlock tools."
@@ -4670,6 +4867,33 @@ export default function HomePage({
                 >
                   {isCopilotThinking ? "Checking role" : "Ask AI to analyse fit"}
                 </button>
+              ) : activeFocus === "application-answers" ? (
+                <>
+                  <button
+                    disabled={!activeKitApplication}
+                    type="button"
+                    onClick={regenerateKitDraft}
+                  >
+                    Generate kit draft
+                  </button>
+                  <button
+                    className="secondary-button"
+                    disabled={!activeKitApplication || !kitDraft}
+                    type="button"
+                    onClick={saveApplicationKitSnapshot}
+                  >
+                    Save kit to job
+                  </button>
+                </>
+              ) : activeFocus === "cv-tailor" ? (
+                <>
+                  <a className="secondary-button" href="/dashboard/autofill-profile">
+                    Edit profile evidence
+                  </a>
+                  <a className="secondary-button" href="/dashboard/application-answers">
+                    Open Application Kit
+                  </a>
+                </>
               ) : currentTab === "profile" ? (
                 <>
                   <button
@@ -5442,7 +5666,240 @@ export default function HomePage({
                 </section>
               )}
 
-              {!isOverview && currentTab === "profile" && (
+              {!isOverview &&
+                currentTab === "profile" &&
+                activeFocus === "application-answers" && (
+                  <section
+                    className="application-kit-workspace"
+                    aria-label="Application Kit workspace"
+                  >
+                    <section className="panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Application Kit</p>
+                        <h2>Write for one tracked job</h2>
+                        <p>
+                          Draft content from saved evidence, edit it, copy it,
+                          then save the snapshot back to the job.
+                        </p>
+                      </div>
+                      {state.applications.length ? (
+                        <label>
+                          Tracked job
+                          <select
+                            value={activeKitApplication?.id ?? ""}
+                            onChange={(event) => {
+                              const nextApplication = state.applications.find(
+                                (application) =>
+                                  application.id === event.target.value
+                              )
+                              setKitApplicationId(event.target.value)
+                              setKitDraft(
+                                nextApplication
+                                  ? nextApplication.contentSnapshot ??
+                                      createApplicationContentSnapshot({
+                                        application: nextApplication,
+                                        job: state.jobAnalysis,
+                                        profile: state.profile,
+                                        reusableAnswers: state.reusableAnswers
+                                      })
+                                  : null
+                              )
+                            }}
+                          >
+                            {state.applications.map((application) => (
+                              <option key={application.id} value={application.id}>
+                                {[
+                                  application.roleTitle || application.title,
+                                  application.company,
+                                  application.status
+                                ]
+                                  .filter(Boolean)
+                                  .join(" - ")}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <div className="empty-state rich-empty-state">
+                          <strong>No tracked job yet</strong>
+                          <p>
+                            Analyse and track one role before writing application
+                            content for it.
+                          </p>
+                          <a
+                            className="secondary-button"
+                            href="/dashboard/match-score"
+                          >
+                            Analyse a role
+                          </a>
+                        </div>
+                      )}
+                      {activeKitApplication ? (
+                        <dl className="summary-list">
+                          <div>
+                            <dt>Job</dt>
+                            <dd>
+                              {activeKitApplication.roleTitle ||
+                                activeKitApplication.title}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Company</dt>
+                            <dd>
+                              {activeKitApplication.company ||
+                                "Unknown company"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Status</dt>
+                            <dd>{activeKitApplication.status}</dd>
+                          </div>
+                        </dl>
+                      ) : null}
+                    </section>
+
+                    {kitDraft ? (
+                      <section className="application-kit-editor">
+                        {(
+                          [
+                            ["profileSummary", "Profile summary"],
+                            ["coverLetter", "Cover note"],
+                            ["motivationAnswer", "Motivation answer"],
+                            ["strengthsAnswer", "Strengths answer"],
+                            ["availabilityAnswer", "Availability answer"]
+                          ] as Array<[ApplicationContentField, string]>
+                        ).map(([key, label]) => (
+                          <article className="panel kit-field-card" key={key}>
+                            <div className="kit-field-heading">
+                              <div>
+                                <p className="eyebrow">{label}</p>
+                                <h3>{label}</h3>
+                              </div>
+                              <button
+                                className="secondary-button"
+                                type="button"
+                                onClick={() => copyKitField(label, kitDraft[key])}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <textarea
+                              value={kitDraft[key]}
+                              onChange={(event) =>
+                                updateKitDraft(key, event.target.value)
+                              }
+                            />
+                          </article>
+                        ))}
+                        <div className="application-actions">
+                          <button type="button" onClick={saveApplicationKitSnapshot}>
+                            Save kit to job
+                          </button>
+                          <button
+                            className="secondary-button"
+                            type="button"
+                            onClick={regenerateKitDraft}
+                          >
+                            Regenerate from evidence
+                          </button>
+                        </div>
+                      </section>
+                    ) : null}
+                  </section>
+                )}
+
+              {!isOverview &&
+                currentTab === "profile" &&
+                activeFocus === "cv-tailor" && (
+                  <section
+                    className="evidence-bank-workspace"
+                    aria-label="Evidence Bank workspace"
+                  >
+                    <section className="panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Evidence Bank</p>
+                        <h2>Reusable proof points</h2>
+                        <p>
+                          Keep factual CV evidence, projects and reusable
+                          answers in one place. This is context for fit and
+                          positioning, not a CV builder.
+                        </p>
+                      </div>
+                      <label>
+                        CV evidence
+                        <textarea
+                          placeholder="Paste factual CV text or a concise evidence summary."
+                          value={state.profile.baseCvText}
+                          onChange={(event) =>
+                            updateProfile("baseCvText", event.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        Experience highlights
+                        <textarea
+                          placeholder="Add proof points with tools, responsibilities and outcomes."
+                          value={state.profile.experienceHighlights}
+                          onChange={(event) =>
+                            updateProfile(
+                              "experienceHighlights",
+                              event.target.value
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        Project examples
+                        <textarea
+                          placeholder="Add project, delivery or workflow improvement examples."
+                          value={state.profile.projectSummaries}
+                          onChange={(event) =>
+                            updateProfile(
+                              "projectSummaries",
+                              event.target.value
+                            )
+                          }
+                        />
+                      </label>
+                    </section>
+                    <section className="panel">
+                      <div className="section-heading">
+                        <p className="eyebrow">Reusable answers</p>
+                        <h2>Evidence-backed answers</h2>
+                        <p>
+                          Save wording only when it is true and supported by
+                          the evidence above.
+                        </p>
+                      </div>
+                      {(
+                        [
+                          ["motivationAnswer", "Motivation answer"],
+                          ["strengthsAnswer", "Strengths answer"],
+                          ["workAuthorisationAnswer", "Work authorisation"],
+                          ["relocationAnswer", "Relocation"],
+                          ["availabilityAnswer", "Availability"],
+                          ["noticePeriodAnswer", "Notice period"],
+                          ["salaryExpectationAnswer", "Salary expectation"],
+                          ["sponsorshipAnswer", "Sponsorship"]
+                        ] as Array<[ReusableAnswerKey, string]>
+                      ).map(([key, label]) => (
+                        <label key={key}>
+                          {label}
+                          <textarea
+                            value={state.reusableAnswers[key]}
+                            onChange={(event) =>
+                              updateReusableAnswer(key, event.target.value)
+                            }
+                          />
+                        </label>
+                      ))}
+                    </section>
+                  </section>
+                )}
+
+              {!isOverview &&
+                currentTab === "profile" &&
+                activeFocus === "autofill-profile" && (
                 <section className="workspace-grid">
                   <div className="input-column">
                     <section
@@ -6270,7 +6727,7 @@ export default function HomePage({
                     <h2>{focusCopy.title}</h2>
                     <p>{focusCopy.body}</p>
                   </div>
-                  {activeFocus !== "insights" && (
+                  {activeFocus !== "insights" && !showFollowUpQueue && (
                     <div
                       className="pipeline-summary"
                       aria-label="Application status counts"
@@ -6599,6 +7056,113 @@ export default function HomePage({
                         </div>
                       </section>
                     </>
+                  )}
+                  {showFollowUpQueue && (
+                    <section
+                      className="follow-up-workspace"
+                      aria-label="Follow-up queue"
+                    >
+                      <div className="section-heading">
+                        <p className="eyebrow">Follow-ups</p>
+                        <h2>Next actions across tracked jobs</h2>
+                        <p>
+                          Work from the role that needs attention next. Archive
+                          or reject jobs when no action is needed.
+                        </p>
+                      </div>
+                      {followUpApplications.length ? (
+                        <div className="follow-up-list">
+                          {followUpApplications.map((application) => (
+                            <article
+                              className="follow-up-card"
+                              key={application.id}
+                            >
+                              <div>
+                                <strong>
+                                  {application.roleTitle || application.title}
+                                </strong>
+                                <span>
+                                  {application.company || "Unknown company"} /{" "}
+                                  {application.status}
+                                </span>
+                              </div>
+                              <span
+                                className={`action-timing ${
+                                  getNextActionTiming(application).includes(
+                                    "overdue"
+                                  )
+                                    ? "overdue"
+                                    : getNextActionTiming(application) ===
+                                        "Due today"
+                                      ? "due"
+                                      : ""
+                                }`}
+                              >
+                                {getNextActionTiming(application)}
+                              </span>
+                              <label>
+                                Next action
+                                <input
+                                  value={application.nextAction ?? ""}
+                                  onChange={(event) =>
+                                    updateApplication(application.id, {
+                                      nextAction: event.target.value
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label>
+                                Due date
+                                <input
+                                  type="date"
+                                  value={application.nextActionDate ?? ""}
+                                  onChange={(event) =>
+                                    updateApplication(application.id, {
+                                      nextActionDate:
+                                        event.target.value || undefined
+                                    })
+                                  }
+                                />
+                              </label>
+                              <div className="application-actions">
+                                <a
+                                  className="secondary-button"
+                                  href={`/dashboard/applications/${application.id}`}
+                                >
+                                  Open job
+                                </a>
+                                <button
+                                  className="secondary-button"
+                                  type="button"
+                                  onClick={() =>
+                                    updateApplication(application.id, {
+                                      nextAction: "",
+                                      nextActionDate: undefined
+                                    })
+                                  }
+                                >
+                                  Clear action
+                                </button>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="empty-state rich-empty-state">
+                          <strong>No follow-ups waiting</strong>
+                          <p>
+                            Add a next action from Tracked Jobs or save a role
+                            from Fit Analysis.
+                          </p>
+                          <a
+                            className="secondary-button"
+                            href="/dashboard/applications"
+                          >
+                            Open tracked jobs
+                          </a>
+                        </div>
+                      )}
+                    </section>
                   )}
                   {applicationId && !selectedApplication ? (
                     <section className="job-detail-panel">
