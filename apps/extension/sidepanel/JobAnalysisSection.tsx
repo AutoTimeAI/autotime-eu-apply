@@ -121,10 +121,10 @@ export function JobAnalysisSection({
         </div>
         <div className="job-hero-actions">
           <button type="button" onClick={onImportCurrentJobPage}>
-            Import job
+            Track Job
           </button>
           <button type="button" onClick={onSave}>
-            Get insights
+            Analyse Fit
           </button>
         </div>
       </div>

@@ -11,11 +11,12 @@ type PublicNavProps = {
 }
 
 const signedInNavItems = [
-  { href: "/dashboard", label: "Today" },
-  { href: "/dashboard/jobs", label: "Check Job" },
-  { href: "/dashboard/applications", label: "Tracker" },
-  { href: "/dashboard/profile", label: "Profile" },
-  { href: "/dashboard/interview", label: "Interview" },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/applications", label: "Tracked Jobs" },
+  { href: "/dashboard/match-score", label: "Fit Analysis" },
+  { href: "/dashboard/application-answers", label: "Application Kit" },
+  { href: "/dashboard/cv-tailor", label: "Evidence Bank" },
+  { href: "/dashboard/interview", label: "Interview Prep" },
   { href: "/dashboard/extension", label: "Extension" },
   { href: "/pricing", label: "Pricing" }
 ]

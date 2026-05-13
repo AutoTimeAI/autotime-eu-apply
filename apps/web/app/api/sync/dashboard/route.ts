@@ -17,6 +17,7 @@ import {
 import { getRequestUser } from "../../../../lib/api-auth"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { createAdminClient } from "../../../../lib/supabase/admin"
+import { isTestAuthUserId } from "../../../../lib/test-auth"
 import type { Database } from "../../../../lib/supabase/types"
 
 type ApiResponse<T> = {
@@ -54,6 +55,27 @@ const dashboardWorkflowSchema = companionDashboardStateSchema.pick({
   outcomeRecords: true,
   interviewPrepPacks: true
 })
+
+const emptyReusableAnswers: ReusableAnswers = {
+  sponsorshipAnswer: "",
+  relocationAnswer: "",
+  workAuthorisationAnswer: "",
+  noticePeriodAnswer: "",
+  salaryExpectationAnswer: "",
+  motivationAnswer: "",
+  strengthsAnswer: "",
+  availabilityAnswer: ""
+}
+
+function emptyDashboard(): DashboardReadData["dashboard"] {
+  return {
+    reusableAnswers: emptyReusableAnswers,
+    applications: [],
+    evidenceRecords: [],
+    outcomeRecords: [],
+    interviewPrepPacks: []
+  }
+}
 
 const dashboardDeleteSchema = z.object({
   applicationId: z.string().trim().min(1).optional(),
@@ -432,6 +454,14 @@ export async function GET(
       })
     }
 
+    if (isTestAuthUserId(auth.user.id)) {
+      return jsonResponse({
+        data: { dashboard: emptyDashboard() },
+        error: null,
+        status: 200
+      })
+    }
+
     const supabase = createAdminClient()
     const [
       reusableAnswersResult,
@@ -534,6 +564,15 @@ export async function POST(
     }
 
     const payload = dashboardWorkflowSchema.parse(await request.json())
+
+    if (isTestAuthUserId(auth.user.id)) {
+      return jsonResponse({
+        data: { deletedApplicationIds: [], synced: true },
+        error: null,
+        status: 200
+      })
+    }
+
     const supabase = createAdminClient()
     const sourceSurface = getSourceSurface(request)
     const applicationUrlKeys = payload.applications.map((application) =>
@@ -853,6 +892,15 @@ export async function DELETE(
     }
 
     const body = dashboardDeleteSchema.parse(await request.json())
+
+    if (isTestAuthUserId(auth.user.id)) {
+      return jsonResponse({
+        data: { deleted: true },
+        error: null,
+        status: 200
+      })
+    }
+
     const supabase = createAdminClient()
     const sourceSurface = getSourceSurface(request)
     const existingQuery = supabase

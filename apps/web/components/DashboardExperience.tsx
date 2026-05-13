@@ -358,38 +358,44 @@ const commandSidebarItems: Array<{
   {
     href: "/dashboard",
     focus: "dashboard",
-    label: "Today",
+    label: "Dashboard",
     routeId: "overview"
-  },
-  {
-    href: "/dashboard/match-score",
-    focus: "match-score",
-    label: "Matches",
-    routeId: "jobs"
   },
   {
     href: "/dashboard/applications",
     focus: "application-tracker",
-    label: "Job Tracker",
+    label: "Tracked Jobs",
     routeId: "applications"
+  },
+  {
+    href: "/dashboard/match-score",
+    focus: "match-score",
+    label: "Fit Analysis",
+    routeId: "jobs"
+  },
+  {
+    href: "/dashboard/application-answers",
+    focus: "application-answers",
+    label: "Application Kit",
+    routeId: "profile"
   },
   {
     href: "/dashboard/cv-tailor",
     focus: "cv-tailor",
-    label: "Documents",
+    label: "Evidence Bank",
     routeId: "profile"
   },
   {
-    href: "/dashboard/extension",
-    focus: "job-inbox",
-    label: "Copilot",
+    href: "/dashboard/interview",
+    focus: "interview-prep",
+    label: "Interview Prep",
     routeId: "interview"
   },
   {
-    href: "/dashboard/autofill-profile",
-    focus: "autofill-profile",
-    label: "Profile",
-    routeId: "profile"
+    href: "/dashboard/follow-ups",
+    focus: "follow-ups",
+    label: "Follow-ups",
+    routeId: "applications"
   },
   {
     href: "/dashboard/settings",
@@ -404,39 +410,39 @@ const dashboardFocusCopy: Record<
   { eyebrow: string; title: string; body: string }
 > = {
   dashboard: {
-    eyebrow: "Today",
-    title: "Your job search",
-    body: "A simpler home for matches, saved jobs, documents and profile setup."
+    eyebrow: "Dashboard",
+    title: "Your EU application workspace",
+    body: "Track jobs, analyse fit, prepare stronger applications and keep every next action visible."
   },
   "job-inbox": {
-    eyebrow: "Copilot",
-    title: "Autofill Copilot",
-    body: "Connect the extension so jobs can be captured and applications can move faster."
+    eyebrow: "Tracked Jobs",
+    title: "Tracked Jobs",
+    body: "Roles captured from the extension or tracked from a fit analysis."
   },
   "match-score": {
-    eyebrow: "Matches",
-    title: "Matches",
-    body: "Check a role against your profile before you spend time applying."
+    eyebrow: "Fit Analysis",
+    title: "Analyse fit before you apply",
+    body: "Compare a European role against your profile evidence, gaps and work-right context."
   },
   "cv-tailor": {
-    eyebrow: "Documents",
-    title: "Documents",
-    body: "Keep CV evidence and reusable application material in one place."
+    eyebrow: "Evidence Bank",
+    title: "Evidence Bank",
+    body: "Keep CV evidence, projects, skills and proof points ready for role-specific positioning."
   },
   "application-answers": {
-    eyebrow: "Answers",
-    title: "Application answers",
-    body: "Draft reusable answers from your profile and saved notes."
+    eyebrow: "Application Kit",
+    title: "Application Kit",
+    body: "Prepare profile summaries, cover notes and reusable answers from verified evidence."
   },
   "autofill-profile": {
-    eyebrow: "Profile",
-    title: "Profile",
-    body: "Add the details AutoTime needs to match jobs and autofill safely."
+    eyebrow: "Profile Evidence",
+    title: "Profile Evidence",
+    body: "Add the profile details AutoTime needs for fit analysis and application preparation."
   },
   "application-tracker": {
-    eyebrow: "Job Tracker",
-    title: "Job Tracker",
-    body: "See saved jobs, update status and keep next steps visible."
+    eyebrow: "Tracked Jobs",
+    title: "Tracked Jobs",
+    body: "See tracked jobs, update status and keep next steps visible."
   },
   "follow-ups": {
     eyebrow: "Follow-ups",
@@ -451,7 +457,7 @@ const dashboardFocusCopy: Record<
   insights: {
     eyebrow: "Progress",
     title: "Progress",
-    body: "See what is working across saved jobs."
+    body: "See what is working across tracked jobs."
   },
   settings: {
     eyebrow: "Settings",
@@ -2656,21 +2662,11 @@ export default function HomePage({
     [state.profile]
   )
   const profileReadyForExecution = readinessScore >= profileExecutionThreshold
-  const profileCompletionGap = Math.max(
-    0,
-    profileExecutionThreshold - readinessScore
-  )
   const profileGateItems = [
     ...profileBridgeIssues.map((issue) => `Add ${issue}`),
     ...(profileReadyForExecution
       ? []
-      : [
-          `Reach ${profileExecutionThreshold}% profile completion${
-            profileCompletionGap > 0
-              ? ` (${profileCompletionGap}% more needed)`
-              : ""
-          }`
-        ])
+      : ["Add enough profile evidence to unlock job checks"])
   ]
   const cloudSyncReadiness = useMemo(() => getBrowserCloudSyncReadiness(), [])
   const interviewApplications = state.applications.filter(
@@ -2719,12 +2715,12 @@ export default function HomePage({
   const actionPanelEyebrow = isOverview
     ? "Quick actions"
     : currentTab === "jobs"
-      ? "Check a Job"
+      ? "Fit Analysis"
       : currentTab === "profile"
-        ? "Profile"
+        ? "Profile Evidence"
         : currentTab === "applications"
-          ? "Tracker"
-          : "Interview"
+          ? "Tracked Jobs"
+          : "Interview Prep"
   const showHeaderJobActions =
     profileReadyForExecution &&
     (isOverview || currentTab === "jobs" || currentTab === "applications")
@@ -2803,15 +2799,15 @@ export default function HomePage({
             : "Review blockers before applying."
     },
     {
-      title: "Saved Jobs",
+      title: "Tracked Jobs",
       value: `${state.applications.length} jobs`,
       hideMetric: state.applications.length > 0,
       tone: state.applications.length > 0 ? "good" : "neutral",
       progress: Math.min(100, state.applications.length * 24),
       body:
         statusCounts.Applied + statusCounts.Interview > 0
-          ? "Some saved jobs have progressed."
-          : "No saved jobs have progressed yet."
+          ? "Some tracked jobs have progressed."
+          : "No tracked jobs have progressed yet."
     },
     {
       title: "Follow-ups",
@@ -2819,7 +2815,7 @@ export default function HomePage({
       hideMetric: true,
       tone: followUpTone,
       progress: activeActionCount > 0 ? 45 : 100,
-      body: "Next steps across saved jobs."
+      body: "Next steps across tracked jobs."
     },
     {
       title: "Interview",
@@ -2827,7 +2823,7 @@ export default function HomePage({
       hideMetric: state.interviewPrepPacks.length > 0,
       tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral",
       progress: Math.min(100, state.interviewPrepPacks.length * 34),
-      body: "Saved jobs and interview stages feed prep."
+      body: "Tracked jobs and interview stages feed prep."
     }
   ]
   const onboardingSteps = [
@@ -2873,7 +2869,7 @@ export default function HomePage({
       detail: hasJobDraft(state.jobAnalysis)
         ? fitEvaluation.decision
         : "Load an extension-parsed job or paste a JD manually before applying.",
-      cta: "Check job fit",
+      cta: "Analyse Fit",
       tone: hasJobDraft(state.jobAnalysis) ? decisionTone : "neutral"
     },
     {
@@ -2883,7 +2879,7 @@ export default function HomePage({
       status:
         state.applications.length > 0
           ? `${state.applications.length} saved`
-          : "No saved jobs yet",
+          : "No tracked jobs yet",
       hideStatusMetric: state.applications.length > 0,
       detail:
         activeActionCount > 0
@@ -2920,15 +2916,15 @@ export default function HomePage({
   ]
   const commandQuickActions = [
     {
-      href: "/dashboard/inbox",
-      label: "Saved jobs",
-      title: "Review saved roles",
+      href: "/dashboard/applications",
+      label: "Tracked Jobs",
+      title: "Review tracked roles",
       body: "Check which roles need a decision, status update or next action."
     },
     {
       href: "/dashboard/match-score",
-      label: "Check job",
-      title: canSaveCheckedJob ? "Save this checked job" : "Analyse a role",
+      label: "Fit Analysis",
+      title: canSaveCheckedJob ? "Track this job" : "Analyse a role",
       body: canSaveCheckedJob
         ? "A role is ready to save into your tracker with evidence attached."
         : "Paste a job description to see fit, missing proof and limits."
@@ -2940,7 +2936,7 @@ export default function HomePage({
       body:
         activeActionCount > 0
           ? "Move the next action forward before it gets buried."
-          : "No urgent follow-up is waiting from saved jobs."
+          : "No urgent follow-up is waiting from tracked jobs."
     }
   ]
   const todayAction = !profileReadyForExecution
@@ -2953,8 +2949,8 @@ export default function HomePage({
       }
     : state.applications.length === 0
       ? {
-          body: "Check one role manually or track it from the extension. Saved jobs will appear in your tracker.",
-          cta: "Check a job",
+          body: "Analyse one role manually or track it from the extension. Tracked jobs will appear in your tracker.",
+          cta: "Analyse Fit",
           href: "/dashboard/jobs",
           label: "Best next step",
           title: "Save your first job"
@@ -2968,7 +2964,7 @@ export default function HomePage({
             title: "Handle the next action"
           }
         : {
-            body: "Your saved jobs are tidy. Review recent roles or check another job when you are ready.",
+            body: "Your tracked jobs are tidy. Review recent roles or analyse another job when you are ready.",
             cta: "Review tracker",
             href: "/dashboard/applications",
             label: "Best next step",
@@ -3227,7 +3223,7 @@ export default function HomePage({
       return
     }
 
-    setOnlineAnalyticsStatus("Running Python analytics from saved evidence...")
+    setOnlineAnalyticsStatus("Preparing evidence report from tracked jobs...")
     try {
       const response = await fetch(
         `${analyticsServiceBaseUrl}/evidence-outcomes`,
@@ -3248,14 +3244,14 @@ export default function HomePage({
       const report = (await response.json()) as OnlineAnalyticsReport
       setOnlineAnalyticsReport(report)
       setOnlineAnalyticsStatus(
-        "Python analytics updated from evidence and outcomes."
+        "Evidence report updated from tracked jobs and outcomes."
       )
     } catch (error) {
       setOnlineAnalyticsReport(null)
       setOnlineAnalyticsStatus(
         error instanceof Error
-          ? `Python analytics unavailable: ${error.message}`
-          : "Python analytics unavailable."
+          ? `Evidence report unavailable: ${error.message}`
+          : "Evidence report unavailable."
       )
     }
   }
@@ -3744,11 +3740,11 @@ export default function HomePage({
       ]
     }
 
-    persist(nextState, "Application saved with evidence and outcome records")
+    persist(nextState, "Job tracked with evidence and outcome history")
     hasUnsyncedDashboardChangesRef.current = true
     const synced = await syncDashboardStateToCloud(nextState, {
-      failureMessage: "Application saved locally. Dashboard sync failed",
-      successMessage: "Application saved and synced to dashboard"
+      failureMessage: "Job tracked locally. Dashboard sync failed",
+      successMessage: "Job tracked and synced to dashboard"
     })
     hasUnsyncedDashboardChangesRef.current = !synced
     openDashboardView("applications")
@@ -3766,7 +3762,7 @@ export default function HomePage({
 
     try {
       setIsCopilotThinking(true)
-      setStatus("AI Copilot is checking the role against your profile...")
+      setStatus("AI fit assistant is checking the role against your profile...")
       const response = await fetch("/api/ai/analyse", {
         method: "POST",
         headers: {
@@ -3803,7 +3799,7 @@ export default function HomePage({
         }
       }
 
-      persist(next, "AI Copilot updated the role analysis")
+      persist(next, "AI fit assistant updated the role analysis")
     } catch (error: unknown) {
       setStatus(
         error instanceof Error ? error.message : "AI role analysis failed"
@@ -4201,7 +4197,7 @@ export default function HomePage({
         : currentTab === "profile"
           ? "Add the details AutoTime needs about you."
           : currentTab === "applications"
-            ? "Review saved jobs and update the next step."
+            ? "Review tracked jobs and update the next step."
             : "Prepare a clearer interview answer."
   const actionPanelStateLabel = isProfileGateRequired
     ? "Your profile needs more verified evidence before AutoTime can avoid generic advice."
@@ -4435,16 +4431,16 @@ export default function HomePage({
               <>
                 {currentTab !== "jobs" ? (
                   <a className="secondary-button" href="/dashboard/jobs">
-                    Check job
+                    Analyse Fit
                   </a>
                 ) : null}
                 <a className="secondary-button" href="/dashboard/inbox">
-                  Saved Jobs
+                  Tracked Jobs
                 </a>
               </>
             ) : null}
             <div className="profile-completion-meter">
-              <small>User Profile Completion</small>
+              <small>Profile readiness</small>
               <strong>
                 <RevealMetric label="Show profile completion">
                   {readinessScore}%
@@ -4543,7 +4539,7 @@ export default function HomePage({
           className="command-sidebar"
           aria-label="Dashboard menu"
         >
-          <p>Menu</p>
+          <p>Dashboard</p>
           <nav>
             {commandSidebarItems.map((item) => (
               <a
@@ -4590,7 +4586,7 @@ export default function HomePage({
                   {profileReadyForExecution ? (
                     <>
                       <a className="secondary-button" href="/dashboard/jobs">
-                        Check job
+                        Analyse Fit
                       </a>
                       <a
                         className="secondary-button"
@@ -4616,7 +4612,7 @@ export default function HomePage({
                   type="button"
                   onClick={runAiJobAnalysis}
                 >
-                  {isCopilotThinking ? "Checking role" : "Ask AI to check role"}
+                  {isCopilotThinking ? "Checking role" : "Ask AI to analyse fit"}
                 </button>
               ) : currentTab === "profile" ? (
                 <>
@@ -4669,10 +4665,10 @@ export default function HomePage({
                   <p className="eyebrow">Profile evidence gate</p>
                   <h2>Locked until your candidate evidence is ready</h2>
                   <p>
-                    Your profile is {readinessScore}% complete. AutoTime unlocks
-                    job checks, tracker actions and AI interview coaching at{" "}
-                    {profileExecutionThreshold}% so every recommendation is tied
-                    to real role proof, work-right context and candidate facts.
+                    AutoTime unlocks job checks, tracker actions and AI
+                    interview coaching once your profile has enough verified
+                    evidence, so every recommendation is tied to real role
+                    proof, work-right context and candidate facts.
                   </p>
                 </div>
               </div>
@@ -5190,14 +5186,13 @@ export default function HomePage({
                         ) : null}
                         {profileReadyForExecution
                           ? "Profile is ready"
-                          : "Evidence gate locked until 90%"}
+                          : "Evidence gate locked"}
                       </h2>
                       <p>
-                        Complete at least {profileExecutionThreshold}% of your
-                        profile before using job checks, tracker actions or
-                        interview prep. This keeps the workflow
-                        competitor-grade: specific, evidence-led and safe from
-                        generic AI claims.
+                        Add enough candidate evidence before using job checks,
+                        tracker actions or interview prep. This keeps the
+                        workflow specific, evidence-led and safe from generic AI
+                        claims.
                       </p>
                     </div>
                     {profileReadyForExecution ? (
@@ -5381,12 +5376,12 @@ export default function HomePage({
                     className={`metric-card ${getMetricTone(state.applications.length, 3)}`}
                   >
                     <span>
-                      <RevealMetric label="Show saved jobs count">
+                      <RevealMetric label="Show tracked jobs count">
                         {state.applications.length}
                       </RevealMetric>
                     </span>
-                    <small>Saved jobs</small>
-                    <p>Some jobs may be active beyond saved.</p>
+                    <small>Tracked jobs</small>
+                    <p>Some jobs may be active beyond tracked.</p>
                   </div>
                   <div
                     className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
@@ -5408,7 +5403,7 @@ export default function HomePage({
                       </RevealMetric>
                     </span>
                     <small>Next actions</small>
-                    <p>Follow-ups across saved jobs</p>
+                    <p>Follow-ups across tracked jobs</p>
                   </div>
                   <div className="metric-card warn">
                     <span>
@@ -5876,14 +5871,10 @@ export default function HomePage({
                       type="button"
                       onClick={saveApplicationFromJob}
                     >
-                      {fitEvaluation.contentGate === "ready"
-                        ? "Save viable job"
-                        : fitEvaluation.contentGate === "stretch"
-                          ? "Save as stretch"
-                          : "Save blocker for review"}
+                      Track Job
                     </button>
                     <p className="job-check-save-note">
-                      Saving moves this checked role into the tracker with the
+                      Tracking moves this checked role into the tracker with the
                       current score, risks and next action attached.
                     </p>
                   </div>
@@ -6257,9 +6248,9 @@ export default function HomePage({
                               {persistedEvidenceRecords.length}
                             </RevealMetric>
                           </span>
-                          <strong>Saved checks</strong>
+                          <strong>Saved fit checks</strong>
                           <p>
-                            Checks stored from saved jobs and profile details.
+                            Checks stored from tracked jobs and profile details.
                           </p>
                         </article>
                         <article>
@@ -6268,8 +6259,8 @@ export default function HomePage({
                               {outcomeAnalytics.total}
                             </RevealMetric>
                           </span>
-                          <strong>Outcome records</strong>
-                          <p>Saved decisions with status and result changes.</p>
+                          <strong>Outcome history</strong>
+                          <p>Tracked decisions with status and result changes.</p>
                         </article>
                         <article>
                           <span>
@@ -6291,23 +6282,23 @@ export default function HomePage({
                           <strong>Calibration status</strong>
                           <p>
                             {outcomeAnalytics.calibrationReady
-                              ? "Enough records exist to begin score-band calibration."
+                              ? "Enough history exists to begin fit calibration."
                               : "Decision Index remains non-probability until enough outcomes exist."}
                           </p>
                         </article>
                       </section>
                       <section className="online-analytics-panel">
                         <div className="section-heading">
-                          <p className="eyebrow">Python analytics</p>
-                          <h2>Online evidence and outcome report</h2>
-                          <p>Descriptive analytics from saved records only.</p>
+                          <p className="eyebrow">Evidence report</p>
+                          <h2>Evidence and outcome report</h2>
+                          <p>Descriptive report from tracked jobs only.</p>
                         </div>
                         <button
                           className="secondary-button"
                           type="button"
                           onClick={runOnlineAnalytics}
                         >
-                          Run Python analytics
+                          Run evidence report
                         </button>
                         {onlineAnalyticsStatus ? (
                           <p className="status-message">
@@ -6327,7 +6318,7 @@ export default function HomePage({
                                 </RevealMetric>
                               </span>
                               <strong>Observed interview rate</strong>
-                              <p>Based only on tracked outcome records.</p>
+                              <p>Based only on tracked outcome history.</p>
                             </article>
                             <article>
                               <span>
@@ -6354,20 +6345,20 @@ export default function HomePage({
                               </span>
                               <strong>Interview signals</strong>
                               <p>
-                                Outcome records marked as interview or final
+                                Outcome history marked as interview or final
                                 stage.
                               </p>
                             </article>
                             <article>
                               <span>
-                                <RevealMetric label="Show ML feature row count">
+                                <RevealMetric label="Show evidence row count">
                                   {
                                     onlineAnalyticsReport.mlReadiness
                                       .featureRows
                                   }
                                 </RevealMetric>
                               </span>
-                              <strong>ML feature rows</strong>
+                              <strong>Evidence rows</strong>
                               <p>
                                 {
                                   onlineAnalyticsReport.mlReadiness
@@ -6400,7 +6391,7 @@ export default function HomePage({
                               <p>{onlineAnalyticsReport.mlReadiness.message}</p>
                             </article>
                             <div className="score-band-table">
-                              <strong>Score-band outcomes</strong>
+                              <strong>Fit-band outcomes</strong>
                               {onlineAnalyticsReport.scoreBands.length ? (
                                 onlineAnalyticsReport.scoreBands.map((band) => (
                                   <div key={band.band}>
@@ -6434,7 +6425,7 @@ export default function HomePage({
                                   </div>
                                 ))
                               ) : (
-                                <p>No score-band outcomes yet.</p>
+                                <p>No fit-band outcomes yet.</p>
                               )}
                             </div>
                             <div className="score-band-table">
@@ -6608,11 +6599,11 @@ export default function HomePage({
                           </div>
                           <dl className="summary-list">
                             <div>
-                              <dt>Job match score</dt>
+                              <dt>Fit analysis</dt>
                               <dd>
                                 {typeof selectedApplication.fitScore ===
                                 "number" ? (
-                                  <RevealMetric label="Show saved job match score">
+                                  <RevealMetric label="Show saved fit analysis value">
                                     {selectedApplication.fitScore}/100
                                   </RevealMetric>
                                 ) : (
@@ -6776,7 +6767,7 @@ export default function HomePage({
 
                         <section className="panel">
                           <div className="section-heading">
-                            <p className="eyebrow">Documents</p>
+                            <p className="eyebrow">Application Kit</p>
                             <h3>Saved application content</h3>
                           </div>
                           {selectedApplication.contentSnapshot ? (
@@ -7090,7 +7081,7 @@ export default function HomePage({
                             <strong>
                               {state.applications.length
                                 ? "No jobs match these filters"
-                                : "No saved jobs yet"}
+                                : "No tracked jobs yet"}
                             </strong>
                             <p>
                               {state.applications.length
@@ -7201,7 +7192,7 @@ export default function HomePage({
                           type="button"
                           onClick={generateInterviewBuddyAnswers}
                         >
-                          {isCopilotThinking ? "Coaching..." : "Run AI Coach"}
+                          {isCopilotThinking ? "Coaching..." : "Run interview coach"}
                         </button>
                         <button
                           className="secondary-button"
@@ -7404,7 +7395,7 @@ export default function HomePage({
       </div>
 
       <details className="utility-bar">
-        <summary>Data tools</summary>
+        <summary>Backups</summary>
         <button type="button" onClick={saveDashboard}>
           Save changes
         </button>

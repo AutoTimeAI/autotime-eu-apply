@@ -236,7 +236,7 @@ export default function ExtensionConnect() {
 
       const successMessage =
         extensionResponse.syncError
-          ? `Extension connected. Saved jobs will retry sync from Track Job. Reason: ${extensionResponse.syncError}`
+          ? `Extension connected. Tracked jobs will retry sync from Track Job. Reason: ${extensionResponse.syncError}`
           : recordWarning
             ? `Extension connected. Dashboard record warning: ${recordWarning}`
             : "Extension connected. You can return to the side panel."
