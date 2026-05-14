@@ -379,7 +379,7 @@ const dashboardFocusCopy: Record<
   "match-score": {
     eyebrow: "Analyse Fit",
     title: "Analyse Fit before you apply",
-    body: "Evidence-first scoring and rules compare one role against your profile, work-right context, country fit, risks and missing proof. AI assists where useful."
+    body: "Rules-first fit check for one role against your saved profile evidence, country context and missing proof."
   },
   "cv-tailor": {
     eyebrow: "Evidence Bank",
@@ -2878,6 +2878,9 @@ export default function HomePage({
     () => getOfficialSources(productContext.targetCountry),
     [productContext.targetCountry]
   )
+  const officialSourceStatusLabel = trustState.officialSourceReviewed
+    ? "Official source reviewed"
+    : "Official source check needed"
   const evidenceLedgerRows = useMemo(
     () => getEvidenceLedgerRows(fitEvaluation, decisionBrief.missingInputs),
     [fitEvaluation, decisionBrief.missingInputs]
@@ -2964,7 +2967,7 @@ export default function HomePage({
   const actionPanelEyebrow = isOverview
     ? "Quick actions"
     : currentTab === "jobs"
-      ? "Fit Analysis"
+      ? "Analyse Fit"
       : currentTab === "profile"
         ? "Profile Evidence"
         : currentTab === "applications"
@@ -3176,7 +3179,7 @@ export default function HomePage({
     },
     {
       href: "/dashboard/match-score",
-      label: "Fit Analysis",
+      label: "Analyse Fit",
       title: canSaveCheckedJob ? "Track this job" : "Analyse a role",
       body: canSaveCheckedJob
         ? "A role is ready to save into your tracker with evidence attached."
@@ -4846,7 +4849,7 @@ export default function HomePage({
     : isOverview
       ? "What do you want to do now?"
       : currentTab === "jobs"
-        ? "Paste a job and see if it is worth applying."
+        ? "Check fit before applying."
         : activeFocus === "application-answers"
           ? "Prepare application content for one tracked job."
           : activeFocus === "cv-tailor"
@@ -4864,8 +4867,8 @@ export default function HomePage({
         : "Profile evidence still needs work before the best outcomes."
         : currentTab === "jobs"
           ? hasJobDraft(state.jobAnalysis)
-            ? "Ready to analyse current role"
-            : "Waiting for role details"
+            ? "Role ready"
+            : "Add role details"
         : activeFocus === "application-answers"
           ? activeKitApplication
             ? "Draft content is tied to a tracked job"
@@ -5300,17 +5303,9 @@ export default function HomePage({
                     Complete profile
                   </a>
                 ) : currentTab === "jobs" ? (
-                  <button
-                    disabled={
-                      isCopilotThinking || !hasJobDraft(state.jobAnalysis)
-                    }
-                    type="button"
-                    onClick={runAiJobAnalysis}
-                  >
-                    {isCopilotThinking
-                      ? "Checking role"
-                      : "Use AI assistant"}
-                  </button>
+                  <a className="secondary-button" href="#analyse-fit-role">
+                    Open fit check
+                  </a>
                 ) : activeFocus === "application-answers" ? (
                   <>
                     <button
@@ -5767,15 +5762,13 @@ export default function HomePage({
                 >
                   <div>
                     <p className="eyebrow">Analyse Fit</p>
-                    <h2>Check one role, then decide</h2>
+                    <h2>Evidence-led role decision</h2>
                     <p>
-                      Load a tracked job or paste a role. AutoTime compares it
-                      against your saved profile, then gives you a clear next
-                      step.
+                      Load a tracked job or paste one role. AutoTime checks
+                      fit, risk and next action against your saved evidence.
                     </p>
                     <p className="decision-method-note">
-                      Analyse Fit uses evidence-first scoring and rules, with
-                      AI assistance where useful.
+                      Rules first. Official sources and saved proof outrank AI.
                     </p>
                   </div>
                   <div className="decision-score">
@@ -5802,23 +5795,22 @@ export default function HomePage({
                     <article>
                       <span>1</span>
                       <strong>Add role evidence</strong>
-                      <p>Load a tracked job or paste the job title, URL and JD.</p>
+                      <p>Load a tracked job or paste title, URL and JD.</p>
                     </article>
                     <article>
                       <span>2</span>
-                      <strong>Review the decision</strong>
-                      <p>Check the score, risk and missing proof before acting.</p>
+                      <strong>Check the decision</strong>
+                      <p>Review score, risk and missing proof.</p>
                     </article>
                     <article>
                       <span>3</span>
                       <strong>Save the role</strong>
-                      <p>Send useful roles to Tracked Jobs with the decision attached.</p>
+                      <p>Keep useful roles with the decision attached.</p>
                     </article>
                   </div>
                   <p className="decision-integrity-note">
-                    Evidence-first scoring is the decision base. AI support can
-                    enrich job text, but it does not replace the rules,
-                    evidence or user review.
+                    AI can enrich job text. It cannot replace rules, evidence,
+                    official sources or user review.
                   </p>
                 </section>
               )}
@@ -6750,10 +6742,8 @@ export default function HomePage({
                       <p className="eyebrow">Role evidence</p>
                       <h2>Analyse one job before you apply</h2>
                       <p>
-                        Start from a job parsed by the extension. Manual fields
-                        are a fallback for roles you have not tracked yet.
-                        Scoring remains rules-led; AI only assists the role
-                        analysis when you choose it.
+                        Use a tracked job or paste one JD. Rules score it
+                        first; AI is optional.
                       </p>
                     </div>
                     <section
@@ -6769,8 +6759,8 @@ export default function HomePage({
                           </strong>
                           <p>
                             {latestTrackedJobSource
-                              ? "These jobs came from the extension or saved tracker. Loading one fills the role details and JD text for analysis."
-                              : "Open a job page in the extension and track it, or paste the JD manually below."}
+                              ? "Load saved role details and JD text."
+                              : "Track a job from the extension or paste the JD below."}
                           </p>
                         </div>
                         <span
@@ -6835,9 +6825,8 @@ export default function HomePage({
                       )}
                     </section>
                     <p className="job-check-save-note">
-                      Automatic means the JD was parsed from the browser
-                      extension. Manual means this role was typed or pasted in
-                      the dashboard.
+                      Automatic means extension-captured. Manual means pasted
+                      here.
                     </p>
                     <div className="job-check-field-grid">
                       <label>
@@ -6890,8 +6879,7 @@ export default function HomePage({
                       Save to Tracked Jobs
                     </button>
                     <p className="job-check-save-note">
-                      Tracking moves this checked role into the tracker with the
-                      current score, risks and next action attached.
+                      Saves the score, risks and next action with the role.
                     </p>
                   </div>
 
@@ -7003,6 +6991,48 @@ export default function HomePage({
                           <p>{decisionBrief.nextActions[0]}</p>
                         </article>
                       </div>
+                      <section
+                        className="fit-trust-panel"
+                        aria-label="Official source and AI integrity check"
+                      >
+                        <div>
+                          <span>{officialSourceStatusLabel}</span>
+                          <strong>Official source and employer wording first</strong>
+                          <p>
+                            Official sources and employer wording must be
+                            checked before relying on work-right, sponsorship,
+                            relocation or location-fit advice.
+                          </p>
+                        </div>
+                        <div className="fit-trust-sources">
+                          {officialSources.slice(0, 2).map((source) => (
+                            <a
+                              href={source.url}
+                              key={source.url}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              {source.label}
+                            </a>
+                          ))}
+                        </div>
+                        <p className="fit-ai-boundary">
+                          AI output cannot override official sources, saved
+                          profile evidence, parsed job text or your review.
+                        </p>
+                        <label className="official-review-control">
+                          <input
+                            checked={trustState.officialSourceReviewed}
+                            type="checkbox"
+                            onChange={(event) =>
+                              setOfficialSourceReviewed(event.target.checked)
+                            }
+                          />
+                          I checked the official source for this country and
+                          understand AutoTime is guidance, not work-right, visa
+                          or sponsorship approval.
+                        </label>
+                      </section>
                       <div className="fit-decision-actions">
                         <button
                           disabled={!canSaveCheckedJob}
@@ -7144,6 +7174,30 @@ export default function HomePage({
                       </ul>
                     </section>
                   </div>
+                </section>
+              )}
+
+              {currentTab === "jobs" && (
+                <section
+                  className="panel fit-ai-assist-panel"
+                  aria-label="Optional Analyse Fit AI assistant"
+                >
+                  <div className="section-heading">
+                    <p className="eyebrow">Optional AI</p>
+                    <h2>Refine the role analysis</h2>
+                    <p>
+                      Use AI after the rules-led check to summarise the JD,
+                      surface gaps and update the analysis. Evidence and
+                      official sources stay in control.
+                    </p>
+                  </div>
+                  <button
+                    disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
+                    type="button"
+                    onClick={runAiJobAnalysis}
+                  >
+                    {isCopilotThinking ? "Checking role" : "Use AI assistant"}
+                  </button>
                 </section>
               )}
 
@@ -7707,7 +7761,7 @@ export default function HomePage({
                           <strong>No follow-ups waiting</strong>
                           <p>
                             Add a next action from Tracked Jobs or save a role
-                            from Fit Analysis.
+                            from Analyse Fit.
                           </p>
                           <a
                             className="secondary-button"

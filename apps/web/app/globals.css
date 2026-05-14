@@ -2218,6 +2218,65 @@ h4 {
   margin-top: 2px;
 }
 
+.fit-trust-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #b7c9ee;
+  border-radius: 8px;
+  background: #f7fbff;
+  padding: 14px;
+}
+
+.fit-trust-panel > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.fit-trust-panel span {
+  color: var(--blue);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.fit-trust-panel strong {
+  color: var(--ink);
+}
+
+.fit-trust-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.fit-trust-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fit-trust-sources a {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 750;
+  padding: 7px 10px;
+  text-decoration: none;
+}
+
+.fit-trust-sources a:hover {
+  border-color: var(--accent);
+  background: #edf7f5;
+}
+
+.fit-ai-boundary {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  font-weight: 700;
+}
+
 .guardrail-item {
   display: grid;
   gap: 8px;
@@ -3108,6 +3167,21 @@ h4 {
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.45;
+}
+
+.fit-ai-assist-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.fit-ai-assist-panel .section-heading {
+  margin: 0;
+}
+
+.fit-ai-assist-panel button {
+  white-space: nowrap;
 }
 
 .decision-method-note {
@@ -5967,6 +6041,7 @@ h4 {
   .application-kit-workspace,
   .evidence-bank-workspace,
   .application-kit-editor,
+  .fit-ai-assist-panel,
   .follow-up-card,
   .trust-grid,
   .workspace-grid,
@@ -6221,6 +6296,7 @@ h4 {
   .interview-buddy-layout,
   .extension-distribution-grid,
   .job-check-field-grid,
+  .fit-ai-assist-panel,
   .analytics-grid,
   .online-analytics-results,
   .metrics-strip,
@@ -6255,6 +6331,10 @@ h4 {
 
   .application-command-strip {
     grid-template-columns: 1fr;
+  }
+
+  .fit-ai-assist-panel button {
+    width: 100%;
   }
 
   .admin-shell {

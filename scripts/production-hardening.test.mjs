@@ -171,11 +171,25 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   assert.match(dashboard, /title: "Analyse Fit before you apply"/)
   assert.match(
     dashboard,
-    /Evidence-first scoring and rules compare one role against your profile/
+    /Rules-first fit check for one role against your saved profile evidence/
   )
   assert.match(dashboard, /Use AI assistant/)
+  assert.match(dashboard, /Open fit check/)
+  assert.match(dashboard, /Refine the role analysis/)
   assert.match(dashboard, /Rules first/)
   assert.match(dashboard, /AI assistance is optional/)
+  assert.match(dashboard, /Official sources and saved proof outrank AI/)
+  assert.match(dashboard, /Official source check needed/)
+  assert.match(dashboard, /Official source reviewed/)
+  assert.match(
+    dashboard,
+    /Official sources and employer wording must be\s*checked before relying on work-right, sponsorship,\s*relocation or location-fit advice\./
+  )
+  assert.match(
+    dashboard,
+    /AI output cannot override official sources, saved\s*profile evidence, parsed job text or your review\./
+  )
+  assert.match(dashboard, /setOfficialSourceReviewed\(event\.target\.checked\)/)
 
   const createApplicationStart = dashboard.indexOf("function createApplication(")
   const createContentStart = dashboard.indexOf(
