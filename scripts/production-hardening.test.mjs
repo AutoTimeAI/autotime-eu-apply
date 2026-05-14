@@ -149,6 +149,21 @@ test("CV profile detail extraction stays conservative", () => {
   assert.doesNotMatch(dashboard, /gender|ethnicity|marital|nationality|dateOfBirth/i)
 })
 
+test("profile evidence sync stays local-first until online save succeeds", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.match(
+    dashboard,
+    /if \(storedSyncPreferences\.profileAccountSyncEnabled\) \{\s*void loadDashboardSnapshot\(\{ silent: true \}\)\s*void loadProfileSnapshot\(\{ silent: true \}\)\s*\}/
+  )
+  assert.match(
+    dashboard,
+    /if \(!syncPreferences\.profileAccountSyncEnabled\) \{\s*return\s*\}/
+  )
+  assert.match(dashboard, /const synced = await syncProfileStateToCloud\(state\.profile\)/)
+  assert.match(dashboard, /if \(synced\) \{\s*setProfileAccountSyncEnabled\(true\)\s*\}/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

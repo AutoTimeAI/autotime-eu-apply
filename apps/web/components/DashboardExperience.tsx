@@ -3419,11 +3419,17 @@ export default function HomePage({
     const storedSyncPreferences = getStoredSyncPreferences(userId)
     setSyncPreferences(storedSyncPreferences)
     setCloudSyncConsent(storedSyncPreferences.profileAccountSyncEnabled)
-    void loadDashboardSnapshot({ silent: true })
-    void loadProfileSnapshot({ silent: true })
+    if (storedSyncPreferences.profileAccountSyncEnabled) {
+      void loadDashboardSnapshot({ silent: true })
+      void loadProfileSnapshot({ silent: true })
+    }
   }, [loadDashboardSnapshot, loadProfileSnapshot, userId])
 
   useEffect(() => {
+    if (!syncPreferences.profileAccountSyncEnabled) {
+      return
+    }
+
     const refreshSyncedWorkflow = () => {
       void loadDashboardSnapshot({ silent: true })
       void loadProfileSnapshot({ silent: true })
@@ -3447,7 +3453,11 @@ export default function HomePage({
       document.removeEventListener("visibilitychange", refreshWhenVisible)
       window.clearInterval(intervalId)
     }
-  }, [loadDashboardSnapshot, loadProfileSnapshot])
+  }, [
+    loadDashboardSnapshot,
+    loadProfileSnapshot,
+    syncPreferences.profileAccountSyncEnabled
+  ])
 
   const persist = (next: CompanionDashboardState, message: string) => {
     setState(next)
@@ -4759,8 +4769,12 @@ export default function HomePage({
   }
 
   const syncProfileToCloud = async () => {
-    setProfileAccountSyncEnabled(true)
-    await syncProfileStateToCloud(state.profile)
+    setCloudSyncConsent(true)
+    const synced = await syncProfileStateToCloud(state.profile)
+
+    if (synced) {
+      setProfileAccountSyncEnabled(true)
+    }
   }
 
   const loadProfileFromCloud = async () => {
@@ -6378,11 +6392,14 @@ export default function HomePage({
                               checked={cloudSyncConsent}
                               disabled={!cloudSyncReadiness.configured}
                               type="checkbox"
-                              onChange={(event) =>
-                                setProfileAccountSyncEnabled(
-                                  event.target.checked
-                                )
-                              }
+                              onChange={(event) => {
+                                if (event.target.checked) {
+                                  setCloudSyncConsent(true)
+                                  return
+                                }
+
+                                setProfileAccountSyncEnabled(false)
+                              }}
                             />
                             <span>
                               I want an online copy for this signed-in account.
