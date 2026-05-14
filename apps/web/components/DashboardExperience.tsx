@@ -5702,6 +5702,13 @@ export default function HomePage({
                         >
                           Check sync
                         </button>
+                      </div>
+                      <details className="sync-danger-details">
+                        <summary>Advanced data controls</summary>
+                        <p>
+                          Use only if you want to remove the profile saved to
+                          this online account. Your browser copy stays separate.
+                        </p>
                         <button
                           className="danger-button"
                           disabled={!cloudSyncReadiness.configured}
@@ -5710,7 +5717,7 @@ export default function HomePage({
                         >
                           Delete online profile
                         </button>
-                      </div>
+                      </details>
                     </div>
                   </section>
                 )}
@@ -6356,42 +6363,46 @@ export default function HomePage({
                         </div>
                       </dl>
                     </section>
-                    <section className="panel">
-                      <div className="section-heading">
-                        <p className="eyebrow">Reusable answers</p>
-                        <h2>Reusable answers</h2>
+                    <details className="panel reusable-answers-panel">
+                      <summary>
+                        <span>
+                          <small>Reusable answers</small>
+                          <strong>Open answer evidence</strong>
+                        </span>
+                      </summary>
+                      <div className="reusable-answers-content">
                         <p>
                           Save reusable wording here only when it is true and
                           supported by your profile.
                         </p>
+                        <label>
+                          Motivation answer
+                          <textarea
+                            placeholder="Why this kind of role, company, or market makes sense for you."
+                            value={state.reusableAnswers.motivationAnswer}
+                            onChange={(event) =>
+                              updateReusableAnswer(
+                                "motivationAnswer",
+                                event.target.value
+                              )
+                            }
+                          />
+                        </label>
+                        <label>
+                          Strengths answer
+                          <textarea
+                            placeholder="A factual strengths answer backed by experience, projects, tools, or outcomes."
+                            value={state.reusableAnswers.strengthsAnswer}
+                            onChange={(event) =>
+                              updateReusableAnswer(
+                                "strengthsAnswer",
+                                event.target.value
+                              )
+                            }
+                          />
+                        </label>
                       </div>
-                      <label>
-                        Motivation answer
-                        <textarea
-                          placeholder="Why this kind of role, company, or market makes sense for you."
-                          value={state.reusableAnswers.motivationAnswer}
-                          onChange={(event) =>
-                            updateReusableAnswer(
-                              "motivationAnswer",
-                              event.target.value
-                            )
-                          }
-                        />
-                      </label>
-                      <label>
-                        Strengths answer
-                        <textarea
-                          placeholder="A factual strengths answer backed by experience, projects, tools, or outcomes."
-                          value={state.reusableAnswers.strengthsAnswer}
-                          onChange={(event) =>
-                            updateReusableAnswer(
-                              "strengthsAnswer",
-                              event.target.value
-                            )
-                          }
-                        />
-                      </label>
-                    </section>
+                    </details>
                   </div>
                 </section>
               )}

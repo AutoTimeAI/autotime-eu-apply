@@ -2760,6 +2760,31 @@ h4 {
   flex: 1 1 150px;
 }
 
+.sync-danger-details {
+  border: 1px solid #ead1d5;
+  border-radius: 8px;
+  background: #fffafa;
+  padding: 8px 10px;
+}
+
+.sync-danger-details summary {
+  color: var(--red);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.sync-danger-details p {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.sync-danger-details button {
+  width: 100%;
+}
+
 .sync-consent-control {
   display: flex;
   align-items: flex-start;
@@ -2773,6 +2798,74 @@ h4 {
 .sync-consent-control input {
   width: auto;
   margin-top: 2px;
+}
+
+.reusable-answers-panel {
+  padding: 0;
+}
+
+.reusable-answers-panel summary {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 16px;
+}
+
+.reusable-answers-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.reusable-answers-panel summary::after {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--accent-strong);
+  content: "+";
+  font-weight: 800;
+}
+
+.reusable-answers-panel[open] summary::after {
+  content: "-";
+}
+
+.reusable-answers-panel summary span {
+  display: grid;
+  gap: 3px;
+}
+
+.reusable-answers-panel summary small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.reusable-answers-panel summary strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.reusable-answers-content {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 14px 16px 16px;
+}
+
+.reusable-answers-content p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .metric-card {
