@@ -61,6 +61,19 @@ test("CI builds the web dashboard with non-production placeholder secrets", () =
   assert.match(workflow, /NEXT_PUBLIC_SUPABASE_URL: https:\/\/example\.supabase\.co/)
 })
 
+test("AI rate-limit RPC uses timestamptz reset values", () => {
+  const migration = read(
+    "supabase/migrations/20260514120000_fix_ai_rate_limit_timestamp.sql"
+  )
+
+  assert.match(migration, /current_timestamp_at timestamptz := now\(\);/)
+  assert.match(
+    migration,
+    /current_timestamp_at \+ make_interval\(secs => p_window_seconds\)/
+  )
+  assert.doesNotMatch(migration, /current_time timestamptz/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
