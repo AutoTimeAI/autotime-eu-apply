@@ -1455,6 +1455,42 @@ h4 {
   gap: 14px;
 }
 
+.context-explainer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.context-explainer article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 12px;
+}
+
+.context-explainer span {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.context-explainer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .segmented-field {
   display: grid;
   gap: 10px;
@@ -5310,6 +5346,7 @@ h4 {
   .metrics-strip,
   .decision-columns,
   .integrity-grid,
+  .context-explainer,
   .interview-coach-audit,
   .ai-audit-summary,
   .overview-workflow-map,
@@ -5496,6 +5533,7 @@ h4 {
   .command-header-tools,
   .command-centre-grid,
   .command-action-dock,
+  .context-explainer,
   .integrity-grid,
   .interview-coach-audit,
   .ai-audit-summary,

@@ -10,37 +10,22 @@ type PublicNavProps = {
   } | null
 }
 
-const signedInNavItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  {
-    aliases: ["/dashboard/profile"],
-    href: "/dashboard/autofill-profile",
-    label: "Profile Evidence"
-  },
-  {
-    aliases: ["/dashboard/inbox"],
-    href: "/dashboard/applications",
-    label: "Tracked Jobs"
-  },
-  {
-    aliases: ["/dashboard/jobs"],
-    href: "/dashboard/match-score",
-    label: "Fit Analysis"
-  },
-  {
-    aliases: ["/dashboard/documents"],
-    href: "/dashboard/application-answers",
-    label: "Application Kit"
-  },
-  { href: "/dashboard/cv-tailor", label: "Evidence Bank" },
-  { href: "/dashboard/interview", label: "Interview Prep" },
+type PublicNavItem = {
+  aliases?: string[]
+  href: string
+  label: string
+}
+
+const signedInNavItems: PublicNavItem[] = [
+  { href: "/dashboard", label: "Home" },
   { href: "/dashboard/extension", label: "Extension" },
-  { href: "/pricing", label: "Pricing" }
+  { href: "/pricing", label: "Plans" },
+  { href: "/dashboard/settings", label: "Settings" }
 ]
 
 function isActiveSignedInNavItem(
   currentPath: string | undefined,
-  item: (typeof signedInNavItems)[number]
+  item: PublicNavItem
 ) {
   if (!currentPath) {
     return false
@@ -100,7 +85,7 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
               className={currentPath === "/pricing" ? "active" : undefined}
               href="/pricing"
             >
-              Pricing
+              Plans
             </Link>
             <Link className="nav-cta" href="/login">
               Sign in

@@ -4952,9 +4952,33 @@ export default function HomePage({
                       <p className="eyebrow">Profile settings</p>
                       <h2>Candidate context</h2>
                       <p>
-                        Set country, role focus and work-right context for
-                        checks.
+                        Choose the quick context below, then apply it into your
+                        My Profile fields for job checks and interview answers.
                       </p>
+                    </div>
+
+                    <div className="context-explainer">
+                      <article>
+                        <span>1</span>
+                        <p>
+                          Pick your role focus, work authorisation status,
+                          target country, experience level and search pace.
+                        </p>
+                      </article>
+                      <article>
+                        <span>2</span>
+                        <p>
+                          Click Apply to My Profile so AutoTime fills the
+                          target roles, target country and work-right prompt.
+                        </p>
+                      </article>
+                      <article>
+                        <span>3</span>
+                        <p>
+                          Review the saved fields in My Profile and replace any
+                          prompt text with your exact verified details.
+                        </p>
+                      </article>
                     </div>
 
                     <div className="context-grid">
@@ -5072,7 +5096,7 @@ export default function HomePage({
                           type="button"
                           onClick={applyMarketContextToProfile}
                         >
-                          Use these choices
+                          Apply to My Profile
                         </button>
                       </div>
                     </div>
