@@ -320,16 +320,7 @@ h4 {
   gap: 10px;
 }
 
-.file-import-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.file-import-button input {
+.hidden-file-input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -5918,7 +5909,6 @@ h4 {
 
   .header-actions,
   .header-actions button,
-  .header-actions .file-import-button,
   .walkthrough-actions,
   .walkthrough-actions a,
   .walkthrough-actions button,

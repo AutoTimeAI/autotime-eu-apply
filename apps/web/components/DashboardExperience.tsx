@@ -157,7 +157,7 @@ type ReadyToApplyItem = {
 
 function RevealMetric({
   children,
-  label = "Show value"
+  label = "Reveal value"
 }: {
   children: ReactNode
   label?: string
@@ -170,7 +170,7 @@ function RevealMetric({
 
   return (
     <span
-      aria-label={`Show value: ${label}`}
+      aria-label={`Reveal value: ${label}`}
       className="metric-reveal-button"
       role="button"
       tabIndex={0}
@@ -187,7 +187,7 @@ function RevealMetric({
         }
       }}
     >
-      Show value
+      Reveal
     </span>
   )
 }
@@ -388,7 +388,7 @@ const dashboardFocusCopy: Record<
     body: "Prepare profile summaries, cover notes and reusable answers from verified evidence."
   },
   "autofill-profile": {
-    eyebrow: "Profile Evidence",
+    eyebrow: "Profile setup",
     title: "Profile Evidence",
     body: "Add the profile details AutoTime needs for fit analysis and application preparation."
   },
@@ -2543,6 +2543,7 @@ export default function HomePage({
     useState<ContextSuggestion | null>(null)
   const [isReviewingCv, setIsReviewingCv] = useState(false)
   const hasResumeIntake = Boolean(resumeIntake.trim())
+  const resumeFileInputRef = useRef<HTMLInputElement | null>(null)
   const [interviewQuestion, setInterviewQuestion] = useState(
     interviewQuestionOptions[0]
   )
@@ -5287,15 +5288,22 @@ export default function HomePage({
                         />
                       </label>
                       <div className="header-actions">
-                        <label className="secondary-button file-import-button">
-                          <span>Import CV file</span>
-                          <input
-                            accept=".txt,.md,.markdown,.csv,.json,.rtf,text/*"
-                            aria-label="Import CV file"
-                            type="file"
-                            onChange={importResumeFile}
-                          />
-                        </label>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => resumeFileInputRef.current?.click()}
+                        >
+                          Import CV file
+                        </button>
+                        <input
+                          ref={resumeFileInputRef}
+                          accept=".txt,.md,.markdown,.csv,.json,.rtf,text/*"
+                          aria-label="Import CV file"
+                          className="hidden-file-input"
+                          tabIndex={-1}
+                          type="file"
+                          onChange={importResumeFile}
+                        />
                         <button
                           disabled={!hasResumeIntake || isReviewingCv}
                           type="button"
@@ -6341,14 +6349,9 @@ export default function HomePage({
                         <div>
                           <dt>CV evidence</dt>
                           <dd>
-                            {state.profile.baseCvText.trim() ? (
-                              <RevealMetric label="Show CV evidence character count">
-                                {state.profile.baseCvText.trim().length}{" "}
-                                characters saved
-                              </RevealMetric>
-                            ) : (
-                              "Missing"
-                            )}
+                            {state.profile.baseCvText.trim()
+                              ? `${state.profile.baseCvText.trim().length} characters saved`
+                              : "Missing"}
                           </dd>
                         </div>
                       </dl>
