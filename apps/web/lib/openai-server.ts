@@ -47,6 +47,28 @@ export type InterviewAnswerCoachResult = {
   boundaryNote: string
 }
 
+export type ProfileContextAIResult = {
+  roleMarket:
+    | "general-tech"
+    | "fintech"
+    | "enterprise-saas"
+    | "data-ai"
+    | "cybersecurity"
+    | "healthtech"
+    | "climate-energy"
+    | "gov-public"
+    | "ecommerce-marketplace"
+    | "devtools-cloud"
+  candidatePosition: "foreign-candidate" | "native-candidate"
+  urgency: "urgent" | "active" | "exploring"
+  targetCountry: string
+  experienceLevel: string
+  targetRoles: string
+  workRightPrompt: string
+  confidence: "Low" | "Medium" | "High"
+  reasons: string[]
+}
+
 export class RateLimitError extends Error {
   constructor(message: string) {
     super(message)
@@ -109,6 +131,33 @@ const interviewAnswerCoachSchema = z.object({
   strongFinalAnswer: z.string().optional(),
   followUpDrills: z.array(z.string()).optional(),
   boundaryNote: z.string().optional()
+})
+
+const profileContextSchema = z.object({
+  roleMarket: z
+    .enum([
+      "general-tech",
+      "fintech",
+      "enterprise-saas",
+      "data-ai",
+      "cybersecurity",
+      "healthtech",
+      "climate-energy",
+      "gov-public",
+      "ecommerce-marketplace",
+      "devtools-cloud"
+    ])
+    .optional(),
+  candidatePosition: z
+    .enum(["foreign-candidate", "native-candidate"])
+    .optional(),
+  urgency: z.enum(["urgent", "active", "exploring"]).optional(),
+  targetCountry: z.string().optional(),
+  experienceLevel: z.string().optional(),
+  targetRoles: z.string().optional(),
+  workRightPrompt: z.string().optional(),
+  confidence: z.enum(["Low", "Medium", "High"]).optional(),
+  reasons: z.array(z.string()).optional()
 })
 
 let openAIClient: OpenAI | null = null
@@ -237,6 +286,42 @@ function normaliseInterviewAnswerCoach(
     boundaryNote:
       toStringValue(value.boundaryNote) ||
       "Use this as interview preparation only. Keep every claim truthful and verifiable."
+  }
+}
+
+function normaliseProfileContext({
+  currentContext,
+  value
+}: {
+  currentContext: Pick<
+    ProfileContextAIResult,
+    | "candidatePosition"
+    | "experienceLevel"
+    | "roleMarket"
+    | "targetCountry"
+    | "urgency"
+  >
+  value: z.infer<typeof profileContextSchema>
+}): ProfileContextAIResult {
+  const candidatePosition =
+    value.candidatePosition ?? currentContext.candidatePosition
+
+  return {
+    roleMarket: value.roleMarket ?? currentContext.roleMarket,
+    candidatePosition,
+    urgency: value.urgency ?? currentContext.urgency,
+    targetCountry:
+      toStringValue(value.targetCountry) || currentContext.targetCountry,
+    experienceLevel:
+      toStringValue(value.experienceLevel) || currentContext.experienceLevel,
+    targetRoles: toStringValue(value.targetRoles),
+    workRightPrompt:
+      toStringValue(value.workRightPrompt) ||
+      (candidatePosition === "foreign-candidate"
+        ? "Confirm visa/work-right status, sponsorship need, relocation timing and eligible countries before applying."
+        : "Confirm local work-right status, notice period, salary expectations and availability before applying."),
+    confidence: value.confidence ?? "Medium",
+    reasons: toStringArray(value.reasons)
   }
 }
 
@@ -411,5 +496,43 @@ export async function generateInterviewAnswerWithOpenAI({
   return {
     ...result,
     value: normaliseInterviewAnswerCoach(result.value)
+  }
+}
+
+export async function reviewProfileContextWithOpenAI({
+  currentContext,
+  resumeText
+}: {
+  currentContext: Pick<
+    ProfileContextAIResult,
+    | "candidatePosition"
+    | "experienceLevel"
+    | "roleMarket"
+    | "targetCountry"
+    | "urgency"
+  >
+  resumeText: string
+}): Promise<ServerAIResult<ProfileContextAIResult>> {
+  const result = await createJsonResponse({
+    instructions: [
+      "You review CV text for AutoTime's profile setup step.",
+      "Return only valid JSON with keys roleMarket, candidatePosition, urgency, targetCountry, experienceLevel, targetRoles, workRightPrompt, confidence, reasons.",
+      "roleMarket must be one of general-tech, fintech, enterprise-saas, data-ai, cybersecurity, healthtech, climate-energy, gov-public, ecommerce-marketplace, devtools-cloud.",
+      "candidatePosition must be foreign-candidate or native-candidate. urgency must be urgent, active, or exploring. confidence must be Low, Medium, or High.",
+      "Suggest target roles and profile context only from CV evidence and the current context.",
+      "Do not invent work rights, visa status, sponsorship status, relocation facts, degrees, employers, dates, salary, or outcomes.",
+      "For workRightPrompt, ask the user to confirm exact verified facts. Do not state that they have work rights unless the CV explicitly says it.",
+      "Keep reasons short and explain which CV signals drove the suggestion."
+    ].join(" "),
+    input: { currentContext, resumeText },
+    schema: profileContextSchema
+  })
+
+  return {
+    ...result,
+    value: normaliseProfileContext({
+      currentContext,
+      value: result.value
+    })
   }
 }

@@ -103,6 +103,11 @@ type ContextSuggestion = ProductContext & {
   reasons: string[]
 }
 
+type ProfileContextReviewResponse = {
+  data: { suggestion: ContextSuggestion } | { upgradeUrl: string } | null
+  error: string | null
+}
+
 type DecisionBrief = {
   decision: CountryFitEvaluation["decision"]
   confidence: "Low" | "Medium" | "High"
@@ -2498,6 +2503,7 @@ export default function HomePage({
   const [resumeIntake, setResumeIntake] = useState("")
   const [contextSuggestion, setContextSuggestion] =
     useState<ContextSuggestion | null>(null)
+  const [isReviewingCv, setIsReviewingCv] = useState(false)
   const [interviewQuestion, setInterviewQuestion] = useState(
     interviewQuestionOptions[0]
   )
@@ -3560,14 +3566,60 @@ export default function HomePage({
     window.alert(statusMessage)
   }
 
-  const reviewResumeForContext = () => {
+  const reviewResumeForContext = async () => {
     if (!resumeIntake.trim()) {
       setStatus("Paste CV or resume text before reviewing candidate context")
       setTimeout(() => setStatus(""), 3000)
       return
     }
 
-    setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
+    setIsReviewingCv(true)
+    setStatus("AI is reviewing your CV for profile suggestions...")
+
+    try {
+      const response = await fetch("/api/ai/profile-context", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentContext: productContext,
+          resumeText: resumeIntake
+        })
+      })
+      const body = (await response.json()) as ProfileContextReviewResponse
+
+      if (!response.ok || !body.data || body.error) {
+        const fallbackSuggestion = inferContextFromResume(
+          resumeIntake,
+          productContext
+        )
+        setContextSuggestion(fallbackSuggestion)
+        setStatus(
+          body.error
+            ? `AI review unavailable. Local suggestions prepared: ${body.error}`
+            : "AI review unavailable. Local suggestions prepared."
+        )
+        return
+      }
+
+      if ("upgradeUrl" in body.data) {
+        setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
+        setStatus("AI limit reached. Local suggestions prepared for approval.")
+        return
+      }
+
+      setContextSuggestion(body.data.suggestion)
+      setStatus("AI CV review complete. Approve suggestions before saving.")
+    } catch (error: unknown) {
+      setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
+      setStatus(
+        error instanceof Error
+          ? `AI review unavailable. Local suggestions prepared: ${error.message}`
+          : "AI review unavailable. Local suggestions prepared."
+      )
+    } finally {
+      setIsReviewingCv(false)
+      setTimeout(() => setStatus(""), 5000)
+    }
   }
 
   const importResumeFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -4893,10 +4945,11 @@ export default function HomePage({
                   <>
                     <button
                       className="secondary-button"
+                      disabled={isReviewingCv}
                       type="button"
                       onClick={reviewResumeForContext}
                     >
-                      Review CV notes
+                      {isReviewingCv ? "Reviewing CV" : "Review CV with AI"}
                     </button>
                     <button type="button" onClick={applyMarketContextToProfile}>
                       Apply market context
@@ -5200,8 +5253,12 @@ export default function HomePage({
                             onChange={importResumeFile}
                           />
                         </label>
-                        <button type="button" onClick={reviewResumeForContext}>
-                          Review my CV
+                        <button
+                          disabled={isReviewingCv}
+                          type="button"
+                          onClick={reviewResumeForContext}
+                        >
+                          {isReviewingCv ? "Reviewing CV" : "Review CV with AI"}
                         </button>
                         <button
                           className="secondary-button"
@@ -5209,7 +5266,7 @@ export default function HomePage({
                           type="button"
                           onClick={approveContextSuggestion}
                         >
-                          Apply suggestions
+                          Apply approved suggestions
                         </button>
                       </div>
                       {contextSuggestion && (
