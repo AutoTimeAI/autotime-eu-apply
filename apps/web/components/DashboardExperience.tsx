@@ -697,6 +697,14 @@ const urgencyOptions: Array<{ id: CandidateUrgency; label: string }> = [
   { id: "exploring", label: "Exploring" }
 ]
 
+const experienceLevelOptions = [
+  "Entry-level",
+  "Junior",
+  "Mid-level",
+  "Senior",
+  "Lead"
+]
+
 const euCountryOptions = [
   "United Kingdom",
   "Ireland",
@@ -2118,6 +2126,36 @@ function inferContextFromResume(
   }
 }
 
+function normalizeContextSuggestionForApproval({
+  fallback,
+  suggestion
+}: {
+  fallback: ContextSuggestion
+  suggestion: ContextSuggestion
+}): ContextSuggestion {
+  const targetCountry = euCountryOptions.includes(suggestion.targetCountry)
+    ? suggestion.targetCountry
+    : fallback.targetCountry
+  const experienceLevel = experienceLevelOptions.includes(
+    suggestion.experienceLevel
+  )
+    ? suggestion.experienceLevel
+    : fallback.experienceLevel
+  const targetRoles =
+    suggestion.targetRoles.trim() || fallback.targetRoles.trim()
+  const workRightPrompt =
+    suggestion.workRightPrompt.trim() || fallback.workRightPrompt.trim()
+
+  return {
+    ...suggestion,
+    experienceLevel,
+    targetCountry,
+    targetRoles,
+    workRightPrompt,
+    reasons: suggestion.reasons.length ? suggestion.reasons : fallback.reasons
+  }
+}
+
 function getDecisionBrief({
   context,
   state,
@@ -2504,6 +2542,7 @@ export default function HomePage({
   const [contextSuggestion, setContextSuggestion] =
     useState<ContextSuggestion | null>(null)
   const [isReviewingCv, setIsReviewingCv] = useState(false)
+  const hasResumeIntake = Boolean(resumeIntake.trim())
   const [interviewQuestion, setInterviewQuestion] = useState(
     interviewQuestionOptions[0]
   )
@@ -3577,6 +3616,7 @@ export default function HomePage({
     setStatus("AI is reviewing your CV for profile suggestions...")
 
     try {
+      const localSuggestion = inferContextFromResume(resumeIntake, productContext)
       const response = await fetch("/api/ai/profile-context", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -3588,11 +3628,7 @@ export default function HomePage({
       const body = (await response.json()) as ProfileContextReviewResponse
 
       if (!response.ok || !body.data || body.error) {
-        const fallbackSuggestion = inferContextFromResume(
-          resumeIntake,
-          productContext
-        )
-        setContextSuggestion(fallbackSuggestion)
+        setContextSuggestion(localSuggestion)
         setStatus(
           body.error
             ? `AI review unavailable. Local suggestions prepared: ${body.error}`
@@ -3602,12 +3638,17 @@ export default function HomePage({
       }
 
       if ("upgradeUrl" in body.data) {
-        setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
+        setContextSuggestion(localSuggestion)
         setStatus("AI limit reached. Local suggestions prepared for approval.")
         return
       }
 
-      setContextSuggestion(body.data.suggestion)
+      setContextSuggestion(
+        normalizeContextSuggestionForApproval({
+          fallback: localSuggestion,
+          suggestion: body.data.suggestion
+        })
+      )
       setStatus("AI CV review complete. Approve suggestions before saving.")
     } catch (error: unknown) {
       setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
@@ -3685,7 +3726,7 @@ export default function HomePage({
         ...state.profile,
         baseCvText: resumeIntake || state.profile.baseCvText,
         targetCountries: contextSuggestion.targetCountry,
-        targetRoles: contextSuggestion.targetRoles,
+        targetRoles: contextSuggestion.targetRoles || state.profile.targetRoles,
         workRightDetails:
           state.profile.workRightDetails || contextSuggestion.workRightPrompt
       },
@@ -3698,6 +3739,7 @@ export default function HomePage({
 
     persist(nextState, "Approved CV context applied")
     scheduleProfileSync(nextState.profile)
+    window.alert("Approved CV suggestions applied to your profile.")
   }
 
   const saveDashboard = () => {
@@ -4945,7 +4987,7 @@ export default function HomePage({
                   <>
                     <button
                       className="secondary-button"
-                      disabled={isReviewingCv}
+                      disabled={!hasResumeIntake || isReviewingCv}
                       type="button"
                       onClick={reviewResumeForContext}
                     >
@@ -5191,11 +5233,11 @@ export default function HomePage({
                               )
                             }
                           >
-                            <option value="Entry-level">Entry-level</option>
-                            <option value="Junior">Junior</option>
-                            <option value="Mid-level">Mid-level</option>
-                            <option value="Senior">Senior</option>
-                            <option value="Lead">Lead</option>
+                            {experienceLevelOptions.map((level) => (
+                              <option key={level} value={level}>
+                                {level}
+                              </option>
+                            ))}
                           </select>
                         </label>
                         <label>
@@ -5246,15 +5288,16 @@ export default function HomePage({
                       </label>
                       <div className="header-actions">
                         <label className="secondary-button file-import-button">
-                          Import CV file
+                          <span>Import CV file</span>
                           <input
                             accept=".txt,.md,.markdown,.csv,.json,.rtf,text/*"
+                            aria-label="Import CV file"
                             type="file"
                             onChange={importResumeFile}
                           />
                         </label>
                         <button
-                          disabled={isReviewingCv}
+                          disabled={!hasResumeIntake || isReviewingCv}
                           type="button"
                           onClick={reviewResumeForContext}
                         >
@@ -5269,6 +5312,10 @@ export default function HomePage({
                           Apply approved suggestions
                         </button>
                       </div>
+                      <p className="profile-action-hint">
+                        Import or paste CV text, review with AI, then approve
+                        before saving to your profile.
+                      </p>
                       {contextSuggestion && (
                         <article className="suggestion-card">
                           <div>
