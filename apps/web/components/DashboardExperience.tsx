@@ -4406,8 +4406,8 @@ export default function HomePage({
   const explainCloudSyncTrack = () => {
     setStatus(
       cloudSyncReadiness.configured
-        ? "Cloud sync is ready for signed-in profile upload and download."
-        : `Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+        ? "Account sync is ready. You can save or load profile and workflow data from this signed-in account."
+        : "Your work is saved on this browser. Sign in with account sync configured to use it on another device."
     )
   }
 
@@ -5612,38 +5612,30 @@ export default function HomePage({
                     aria-label="Sync status"
                   >
                     <div>
-                      <p className="eyebrow">Sync</p>
+                      <p className="eyebrow">Save and sync</p>
                       <h2>
                         {cloudSyncReadiness.configured
-                          ? "Account sync is available"
-                          : "Your data is saved on this browser"}
+                          ? "Use this profile on any signed-in device"
+                          : "Saved on this browser"}
                       </h2>
                       <p>
-                        Your profile saves in this browser first. Use account
-                        sync when you want it available from your signed-in
-                        dashboard account.
+                        AutoTime always saves here first. Turn on account sync
+                        when you want your profile and workflow available after
+                        sign-in on another device.
                       </p>
                     </div>
                     <div className="sync-status-grid">
                       <div>
                         <strong>{cloudSyncReadiness.modeLabel}</strong>
-                        <span>Current mode</span>
+                        <span>Saving now</span>
                       </div>
                       <div>
-                        <strong>{cloudSyncReadiness.accountLabel}</strong>
-                        <span>Account shell</span>
-                      </div>
-                      <div>
-                        <strong>{cloudSyncReadiness.sessionLabel}</strong>
-                        <span>Auth session</span>
-                      </div>
-                      <div>
-                        <strong>{cloudSyncReadiness.firstSliceLabel}</strong>
-                        <span>First sync slice</span>
-                      </div>
-                      <div>
-                        <strong>{cloudSyncReadiness.safetyLabel}</strong>
-                        <span>Safety rule</span>
+                        <strong>
+                          {cloudSyncReadiness.configured
+                            ? "Account ready"
+                            : "Account sync off"}
+                        </strong>
+                        <span>Signed-in access</span>
                       </div>
                     </div>
                     <div className="sync-action-stack">
@@ -5656,54 +5648,61 @@ export default function HomePage({
                             setProfileAccountSyncEnabled(event.target.checked)
                           }
                         />
-                        I consent to sync my candidate profile and dashboard
-                        workflow to my authenticated account.
+                        Save my profile and workflow to this signed-in account.
                       </label>
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        onClick={explainCloudSyncTrack}
-                      >
-                        Check sync status
-                      </button>
-                      <button
-                        disabled={!cloudSyncReadiness.configured}
-                        type="button"
-                        onClick={syncProfileToCloud}
-                      >
-                        Sync profile
-                      </button>
-                      <button
-                        className="secondary-button"
-                        disabled={!cloudSyncReadiness.configured}
-                        type="button"
-                        onClick={loadProfileFromCloud}
-                      >
-                        Load synced profile
-                      </button>
-                      <button
-                        className="danger-button"
-                        disabled={!cloudSyncReadiness.configured}
-                        type="button"
-                        onClick={deleteProfileForAccount}
-                      >
-                        Delete synced profile
-                      </button>
-                      <button
-                        disabled={!cloudSyncReadiness.configured}
-                        type="button"
-                        onClick={syncDashboardToCloud}
-                      >
-                        Sync saved workflow
-                      </button>
-                      <button
-                        className="secondary-button"
-                        disabled={!cloudSyncReadiness.configured}
-                        type="button"
-                        onClick={loadDashboardFromCloud}
-                      >
-                        Load synced workflow
-                      </button>
+                      <div className="sync-action-group">
+                        <span>Profile</span>
+                        <button
+                          disabled={!cloudSyncReadiness.configured}
+                          type="button"
+                          onClick={syncProfileToCloud}
+                        >
+                          Save profile online
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={!cloudSyncReadiness.configured}
+                          type="button"
+                          onClick={loadProfileFromCloud}
+                        >
+                          Load online profile
+                        </button>
+                      </div>
+                      <div className="sync-action-group">
+                        <span>Workflow</span>
+                        <button
+                          disabled={!cloudSyncReadiness.configured}
+                          type="button"
+                          onClick={syncDashboardToCloud}
+                        >
+                          Save workflow online
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={!cloudSyncReadiness.configured}
+                          type="button"
+                          onClick={loadDashboardFromCloud}
+                        >
+                          Load online workflow
+                        </button>
+                      </div>
+                      <div className="sync-action-row">
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={explainCloudSyncTrack}
+                        >
+                          Check sync
+                        </button>
+                        <button
+                          className="danger-button"
+                          disabled={!cloudSyncReadiness.configured}
+                          type="button"
+                          onClick={deleteProfileForAccount}
+                        >
+                          Delete online profile
+                        </button>
+                      </div>
                     </div>
                   </section>
                 )}

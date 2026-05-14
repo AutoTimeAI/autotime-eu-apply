@@ -2611,12 +2611,12 @@ h4 {
 
 .cloud-sync-panel {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(300px, 0.72fr) minmax(
-      160px,
-      0.32fr
+  grid-template-columns: minmax(220px, 0.75fr) minmax(180px, 0.34fr) minmax(
+      320px,
+      0.85fr
     );
   gap: 14px;
-  align-items: center;
+  align-items: start;
   margin-bottom: 18px;
   border: 1px solid var(--border);
   border-left: 4px solid var(--blue);
@@ -2642,7 +2642,6 @@ h4 {
 
 .sync-status-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2673,7 +2672,35 @@ h4 {
 
 .sync-action-stack {
   display: grid;
+  gap: 10px;
+}
+
+.sync-action-group,
+.sync-action-row {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.sync-action-group {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 8px;
+}
+
+.sync-action-group > span {
+  min-width: 76px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.sync-action-group button,
+.sync-action-row button {
+  flex: 1 1 150px;
 }
 
 .sync-consent-control {
