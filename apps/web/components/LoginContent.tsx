@@ -170,7 +170,22 @@ function LoginForm() {
           </p>
         </div>
 
-        <div className="header-actions">
+        <label className="auth-consent-control">
+          <input
+            checked={accountConsent}
+            type="checkbox"
+            onChange={(event) => setAccountConsent(event.target.checked)}
+          />
+          <span>
+            <strong>Account permission</strong>
+            <small>
+              I allow AutoTime to use this sign-in account for my dashboard,
+              profile sync and billing access.
+            </small>
+          </span>
+        </label>
+
+        <div className="header-actions auth-provider-actions">
           <button
             disabled={Boolean(pendingProvider) || !accountConsent}
             type="button"
@@ -191,18 +206,6 @@ function LoginForm() {
               : "Sign in with Google"}
           </button>
         </div>
-
-        <label className="auth-consent-control">
-          <input
-            checked={accountConsent}
-            type="checkbox"
-            onChange={(event) => setAccountConsent(event.target.checked)}
-          />
-          <span>
-            I allow AutoTime to use this sign-in account for my dashboard,
-            profile sync and billing access.
-          </span>
-        </label>
 
         {status ? <p className="status-banner">{status}</p> : null}
 

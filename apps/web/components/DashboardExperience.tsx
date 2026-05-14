@@ -2542,7 +2542,7 @@ export default function HomePage({
   const [contextSuggestion, setContextSuggestion] =
     useState<ContextSuggestion | null>(null)
   const [isReviewingCv, setIsReviewingCv] = useState(false)
-  const hasResumeIntake = Boolean(resumeIntake.trim())
+  const canReviewResumeWithAi = resumeIntake.trim().length >= 40
   const resumeFileInputRef = useRef<HTMLInputElement | null>(null)
   const [interviewQuestion, setInterviewQuestion] = useState(
     interviewQuestionOptions[0]
@@ -3611,6 +3611,12 @@ export default function HomePage({
       return
     }
 
+    if (!canReviewResumeWithAi) {
+      setStatus("Add at least 40 characters of CV text before AI review.")
+      setTimeout(() => setStatus(""), 3000)
+      return
+    }
+
     setIsReviewingCv(true)
     setStatus("AI is reviewing your CV for profile suggestions...")
 
@@ -3669,6 +3675,52 @@ export default function HomePage({
       return
     }
 
+    const fileName = file.name.toLowerCase()
+
+    if (fileName.endsWith(".doc")) {
+      setStatus(
+        "Old .doc files are not supported. Save the CV as .docx or copy the text here."
+      )
+      event.target.value = ""
+      return
+    }
+
+    if (fileName.endsWith(".docx")) {
+      try {
+        const formData = new FormData()
+        formData.set("file", file)
+
+        const response = await fetch("/api/profile/import-cv", {
+          method: "POST",
+          body: formData
+        })
+        const body = (await response.json()) as {
+          data: { text: string } | null
+          error: string | null
+        }
+
+        if (!response.ok || !body.data?.text) {
+          setStatus(body.error ?? "Could not import this Word CV file.")
+          return
+        }
+
+        setResumeIntake(body.data.text)
+        setContextSuggestion(null)
+        setStatus(`Imported ${file.name}. Review before applying suggestions.`)
+        setTimeout(() => setStatus(""), 3000)
+      } catch (error: unknown) {
+        setStatus(
+          error instanceof Error
+            ? `Could not import this Word CV file: ${error.message}`
+            : "Could not import this Word CV file."
+        )
+      } finally {
+        event.target.value = ""
+      }
+
+      return
+    }
+
     const supportedExtensions = [
       ".txt",
       ".md",
@@ -3677,14 +3729,13 @@ export default function HomePage({
       ".json",
       ".rtf"
     ]
-    const fileName = file.name.toLowerCase()
     const isSupported =
       file.type.startsWith("text/") ||
       supportedExtensions.some((extension) => fileName.endsWith(extension))
 
     if (!isSupported) {
       setStatus(
-        "CV import supports text files for now. Open PDF/DOCX locally, copy the text, then paste it here."
+        "CV import supports DOCX and text files. For PDF or old DOC files, copy the text and paste it here."
       )
       event.target.value = ""
       return
@@ -4986,7 +5037,7 @@ export default function HomePage({
                   <>
                     <button
                       className="secondary-button"
-                      disabled={!hasResumeIntake || isReviewingCv}
+                      disabled={!canReviewResumeWithAi || isReviewingCv}
                       type="button"
                       onClick={reviewResumeForContext}
                     >
@@ -5295,7 +5346,7 @@ export default function HomePage({
                         </button>
                         <input
                           ref={resumeFileInputRef}
-                          accept=".txt,.md,.markdown,.csv,.json,.rtf,text/*"
+                          accept=".docx,.txt,.md,.markdown,.csv,.json,.rtf,text/*"
                           aria-label="Import CV file"
                           className="hidden-file-input"
                           tabIndex={-1}
@@ -5303,7 +5354,7 @@ export default function HomePage({
                           onChange={importResumeFile}
                         />
                         <button
-                          disabled={!hasResumeIntake || isReviewingCv}
+                          disabled={!canReviewResumeWithAi || isReviewingCv}
                           type="button"
                           onClick={reviewResumeForContext}
                         >
@@ -5319,8 +5370,9 @@ export default function HomePage({
                         </button>
                       </div>
                       <p className="profile-action-hint">
-                        Import or paste CV text, review with AI, then approve
-                        before saving to your profile.
+                        Import or paste at least 40 characters of CV text,
+                        review with AI, then approve before saving to your
+                        profile.
                       </p>
                       {contextSuggestion && (
                         <article className="suggestion-card">

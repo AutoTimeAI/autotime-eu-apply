@@ -74,6 +74,19 @@ test("AI rate-limit RPC uses timestamptz reset values", () => {
   assert.doesNotMatch(migration, /current_time timestamptz/)
 })
 
+test("profile CV AI review validates input before quota checks", () => {
+  const route = read("apps/web/app/api/ai/profile-context/route.ts")
+  const parseIndex = route.indexOf("const body = requestSchema.parse")
+  const rateLimitIndex = route.indexOf("await assertAiRouteRateLimit")
+  const featureGateIndex = route.indexOf("await assertCanUseAi")
+
+  assert.notEqual(parseIndex, -1)
+  assert.notEqual(rateLimitIndex, -1)
+  assert.notEqual(featureGateIndex, -1)
+  assert.ok(parseIndex < rateLimitIndex)
+  assert.ok(parseIndex < featureGateIndex)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

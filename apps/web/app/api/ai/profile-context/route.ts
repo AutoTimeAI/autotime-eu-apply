@@ -73,10 +73,11 @@ export async function POST(
       })
     }
 
+    const body = requestSchema.parse(await request.json())
+
     await assertAiRouteRateLimit(user.id)
     await assertCanUseAi(user.id)
 
-    const body = requestSchema.parse(await request.json())
     const result = await reviewProfileContextWithOpenAI(body)
 
     await trackAiCall(user.id, {
