@@ -3639,12 +3639,13 @@ export default function HomePage({
       const body = (await response.json()) as ProfileContextReviewResponse
 
       if (body.data && "upgradeUrl" in body.data) {
+        const message =
+          "Free AI review limit reached. Local suggestions prepared instead."
         setContextSuggestion(localSuggestion)
         setContextSuggestionSource("limit")
-        setContextSuggestionNote(
-          "Free AI review limit reached. Local suggestions prepared instead."
-        )
+        setContextSuggestionNote(message)
         setStatus("AI limit reached. Local suggestions prepared for approval.")
+        window.alert(`${message} Review them before applying to My Profile.`)
         return
       }
 
@@ -3656,6 +3657,7 @@ export default function HomePage({
         setContextSuggestionSource("error")
         setContextSuggestionNote(message)
         setStatus(`${message} Local suggestions prepared.`)
+        window.alert(`${message} Review the local suggestions before applying.`)
         return
       }
 
@@ -3677,6 +3679,7 @@ export default function HomePage({
       setContextSuggestionSource("local")
       setContextSuggestionNote(message)
       setStatus(`${message} Local suggestions prepared.`)
+      window.alert(`${message} Review the local suggestions before applying.`)
     } finally {
       setIsReviewingCv(false)
       setTimeout(() => setStatus(""), 5000)
@@ -3775,6 +3778,7 @@ export default function HomePage({
 
   const approveContextSuggestion = () => {
     if (!contextSuggestion) {
+      window.alert("Review your CV first, then apply the approved suggestions.")
       return
     }
 
@@ -3811,7 +3815,9 @@ export default function HomePage({
     setContextSuggestion(null)
     setContextSuggestionSource(null)
     setContextSuggestionNote("")
-    window.alert("Approved CV suggestions applied to your profile.")
+    window.alert(
+      "Approved CV suggestions applied to My Profile. Review the saved fields before using job checks."
+    )
   }
 
   const saveDashboard = () => {
