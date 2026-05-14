@@ -6055,10 +6055,10 @@ export default function HomePage({
                     <div className="profile-form-toolbar">
                       <div>
                         <p className="eyebrow">Save your work</p>
-                        <h2>Keep your profile safe</h2>
+                        <h2>Save, sync or back up</h2>
                         <p>
-                          Saved in this browser first. Sync only when you
-                          choose.
+                          Saved in this browser first. Sync or export when you
+                          want another copy.
                         </p>
                       </div>
                       <div className="profile-form-actions">
@@ -6082,9 +6082,19 @@ export default function HomePage({
                         <button
                           className="secondary-button"
                           type="button"
-                          onClick={exportDashboard}
+                          onClick={() => {
+                            const backupsPanel =
+                              document.getElementById("dashboard-backups")
+                            if (backupsPanel instanceof HTMLDetailsElement) {
+                              backupsPanel.open = true
+                            }
+                            backupsPanel?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start"
+                            })
+                          }}
                         >
-                          Export backup
+                          Backups
                         </button>
                       </div>
                     </div>
@@ -6284,7 +6294,7 @@ export default function HomePage({
                     <section className="panel">
                       <div className="section-heading">
                         <p className="eyebrow">At a glance</p>
-                        <h2>What AutoTime knows about you</h2>
+                        <h2>Saved facts</h2>
                         <p>
                           These are the facts currently available for job-fit
                           and workflow decisions.
@@ -6336,7 +6346,7 @@ export default function HomePage({
                     <section className="panel">
                       <div className="section-heading">
                         <p className="eyebrow">Reusable answers</p>
-                        <h2>Reusable answer evidence</h2>
+                        <h2>Reusable answers</h2>
                         <p>
                           Save reusable wording here only when it is true and
                           supported by your profile.
@@ -8147,6 +8157,7 @@ export default function HomePage({
       </div>
 
       <details
+        id="dashboard-backups"
         aria-disabled={isDashboardProtocolLocked}
         className={
           isDashboardProtocolLocked ? "utility-bar locked" : "utility-bar"
