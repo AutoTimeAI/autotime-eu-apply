@@ -6038,12 +6038,33 @@ export default function HomePage({
                       className="profile-purpose-panel"
                       aria-label="Profile purpose"
                     >
-                      <p className="eyebrow">My Profile</p>
-                      <h2>Your candidate evidence workspace</h2>
-                      <p>
-                        This is your private evidence space. AutoTime uses it to
-                        check jobs, explain risks and keep answers truthful.
-                      </p>
+                      <div className="profile-purpose-main">
+                        <div>
+                          <p className="eyebrow">My Profile</p>
+                          <h2>Your candidate evidence workspace</h2>
+                          <p>
+                            This is your private evidence space. AutoTime uses
+                            it to check jobs, explain risks and keep answers
+                            truthful.
+                          </p>
+                        </div>
+                        <div className="profile-readiness-badge">
+                          <span>Profile</span>
+                          <strong>{readinessScore}%</strong>
+                          <small>
+                            {profileReadyForExecution
+                              ? "Unlocked"
+                              : "Complete to unlock"}
+                          </small>
+                          <em aria-hidden="true">
+                            <i
+                              style={{
+                                width: `${Math.min(100, readinessScore)}%`
+                              }}
+                            />
+                          </em>
+                        </div>
+                      </div>
                       <div className="profile-purpose-steps">
                         <span>About you</span>
                         <span>Work rights</span>
@@ -6247,12 +6268,7 @@ export default function HomePage({
                     <section className="panel profile-quality-panel">
                       <div className="section-heading">
                         <p className="eyebrow">Profile readiness</p>
-                        <h2>
-                          <RevealMetric label="Show profile quality score">
-                            {profileQualityScore}/100
-                          </RevealMetric>{" "}
-                          ready
-                        </h2>
+                        <h2>{profileQualityScore}/100 ready</h2>
                         <p>
                           Use this as your readiness map. Green means AutoTime
                           can use that evidence confidently; amber or red means
@@ -6268,13 +6284,7 @@ export default function HomePage({
                           >
                             <div>
                               <strong>{signal.label}</strong>
-                              <span>
-                                <RevealMetric
-                                  label={`Show ${signal.label} score`}
-                                >
-                                  {signal.score}/100
-                                </RevealMetric>
-                              </span>
+                              <span>{signal.score}/100</span>
                             </div>
                             <p>{signal.detail}</p>
                           </article>

@@ -2442,15 +2442,64 @@ h4 {
   margin: 0;
 }
 
+.profile-purpose-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.28fr);
+  gap: 16px;
+  align-items: center;
+}
+
 .profile-purpose-panel h2 {
   color: var(--ink);
-  font-size: 1.42rem;
+  font-size: 1.55rem;
   line-height: 1.18;
 }
 
 .profile-purpose-panel p:not(.eyebrow) {
   color: var(--muted);
   line-height: 1.58;
+}
+
+.profile-readiness-badge {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(242, 251, 249, 0.9)),
+    #ffffff;
+  padding: 12px;
+}
+
+.profile-readiness-badge span,
+.profile-readiness-badge small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.profile-readiness-badge strong {
+  color: var(--ink);
+  font-size: 1.72rem;
+  line-height: 1;
+}
+
+.profile-readiness-badge em {
+  display: block;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dce8e6;
+}
+
+.profile-readiness-badge i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
 }
 
 .profile-purpose-steps {
@@ -2463,9 +2512,9 @@ h4 {
   display: grid;
   min-height: 44px;
   place-items: center;
-  border: 1px solid rgba(15, 118, 110, 0.16);
+  border: 1px solid rgba(15, 118, 110, 0.2);
   border-radius: 8px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.84);
   color: var(--accent-strong);
   font-size: 0.74rem;
   font-weight: 800;
@@ -2478,6 +2527,15 @@ h4 {
   position: relative;
   overflow: hidden;
   border-left: 0;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.profile-form-section:focus-within {
+  border-color: rgba(49, 95, 186, 0.34);
+  box-shadow: 0 14px 36px rgba(49, 95, 186, 0.11);
 }
 
 .profile-form-section.important {
@@ -2520,6 +2578,10 @@ h4 {
   margin-top: 6px;
 }
 
+.profile-form-section textarea {
+  min-height: 132px;
+}
+
 .profile-quality-list {
   display: grid;
   gap: 10px;
@@ -2531,7 +2593,7 @@ h4 {
   border: 1px solid var(--border);
   border-left: 4px solid var(--border-strong);
   border-radius: 8px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff, rgba(249, 251, 255, 0.76));
   padding: 11px;
 }
 
@@ -5832,6 +5894,10 @@ h4 {
 
   .profile-purpose-steps {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .profile-purpose-main {
+    grid-template-columns: 1fr;
   }
 
   .auth-proof-grid {
