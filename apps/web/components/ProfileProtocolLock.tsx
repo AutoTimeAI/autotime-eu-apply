@@ -27,6 +27,43 @@ type StoredDashboardState = {
   }
 }
 
+type ProfileReadinessProfile = StoredDashboardState["profile"]
+type ProfileReadinessReusableAnswers = StoredDashboardState["reusableAnswers"]
+type ProfileReadRouteResponse = {
+  data: {
+    profile: ProfileReadinessProfile | null
+  } | null
+  error: string | null
+}
+
+export function getProfileReadinessFromParts(
+  profile: ProfileReadinessProfile = {},
+  reusableAnswers: ProfileReadinessReusableAnswers = {}
+): number {
+  const requiredProfileSignals = [
+    profile.fullName?.trim(),
+    profile.currentCountry?.trim(),
+    profile.targetCountries?.trim(),
+    profile.targetRoles?.trim(),
+    profile.workRightDetails?.trim(),
+    profile.baseCvText?.trim()
+  ]
+  const reusableSignals = [
+    reusableAnswers.motivationAnswer?.trim(),
+    reusableAnswers.strengthsAnswer?.trim()
+  ]
+  const requiredCompleted = requiredProfileSignals.filter(Boolean).length
+  const reusableCompleted = reusableSignals.filter(Boolean).length
+
+  return Math.min(
+    100,
+    Math.round(
+      (requiredCompleted / requiredProfileSignals.length) * 90 +
+        (reusableCompleted / reusableSignals.length) * 10
+    )
+  )
+}
+
 export function getStoredProfileReadiness(userId: string): number {
   if (typeof window === "undefined") {
     return 0
@@ -40,32 +77,33 @@ export function getStoredProfileReadiness(userId: string): number {
     }
 
     const state = JSON.parse(raw) as StoredDashboardState
-    const profile = state.profile ?? {}
-    const reusableAnswers = state.reusableAnswers ?? {}
-    const requiredProfileSignals = [
-      profile.fullName?.trim(),
-      profile.currentCountry?.trim(),
-      profile.targetCountries?.trim(),
-      profile.targetRoles?.trim(),
-      profile.workRightDetails?.trim(),
-      profile.baseCvText?.trim()
-    ]
-    const reusableSignals = [
-      reusableAnswers.motivationAnswer?.trim(),
-      reusableAnswers.strengthsAnswer?.trim()
-    ]
-    const requiredCompleted = requiredProfileSignals.filter(Boolean).length
-    const reusableCompleted = reusableSignals.filter(Boolean).length
-
-    return Math.min(
-      100,
-      Math.round(
-        (requiredCompleted / requiredProfileSignals.length) * 90 +
-          (reusableCompleted / reusableSignals.length) * 10
-      )
-    )
+    return getProfileReadinessFromParts(state.profile, state.reusableAnswers)
   } catch {
     return 0
+  }
+}
+
+async function getSyncedProfileReadiness(
+  signal: AbortSignal
+): Promise<number | null> {
+  try {
+    const response = await fetch("/api/sync/profile", {
+      cache: "no-store",
+      signal
+    })
+    const body = (await response.json()) as ProfileReadRouteResponse
+
+    if (!response.ok || body.error || !body.data?.profile) {
+      return null
+    }
+
+    return getProfileReadinessFromParts(body.data.profile)
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return null
+    }
+
+    return null
   }
 }
 
@@ -73,8 +111,31 @@ export function useProfileProtocolReadiness(userId?: string) {
   const [readinessScore, setReadinessScore] = useState(0)
 
   useEffect(() => {
+    let isActive = true
+    let activeController: AbortController | null = null
+
     const updateReadiness = () => {
-      setReadinessScore(userId ? getStoredProfileReadiness(userId) : 0)
+      if (!userId) {
+        setReadinessScore(0)
+        return
+      }
+
+      const localReadiness = getStoredProfileReadiness(userId)
+      setReadinessScore(localReadiness)
+      activeController?.abort()
+      activeController = new AbortController()
+
+      void getSyncedProfileReadiness(activeController.signal).then(
+        (syncedReadiness) => {
+          if (!isActive || syncedReadiness === null) {
+            return
+          }
+
+          setReadinessScore((currentReadiness) =>
+            Math.max(currentReadiness, localReadiness, syncedReadiness)
+          )
+        }
+      )
     }
 
     if (!userId) {
@@ -88,6 +149,8 @@ export function useProfileProtocolReadiness(userId?: string) {
     window.addEventListener("focus", updateReadiness)
 
     return () => {
+      isActive = false
+      activeController?.abort()
       window.removeEventListener(profileProtocolReadinessEvent, updateReadiness)
       window.removeEventListener("storage", updateReadiness)
       window.removeEventListener("focus", updateReadiness)

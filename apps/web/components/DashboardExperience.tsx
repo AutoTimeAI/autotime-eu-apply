@@ -3197,14 +3197,13 @@ export default function HomePage({
     setSyncPreferences(storedSyncPreferences)
     setCloudSyncConsent(storedSyncPreferences.profileAccountSyncEnabled)
     void loadDashboardSnapshot({ silent: true })
-    if (storedSyncPreferences.profileAccountSyncEnabled) {
-      void loadProfileSnapshot({ silent: true })
-    }
+    void loadProfileSnapshot({ silent: true })
   }, [loadDashboardSnapshot, loadProfileSnapshot, userId])
 
   useEffect(() => {
     const refreshSyncedWorkflow = () => {
       void loadDashboardSnapshot({ silent: true })
+      void loadProfileSnapshot({ silent: true })
     }
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") {
@@ -3225,7 +3224,7 @@ export default function HomePage({
       document.removeEventListener("visibilitychange", refreshWhenVisible)
       window.clearInterval(intervalId)
     }
-  }, [loadDashboardSnapshot])
+  }, [loadDashboardSnapshot, loadProfileSnapshot])
 
   const persist = (next: CompanionDashboardState, message: string) => {
     setState(next)
