@@ -87,6 +87,16 @@ test("profile CV AI review validates input before quota checks", () => {
   assert.ok(parseIndex < featureGateIndex)
 })
 
+test("profile CV AI review handles upgrade limits before generic errors", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+  const upgradeIndex = dashboard.indexOf('body.data && "upgradeUrl" in body.data')
+  const errorIndex = dashboard.indexOf("!response.ok || !body.data || body.error")
+
+  assert.notEqual(upgradeIndex, -1)
+  assert.notEqual(errorIndex, -1)
+  assert.ok(upgradeIndex < errorIndex)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

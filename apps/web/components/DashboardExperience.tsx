@@ -2545,6 +2545,7 @@ export default function HomePage({
     useState<ContextSuggestion | null>(null)
   const [contextSuggestionSource, setContextSuggestionSource] =
     useState<ContextSuggestionSource>(null)
+  const [contextSuggestionNote, setContextSuggestionNote] = useState("")
   const [isReviewingCv, setIsReviewingCv] = useState(false)
   const canReviewResumeWithAi = resumeIntake.trim().length >= 40
   const resumeFileInputRef = useRef<HTMLInputElement | null>(null)
@@ -3622,6 +3623,7 @@ export default function HomePage({
     }
 
     setIsReviewingCv(true)
+    setContextSuggestionNote("")
     setStatus("AI is reviewing your CV for profile suggestions...")
 
     try {
@@ -3636,21 +3638,24 @@ export default function HomePage({
       })
       const body = (await response.json()) as ProfileContextReviewResponse
 
-      if (!response.ok || !body.data || body.error) {
+      if (body.data && "upgradeUrl" in body.data) {
         setContextSuggestion(localSuggestion)
-        setContextSuggestionSource("error")
-        setStatus(
-          body.error
-            ? `AI review unavailable. Local suggestions prepared: ${body.error}`
-            : "AI review unavailable. Local suggestions prepared."
+        setContextSuggestionSource("limit")
+        setContextSuggestionNote(
+          "Free AI review limit reached. Local suggestions prepared instead."
         )
+        setStatus("AI limit reached. Local suggestions prepared for approval.")
         return
       }
 
-      if ("upgradeUrl" in body.data) {
+      if (!response.ok || !body.data || body.error) {
+        const message = body.error
+          ? `AI review unavailable: ${body.error}`
+          : "AI review unavailable. Local suggestions prepared."
         setContextSuggestion(localSuggestion)
-        setContextSuggestionSource("limit")
-        setStatus("AI limit reached. Local suggestions prepared for approval.")
+        setContextSuggestionSource("error")
+        setContextSuggestionNote(message)
+        setStatus(`${message} Local suggestions prepared.`)
         return
       }
 
@@ -3661,15 +3666,17 @@ export default function HomePage({
         })
       )
       setContextSuggestionSource("ai")
+      setContextSuggestionNote("")
       setStatus("AI CV review complete. Approve suggestions before saving.")
     } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? `AI review unavailable: ${error.message}`
+          : "AI review unavailable. Local suggestions prepared."
       setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
       setContextSuggestionSource("local")
-      setStatus(
-        error instanceof Error
-          ? `AI review unavailable. Local suggestions prepared: ${error.message}`
-          : "AI review unavailable. Local suggestions prepared."
-      )
+      setContextSuggestionNote(message)
+      setStatus(`${message} Local suggestions prepared.`)
     } finally {
       setIsReviewingCv(false)
       setTimeout(() => setStatus(""), 5000)
@@ -3715,6 +3722,7 @@ export default function HomePage({
         setResumeIntake(body.data.text)
         setContextSuggestion(null)
         setContextSuggestionSource(null)
+        setContextSuggestionNote("")
         setStatus(`Imported ${file.name}. Review before applying suggestions.`)
         setTimeout(() => setStatus(""), 3000)
       } catch (error: unknown) {
@@ -3755,6 +3763,7 @@ export default function HomePage({
       setResumeIntake(text)
       setContextSuggestion(null)
       setContextSuggestionSource(null)
+      setContextSuggestionNote("")
       setStatus(`Imported ${file.name}. Review before applying suggestions.`)
       setTimeout(() => setStatus(""), 3000)
     } catch {
@@ -3801,6 +3810,7 @@ export default function HomePage({
     scheduleProfileSync(nextState.profile)
     setContextSuggestion(null)
     setContextSuggestionSource(null)
+    setContextSuggestionNote("")
     window.alert("Approved CV suggestions applied to your profile.")
   }
 
@@ -5403,15 +5413,22 @@ export default function HomePage({
                                 {contextSuggestionSource === "ai"
                                   ? "AI suggestion ready"
                                   : contextSuggestionSource === "limit"
-                                    ? "Local suggestion ready"
+                                    ? "Local suggestion ready - AI limit reached"
                                     : contextSuggestionSource === "error"
-                                      ? "Fallback suggestion ready"
+                                      ? "Local suggestion ready - AI unavailable"
+                                      : contextSuggestionSource === "local"
+                                        ? "Local suggestion ready - connection issue"
                                       : "Suggestion ready"}
                               </strong>
                               <p>
                                 Review these fields, then click Apply approved
                                 suggestions to save them to My Profile.
                               </p>
+                              {contextSuggestionNote ? (
+                                <p className="cv-review-result-note">
+                                  {contextSuggestionNote}
+                                </p>
+                              ) : null}
                             </div>
                           </header>
                           <div>

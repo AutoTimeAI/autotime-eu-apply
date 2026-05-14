@@ -1743,6 +1743,11 @@ h4 {
   line-height: 1.45;
 }
 
+.cv-review-result-heading .cv-review-result-note {
+  color: var(--text);
+  font-weight: 650;
+}
+
 .suggestion-card > div:first-child {
   display: grid;
   align-content: start;
@@ -1756,6 +1761,7 @@ h4 {
 }
 
 .suggestion-card small {
+  display: block;
   color: var(--muted);
   font-weight: 650;
   text-transform: uppercase;
