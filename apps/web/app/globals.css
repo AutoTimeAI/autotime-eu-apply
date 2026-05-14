@@ -1706,6 +1706,43 @@ h4 {
   padding: 14px;
 }
 
+.cv-review-result-panel {
+  border-color: rgba(15, 118, 110, 0.26);
+  background:
+    linear-gradient(135deg, rgba(242, 251, 249, 0.9), transparent 42%),
+    #ffffff;
+}
+
+.cv-review-result-panel.loading {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(49, 95, 186, 0.22);
+  border-radius: 8px;
+  background: #f6f9ff;
+  color: var(--text);
+  padding: 12px;
+}
+
+.cv-review-result-panel.loading p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.cv-review-result-heading {
+  grid-column: 1 / -1;
+}
+
+.cv-review-result-heading strong {
+  color: var(--accent-strong);
+}
+
+.cv-review-result-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .suggestion-card > div:first-child {
   display: grid;
   align-content: start;

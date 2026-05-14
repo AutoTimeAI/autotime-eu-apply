@@ -103,6 +103,8 @@ type ContextSuggestion = ProductContext & {
   reasons: string[]
 }
 
+type ContextSuggestionSource = "ai" | "local" | "limit" | "error" | null
+
 type ProfileContextReviewResponse = {
   data: { suggestion: ContextSuggestion } | { upgradeUrl: string } | null
   error: string | null
@@ -2541,6 +2543,8 @@ export default function HomePage({
   const [resumeIntake, setResumeIntake] = useState("")
   const [contextSuggestion, setContextSuggestion] =
     useState<ContextSuggestion | null>(null)
+  const [contextSuggestionSource, setContextSuggestionSource] =
+    useState<ContextSuggestionSource>(null)
   const [isReviewingCv, setIsReviewingCv] = useState(false)
   const canReviewResumeWithAi = resumeIntake.trim().length >= 40
   const resumeFileInputRef = useRef<HTMLInputElement | null>(null)
@@ -3634,6 +3638,7 @@ export default function HomePage({
 
       if (!response.ok || !body.data || body.error) {
         setContextSuggestion(localSuggestion)
+        setContextSuggestionSource("error")
         setStatus(
           body.error
             ? `AI review unavailable. Local suggestions prepared: ${body.error}`
@@ -3644,6 +3649,7 @@ export default function HomePage({
 
       if ("upgradeUrl" in body.data) {
         setContextSuggestion(localSuggestion)
+        setContextSuggestionSource("limit")
         setStatus("AI limit reached. Local suggestions prepared for approval.")
         return
       }
@@ -3654,9 +3660,11 @@ export default function HomePage({
           suggestion: body.data.suggestion
         })
       )
+      setContextSuggestionSource("ai")
       setStatus("AI CV review complete. Approve suggestions before saving.")
     } catch (error: unknown) {
       setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
+      setContextSuggestionSource("local")
       setStatus(
         error instanceof Error
           ? `AI review unavailable. Local suggestions prepared: ${error.message}`
@@ -3706,6 +3714,7 @@ export default function HomePage({
 
         setResumeIntake(body.data.text)
         setContextSuggestion(null)
+        setContextSuggestionSource(null)
         setStatus(`Imported ${file.name}. Review before applying suggestions.`)
         setTimeout(() => setStatus(""), 3000)
       } catch (error: unknown) {
@@ -3745,6 +3754,7 @@ export default function HomePage({
       const text = await file.text()
       setResumeIntake(text)
       setContextSuggestion(null)
+      setContextSuggestionSource(null)
       setStatus(`Imported ${file.name}. Review before applying suggestions.`)
       setTimeout(() => setStatus(""), 3000)
     } catch {
@@ -3789,6 +3799,8 @@ export default function HomePage({
 
     persist(nextState, "Approved CV context applied")
     scheduleProfileSync(nextState.profile)
+    setContextSuggestion(null)
+    setContextSuggestionSource(null)
     window.alert("Approved CV suggestions applied to your profile.")
   }
 
@@ -5374,8 +5386,34 @@ export default function HomePage({
                         review with AI, then approve before saving to your
                         profile.
                       </p>
+                      {isReviewingCv ? (
+                        <div className="cv-review-result-panel loading">
+                          <strong>Reviewing CV</strong>
+                          <p>
+                            AutoTime is checking your CV for role focus,
+                            candidate context and missing work-right evidence.
+                          </p>
+                        </div>
+                      ) : null}
                       {contextSuggestion && (
-                        <article className="suggestion-card">
+                        <article className="suggestion-card cv-review-result-panel">
+                          <header className="cv-review-result-heading">
+                            <div>
+                              <strong>
+                                {contextSuggestionSource === "ai"
+                                  ? "AI suggestion ready"
+                                  : contextSuggestionSource === "limit"
+                                    ? "Local suggestion ready"
+                                    : contextSuggestionSource === "error"
+                                      ? "Fallback suggestion ready"
+                                      : "Suggestion ready"}
+                              </strong>
+                              <p>
+                                Review these fields, then click Apply approved
+                                suggestions to save them to My Profile.
+                              </p>
+                            </div>
+                          </header>
                           <div>
                             <span>{contextSuggestion.confidence}</span>
                             <small>suggestion confidence</small>
