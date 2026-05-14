@@ -145,7 +145,14 @@ function isActiveWorkflowNavItem(
 export function DashboardTopNav() {
   const pathname = usePathname()
   const { userId } = useDashboardPlan()
-  const { isLocked } = useProfileProtocolReadiness(userId)
+  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId)
+
+  const alertProfileLock = () => {
+    window.alert(
+      `Complete Profile Evidence to 90% before using this area. Current profile readiness: ${readinessScore}%.`
+    )
+    window.location.assign("/dashboard/autofill-profile")
+  }
 
   return (
     <nav className="dashboard-topnav" aria-label="Global dashboard navigation">
@@ -163,6 +170,12 @@ export function DashboardTopNav() {
             }`.trim()}
             href={isProtocolLocked ? "/dashboard/autofill-profile" : item.href}
             key={item.href}
+            onClick={(event) => {
+              if (isProtocolLocked) {
+                event.preventDefault()
+                alertProfileLock()
+              }
+            }}
             title={
               isProtocolLocked
                 ? "Complete Profile Evidence to 90% before using this area."
@@ -180,7 +193,14 @@ export function DashboardTopNav() {
 export function DashboardWorkflowSidebar() {
   const pathname = usePathname()
   const { userId } = useDashboardPlan()
-  const { isLocked } = useProfileProtocolReadiness(userId)
+  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId)
+
+  const alertProfileLock = () => {
+    window.alert(
+      `Complete Profile Evidence to 90% before using this workflow. Current profile readiness: ${readinessScore}%.`
+    )
+    window.location.assign("/dashboard/autofill-profile")
+  }
 
   return (
     <aside className="dashboard-sidebar" aria-label="Workflow navigation">
@@ -207,6 +227,12 @@ export function DashboardWorkflowSidebar() {
                 isProtocolLocked ? "/dashboard/autofill-profile" : item.href
               }
               key={item.href}
+              onClick={(event) => {
+                if (isProtocolLocked) {
+                  event.preventDefault()
+                  alertProfileLock()
+                }
+              }}
               title={
                 isProtocolLocked
                   ? "Complete Profile Evidence to 90% before using this workflow."

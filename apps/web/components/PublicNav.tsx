@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import type { MouseEvent } from "react"
 import { UserNav } from "./UserNav"
 import type { SubscriptionPlan } from "../lib/supabase/types"
 import { useProfileProtocolReadiness } from "./ProfileProtocolLock"
@@ -45,7 +46,14 @@ function isActiveSignedInNavItem(
 }
 
 export function PublicNav({ currentPath, user }: PublicNavProps) {
-  const { isLocked } = useProfileProtocolReadiness(user?.id)
+  const { isLocked, readinessScore } = useProfileProtocolReadiness(user?.id)
+
+  const alertProfileLock = () => {
+    window.alert(
+      `Complete Profile Evidence to 90% before using this area. Current profile readiness: ${readinessScore}%.`
+    )
+    window.location.assign("/dashboard/autofill-profile")
+  }
 
   return (
     <nav className="product-nav" aria-label="Primary">
@@ -86,6 +94,12 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
                     isProtocolLocked ? "/dashboard/autofill-profile" : item.href
                   }
                   key={item.href}
+                  onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+                    if (isProtocolLocked) {
+                      event.preventDefault()
+                      alertProfileLock()
+                    }
+                  }}
                   title={
                     isProtocolLocked
                       ? "Complete Profile Evidence to 90% before using this area."

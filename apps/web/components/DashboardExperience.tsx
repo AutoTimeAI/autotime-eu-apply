@@ -5944,11 +5944,11 @@ export default function HomePage({
                         check jobs, explain risks and keep answers truthful.
                       </p>
                       <div className="profile-purpose-steps">
-                        <span>1. Identity</span>
-                        <span>2. Work-right</span>
-                        <span>3. Target roles</span>
-                        <span>4. CV evidence</span>
-                        <span>5. Reusable answers</span>
+                        <span>About you</span>
+                        <span>Work rights</span>
+                        <span>Target roles</span>
+                        <span>CV proof</span>
+                        <span>Reusable answers</span>
                       </div>
                     </section>
                     <div className="profile-form-toolbar">
@@ -5990,10 +5990,11 @@ export default function HomePage({
 
                     <section className="profile-form-section">
                       <div className="section-heading">
-                        <p className="eyebrow">Identity</p>
-                        <h3>Basic candidate details</h3>
+                        <p className="eyebrow">Step 1</p>
+                        <h3>About you</h3>
                         <p>
-                          Used for summaries and reusable application context.
+                          Start with the basics AutoTime can safely use in
+                          summaries and tracker notes.
                         </p>
                       </div>
                       <label>
@@ -6030,9 +6031,12 @@ export default function HomePage({
 
                     <section className="profile-form-section">
                       <div className="section-heading">
-                        <p className="eyebrow">Search focus</p>
-                        <h3>Where and what you want</h3>
-                        <p>Helps AutoTime avoid generic job-fit advice.</p>
+                        <p className="eyebrow">Step 2</p>
+                        <h3>What you are looking for</h3>
+                        <p>
+                          Add target countries and roles so job advice stays
+                          specific to your search.
+                        </p>
                       </div>
                       <label>
                         Target countries
@@ -6058,11 +6062,11 @@ export default function HomePage({
 
                     <section className="profile-form-section important">
                       <div className="section-heading">
-                        <p className="eyebrow">Work-right evidence</p>
-                        <h3>Facts AutoTime must not invent</h3>
+                        <p className="eyebrow">Step 3</p>
+                        <h3>Work-right facts</h3>
                         <p>
-                          Add only details you can verify. This drives risk
-                          checks.
+                          Add only details you can verify. AutoTime will never
+                          invent work-right, visa or sponsorship claims.
                         </p>
                       </div>
                       <label>
@@ -6082,8 +6086,8 @@ export default function HomePage({
 
                     <section className="profile-form-section important">
                       <div className="section-heading">
-                        <p className="eyebrow">CV evidence</p>
-                        <h3>Proof for job checks and AI answers</h3>
+                        <p className="eyebrow">Step 4</p>
+                        <h3>Your proof</h3>
                         <p>
                           Paste factual CV text, project evidence and
                           achievements.
