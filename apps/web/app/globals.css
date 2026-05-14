@@ -2656,14 +2656,67 @@ h4 {
 }
 
 .profile-form-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto auto auto;
   gap: 8px;
   justify-content: flex-end;
 }
 
-.profile-form-actions button {
+.profile-form-actions > button {
   min-width: 128px;
+}
+
+.profile-action-details {
+  position: relative;
+}
+
+.profile-action-details summary {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 750;
+  padding: 8px 12px;
+  user-select: none;
+}
+
+.profile-action-details[open] summary {
+  border-color: rgba(15, 118, 110, 0.32);
+  background: #eef8f6;
+  color: var(--accent-strong);
+}
+
+.profile-action-details > :not(summary) {
+  margin-top: 8px;
+}
+
+.profile-action-details {
+  border: 1px solid transparent;
+}
+
+.profile-action-details[open] {
+  grid-column: span 2;
+  border-color: var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(24, 45, 73, 0.08);
+  padding: 8px;
+}
+
+.profile-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-action-row button {
+  flex: 1 1 130px;
 }
 
 .cloud-sync-panel {
@@ -2765,6 +2818,10 @@ h4 {
   border-radius: 8px;
   background: #fffafa;
   padding: 8px 10px;
+}
+
+.sync-danger-details.compact {
+  margin-top: 8px;
 }
 
 .sync-danger-details summary {
@@ -3997,6 +4054,7 @@ h4 {
 
 .user-nav-menu {
   position: absolute;
+  z-index: 60;
   top: calc(100% + 8px);
   right: 0;
   display: grid;
@@ -5823,6 +5881,20 @@ h4 {
 
   .profile-purpose-steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .profile-form-actions {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .profile-form-actions > button,
+  .profile-action-details summary {
+    width: 100%;
+  }
+
+  .profile-action-details[open] {
+    grid-column: auto;
   }
 
   .dashboard-body {

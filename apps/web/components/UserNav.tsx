@@ -253,6 +253,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const planLabel = plan === "pro" ? "Pro" : "Free"
+  const menuId = "user-account-menu"
 
   const openBillingPortal = async () => {
     try {
@@ -349,9 +350,16 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   return (
     <div className="user-nav-shell" onMouseLeave={() => setIsOpen(false)}>
       <button
+        aria-controls={isOpen ? menuId : undefined}
         aria-expanded={isOpen}
+        aria-haspopup="menu"
         className="secondary-button user-nav-trigger"
         type="button"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            setIsOpen(false)
+          }
+        }}
         onClick={() => setIsOpen((current) => !current)}
       >
         <span aria-hidden="true" className="user-avatar">
@@ -365,20 +373,26 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
         </span>
       </button>
       {isOpen ? (
-        <div className="user-nav-menu">
+        <div className="user-nav-menu" id={menuId} role="menu">
           {isAdmin ? (
-            <a className="secondary-button" href="/admin">
+            <a className="secondary-button" href="/admin" role="menuitem">
               Admin panel
             </a>
           ) : null}
           <button
             className="secondary-button"
+            role="menuitem"
             type="button"
             onClick={openBillingPortal}
           >
             {plan === "pro" ? "Billing & Plan" : "Upgrade plan"}
           </button>
-          <button className="secondary-button" type="button" onClick={signOut}>
+          <button
+            className="secondary-button"
+            role="menuitem"
+            type="button"
+            onClick={signOut}
+          >
             Sign out
           </button>
           {status ? <p className="empty-state">{status}</p> : null}

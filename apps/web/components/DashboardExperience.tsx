@@ -2799,8 +2799,6 @@ export default function HomePage({
     isOverview || (profileReadyForExecution && currentTab === "jobs")
   const showProfileSettingsPanel =
     activeFocus === "autofill-profile" || activeFocus === "settings"
-  const showProfileCloudSync =
-    activeFocus === "autofill-profile" || activeFocus === "settings"
   const showApplicationAnalytics =
     activeFocus === "insights" && !selectedApplication
   const showFollowUpQueue = activeFocus === "follow-ups" && !selectedApplication
@@ -5607,121 +5605,6 @@ export default function HomePage({
                   </section>
                 )}
 
-              {!isOverview &&
-                currentTab === "profile" &&
-                showProfileCloudSync && (
-                  <section
-                    className={
-                      cloudSyncReadiness.configured
-                        ? "cloud-sync-panel flagged"
-                        : "cloud-sync-panel local"
-                    }
-                    id="account-sync-settings"
-                    aria-label="Sync status"
-                  >
-                    <div>
-                      <p className="eyebrow">Save and sync</p>
-                      <h2>
-                        {cloudSyncReadiness.configured
-                          ? "Use this profile on any signed-in device"
-                          : "Saved on this browser"}
-                      </h2>
-                      <p>
-                        AutoTime always saves here first. Turn on account sync
-                        when you want your profile and workflow available after
-                        sign-in on another device.
-                      </p>
-                    </div>
-                    <div className="sync-status-grid">
-                      <div>
-                        <strong>{cloudSyncReadiness.modeLabel}</strong>
-                        <span>Saving now</span>
-                      </div>
-                      <div>
-                        <strong>
-                          {cloudSyncReadiness.configured
-                            ? "Account ready"
-                            : "Account sync off"}
-                        </strong>
-                        <span>Signed-in access</span>
-                      </div>
-                    </div>
-                    <div className="sync-action-stack">
-                      <label className="sync-consent-control">
-                        <input
-                          checked={cloudSyncConsent}
-                          disabled={!cloudSyncReadiness.configured}
-                          type="checkbox"
-                          onChange={(event) =>
-                            setProfileAccountSyncEnabled(event.target.checked)
-                          }
-                        />
-                        Save my profile and workflow to this signed-in account.
-                      </label>
-                      <div className="sync-action-group">
-                        <span>Profile</span>
-                        <button
-                          disabled={!cloudSyncReadiness.configured}
-                          type="button"
-                          onClick={syncProfileToCloud}
-                        >
-                          Save profile online
-                        </button>
-                        <button
-                          className="secondary-button"
-                          disabled={!cloudSyncReadiness.configured}
-                          type="button"
-                          onClick={loadProfileFromCloud}
-                        >
-                          Load online profile
-                        </button>
-                      </div>
-                      <div className="sync-action-group">
-                        <span>Workflow</span>
-                        <button
-                          disabled={!cloudSyncReadiness.configured}
-                          type="button"
-                          onClick={syncDashboardToCloud}
-                        >
-                          Save workflow online
-                        </button>
-                        <button
-                          className="secondary-button"
-                          disabled={!cloudSyncReadiness.configured}
-                          type="button"
-                          onClick={loadDashboardFromCloud}
-                        >
-                          Load online workflow
-                        </button>
-                      </div>
-                      <div className="sync-action-row">
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          onClick={explainCloudSyncTrack}
-                        >
-                          Check sync
-                        </button>
-                      </div>
-                      <details className="sync-danger-details">
-                        <summary>Advanced data controls</summary>
-                        <p>
-                          Use only if you want to remove the profile saved to
-                          this online account. Your browser copy stays separate.
-                        </p>
-                        <button
-                          className="danger-button"
-                          disabled={!cloudSyncReadiness.configured}
-                          type="button"
-                          onClick={deleteProfileForAccount}
-                        >
-                          Delete online profile
-                        </button>
-                      </details>
-                    </div>
-                  </section>
-                )}
-
               {!isOverview && currentTab === "applications" && (
                 <section
                   className="tracker-pipeline-panel"
@@ -6090,48 +5973,118 @@ export default function HomePage({
                     </section>
                     <div className="profile-form-toolbar">
                       <div>
-                        <p className="eyebrow">Save your work</p>
-                        <h2>Save, sync or back up</h2>
+                        <p className="eyebrow">Saved in this browser</p>
+                        <h2>Keep your profile up to date</h2>
                         <p>
-                          Saved in this browser first. Sync or export when you
-                          want another copy.
+                          Edit the four steps below. Use account sync or a
+                          backup only when you need another copy.
                         </p>
                       </div>
                       <div className="profile-form-actions">
                         <button
-                          className="secondary-button"
                           type="button"
                           onClick={saveDashboard}
                         >
-                          Save locally
+                          Save changes
                         </button>
-                        <button type="button" onClick={syncProfileToCloud}>
-                          Sync profile
-                        </button>
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          onClick={loadProfileFromCloud}
-                        >
-                          Load synced
-                        </button>
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          onClick={() => {
-                            const backupsPanel =
-                              document.getElementById("dashboard-backups")
-                            if (backupsPanel instanceof HTMLDetailsElement) {
-                              backupsPanel.open = true
-                            }
-                            backupsPanel?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "start"
-                            })
-                          }}
-                        >
-                          Backups
-                        </button>
+                        <details className="profile-action-details">
+                          <summary>Account sync</summary>
+                          <label className="sync-consent-control">
+                            <input
+                              checked={cloudSyncConsent}
+                              disabled={!cloudSyncReadiness.configured}
+                              type="checkbox"
+                              onChange={(event) =>
+                                setProfileAccountSyncEnabled(
+                                  event.target.checked
+                                )
+                              }
+                            />
+                            <span>
+                              Save this profile to my signed-in account.
+                            </span>
+                          </label>
+                          <div className="profile-action-row">
+                            <button
+                              disabled={!cloudSyncReadiness.configured}
+                              type="button"
+                              onClick={syncProfileToCloud}
+                            >
+                              Sync profile
+                            </button>
+                            <button
+                              className="secondary-button"
+                              disabled={!cloudSyncReadiness.configured}
+                              type="button"
+                              onClick={loadProfileFromCloud}
+                            >
+                              Load synced
+                            </button>
+                          </div>
+                          <div className="profile-action-row">
+                            <button
+                              className="secondary-button"
+                              disabled={!cloudSyncReadiness.configured}
+                              type="button"
+                              onClick={syncDashboardToCloud}
+                            >
+                              Sync workflow
+                            </button>
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              onClick={explainCloudSyncTrack}
+                            >
+                              Check sync
+                            </button>
+                          </div>
+                          <details className="sync-danger-details compact">
+                            <summary>Delete online profile</summary>
+                            <p>
+                              Removes only the profile saved to this online
+                              account. Your browser copy stays here.
+                            </p>
+                            <button
+                              className="danger-button"
+                              disabled={!cloudSyncReadiness.configured}
+                              type="button"
+                              onClick={deleteProfileForAccount}
+                            >
+                              Delete online copy
+                            </button>
+                          </details>
+                        </details>
+                        <details className="profile-action-details">
+                          <summary>Backups</summary>
+                          <div className="profile-action-row">
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              onClick={exportDashboard}
+                            >
+                              Export
+                            </button>
+                            <button
+                              className="secondary-button"
+                              type="button"
+                              onClick={() => {
+                                const backupsPanel =
+                                  document.getElementById("dashboard-backups")
+                                if (
+                                  backupsPanel instanceof HTMLDetailsElement
+                                ) {
+                                  backupsPanel.open = true
+                                }
+                                backupsPanel?.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "start"
+                                })
+                              }}
+                            >
+                              Import
+                            </button>
+                          </div>
+                        </details>
                       </div>
                     </div>
 
