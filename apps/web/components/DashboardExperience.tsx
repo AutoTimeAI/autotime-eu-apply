@@ -377,9 +377,9 @@ const dashboardFocusCopy: Record<
     body: "Roles captured from the extension or tracked from a fit analysis."
   },
   "match-score": {
-    eyebrow: "Fit Analysis",
-    title: "Analyse fit before you apply",
-    body: "Compare a European role against your profile evidence, gaps and work-right context."
+    eyebrow: "Analyse Fit",
+    title: "Analyse Fit before you apply",
+    body: "Evidence-first scoring and rules compare one role against your profile, work-right context, country fit, risks and missing proof. AI assists where useful."
   },
   "cv-tailor": {
     eyebrow: "Evidence Bank",
@@ -5309,7 +5309,7 @@ export default function HomePage({
                   >
                     {isCopilotThinking
                       ? "Checking role"
-                      : "Ask AI to analyse fit"}
+                      : "Use AI assistant"}
                   </button>
                 ) : activeFocus === "application-answers" ? (
                   <>
@@ -5766,11 +5766,15 @@ export default function HomePage({
                   aria-label="UK/EU apply decision brief"
                 >
                   <div>
-                    <p className="eyebrow">Job decision</p>
-                    <h2>Job check result</h2>
+                    <p className="eyebrow">Analyse Fit</p>
+                    <h2>Fit decision</h2>
                     <p>
-                      Paste a role below to get a practical apply, stretch or
-                      pause decision.
+                      Load or paste one role to see evidence, risks, missing
+                      proof and the safest next action.
+                    </p>
+                    <p className="decision-method-note">
+                      Analyse Fit uses evidence-first scoring and rules, with
+                      AI assistance where useful.
                     </p>
                   </div>
                   <div className="decision-score">
@@ -5839,7 +5843,9 @@ export default function HomePage({
                     </section>
                   </div>
                   <p className="decision-integrity-note">
-                    Use this as guidance before deciding whether to apply.
+                    Evidence-first scoring is the decision base. AI support can
+                    enrich job text, but it does not replace the rules,
+                    evidence or user review.
                   </p>
                 </section>
               )}
@@ -6765,11 +6771,13 @@ export default function HomePage({
                 <section className="workspace-grid job-check-grid">
                   <div className="input-column job-check-input">
                     <div className="section-heading">
-                      <p className="eyebrow">Role source</p>
-                      <h2>Check one job before you apply</h2>
+                      <p className="eyebrow">Role evidence</p>
+                      <h2>Analyse one job before you apply</h2>
                       <p>
                         Start from a job parsed by the extension. Manual fields
                         are a fallback for roles you have not tracked yet.
+                        Scoring remains rules-led; AI only assists the role
+                        analysis when you choose it.
                       </p>
                     </div>
                     <section
@@ -6903,7 +6911,7 @@ export default function HomePage({
                       type="button"
                       onClick={saveApplicationFromJob}
                     >
-                      Track Job
+                      Save to Tracked Jobs
                     </button>
                     <p className="job-check-save-note">
                       Tracking moves this checked role into the tracker with the
@@ -6914,7 +6922,7 @@ export default function HomePage({
                   <div className="output-column job-check-results">
                     <section className="panel country-fit-panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Live result</p>
+                        <p className="eyebrow">Analyse Fit result</p>
                         <h2>{fitEvaluation.decision}</h2>
                         <span
                           className={`source-mode-pill ${currentJobInputMode.className}`}
@@ -6925,8 +6933,16 @@ export default function HomePage({
                       </div>
                       <div
                         className="ai-audit-summary"
-                        aria-label="Job check AI audit"
+                        aria-label="Analyse Fit evidence audit"
                       >
+                        <article>
+                          <span>Method</span>
+                          <strong>Rules first</strong>
+                          <p>
+                            Evidence-first scoring and country rules drive the
+                            decision. AI assistance is optional.
+                          </p>
+                        </article>
                         <article>
                           <span>Evidence used</span>
                           <strong>

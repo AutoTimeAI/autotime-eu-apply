@@ -3110,6 +3110,18 @@ h4 {
   line-height: 1.45;
 }
 
+.decision-method-note {
+  margin-top: 10px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 8px;
+  background: #f2fbf9;
+  color: #24594e;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.48;
+  padding: 10px 12px;
+}
+
 .job-check-results {
   gap: 14px;
 }
@@ -3226,7 +3238,7 @@ h4 {
 
 .pipeline-summary {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 8px;
 }
 
@@ -3355,10 +3367,10 @@ h4 {
 .application-command-strip {
   display: grid;
   grid-template-columns:
-    minmax(240px, 1fr) minmax(150px, 0.42fr) minmax(190px, 0.55fr)
-    auto;
-  gap: 10px;
-  align-items: end;
+    minmax(260px, 1fr) minmax(150px, 0.38fr) minmax(190px, 0.48fr)
+    minmax(120px, auto);
+  gap: 12px;
+  align-items: stretch;
   border: 1px solid rgba(216, 224, 235, 0.84);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
@@ -3371,6 +3383,8 @@ h4 {
 }
 
 .application-command-strip > div {
+  display: grid;
+  align-content: center;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-muted);
@@ -3396,11 +3410,13 @@ h4 {
 
 .application-row {
   display: grid;
-  grid-template-columns:
-    minmax(220px, 1.15fr) minmax(120px, 0.45fr) minmax(170px, 0.65fr)
-    minmax(150px, 0.55fr) minmax(220px, 0.85fr) minmax(150px, 0.5fr);
-  gap: 10px;
-  align-items: end;
+  grid-template-areas:
+    "summary status actions"
+    "summary next actions"
+    "summary outcome notes";
+  grid-template-columns: minmax(280px, 1.15fr) minmax(360px, 1.35fr) minmax(144px, 0.44fr);
+  gap: 12px;
+  align-items: stretch;
   border: 1px solid rgba(216, 224, 235, 0.84);
   border-left: 4px solid var(--blue);
   border-radius: 8px;
@@ -3413,6 +3429,32 @@ h4 {
     transform 160ms ease;
 }
 
+.application-row > div:first-child {
+  grid-area: summary;
+  align-self: start;
+}
+
+.application-row > label:nth-of-type(1) {
+  grid-area: status;
+}
+
+.application-row > .application-next-action-fields {
+  grid-area: next;
+}
+
+.application-row > label:nth-of-type(2) {
+  grid-area: outcome;
+}
+
+.application-row > label:nth-of-type(3) {
+  grid-area: notes;
+}
+
+.application-row > .application-actions {
+  grid-area: actions;
+  align-content: start;
+}
+
 .application-row:hover {
   border-color: rgba(15, 118, 110, 0.24);
   box-shadow: 0 16px 38px rgba(24, 45, 73, 0.09);
@@ -3422,7 +3464,7 @@ h4 {
 .application-row-header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -3434,7 +3476,9 @@ h4 {
 }
 
 .application-row strong {
+  flex: 1 1 220px;
   color: var(--ink);
+  line-height: 1.25;
 }
 
 .application-row .action-timing {
@@ -3486,6 +3530,21 @@ h4 {
   grid-template-columns: minmax(0, 1fr) minmax(128px, 0.58fr);
   gap: 8px;
   align-items: end;
+}
+
+.application-row > label,
+.application-next-action-fields label {
+  margin: 0;
+}
+
+.application-row .application-actions {
+  gap: 8px;
+}
+
+.application-row .application-actions a,
+.application-row .application-actions button {
+  width: 100%;
+  min-height: 38px;
 }
 
 .application-row span {
@@ -5862,7 +5921,16 @@ h4 {
   }
 
   .application-row {
+    grid-template-areas:
+      "summary summary"
+      "status outcome"
+      "next next"
+      "notes actions";
     grid-template-columns: 1fr 1fr;
+  }
+
+  .application-command-strip {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.72fr);
   }
 
   .utility-bar,
@@ -5987,6 +6055,10 @@ h4 {
     position: static;
   }
 
+  .application-row {
+    grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.22fr) minmax(132px, 0.38fr);
+  }
+
   .ai-settings-panel {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -6084,6 +6156,20 @@ h4 {
   .admin-config-grid,
   .admin-two-column,
   .application-row {
+    grid-template-columns: 1fr;
+  }
+
+  .application-row {
+    grid-template-areas:
+      "summary"
+      "status"
+      "next"
+      "outcome"
+      "notes"
+      "actions";
+  }
+
+  .application-command-strip {
     grid-template-columns: 1fr;
   }
 
