@@ -3524,6 +3524,15 @@ export default function HomePage({
 
   const applyMarketContextToProfile = () => {
     const market = getRoleMarket(productContext)
+    const profileSettingsNote = `Profile settings: ${getMarketLabel(productContext)} / ${
+      productContext.candidatePosition === "foreign-candidate"
+        ? "foreign or relocating"
+        : "native or local"
+    } / ${productContext.targetCountry} / ${productContext.urgency}.`
+    const currentJobNotes = state.jobAnalysis.notes.trim()
+    const nextJobNotes = currentJobNotes.includes(profileSettingsNote)
+      ? currentJobNotes
+      : [currentJobNotes, profileSettingsNote].filter(Boolean).join("\n")
     const nextState = {
       ...state,
       profile: {
@@ -3539,26 +3548,16 @@ export default function HomePage({
         ...state.jobAnalysis,
         seniority: productContext.experienceLevel,
         positioningAngle: getMarketPositioning(productContext),
-        notes: [
-          state.jobAnalysis.notes,
-          `Profile settings: ${getMarketLabel(productContext)} / ${
-            productContext.candidatePosition === "foreign-candidate"
-              ? "foreign or relocating"
-              : "native or local"
-          } / ${productContext.targetCountry} / ${productContext.urgency}.`
-        ]
-          .filter(Boolean)
-          .join("\n")
+        notes: nextJobNotes
       }
     }
+    const statusMessage = state.profile.workRightDetails.trim()
+      ? "Profile settings applied to saved evidence"
+      : "Profile settings applied. Add verified work-right details next."
 
-    persist(
-      nextState,
-      state.profile.workRightDetails.trim()
-        ? "Profile settings applied to saved evidence"
-        : "Profile settings applied. Add verified work-right details next."
-    )
+    persist(nextState, statusMessage)
     scheduleProfileSync(nextState.profile)
+    window.alert(statusMessage)
   }
 
   const reviewResumeForContext = () => {
