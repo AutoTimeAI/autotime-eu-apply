@@ -164,6 +164,67 @@ test("profile evidence sync stays local-first until online save succeeds", () =>
   assert.match(dashboard, /if \(synced\) \{\s*setProfileAccountSyncEnabled\(true\)\s*\}/)
 })
 
+test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+  const fitModel = read("packages/shared/src/fit-model.ts")
+
+  assert.match(dashboard, /title: "Analyse Fit before you apply"/)
+  assert.match(
+    dashboard,
+    /Evidence-first scoring and rules compare one role against your profile/
+  )
+  assert.match(dashboard, /Use AI assistant/)
+  assert.match(dashboard, /Rules first/)
+  assert.match(dashboard, /AI assistance is optional/)
+
+  const createApplicationStart = dashboard.indexOf("function createApplication(")
+  const createContentStart = dashboard.indexOf(
+    "function createApplicationContentSnapshot("
+  )
+  const saveStart = dashboard.indexOf("const saveApplicationFromJob = async () =>")
+  const aiStart = dashboard.indexOf("const runAiJobAnalysis = async () =>")
+  const updateStart = dashboard.indexOf("const updateApplication = (")
+
+  assert.notEqual(createApplicationStart, -1)
+  assert.notEqual(createContentStart, -1)
+  assert.notEqual(aiStart, -1)
+  assert.notEqual(saveStart, -1)
+  assert.notEqual(updateStart, -1)
+
+  const createApplicationFlow = dashboard.slice(
+    createApplicationStart,
+    createContentStart
+  )
+  const saveFlow = dashboard.slice(saveStart, aiStart)
+  const aiFlow = dashboard.slice(aiStart, updateStart)
+
+  assert.match(createApplicationFlow, /nextAction: fitEvaluation\.nextBestAction/)
+  assert.match(createApplicationFlow, /fitScore: fitEvaluation\.overallScore/)
+  assert.match(createApplicationFlow, /fitDecision: fitEvaluation\.decision/)
+  assert.match(createApplicationFlow, /contentGate: fitEvaluation\.contentGate/)
+
+  assert.match(aiFlow, /requireProfileExecutionReady\(\)/)
+  assert.match(aiFlow, /hasJobDraft\(state\.jobAnalysis\)/)
+  assert.match(aiFlow, /fetch\("\/api\/ai\/analyse"/)
+  assert.match(aiFlow, /profile: state\.profile/)
+  assert.match(aiFlow, /persist\(next, "AI fit assistant updated the role analysis"\)/)
+
+  assert.match(saveFlow, /requireProfileExecutionReady\(\)/)
+  assert.match(saveFlow, /hasJobDraft\(state\.jobAnalysis\)/)
+  assert.match(saveFlow, /createApplication\(/)
+  assert.match(saveFlow, /fitScore: fitEvaluation\.overallScore/)
+  assert.match(saveFlow, /createEvidenceRecords\(/)
+  assert.match(saveFlow, /createOutcomeRecord\(application\)/)
+  assert.match(saveFlow, /syncDashboardStateToCloud\(nextState/)
+  assert.match(saveFlow, /openDashboardView\("applications"\)/)
+
+  assert.match(fitModel, /export function evaluateCountryFit/)
+  assert.match(fitModel, /getSponsorshipLikelihood/)
+  assert.match(fitModel, /getRightToWorkCompatibility/)
+  assert.match(fitModel, /getCountryLocationFit/)
+  assert.match(fitModel, /contentGate/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
