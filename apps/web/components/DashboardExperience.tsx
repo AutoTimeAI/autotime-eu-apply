@@ -2067,6 +2067,53 @@ function inferRoleMarketFromText(value: string, fallback: RoleMarket) {
     : getRoleMarket({ roleMarket: fallback })
 }
 
+function findSupportedCountryInText(value: string) {
+  const normalized = value.toLowerCase()
+  const countryAliases: Record<string, string[]> = {
+    "United Kingdom": [
+      "united kingdom",
+      "uk",
+      "u.k.",
+      "england",
+      "scotland",
+      "wales"
+    ]
+  }
+
+  return (
+    euCountryOptions.find((country) => {
+      const aliases = countryAliases[country] ?? [country]
+
+      return aliases.some((alias) =>
+        new RegExp(
+          `\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+          "i"
+        ).test(normalized)
+      )
+    }) || ""
+  )
+}
+
+function inferTargetCountryFromResume(
+  resumeText: string,
+  fallbackCountry: string
+) {
+  const lines = resumeText
+    .split(/\r?\n|(?<=[.!?])\s+/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+  const targetLine = lines.find(
+    (line) =>
+      /\b(target|seeking|looking for|open to|relocat|visa|sponsor|authori[sz]ation|work permit)\b/i.test(
+        line
+      ) && findSupportedCountryInText(line)
+  )
+
+  return targetLine
+    ? findSupportedCountryInText(targetLine) || fallbackCountry
+    : fallbackCountry
+}
+
 function inferContextFromResume(
   resumeText: string,
   current: ProductContext
@@ -2074,6 +2121,10 @@ function inferContextFromResume(
   const words = resumeText.trim().split(/\s+/).filter(Boolean)
   const inferredMarket = inferRoleMarketFromText(resumeText, current.roleMarket)
   const roleMarket = inferredMarket.id
+  const targetCountry = inferTargetCountryFromResume(
+    resumeText,
+    current.targetCountry
+  )
   const candidatePosition = includesAny(resumeText, [
     "visa",
     "sponsorship",
@@ -2113,6 +2164,7 @@ function inferContextFromResume(
     roleMarket,
     candidatePosition,
     experienceLevel,
+    targetCountry,
     targetRoles: targetRoles || inferredMarket.targetRoles,
     workRightPrompt:
       candidatePosition === "foreign-candidate"
@@ -2122,6 +2174,9 @@ function inferContextFromResume(
       words.length > 120 ? "High" : words.length > 50 ? "Medium" : "Low",
     reasons: [
       inferredMarket.detectedReason,
+      targetCountry !== current.targetCountry
+        ? `Detected target country: ${targetCountry}.`
+        : `Target country kept as ${targetCountry}.`,
       candidatePosition === "foreign-candidate"
         ? "Detected visa, sponsorship, work permit or relocation language."
         : "No strong visa or relocation signal was detected; user approval is still required.",
@@ -2227,12 +2282,12 @@ function inferCandidateDetailsFromResume(resumeText: string) {
     /\b(location|based in|current city|address)\b/i.test(line)
   )
   const currentCountry = locationLine
-    ? euCountryOptions.find((country) => includesAny(locationLine, [country])) ||
-      ""
+    ? findSupportedCountryInText(locationLine)
     : ""
   const currentCity = locationLine
     ?.replace(/\b(location|based in|current city|address)\b\s*:?\s*/i, "")
-    .split(",")[0]
+    .replace(currentCountry, "")
+    .split(/,|\|/)[0]
     ?.trim()
 
   return {
@@ -3901,6 +3956,13 @@ export default function HomePage({
       return
     }
 
+    const cvEvidenceSource = resumeIntake.trim() || state.profile.baseCvText
+
+    if (!cvEvidenceSource.trim()) {
+      window.alert("Add or import your CV first, then review and approve it.")
+      return
+    }
+
     saveProductContext(
       {
         roleMarket: contextSuggestion.roleMarket,
@@ -3912,60 +3974,89 @@ export default function HomePage({
       userId
     )
     setProductContext(contextSuggestion)
-    const cvEvidenceSource = resumeIntake || state.profile.baseCvText
     const inferredEvidence = inferEvidenceFromResume(cvEvidenceSource)
     const inferredDetails = inferCandidateDetailsFromResume(cvEvidenceSource)
+    const currentProfile = state.profile
+    const canUseInferredCurrentCountry =
+      !currentProfile.currentCountry.trim() ||
+      (currentProfile.currentCountry === emptyProfile.currentCountry &&
+        !currentProfile.currentCity.trim())
+    const nextProfile: CandidateProfile = {
+      ...currentProfile,
+      baseCvText: cvEvidenceSource,
+      fullName: currentProfile.fullName.trim()
+        ? currentProfile.fullName
+        : inferredDetails.fullName,
+      email: currentProfile.email.trim() ? currentProfile.email : inferredDetails.email,
+      phone: currentProfile.phone.trim() ? currentProfile.phone : inferredDetails.phone,
+      linkedInUrl: currentProfile.linkedInUrl.trim()
+        ? currentProfile.linkedInUrl
+        : inferredDetails.linkedInUrl,
+      githubUrl: currentProfile.githubUrl.trim()
+        ? currentProfile.githubUrl
+        : inferredDetails.githubUrl,
+      portfolioUrl: currentProfile.portfolioUrl.trim()
+        ? currentProfile.portfolioUrl
+        : inferredDetails.portfolioUrl,
+      currentCountry: currentProfile.currentCountry.trim()
+        ? canUseInferredCurrentCountry
+          ? inferredDetails.currentCountry || currentProfile.currentCountry
+          : currentProfile.currentCountry
+        : inferredDetails.currentCountry,
+      currentCity: currentProfile.currentCity.trim()
+        ? currentProfile.currentCity
+        : inferredDetails.currentCity,
+      targetCountries: contextSuggestion.targetCountry,
+      targetRoles: contextSuggestion.targetRoles || currentProfile.targetRoles,
+      workRightDetails:
+        currentProfile.workRightDetails.trim() || contextSuggestion.workRightPrompt,
+      experienceHighlights: currentProfile.experienceHighlights.trim()
+        ? currentProfile.experienceHighlights
+        : inferredEvidence.experienceHighlights,
+      projectSummaries: currentProfile.projectSummaries.trim()
+        ? currentProfile.projectSummaries
+        : inferredEvidence.projectSummaries
+    }
     const filledEvidenceFields = [
-      !state.profile.fullName.trim() && inferredDetails.fullName && "full name",
-      !state.profile.email.trim() && inferredDetails.email && "email",
-      !state.profile.phone.trim() && inferredDetails.phone && "phone",
-      !state.profile.linkedInUrl.trim() &&
+      cvEvidenceSource !== currentProfile.baseCvText && "CV text",
+      !currentProfile.fullName.trim() && inferredDetails.fullName && "full name",
+      !currentProfile.email.trim() && inferredDetails.email && "email",
+      !currentProfile.phone.trim() && inferredDetails.phone && "phone",
+      !currentProfile.linkedInUrl.trim() &&
         inferredDetails.linkedInUrl &&
         "LinkedIn URL",
-      !state.profile.githubUrl.trim() &&
+      !currentProfile.githubUrl.trim() &&
         inferredDetails.githubUrl &&
         "GitHub URL",
-      !state.profile.portfolioUrl.trim() &&
+      !currentProfile.portfolioUrl.trim() &&
         inferredDetails.portfolioUrl &&
         "portfolio URL",
-      !state.profile.currentCountry.trim() &&
+      !currentProfile.currentCountry.trim() &&
         inferredDetails.currentCountry &&
         "current country",
-      !state.profile.currentCity.trim() &&
+      canUseInferredCurrentCountry &&
+        inferredDetails.currentCountry &&
+        inferredDetails.currentCountry !== currentProfile.currentCountry &&
+        "current country",
+      !currentProfile.currentCity.trim() &&
         inferredDetails.currentCity &&
         "current city",
-      !state.profile.experienceHighlights.trim() &&
+      currentProfile.targetCountries !== nextProfile.targetCountries &&
+        "target country",
+      currentProfile.targetRoles !== nextProfile.targetRoles && "target roles",
+      !currentProfile.workRightDetails.trim() &&
+        nextProfile.workRightDetails &&
+        "work-right details",
+      !currentProfile.experienceHighlights.trim() &&
         inferredEvidence.experienceHighlights &&
         "experience highlights",
-      !state.profile.projectSummaries.trim() &&
+      !currentProfile.projectSummaries.trim() &&
         inferredEvidence.projectSummaries &&
         "project examples"
     ].filter(Boolean)
     const nextState = {
       ...state,
-      profile: {
-        ...state.profile,
-        baseCvText: cvEvidenceSource,
-        fullName: state.profile.fullName || inferredDetails.fullName,
-        email: state.profile.email || inferredDetails.email,
-        phone: state.profile.phone || inferredDetails.phone,
-        linkedInUrl: state.profile.linkedInUrl || inferredDetails.linkedInUrl,
-        githubUrl: state.profile.githubUrl || inferredDetails.githubUrl,
-        portfolioUrl:
-          state.profile.portfolioUrl || inferredDetails.portfolioUrl,
-        currentCountry:
-          state.profile.currentCountry || inferredDetails.currentCountry,
-        currentCity: state.profile.currentCity || inferredDetails.currentCity,
-        targetCountries: contextSuggestion.targetCountry,
-        targetRoles: contextSuggestion.targetRoles || state.profile.targetRoles,
-        workRightDetails:
-          state.profile.workRightDetails || contextSuggestion.workRightPrompt,
-        experienceHighlights:
-          state.profile.experienceHighlights ||
-          inferredEvidence.experienceHighlights,
-        projectSummaries:
-          state.profile.projectSummaries || inferredEvidence.projectSummaries
-      },
+      profile: nextProfile,
       jobAnalysis: {
         ...state.jobAnalysis,
         seniority: contextSuggestion.experienceLevel,
@@ -5369,12 +5460,139 @@ export default function HomePage({
                     className="market-context-panel"
                     aria-label="Profile settings"
                   >
+                    <section
+                      className="resume-intake-panel"
+                      aria-label="CV context review"
+                    >
+                      <div className="section-heading">
+                        <p className="eyebrow">Start with your CV</p>
+                        <h2>Import CV first</h2>
+                        <p>
+                          AutoTime extracts profile suggestions first. Nothing
+                          is saved until you approve it.
+                        </p>
+                      </div>
+                      <label>
+                        CV or profile text
+                        <textarea
+                          placeholder="Import or paste your CV, resume, or LinkedIn summary. AutoTime will suggest profile updates for you to approve."
+                          value={resumeIntake}
+                          onChange={(event) =>
+                            setResumeIntake(event.target.value)
+                          }
+                        />
+                      </label>
+                      <div className="header-actions">
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => resumeFileInputRef.current?.click()}
+                        >
+                          Import CV file
+                        </button>
+                        <input
+                          ref={resumeFileInputRef}
+                          accept=".docx,.txt,.md,.markdown,.csv,.json,.rtf,text/*"
+                          aria-label="Import CV file"
+                          className="hidden-file-input"
+                          tabIndex={-1}
+                          type="file"
+                          onChange={importResumeFile}
+                        />
+                        <button
+                          disabled={!canReviewResumeWithAi || isReviewingCv}
+                          type="button"
+                          onClick={reviewResumeForContext}
+                        >
+                          {isReviewingCv ? "Reviewing CV" : "Review CV with AI"}
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={!contextSuggestion}
+                          type="button"
+                          onClick={approveContextSuggestion}
+                        >
+                          Apply approved suggestions
+                        </button>
+                      </div>
+                      <p className="profile-action-hint">
+                        Import or paste at least 40 characters, review with AI,
+                        then approve the suggested fields before saving to your
+                        profile.
+                      </p>
+                      {isReviewingCv ? (
+                        <div className="cv-review-result-panel loading">
+                          <strong>Reviewing CV</strong>
+                          <p>
+                            AutoTime is checking your CV for role focus,
+                            candidate context and missing work-right evidence.
+                          </p>
+                        </div>
+                      ) : null}
+                      {contextSuggestion && (
+                        <article className="suggestion-card cv-review-result-panel">
+                          <header className="cv-review-result-heading">
+                            <div>
+                              <strong>
+                                {contextSuggestionSource === "ai"
+                                  ? "AI suggestion ready"
+                                  : contextSuggestionSource === "limit"
+                                    ? "Local suggestion ready - AI limit reached"
+                                    : contextSuggestionSource === "error"
+                                      ? "Local suggestion ready - AI unavailable"
+                                      : contextSuggestionSource === "local"
+                                        ? "Local suggestion ready - connection issue"
+                                      : "Suggestion ready"}
+                              </strong>
+                              <p>
+                                Review these fields, then click Apply approved
+                                suggestions to save them to My Profile.
+                              </p>
+                              {contextSuggestionNote ? (
+                                <p className="cv-review-result-note">
+                                  {contextSuggestionNote}
+                                </p>
+                              ) : null}
+                            </div>
+                          </header>
+                          <div>
+                            <span>{contextSuggestion.confidence}</span>
+                            <small>suggestion confidence</small>
+                          </div>
+                          <dl>
+                            <div>
+                              <dt>Work authorisation status</dt>
+                              <dd>
+                                {contextSuggestion.candidatePosition ===
+                                "foreign-candidate"
+                                  ? "Foreign / relocating"
+                                  : "Native / local"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Target role focus</dt>
+                              <dd>{getMarketLabel(contextSuggestion)}</dd>
+                            </div>
+                            <div>
+                              <dt>Target roles</dt>
+                              <dd>{contextSuggestion.targetRoles}</dd>
+                            </div>
+                          </dl>
+                          <ul className="bullets-list">
+                            {contextSuggestion.reasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </article>
+                      )}
+                    </section>
+
                     <div className="section-intro">
                       <p className="eyebrow">Your goals</p>
-                      <h2>Tell AutoTime what you are aiming for</h2>
+                      <h2>Check and refine your profile direction</h2>
                       <p>
-                        Choose your role direction and target country, then add
-                        it to your profile for better job checks.
+                        Use the CV suggestions first, then adjust your role
+                        direction, work-right context and target country.
                       </p>
                     </div>
 
@@ -5382,23 +5600,22 @@ export default function HomePage({
                       <article>
                         <span>1</span>
                         <p>
-                          Pick your role focus, work authorisation status,
-                          target country, experience level and search pace.
+                          Import or paste your CV, then run Review CV with AI
+                          to generate suggested profile fields.
                         </p>
                       </article>
                       <article>
                         <span>2</span>
                         <p>
-                          Click Apply to My Profile so AutoTime fills the
-                          target roles and target country in your saved
-                          profile.
+                          Review the suggestions and click Apply approved
+                          suggestions only when the facts are correct.
                         </p>
                       </article>
                       <article>
                         <span>3</span>
                         <p>
-                          Review the saved fields in My Profile and replace any
-                          missing work-right details with exact verified facts.
+                          Adjust role focus, work authorisation status, target
+                          country, experience level and search pace if needed.
                         </p>
                       </article>
                     </div>
@@ -5522,130 +5739,6 @@ export default function HomePage({
                         </button>
                       </div>
                     </div>
-
-                    <section
-                      className="resume-intake-panel"
-                      aria-label="CV context review"
-                    >
-                      <div className="section-heading">
-                        <p className="eyebrow">CV import</p>
-                        <h2>Review CV text</h2>
-                        <p>Suggestions stay pending until you approve them.</p>
-                      </div>
-                      <label>
-                        CV or profile text
-                        <textarea
-                          placeholder="Add CV, resume, or LinkedIn summary text. Suggested profile updates stay pending until you approve them."
-                          value={resumeIntake}
-                          onChange={(event) =>
-                            setResumeIntake(event.target.value)
-                          }
-                        />
-                      </label>
-                      <div className="header-actions">
-                        <button
-                          className="secondary-button"
-                          type="button"
-                          onClick={() => resumeFileInputRef.current?.click()}
-                        >
-                          Import CV file
-                        </button>
-                        <input
-                          ref={resumeFileInputRef}
-                          accept=".docx,.txt,.md,.markdown,.csv,.json,.rtf,text/*"
-                          aria-label="Import CV file"
-                          className="hidden-file-input"
-                          tabIndex={-1}
-                          type="file"
-                          onChange={importResumeFile}
-                        />
-                        <button
-                          disabled={!canReviewResumeWithAi || isReviewingCv}
-                          type="button"
-                          onClick={reviewResumeForContext}
-                        >
-                          {isReviewingCv ? "Reviewing CV" : "Review CV with AI"}
-                        </button>
-                        <button
-                          className="secondary-button"
-                          disabled={!contextSuggestion}
-                          type="button"
-                          onClick={approveContextSuggestion}
-                        >
-                          Apply approved suggestions
-                        </button>
-                      </div>
-                      <p className="profile-action-hint">
-                        Import or paste at least 40 characters of CV text,
-                        review with AI, then approve before saving to your
-                        profile.
-                      </p>
-                      {isReviewingCv ? (
-                        <div className="cv-review-result-panel loading">
-                          <strong>Reviewing CV</strong>
-                          <p>
-                            AutoTime is checking your CV for role focus,
-                            candidate context and missing work-right evidence.
-                          </p>
-                        </div>
-                      ) : null}
-                      {contextSuggestion && (
-                        <article className="suggestion-card cv-review-result-panel">
-                          <header className="cv-review-result-heading">
-                            <div>
-                              <strong>
-                                {contextSuggestionSource === "ai"
-                                  ? "AI suggestion ready"
-                                  : contextSuggestionSource === "limit"
-                                    ? "Local suggestion ready - AI limit reached"
-                                    : contextSuggestionSource === "error"
-                                      ? "Local suggestion ready - AI unavailable"
-                                      : contextSuggestionSource === "local"
-                                        ? "Local suggestion ready - connection issue"
-                                      : "Suggestion ready"}
-                              </strong>
-                              <p>
-                                Review these fields, then click Apply approved
-                                suggestions to save them to My Profile.
-                              </p>
-                              {contextSuggestionNote ? (
-                                <p className="cv-review-result-note">
-                                  {contextSuggestionNote}
-                                </p>
-                              ) : null}
-                            </div>
-                          </header>
-                          <div>
-                            <span>{contextSuggestion.confidence}</span>
-                            <small>suggestion confidence</small>
-                          </div>
-                          <dl>
-                            <div>
-                              <dt>Work authorisation status</dt>
-                              <dd>
-                                {contextSuggestion.candidatePosition ===
-                                "foreign-candidate"
-                                  ? "Foreign / relocating"
-                                  : "Native / local"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Target role focus</dt>
-                              <dd>{getMarketLabel(contextSuggestion)}</dd>
-                            </div>
-                            <div>
-                              <dt>Target roles</dt>
-                              <dd>{contextSuggestion.targetRoles}</dd>
-                            </div>
-                          </dl>
-                          <ul className="bullets-list">
-                            {contextSuggestion.reasons.map((reason) => (
-                              <li key={reason}>{reason}</li>
-                            ))}
-                          </ul>
-                        </article>
-                      )}
-                    </section>
 
                     <p className="context-guidance">
                       {getCountryGuidance(productContext)}

@@ -143,7 +143,9 @@ test("CV profile detail extraction stays conservative", () => {
   assert.match(dashboard, /roleTitleKeywords/)
   assert.match(dashboard, /!includesAny\(line, roleTitleKeywords\)/)
   assert.match(dashboard, /currentCountry = locationLine/)
-  assert.match(dashboard, /state\.profile\.fullName \|\| inferredDetails\.fullName/)
+  assert.match(dashboard, /currentProfile\.fullName\.trim\(\)/)
+  assert.match(dashboard, /inferredDetails\.fullName/)
+  assert.match(dashboard, /canUseInferredCurrentCountry/)
   assert.doesNotMatch(dashboard, /gender|ethnicity|marital|nationality|dateOfBirth/i)
 })
 
