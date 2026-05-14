@@ -39,6 +39,7 @@ import {
   getProfileExecutionLockMessage,
   PROFILE_EXECUTION_THRESHOLD
 } from "../lib/product-protocols"
+import { profileProtocolReadinessEvent } from "./ProfileProtocolLock"
 import { useDashboardPlan } from "./UserNav"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
@@ -965,6 +966,7 @@ function saveState(state: CompanionDashboardState, userId: string) {
     getUserScopedStorageKey(storageKey, userId),
     JSON.stringify(state)
   )
+  window.dispatchEvent(new Event(profileProtocolReadinessEvent))
 }
 
 function getStoredProductContext(userId: string) {

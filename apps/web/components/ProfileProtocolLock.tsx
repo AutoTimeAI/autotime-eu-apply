@@ -4,6 +4,8 @@ import { type ReactNode, useEffect, useState } from "react"
 import { PROFILE_EXECUTION_THRESHOLD } from "../lib/product-protocols"
 
 const dashboardStorageKey = "autotime-v2-companion-dashboard"
+export const profileProtocolReadinessEvent =
+  "autotime-profile-readiness-updated"
 
 type ProfileProtocolLockProps = {
   children: ReactNode
@@ -71,12 +73,25 @@ export function useProfileProtocolReadiness(userId?: string) {
   const [readinessScore, setReadinessScore] = useState(0)
 
   useEffect(() => {
+    const updateReadiness = () => {
+      setReadinessScore(userId ? getStoredProfileReadiness(userId) : 0)
+    }
+
     if (!userId) {
       setReadinessScore(0)
       return
     }
 
-    setReadinessScore(getStoredProfileReadiness(userId))
+    updateReadiness()
+    window.addEventListener(profileProtocolReadinessEvent, updateReadiness)
+    window.addEventListener("storage", updateReadiness)
+    window.addEventListener("focus", updateReadiness)
+
+    return () => {
+      window.removeEventListener(profileProtocolReadinessEvent, updateReadiness)
+      window.removeEventListener("storage", updateReadiness)
+      window.removeEventListener("focus", updateReadiness)
+    }
   }, [userId])
 
   return {
