@@ -320,6 +320,19 @@ h4 {
   gap: 10px;
 }
 
+.file-import-button {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.file-import-button input {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
 .command-header-tools {
   display: flex;
   flex-wrap: wrap;
@@ -874,6 +887,39 @@ h4 {
 
 .dashboard-lock-overlay a {
   white-space: nowrap;
+}
+
+.protocol-page-lock {
+  position: relative;
+  display: grid;
+  gap: 16px;
+}
+
+.protocol-page-lock-content {
+  display: grid;
+  gap: 18px;
+}
+
+.protocol-page-lock.locked .protocol-page-lock-content {
+  filter: blur(4px);
+  opacity: 0.48;
+  pointer-events: none;
+  user-select: none;
+}
+
+.protocol-page-lock-overlay {
+  margin-bottom: 2px;
+}
+
+.protocol-locked-link {
+  opacity: 0.62;
+}
+
+.protocol-locked-link::after {
+  margin-left: 6px;
+  color: var(--red);
+  content: "\1F512";
+  font-size: 0.78em;
 }
 
 .ai-copilot-panel {
@@ -3370,9 +3416,7 @@ h4 {
 .utility-bar {
   order: 5;
   display: grid;
-  grid-template-columns:
-    minmax(140px, 0.18fr) minmax(140px, 0.18fr) minmax(240px, 1fr)
-    minmax(160px, 0.22fr);
+  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 1fr);
   gap: 12px;
   margin-top: 18px;
   align-items: start;
@@ -3395,6 +3439,44 @@ h4 {
 
 .utility-bar:not([open]) {
   display: block;
+}
+
+.backup-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.backup-action-group,
+.backup-import-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.backup-action-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 10px;
+}
+
+.backup-action-group span,
+.backup-import-group .import-control {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.backup-action-group button,
+.backup-import-group button {
+  width: 100%;
+}
+
+.backup-import-group {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.22fr);
+  align-items: end;
 }
 
 .import-control textarea {
@@ -5438,6 +5520,11 @@ h4 {
     grid-template-columns: 1fr 1fr;
   }
 
+  .utility-bar,
+  .backup-import-group {
+    grid-template-columns: 1fr;
+  }
+
   .country-rule-strip {
     grid-template-columns: 1fr;
   }
@@ -5595,6 +5682,7 @@ h4 {
   }
 
   .executive-panel,
+  .backup-actions,
   .command-header-tools,
   .dashboard-lock-overlay,
   .command-centre-grid,

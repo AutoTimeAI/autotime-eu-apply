@@ -1,11 +1,15 @@
+"use client"
+
 import Link from "next/link"
 import { UserNav } from "./UserNav"
 import type { SubscriptionPlan } from "../lib/supabase/types"
+import { useProfileProtocolReadiness } from "./ProfileProtocolLock"
 
 type PublicNavProps = {
   currentPath?: string
   user?: {
     email: string
+    id?: string
     plan: SubscriptionPlan
   } | null
 }
@@ -41,6 +45,8 @@ function isActiveSignedInNavItem(
 }
 
 export function PublicNav({ currentPath, user }: PublicNavProps) {
+  const { isLocked } = useProfileProtocolReadiness(user?.id)
+
   return (
     <nav className="product-nav" aria-label="Primary">
       <Link className="dashboard-brand" href={user ? "/dashboard" : "/"}>
@@ -64,13 +70,27 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
           <>
             {signedInNavItems.map((item) => {
               const isActive = isActiveSignedInNavItem(currentPath, item)
+              const isProtocolLocked =
+                isLocked &&
+                item.href !== "/dashboard" &&
+                item.href !== "/dashboard/autofill-profile"
 
               return (
                 <Link
                   aria-current={isActive ? "page" : undefined}
-                  className={isActive ? "active" : undefined}
-                  href={item.href}
+                  aria-disabled={isProtocolLocked}
+                  className={`${isActive ? "active" : ""}${
+                    isProtocolLocked ? " protocol-locked-link" : ""
+                  }`.trim()}
+                  href={
+                    isProtocolLocked ? "/dashboard/autofill-profile" : item.href
+                  }
                   key={item.href}
+                  title={
+                    isProtocolLocked
+                      ? "Complete Profile Evidence to 90% before using this area."
+                      : undefined
+                  }
                 >
                   {item.label}
                 </Link>

@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  type ChangeEvent,
   type ReactNode,
   useCallback,
   useEffect,
@@ -2005,10 +2006,10 @@ function getCountryGuidance(context: ProductContext) {
   const country = context.targetCountry || "selected country"
 
   if (context.candidatePosition === "foreign-candidate") {
-    return `${country} checks should include work-right clarity, sponsorship wording, relocation practicality, timezone or location fit, and missing evidence before any application advice is used.`
+    return `${country} requirements: work-right, sponsorship, relocation, location fit, missing evidence.`
   }
 
-  return `${country} checks should include local availability, salary and notice-period consistency, role seniority, domain fit, and missing evidence before next steps are suggested.`
+  return `${country} requirements: availability, salary, notice period, role fit, missing evidence.`
 }
 
 function getMarketPositioning(context: ProductContext) {
@@ -2762,8 +2763,7 @@ export default function HomePage({
     !profileReadyForExecution && !isOverview && currentTab !== "profile"
   const isDashboardProtocolLocked =
     !profileReadyForExecution &&
-    activeFocus !== "autofill-profile" &&
-    activeFocus !== "settings"
+    activeFocus !== "autofill-profile"
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const decisionTone =
     decisionBrief.contentGate === "ready"
@@ -3532,12 +3532,7 @@ export default function HomePage({
         relocationWillingness:
           productContext.candidatePosition === "foreign-candidate"
             ? "depends"
-            : state.profile.relocationWillingness,
-        workRightDetails:
-          state.profile.workRightDetails ||
-          (productContext.candidatePosition === "foreign-candidate"
-            ? `Add current visa/work-right status for ${productContext.targetCountry}, sponsorship needs, relocation timing and location constraints.`
-            : `Add current work-right status, notice period, salary expectations and local availability for ${productContext.targetCountry}.`)
+            : state.profile.relocationWillingness
       },
       jobAnalysis: {
         ...state.jobAnalysis,
@@ -3556,7 +3551,12 @@ export default function HomePage({
       }
     }
 
-    persist(nextState, "Profile settings applied to saved evidence")
+    persist(
+      nextState,
+      state.profile.workRightDetails.trim()
+        ? "Profile settings applied to saved evidence"
+        : "Profile settings applied. Add verified work-right details next."
+    )
     scheduleProfileSync(nextState.profile)
   }
 
@@ -3568,6 +3568,47 @@ export default function HomePage({
     }
 
     setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
+  }
+
+  const importResumeFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
+    const supportedExtensions = [
+      ".txt",
+      ".md",
+      ".markdown",
+      ".csv",
+      ".json",
+      ".rtf"
+    ]
+    const fileName = file.name.toLowerCase()
+    const isSupported =
+      file.type.startsWith("text/") ||
+      supportedExtensions.some((extension) => fileName.endsWith(extension))
+
+    if (!isSupported) {
+      setStatus(
+        "CV import supports text files for now. Open PDF/DOCX locally, copy the text, then paste it here."
+      )
+      event.target.value = ""
+      return
+    }
+
+    try {
+      const text = await file.text()
+      setResumeIntake(text)
+      setContextSuggestion(null)
+      setStatus(`Imported ${file.name}. Review before applying suggestions.`)
+      setTimeout(() => setStatus(""), 3000)
+    } catch {
+      setStatus("Could not import this CV file. Copy the text and paste it here.")
+    } finally {
+      event.target.value = ""
+    }
   }
 
   const approveContextSuggestion = () => {
@@ -4898,16 +4939,16 @@ export default function HomePage({
                     aria-label="Settings overview"
                   >
                     <div className="section-intro">
-                      <p className="eyebrow">Settings overview</p>
-                      <h2>Control how AutoTime works for you</h2>
+                      <p className="eyebrow">Your workspace</p>
+                      <h2>Choose how AutoTime supports you</h2>
                       <p>
-                        Keep account sync, extension capture, profile defaults
-                        and data controls understandable from one place.
+                        Keep profile saving, extension capture and account
+                        choices simple from one place.
                       </p>
                     </div>
                     <div className="settings-hub-grid">
                       <article>
-                        <span>Profile quality</span>
+                        <span>Profile readiness</span>
                         <strong>
                           <RevealMetric label="Show profile quality score">
                             {profileQualityScore}/100
@@ -4920,14 +4961,14 @@ export default function HomePage({
                         <a href="/dashboard/autofill-profile">Edit profile</a>
                       </article>
                       <article>
-                        <span>Account sync</span>
+                        <span>Save online</span>
                         <strong>{cloudSyncReadiness.modeLabel}</strong>
                         <p>
                           {cloudSyncConsent
-                            ? "Profile and workflow sync consent is enabled."
-                            : "Browser-first saving is active until you enable sync."}
+                            ? "Profile and workflow saving is enabled."
+                            : "Browser-first saving is active until you choose sync."}
                         </p>
-                        <a href="#account-sync-settings">Review sync</a>
+                        <a href="#account-sync-settings">Review saving</a>
                       </article>
                       <article>
                         <span>Extension</span>
@@ -4947,21 +4988,22 @@ export default function HomePage({
                         <a href="/dashboard/extension">Open extension</a>
                       </article>
                       <article>
-                        <span>Plan and AI</span>
+                        <span>Plan</span>
                         <strong>
                           {isCopilotThinking ? "AI working" : "Ready"}
                         </strong>
                         <p>
-                          Manage AI limits, upgrade gates and subscription
-                          settings.
+                          See what is included and what unlocks after profile
+                          completion.
                         </p>
                         <a href="/pricing">View pricing</a>
                       </article>
                       <article>
-                        <span>Data controls</span>
-                        <strong>Export / delete</strong>
+                        <span>Your data</span>
+                        <strong>Backup / delete</strong>
                         <p>
-                          Export a local backup or delete synced profile data.
+                          Keep a backup or remove saved profile data when you
+                          need to.
                         </p>
                         <a href="#account-sync-settings">Manage data</a>
                       </article>
@@ -4977,11 +5019,11 @@ export default function HomePage({
                     aria-label="Profile settings"
                   >
                     <div className="section-intro">
-                      <p className="eyebrow">Profile settings</p>
-                      <h2>Candidate context</h2>
+                      <p className="eyebrow">Your goals</p>
+                      <h2>Tell AutoTime what you are aiming for</h2>
                       <p>
-                        Choose the quick context below, then apply it into your
-                        My Profile fields for job checks and interview answers.
+                        Choose your role direction and target country, then add
+                        it to your profile for better job checks.
                       </p>
                     </div>
 
@@ -4997,14 +5039,15 @@ export default function HomePage({
                         <span>2</span>
                         <p>
                           Click Apply to My Profile so AutoTime fills the
-                          target roles, target country and work-right prompt.
+                          target roles and target country in your saved
+                          profile.
                         </p>
                       </article>
                       <article>
                         <span>3</span>
                         <p>
                           Review the saved fields in My Profile and replace any
-                          prompt text with your exact verified details.
+                          missing work-right details with exact verified facts.
                         </p>
                       </article>
                     </div>
@@ -5149,6 +5192,14 @@ export default function HomePage({
                         />
                       </label>
                       <div className="header-actions">
+                        <label className="secondary-button file-import-button">
+                          Import CV file
+                          <input
+                            accept=".txt,.md,.markdown,.csv,.json,.rtf,text/*"
+                            type="file"
+                            onChange={importResumeFile}
+                          />
+                        </label>
                         <button type="button" onClick={reviewResumeForContext}>
                           Review my CV
                         </button>
@@ -5887,9 +5938,8 @@ export default function HomePage({
                       <p className="eyebrow">My Profile</p>
                       <h2>Your candidate evidence workspace</h2>
                       <p>
-                        This is not a public profile. It is the evidence
-                        AutoTime uses to score jobs, explain risks, fill tracker
-                        context and keep AI interview answers truthful.
+                        This is your private evidence space. AutoTime uses it to
+                        check jobs, explain risks and keep answers truthful.
                       </p>
                       <div className="profile-purpose-steps">
                         <span>1. Identity</span>
@@ -5901,10 +5951,11 @@ export default function HomePage({
                     </section>
                     <div className="profile-form-toolbar">
                       <div>
-                        <p className="eyebrow">Profile controls</p>
-                        <h2>Save and sync your evidence</h2>
+                        <p className="eyebrow">Save your work</p>
+                        <h2>Keep your profile safe</h2>
                         <p>
-                          Browser-first by default. Sync only when you choose.
+                          Saved in this browser first. Sync only when you
+                          choose.
                         </p>
                       </div>
                       <div className="profile-form-actions">
@@ -6078,12 +6129,12 @@ export default function HomePage({
                   <div className="output-column">
                     <section className="panel profile-quality-panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Profile quality score</p>
+                        <p className="eyebrow">Profile readiness</p>
                         <h2>
                           <RevealMetric label="Show profile quality score">
                             {profileQualityScore}/100
                           </RevealMetric>{" "}
-                          evidence quality
+                          ready
                         </h2>
                         <p>
                           Use this as your readiness map. Green means AutoTime
@@ -7995,38 +8046,48 @@ export default function HomePage({
         }
       >
         <summary>Backups</summary>
-        <button
-          disabled={isDashboardProtocolLocked}
-          type="button"
-          onClick={saveDashboard}
-        >
-          Save changes
-        </button>
-        <button
-          className="secondary-button"
-          disabled={isDashboardProtocolLocked}
-          type="button"
-          onClick={exportDashboard}
-        >
-          Export backup
-        </button>
-        <label className="import-control">
-          Import backup
-          <textarea
+        <div className="backup-actions">
+          <div className="backup-action-group">
+            <span>Save</span>
+            <button
+              disabled={isDashboardProtocolLocked}
+              type="button"
+              onClick={saveDashboard}
+            >
+              Save changes
+            </button>
+          </div>
+          <div className="backup-action-group">
+            <span>Export</span>
+            <button
+              className="secondary-button"
+              disabled={isDashboardProtocolLocked}
+              type="button"
+              onClick={exportDashboard}
+            >
+              Export backup
+            </button>
+          </div>
+        </div>
+        <div className="backup-import-group">
+          <label className="import-control">
+            Import
+            <textarea
+              disabled={isDashboardProtocolLocked}
+              placeholder="Paste exported AutoTime backup contents"
+              value={importJson}
+              onChange={(event) => setImportJson(event.target.value)}
+            />
+          </label>
+          <button
+            className="secondary-button"
             disabled={isDashboardProtocolLocked}
-            placeholder="Paste exported AutoTime backup contents"
-            value={importJson}
-            onChange={(event) => setImportJson(event.target.value)}
-          />
-        </label>
-        <button
-          className="secondary-button"
-          disabled={isDashboardProtocolLocked}
-          type="button"
-          onClick={() => importDashboard(importJson)}
-        >
-          Import backup
-        </button>
+            type="button"
+            onClick={() => importDashboard(importJson)}
+          >
+            Import backup
+          </button>
+        </div>
       </details>
     </main>
   )

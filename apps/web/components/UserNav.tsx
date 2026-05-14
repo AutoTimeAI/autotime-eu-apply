@@ -4,6 +4,7 @@ import { createContext, type ReactNode, useContext, useState } from "react"
 import { usePathname } from "next/navigation"
 import { createBrowserClient } from "../lib/supabase/client"
 import type { SubscriptionPlan } from "../lib/supabase/types"
+import { useProfileProtocolReadiness } from "./ProfileProtocolLock"
 
 type DashboardPlanContextValue = {
   plan: SubscriptionPlan
@@ -143,18 +144,30 @@ function isActiveWorkflowNavItem(
 
 export function DashboardTopNav() {
   const pathname = usePathname()
+  const { userId } = useDashboardPlan()
+  const { isLocked } = useProfileProtocolReadiness(userId)
 
   return (
     <nav className="dashboard-topnav" aria-label="Global dashboard navigation">
       {dashboardTopNavItems.map((item) => {
         const isActive = isActiveTopNavItem(pathname, item)
+        const isProtocolLocked =
+          isLocked && item.href !== "/dashboard" && item.href !== "/dashboard/autofill-profile"
 
         return (
           <a
             aria-current={isActive ? "page" : undefined}
-            className={isActive ? "active" : undefined}
-            href={item.href}
+            aria-disabled={isProtocolLocked}
+            className={`${isActive ? "active" : ""}${
+              isProtocolLocked ? " protocol-locked-link" : ""
+            }`.trim()}
+            href={isProtocolLocked ? "/dashboard/autofill-profile" : item.href}
             key={item.href}
+            title={
+              isProtocolLocked
+                ? "Complete Profile Evidence to 90% before using this area."
+                : undefined
+            }
           >
             {item.label}
           </a>
@@ -166,6 +179,8 @@ export function DashboardTopNav() {
 
 export function DashboardWorkflowSidebar() {
   const pathname = usePathname()
+  const { userId } = useDashboardPlan()
+  const { isLocked } = useProfileProtocolReadiness(userId)
 
   return (
     <aside className="dashboard-sidebar" aria-label="Workflow navigation">
@@ -176,13 +191,27 @@ export function DashboardWorkflowSidebar() {
       <nav className="dashboard-workflow-nav">
         {dashboardWorkflowNavItems.map((item) => {
           const isActive = isActiveWorkflowNavItem(pathname, item)
+          const isProtocolLocked =
+            isLocked &&
+            item.href !== "/dashboard" &&
+            item.href !== "/dashboard/autofill-profile"
 
           return (
             <a
               aria-current={isActive ? "page" : undefined}
-              className={isActive ? "active" : undefined}
-              href={item.href}
+              aria-disabled={isProtocolLocked}
+              className={`${isActive ? "active" : ""}${
+                isProtocolLocked ? " protocol-locked-link" : ""
+              }`.trim()}
+              href={
+                isProtocolLocked ? "/dashboard/autofill-profile" : item.href
+              }
               key={item.href}
+              title={
+                isProtocolLocked
+                  ? "Complete Profile Evidence to 90% before using this workflow."
+                  : undefined
+              }
             >
               <span>{item.label}</span>
               <small>{item.description}</small>

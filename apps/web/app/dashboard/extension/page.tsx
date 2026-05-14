@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { ProfileProtocolLock } from "../../../components/ProfileProtocolLock"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
@@ -130,7 +131,8 @@ export default async function DashboardExtensionPage() {
 
   return (
     <main className="dashboard-shell">
-      <section className="extension-download-panel">
+      <ProfileProtocolLock userId={user.id}>
+        <section className="extension-download-panel">
         <div className="extension-health-hero">
           <div>
             <p className="eyebrow">Chrome extension</p>
@@ -322,7 +324,8 @@ export default async function DashboardExtensionPage() {
             )}
           </section>
         </div>
-      </section>
+        </section>
+      </ProfileProtocolLock>
     </main>
   )
 }
