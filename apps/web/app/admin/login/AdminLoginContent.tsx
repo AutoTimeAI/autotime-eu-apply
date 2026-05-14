@@ -25,6 +25,9 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
+          queryParams: {
+            prompt: "consent select_account"
+          },
           redirectTo: callbackUrl.toString()
         }
       })

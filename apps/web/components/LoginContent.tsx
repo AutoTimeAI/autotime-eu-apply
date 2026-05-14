@@ -27,6 +27,7 @@ function LoginForm() {
   const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(
     null
   )
+  const [accountConsent, setAccountConsent] = useState(false)
   const redirectTo = searchParams.get("redirectTo") || "/dashboard"
 
   useEffect(() => {
@@ -71,16 +72,28 @@ function LoginForm() {
 
   const handleSignIn = async (provider: OAuthProvider) => {
     try {
+      if (!accountConsent) {
+        setStatus("Please confirm account access before continuing.")
+        return
+      }
+
       setStatus("Opening secure sign-in...")
       setPendingProvider(provider)
 
       const supabase = createBrowserClient()
       const callbackUrl = new URL("/auth/callback", window.location.origin)
       callbackUrl.searchParams.set("redirectTo", redirectTo)
+      const queryParams =
+        provider === "google"
+          ? {
+              prompt: "consent select_account"
+            }
+          : undefined
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
+          queryParams,
           redirectTo: callbackUrl.toString(),
           skipBrowserRedirect: true
         }
@@ -159,7 +172,7 @@ function LoginForm() {
 
         <div className="header-actions">
           <button
-            disabled={Boolean(pendingProvider)}
+            disabled={Boolean(pendingProvider) || !accountConsent}
             type="button"
             onClick={() => handleSignIn("github")}
           >
@@ -169,7 +182,7 @@ function LoginForm() {
           </button>
           <button
             className="secondary-button"
-            disabled={Boolean(pendingProvider)}
+            disabled={Boolean(pendingProvider) || !accountConsent}
             type="button"
             onClick={() => handleSignIn("google")}
           >
@@ -178,6 +191,18 @@ function LoginForm() {
               : "Sign in with Google"}
           </button>
         </div>
+
+        <label className="auth-consent-control">
+          <input
+            checked={accountConsent}
+            type="checkbox"
+            onChange={(event) => setAccountConsent(event.target.checked)}
+          />
+          <span>
+            I allow AutoTime to use this sign-in account for my dashboard,
+            profile sync and billing access.
+          </span>
+        </label>
 
         {status ? <p className="status-banner">{status}</p> : null}
 
