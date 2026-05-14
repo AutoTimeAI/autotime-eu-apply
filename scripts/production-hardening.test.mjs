@@ -74,6 +74,16 @@ test("AI rate-limit RPC uses timestamptz reset values", () => {
   assert.doesNotMatch(migration, /current_time timestamptz/)
 })
 
+test("profile sync stores one current profile record per user", () => {
+  const migration = read("supabase/migrations/20260506171000_cloud_sync_profiles.sql")
+  const cloudSync = read("apps/web/lib/cloud-sync.ts")
+
+  assert.match(migration, /create table if not exists public\.profiles/i)
+  assert.match(migration, /constraint profiles_user_unique unique \(user_id\)/i)
+  assert.match(migration, /alter table public\.profiles enable row level security/i)
+  assert.match(cloudSync, /\.upsert\(payloadResult\.payload, \{ onConflict: "user_id" \}\)/)
+})
+
 test("profile CV AI review validates input before quota checks", () => {
   const routes = [
     "apps/web/app/api/ai/analyse/route.ts",

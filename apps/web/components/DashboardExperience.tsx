@@ -32,7 +32,9 @@ import {
   getInterviewPrepGuardrails
 } from "../lib/interview-prep"
 import {
+  createBrowserCloudSyncClient,
   getBrowserCloudSyncReadiness,
+  getCloudSyncSessionState,
   prepareProfileSyncAction
 } from "../lib/cloud-sync"
 import {
@@ -4646,11 +4648,22 @@ export default function HomePage({
     }
   }
 
-  const explainCloudSyncTrack = () => {
+  const checkCloudSyncStatus = async () => {
+    if (!cloudSyncReadiness.configured) {
+      setStatus(
+        `Account sync is not ready: ${cloudSyncReadiness.issues.join(", ")}. Your profile remains saved in this browser.`
+      )
+      return
+    }
+
+    const session = await getCloudSyncSessionState(
+      createBrowserCloudSyncClient()
+    )
+
     setStatus(
-      cloudSyncReadiness.configured
-        ? "Account sync is ready. You can save or load profile and workflow data from this signed-in account."
-        : "Your work is saved on this browser. Sign in with account sync configured to use it on another device."
+      session.authenticated
+        ? "Account sync is ready. Profile saves as one current online record for this signed-in account."
+        : "Account sync is configured, but no signed-in session was found. Sign in before syncing profile or workflow."
     )
   }
 
@@ -6254,8 +6267,8 @@ export default function HomePage({
                         <p className="eyebrow">Saved in this browser</p>
                         <h2>Keep your profile up to date</h2>
                         <p>
-                          Edit the four steps below. Use account sync or a
-                          backup only when you need another copy.
+                          Edit the steps below. Save online only when you want
+                          this profile available on another device.
                         </p>
                       </div>
                       <div className="profile-form-actions">
@@ -6266,7 +6279,7 @@ export default function HomePage({
                           Save changes
                         </button>
                         <details className="profile-action-details">
-                          <summary>Account sync</summary>
+                          <summary>Online copy</summary>
                           <label className="sync-consent-control">
                             <input
                               checked={cloudSyncConsent}
@@ -6279,7 +6292,7 @@ export default function HomePage({
                               }
                             />
                             <span>
-                              Save this profile to my signed-in account.
+                              I want an online copy for this signed-in account.
                             </span>
                           </label>
                           <div className="profile-action-row">
@@ -6288,7 +6301,7 @@ export default function HomePage({
                               type="button"
                               onClick={syncProfileToCloud}
                             >
-                              Sync profile
+                              Save online
                             </button>
                             <button
                               className="secondary-button"
@@ -6296,7 +6309,7 @@ export default function HomePage({
                               type="button"
                               onClick={loadProfileFromCloud}
                             >
-                              Load synced
+                              Load online copy
                             </button>
                           </div>
                           <div className="profile-action-row">
@@ -6306,14 +6319,14 @@ export default function HomePage({
                               type="button"
                               onClick={syncDashboardToCloud}
                             >
-                              Sync workflow
+                              Save job tracker online
                             </button>
                             <button
                               className="secondary-button"
                               type="button"
-                              onClick={explainCloudSyncTrack}
+                              onClick={checkCloudSyncStatus}
                             >
-                              Check sync
+                              Check online saving
                             </button>
                           </div>
                           <details className="sync-danger-details compact">
