@@ -126,6 +126,17 @@ test("AI review schemas accept list fields as string or array", () => {
   assert.match(read("apps/web/lib/diagnostics.ts"), /getValidationIssueMessage/)
 })
 
+test("CV profile detail extraction stays conservative", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.match(dashboard, /function inferCandidateDetailsFromResume/)
+  assert.match(dashboard, /roleTitleKeywords/)
+  assert.match(dashboard, /!includesAny\(line, roleTitleKeywords\)/)
+  assert.match(dashboard, /currentCountry = locationLine/)
+  assert.match(dashboard, /state\.profile\.fullName \|\| inferredDetails\.fullName/)
+  assert.doesNotMatch(dashboard, /gender|ethnicity|marital|nationality|dateOfBirth/i)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

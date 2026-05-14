@@ -2179,6 +2179,72 @@ function inferEvidenceFromResume(resumeText: string) {
   }
 }
 
+function inferCandidateDetailsFromResume(resumeText: string) {
+  const lines = resumeText
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+  const roleTitleKeywords = [
+    "analyst",
+    "engineer",
+    "developer",
+    "manager",
+    "consultant",
+    "specialist",
+    "administrator",
+    "architect",
+    "lead",
+    "support",
+    "product",
+    "project",
+    "programme",
+    "scrum",
+    "agile"
+  ]
+  const email = resumeText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]
+  const phone = resumeText.match(/(?:\+?\d[\d\s().-]{7,}\d)/)?.[0]
+  const linkedInUrl = resumeText.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s)]+/i)?.[0]
+  const githubUrl = resumeText.match(/https?:\/\/(?:www\.)?github\.com\/[^\s)]+/i)?.[0]
+  const portfolioUrl = resumeText.match(
+    /https?:\/\/(?![^/\s]*linkedin\.com)(?![^/\s]*github\.com)[^\s)]+/i
+  )?.[0]
+  const fullName = lines
+    .slice(0, 5)
+    .find((line) => {
+      const words = line.split(" ").filter(Boolean)
+
+      return (
+        !includesAny(line, roleTitleKeywords) &&
+        !/[0-9@:/\\]/.test(line) &&
+        words.length >= 2 &&
+        words.length <= 4 &&
+        words.every((word) => /^[A-Z][A-Za-z'.-]+$/.test(word))
+      )
+    })
+  const locationLine = lines.find((line) =>
+    /\b(location|based in|current city|address)\b/i.test(line)
+  )
+  const currentCountry = locationLine
+    ? euCountryOptions.find((country) => includesAny(locationLine, [country])) ||
+      ""
+    : ""
+  const currentCity = locationLine
+    ?.replace(/\b(location|based in|current city|address)\b\s*:?\s*/i, "")
+    .split(",")[0]
+    ?.trim()
+
+  return {
+    currentCity: currentCity || "",
+    currentCountry,
+    email: email ?? "",
+    fullName: fullName ?? "",
+    githubUrl: githubUrl ?? "",
+    linkedInUrl: linkedInUrl ?? "",
+    phone: phone?.trim() ?? "",
+    portfolioUrl: portfolioUrl ?? ""
+  }
+}
+
 function normalizeContextSuggestionForApproval({
   fallback,
   suggestion
@@ -3846,7 +3912,26 @@ export default function HomePage({
     setProductContext(contextSuggestion)
     const cvEvidenceSource = resumeIntake || state.profile.baseCvText
     const inferredEvidence = inferEvidenceFromResume(cvEvidenceSource)
+    const inferredDetails = inferCandidateDetailsFromResume(cvEvidenceSource)
     const filledEvidenceFields = [
+      !state.profile.fullName.trim() && inferredDetails.fullName && "full name",
+      !state.profile.email.trim() && inferredDetails.email && "email",
+      !state.profile.phone.trim() && inferredDetails.phone && "phone",
+      !state.profile.linkedInUrl.trim() &&
+        inferredDetails.linkedInUrl &&
+        "LinkedIn URL",
+      !state.profile.githubUrl.trim() &&
+        inferredDetails.githubUrl &&
+        "GitHub URL",
+      !state.profile.portfolioUrl.trim() &&
+        inferredDetails.portfolioUrl &&
+        "portfolio URL",
+      !state.profile.currentCountry.trim() &&
+        inferredDetails.currentCountry &&
+        "current country",
+      !state.profile.currentCity.trim() &&
+        inferredDetails.currentCity &&
+        "current city",
       !state.profile.experienceHighlights.trim() &&
         inferredEvidence.experienceHighlights &&
         "experience highlights",
@@ -3859,6 +3944,16 @@ export default function HomePage({
       profile: {
         ...state.profile,
         baseCvText: cvEvidenceSource,
+        fullName: state.profile.fullName || inferredDetails.fullName,
+        email: state.profile.email || inferredDetails.email,
+        phone: state.profile.phone || inferredDetails.phone,
+        linkedInUrl: state.profile.linkedInUrl || inferredDetails.linkedInUrl,
+        githubUrl: state.profile.githubUrl || inferredDetails.githubUrl,
+        portfolioUrl:
+          state.profile.portfolioUrl || inferredDetails.portfolioUrl,
+        currentCountry:
+          state.profile.currentCountry || inferredDetails.currentCountry,
+        currentCity: state.profile.currentCity || inferredDetails.currentCity,
         targetCountries: contextSuggestion.targetCountry,
         targetRoles: contextSuggestion.targetRoles || state.profile.targetRoles,
         workRightDetails:
