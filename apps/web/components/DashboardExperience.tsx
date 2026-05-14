@@ -5767,10 +5767,11 @@ export default function HomePage({
                 >
                   <div>
                     <p className="eyebrow">Analyse Fit</p>
-                    <h2>Fit decision</h2>
+                    <h2>Check one role, then decide</h2>
                     <p>
-                      Load or paste one role to see evidence, risks, missing
-                      proof and the safest next action.
+                      Load a tracked job or paste a role. AutoTime compares it
+                      against your saved profile, then gives you a clear next
+                      step.
                     </p>
                     <p className="decision-method-note">
                       Analyse Fit uses evidence-first scoring and rules, with
@@ -5794,53 +5795,25 @@ export default function HomePage({
                     </small>
                     <small>Guidance, not a guarantee</small>
                   </div>
-                  <div className="decision-columns">
-                    <section>
-                      <h3>Why</h3>
-                      <ul className="bullets-list">
-                        {decisionBrief.rationale.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </section>
-                    <section>
-                      <h3>Matched details</h3>
-                      <ul className="bullets-list">
-                        {decisionBrief.evidenceFound.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </section>
-                    <section>
-                      <h3>Check first</h3>
-                      <ul className="bullets-list">
-                        {decisionBrief.risks.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </section>
-                    <section>
-                      <h3>Missing info</h3>
-                      {decisionBrief.missingInputs.length ? (
-                        <ul className="bullets-list">
-                          {decisionBrief.missingInputs.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="empty-state">
-                          Core job details are present.
-                        </p>
-                      )}
-                    </section>
-                    <section>
-                      <h3>Next steps</h3>
-                      <ul className="bullets-list">
-                        {decisionBrief.nextActions.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </section>
+                  <div
+                    className="fit-decision-flow"
+                    aria-label="Analyse Fit workflow"
+                  >
+                    <article>
+                      <span>1</span>
+                      <strong>Add role evidence</strong>
+                      <p>Load a tracked job or paste the job title, URL and JD.</p>
+                    </article>
+                    <article>
+                      <span>2</span>
+                      <strong>Review the decision</strong>
+                      <p>Check the score, risk and missing proof before acting.</p>
+                    </article>
+                    <article>
+                      <span>3</span>
+                      <strong>Save the role</strong>
+                      <p>Send useful roles to Tracked Jobs with the decision attached.</p>
+                    </article>
                   </div>
                   <p className="decision-integrity-note">
                     Evidence-first scoring is the decision base. AI support can
@@ -6768,7 +6741,10 @@ export default function HomePage({
               )}
 
               {!isOverview && currentTab === "jobs" && (
-                <section className="workspace-grid job-check-grid">
+                <section
+                  className="workspace-grid job-check-grid"
+                  id="analyse-fit-role"
+                >
                   <div className="input-column job-check-input">
                     <div className="section-heading">
                       <p className="eyebrow">Role evidence</p>
@@ -6923,7 +6899,7 @@ export default function HomePage({
                     <section className="panel country-fit-panel">
                       <div className="section-heading">
                         <p className="eyebrow">Analyse Fit result</p>
-                        <h2>{fitEvaluation.decision}</h2>
+                        <h2>Should you apply?</h2>
                         <span
                           className={`source-mode-pill ${currentJobInputMode.className}`}
                           title={currentJobInputMode.detail}
@@ -7000,88 +6976,127 @@ export default function HomePage({
                             ? "No content blocker detected by current rules"
                             : fitEvaluation.contentGate === "stretch"
                               ? "Stretch application: label the risk"
-                              : "Do not write content yet"}
+                            : "Do not write content yet"}
                         </span>
                       </div>
-                      <div className="country-rule-strip">
-                        <div>
-                          <strong>{fitEvaluation.countryRule.name}</strong>
-                          <span>{fitEvaluation.countryRule.marketNote}</span>
-                        </div>
-                        <dl>
-                          <div>
-                            <dt>Sponsorship</dt>
-                            <dd>
-                              {fitEvaluation.countryRule.sponsorshipStrictness}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Relocation</dt>
-                            <dd>
-                              {fitEvaluation.countryRule.relocationFriction}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Outcomes</dt>
-                            <dd>
-                              <RevealMetric label="Show tracked outcome count">
-                                {outcomeLearningSignals.totalTracked}
-                              </RevealMetric>
-                            </dd>
-                          </div>
-                        </dl>
+                      <div
+                        className="fit-decision-flow compact"
+                        aria-label="Analyse Fit decision"
+                      >
+                        <article>
+                          <span>1</span>
+                          <strong>{fitEvaluation.decision}</strong>
+                          <p>{decisionBrief.rationale[0]}</p>
+                        </article>
+                        <article>
+                          <span>2</span>
+                          <strong>Check first</strong>
+                          <p>
+                            {decisionBrief.risks[0] ||
+                              decisionBrief.missingInputs[0] ||
+                              "No major blocker is visible from the saved evidence."}
+                          </p>
+                        </article>
+                        <article>
+                          <span>3</span>
+                          <strong>Next action</strong>
+                          <p>{decisionBrief.nextActions[0]}</p>
+                        </article>
                       </div>
-                      <div className="fit-component-grid">
-                        {fitEvaluation.components.map((item) => (
-                          <article
-                            className={`fit-component ${item.status}`}
-                            key={item.key}
-                          >
+                      <div className="fit-decision-actions">
+                        <button
+                          disabled={!canSaveCheckedJob}
+                          type="button"
+                          onClick={saveApplicationFromJob}
+                        >
+                          Save to Tracked Jobs
+                        </button>
+                        <a className="secondary-button" href="#analyse-fit-role">
+                          Edit role evidence
+                        </a>
+                      </div>
+                      <details className="fit-supporting-details">
+                        <summary>Show scoring details</summary>
+                        <div className="country-rule-strip">
+                          <div>
+                            <strong>{fitEvaluation.countryRule.name}</strong>
+                            <span>{fitEvaluation.countryRule.marketNote}</span>
+                          </div>
+                          <dl>
                             <div>
-                              <strong>{item.label}</strong>
-                              <span>
-                                <RevealMetric
-                                  label={`Show ${item.label} score`}
-                                >
-                                  {item.score}/100
-                                </RevealMetric>
-                              </span>
+                              <dt>Sponsorship</dt>
+                              <dd>
+                                {fitEvaluation.countryRule.sponsorshipStrictness}
+                              </dd>
                             </div>
-                            <small>{item.status}</small>
-                            <p>{item.rationale}</p>
-                            <ul className="component-evidence-list">
-                              {item.evidence.length ? (
-                                item.evidence.map((evidence) => (
-                                  <li key={evidence}>{evidence}</li>
-                                ))
-                              ) : (
-                                <li>
-                                  No direct supporting evidence found yet.
-                                </li>
-                              )}
-                            </ul>
-                          </article>
-                        ))}
-                      </div>
-                      {fitEvaluation.blockers.length ? (
-                        <ul className="bullets-list blocker-list">
-                          {fitEvaluation.blockers.map((blocker) => (
-                            <li key={blocker}>{blocker}</li>
+                            <div>
+                              <dt>Relocation</dt>
+                              <dd>
+                                {fitEvaluation.countryRule.relocationFriction}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Outcomes</dt>
+                              <dd>
+                                <RevealMetric label="Show tracked outcome count">
+                                  {outcomeLearningSignals.totalTracked}
+                                </RevealMetric>
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
+                        <div className="fit-component-grid">
+                          {fitEvaluation.components.map((item) => (
+                            <article
+                              className={`fit-component ${item.status}`}
+                              key={item.key}
+                            >
+                              <div>
+                                <strong>{item.label}</strong>
+                                <span>
+                                  <RevealMetric
+                                    label={`Show ${item.label} score`}
+                                  >
+                                    {item.score}/100
+                                  </RevealMetric>
+                                </span>
+                              </div>
+                              <small>{item.status}</small>
+                              <p>{item.rationale}</p>
+                              <ul className="component-evidence-list">
+                                {item.evidence.length ? (
+                                  item.evidence.map((evidence) => (
+                                    <li key={evidence}>{evidence}</li>
+                                  ))
+                                ) : (
+                                  <li>
+                                    No direct supporting evidence found yet.
+                                  </li>
+                                )}
+                              </ul>
+                            </article>
                           ))}
+                        </div>
+                        {fitEvaluation.blockers.length ? (
+                          <ul className="bullets-list blocker-list">
+                            {fitEvaluation.blockers.map((blocker) => (
+                              <li key={blocker}>{blocker}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="empty-state">
+                            No blocker was detected by the current rules.
+                            Verify employer requirements before applying.
+                          </p>
+                        )}
+                        <ul className="evidence-list">
+                          {fitEvaluation.evidenceChecklist
+                            .slice(0, 4)
+                            .map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
                         </ul>
-                      ) : (
-                        <p className="empty-state">
-                          No blocker was detected by the current rules. Verify
-                          employer requirements before applying.
-                        </p>
-                      )}
-                      <ul className="evidence-list">
-                        {fitEvaluation.evidenceChecklist
-                          .slice(0, 4)
-                          .map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                      </ul>
+                      </details>
                     </section>
                     <section className="panel">
                       <div className="section-heading">
