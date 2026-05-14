@@ -16,6 +16,13 @@ type UserNavProps = {
   plan: SubscriptionPlan
 }
 
+type DashboardNavItem = {
+  aliases?: string[]
+  description?: string
+  href: string
+  label: string
+}
+
 const DashboardPlanContext =
   createContext<DashboardPlanContextValue | null>(null)
 
@@ -49,32 +56,59 @@ function getInitial(email: string): string {
   return email.trim().charAt(0).toUpperCase() || "A"
 }
 
-const dashboardTopNavItems = [
-  { href: "/dashboard", label: "Dashboard" },
+const dashboardTopNavItems: DashboardNavItem[] = [
+  { href: "/dashboard", label: "Home" },
+  { href: "/dashboard/extension", label: "Extension" },
+  { href: "/pricing", label: "Plans" },
+  { href: "/dashboard/settings", label: "Settings" }
+]
+
+const dashboardWorkflowNavItems: DashboardNavItem[] = [
+  { href: "/dashboard", label: "Overview", description: "Daily command" },
   {
     aliases: ["/dashboard/profile"],
     href: "/dashboard/autofill-profile",
-    label: "Profile Evidence"
+    label: "Profile Evidence",
+    description: "Candidate proof"
   },
   {
     aliases: ["/dashboard/inbox"],
     href: "/dashboard/applications",
-    label: "Tracked Jobs"
+    label: "Tracked Jobs",
+    description: "Saved roles"
   },
   {
     aliases: ["/dashboard/jobs"],
     href: "/dashboard/match-score",
-    label: "Fit Analysis"
+    label: "Fit Analysis",
+    description: "Role quality"
   },
   {
     aliases: ["/dashboard/documents"],
     href: "/dashboard/application-answers",
-    label: "Application Kit"
+    label: "Application Kit",
+    description: "Answers and notes"
   },
-  { href: "/dashboard/cv-tailor", label: "Evidence Bank" },
-  { href: "/dashboard/interview", label: "Interview Prep" },
-  { href: "/dashboard/follow-ups", label: "Follow-ups" },
-  { href: "/dashboard/settings", label: "Settings" }
+  {
+    href: "/dashboard/cv-tailor",
+    label: "Evidence Bank",
+    description: "Reusable examples"
+  },
+  {
+    href: "/dashboard/interview",
+    label: "Interview Prep",
+    description: "Practice answers"
+  },
+  {
+    href: "/dashboard/follow-ups",
+    label: "Follow-ups",
+    description: "Next actions"
+  },
+  {
+    href: "/dashboard/insights",
+    label: "Progress",
+    description: "Application signals"
+  }
 ]
 
 function isPathInSection(pathname: string, sectionPath: string) {
@@ -83,7 +117,20 @@ function isPathInSection(pathname: string, sectionPath: string) {
 
 function isActiveTopNavItem(
   pathname: string,
-  item: (typeof dashboardTopNavItems)[number]
+  item: DashboardNavItem
+) {
+  const sectionPaths = [item.href, ...(item.aliases ?? [])]
+
+  return sectionPaths.some((sectionPath) =>
+    sectionPath === "/dashboard"
+      ? pathname === sectionPath
+      : isPathInSection(pathname, sectionPath)
+  )
+}
+
+function isActiveWorkflowNavItem(
+  pathname: string,
+  item: DashboardNavItem
 ) {
   const sectionPaths = [item.href, ...(item.aliases ?? [])]
 
@@ -114,6 +161,36 @@ export function DashboardTopNav() {
         )
       })}
     </nav>
+  )
+}
+
+export function DashboardWorkflowSidebar() {
+  const pathname = usePathname()
+
+  return (
+    <aside className="dashboard-sidebar" aria-label="Workflow navigation">
+      <div className="dashboard-sidebar-heading">
+        <span>Workflows</span>
+        <strong>Application flow</strong>
+      </div>
+      <nav className="dashboard-workflow-nav">
+        {dashboardWorkflowNavItems.map((item) => {
+          const isActive = isActiveWorkflowNavItem(pathname, item)
+
+          return (
+            <a
+              aria-current={isActive ? "page" : undefined}
+              className={isActive ? "active" : undefined}
+              href={item.href}
+              key={item.href}
+            >
+              <span>{item.label}</span>
+              <small>{item.description}</small>
+            </a>
+          )
+        })}
+      </nav>
+    </aside>
   )
 }
 
@@ -215,7 +292,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   }
 
   return (
-    <div className="user-nav-shell">
+    <div className="user-nav-shell" onMouseLeave={() => setIsOpen(false)}>
       <button
         aria-expanded={isOpen}
         className="secondary-button user-nav-trigger"

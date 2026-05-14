@@ -6,6 +6,7 @@ import { createServerClient } from "../../lib/supabase/server"
 import { getTestAuthUser } from "../../lib/test-auth"
 import {
   DashboardPlanProvider,
+  DashboardWorkflowSidebar,
   DashboardTopNav,
   UserNav
 } from "../../components/UserNav"
@@ -65,7 +66,10 @@ export default async function DashboardLayout({
           {plan === "free" ? (
             <UpgradeBanner remainingCalls={remainingCalls} />
           ) : null}
-          {children}
+          <div className="dashboard-body">
+            <DashboardWorkflowSidebar />
+            <div className="dashboard-main-region">{children}</div>
+          </div>
         </div>
       </DashboardPlanProvider>
     )

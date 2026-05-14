@@ -293,6 +293,12 @@ h4 {
   gap: 4px;
 }
 
+.header-summary-column {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
 .header-copy h1 {
   max-width: 780px;
   margin-bottom: 4px;
@@ -325,18 +331,13 @@ h4 {
 .profile-completion-meter {
   display: grid;
   gap: 6px;
-  min-width: 170px;
   border: 1px solid rgba(15, 118, 110, 0.16);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
-  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-tight);
+  padding: 14px;
 }
 
-.profile-completion-meter summary {
-  cursor: pointer;
-}
-
-.profile-completion-meter summary,
 .profile-completion-meter small {
   color: var(--muted);
   font-size: 0.72rem;
@@ -344,12 +345,9 @@ h4 {
   text-transform: uppercase;
 }
 
-.profile-completion-meter:not([open]) {
-  align-content: center;
-}
-
 .profile-completion-meter strong {
   color: var(--blue);
+  font-size: 2rem;
   line-height: 1;
 }
 
@@ -812,74 +810,8 @@ h4 {
 .command-workspace {
   order: 3;
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-}
-
-.command-sidebar {
-  position: sticky;
-  top: 96px;
-  display: grid;
-  gap: 12px;
-  border: 1px solid rgba(205, 218, 229, 0.8);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: var(--shadow-tight);
-  padding: 14px;
-}
-
-.command-sidebar p {
-  margin: 0;
-  color: var(--accent-strong);
-  font-size: 0.78rem;
-  font-weight: 850;
-  text-transform: uppercase;
-}
-
-.command-sidebar nav {
-  display: grid;
-  gap: 10px;
-}
-
-.command-sidebar a {
-  position: relative;
-  display: flex;
-  min-height: 40px;
-  align-items: center;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 0.92rem;
-  font-weight: 750;
-  padding: 9px 12px;
-  text-decoration: none;
-}
-
-.command-sidebar a:hover,
-.command-sidebar a.active,
-.command-sidebar a[aria-current="page"] {
-  border-color: rgba(15, 118, 110, 0.16);
-  background: var(--surface-mint);
-  color: var(--accent-strong);
-}
-
-.command-sidebar a.active::before,
-.command-sidebar a[aria-current="page"]::before {
-  position: absolute;
-  top: 50%;
-  left: 8px;
-  width: 6px;
-  height: 6px;
-  transform: translateY(-50%);
-  border-radius: 999px;
-  background: var(--accent);
-  content: "";
-}
-
-.command-sidebar a.active,
-.command-sidebar a[aria-current="page"] {
-  padding-left: 22px;
 }
 
 .command-content {
@@ -3392,7 +3324,7 @@ h4 {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
   width: min(1280px, calc(100% - 36px));
   max-width: 100%;
   margin: 0 auto;
@@ -3407,8 +3339,6 @@ h4 {
 }
 
 .dashboard-topnav {
-  grid-column: 1 / -1;
-  grid-row: 2;
   display: flex;
   min-width: 0;
   justify-content: flex-start;
@@ -3420,6 +3350,92 @@ h4 {
 
 .user-nav-shell {
   justify-self: end;
+}
+
+.dashboard-body {
+  display: grid;
+  grid-template-columns: minmax(196px, 230px) minmax(0, 1fr);
+  width: min(1280px, calc(100% - 36px));
+  max-width: 100%;
+  margin: 0 auto;
+  gap: 18px;
+  align-items: start;
+}
+
+.dashboard-main-region {
+  min-width: 0;
+}
+
+.dashboard-main-region .dashboard-shell {
+  width: 100%;
+}
+
+.dashboard-sidebar {
+  position: sticky;
+  top: 86px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(215, 222, 232, 0.78);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-tight);
+  padding: 12px;
+}
+
+.dashboard-sidebar-heading {
+  display: grid;
+  gap: 3px;
+  padding: 2px 4px 4px;
+}
+
+.dashboard-sidebar-heading span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dashboard-sidebar-heading strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.dashboard-workflow-nav {
+  display: grid;
+  gap: 5px;
+}
+
+.dashboard-workflow-nav a {
+  display: grid;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--ink);
+  padding: 9px 10px;
+  text-decoration: none;
+}
+
+.dashboard-workflow-nav a:hover,
+.dashboard-workflow-nav a.active,
+.dashboard-workflow-nav a[aria-current="page"] {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
+.dashboard-workflow-nav a.active,
+.dashboard-workflow-nav a[aria-current="page"] {
+  background: var(--surface-raised);
+}
+
+.dashboard-workflow-nav span {
+  font-size: 0.9rem;
+  font-weight: 750;
+}
+
+.dashboard-workflow-nav small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.25;
 }
 
 .dashboard-topnav a,
@@ -5339,9 +5355,14 @@ h4 {
   }
 
   .dashboard-topnav {
+    grid-column: 1 / -1;
     order: 3;
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .dashboard-topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .ai-copilot-header {
@@ -5351,6 +5372,25 @@ h4 {
   .landing-hero {
     min-height: auto;
     padding: 54px 0;
+  }
+
+  .dashboard-body {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    position: static;
+  }
+
+  .dashboard-workflow-nav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .dashboard-workflow-nav a {
+    min-width: 150px;
   }
 
   .evidence-ledger-panel {
@@ -5365,36 +5405,6 @@ h4 {
     grid-template-columns: 1fr;
   }
 
-  .command-sidebar {
-    position: static;
-  }
-
-  .command-sidebar nav {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
-  }
-
-  .command-sidebar a {
-    display: inline-flex;
-    flex: 0 0 auto;
-    min-height: 36px;
-    align-items: center;
-    white-space: nowrap;
-  }
-
-  .command-sidebar a.active::before,
-  .command-sidebar a[aria-current="page"]::before {
-    top: auto;
-    right: 10px;
-    bottom: 5px;
-    left: 10px;
-    width: auto;
-    height: 3px;
-  }
 }
 
 @media (max-width: 1180px) and (min-width: 981px) {
@@ -5577,10 +5587,30 @@ h4 {
     width: calc(100% - 24px);
   }
 
+  .dashboard-body {
+    width: calc(100% - 24px);
+    gap: 12px;
+  }
+
   .dashboard-topbar,
   .upgrade-banner {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    padding: 10px;
+  }
+
+  .dashboard-sidebar-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .dashboard-workflow-nav a {
+    min-width: 136px;
+    padding: 8px 9px;
   }
 
   .user-nav-trigger {

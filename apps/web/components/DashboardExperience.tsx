@@ -351,68 +351,6 @@ const emptyInterviewCoachMeta: InterviewCoachMeta = {
   source: "local"
 }
 
-const commandSidebarItems: Array<{
-  href: string
-  focus: DashboardFocus
-  label: string
-  routeId: DashboardTab | "overview"
-}> = [
-  {
-    href: "/dashboard",
-    focus: "dashboard",
-    label: "Dashboard",
-    routeId: "overview"
-  },
-  {
-    href: "/dashboard/autofill-profile",
-    focus: "autofill-profile",
-    label: "Profile Evidence",
-    routeId: "profile"
-  },
-  {
-    href: "/dashboard/applications",
-    focus: "application-tracker",
-    label: "Tracked Jobs",
-    routeId: "applications"
-  },
-  {
-    href: "/dashboard/match-score",
-    focus: "match-score",
-    label: "Fit Analysis",
-    routeId: "jobs"
-  },
-  {
-    href: "/dashboard/application-answers",
-    focus: "application-answers",
-    label: "Application Kit",
-    routeId: "profile"
-  },
-  {
-    href: "/dashboard/cv-tailor",
-    focus: "cv-tailor",
-    label: "Evidence Bank",
-    routeId: "profile"
-  },
-  {
-    href: "/dashboard/interview",
-    focus: "interview-prep",
-    label: "Interview Prep",
-    routeId: "interview"
-  },
-  {
-    href: "/dashboard/follow-ups",
-    focus: "follow-ups",
-    label: "Follow-ups",
-    routeId: "applications"
-  },
-  {
-    href: "/dashboard/settings",
-    focus: "settings",
-    label: "Settings",
-    routeId: "profile"
-  }
-]
-
 const dashboardFocusCopy: Record<
   DashboardFocus,
   { eyebrow: string; title: string; body: string }
@@ -2795,9 +2733,6 @@ export default function HomePage({
   const isOverview = view === "overview"
   const activeFocus = focus ?? defaultDashboardFocusByView[view]
   const focusCopy = dashboardFocusCopy[activeFocus]
-  const activeSidebarLabel =
-    commandSidebarItems.find((item) => item.focus === activeFocus)?.label ??
-    focusCopy.title
   const actionPanelEyebrow = isOverview
     ? "Quick actions"
     : currentTab === "jobs"
@@ -2810,6 +2745,7 @@ export default function HomePage({
   const showHeaderJobActions =
     profileReadyForExecution &&
     (isOverview || currentTab === "jobs" || currentTab === "applications")
+  const showActionPanel = activeFocus !== "autofill-profile"
   const showExecutivePanel =
     isOverview || (profileReadyForExecution && currentTab === "jobs")
   const showProfileSettingsPanel =
@@ -4686,43 +4622,43 @@ export default function HomePage({
           <p className="eyebrow">{focusCopy.eyebrow}</p>
           <h1>{focusCopy.title}</h1>
           <p>{focusCopy.body}</p>
-          <div className="command-header-tools">
-            {showHeaderJobActions ? (
-              <>
-                {currentTab !== "jobs" ? (
-                  <a className="secondary-button" href="/dashboard/match-score">
-                    Analyse Fit
-                  </a>
-                ) : null}
-                <a className="secondary-button" href="/dashboard/applications">
-                  Tracked Jobs
+          {showHeaderJobActions ? (
+            <div className="command-header-tools">
+              {currentTab !== "jobs" ? (
+                <a className="secondary-button" href="/dashboard/match-score">
+                  Analyse Fit
                 </a>
-              </>
-            ) : null}
-            <details className="profile-completion-meter">
-              <summary>Profile readiness</summary>
-              <strong>{readinessScore}%</strong>
-              <span aria-hidden="true">
-                <i style={{ width: `${readinessScore}%` }} />
-              </span>
-            </details>
-          </div>
+              ) : null}
+              <a className="secondary-button" href="/dashboard/applications">
+                Tracked Jobs
+              </a>
+            </div>
+          ) : null}
         </div>
-        {showExecutivePanel ? (
-          <div
-            className={`executive-panel tone-${decisionTone}`}
-            aria-label="Dashboard summary"
-          >
-            <p>
-              <small>Next best action</small>
-              <span>
-                {profileReadyForExecution
-                  ? fitEvaluation.decision
-                  : "Improve profile evidence before checking more jobs"}
-              </span>
-            </p>
+        <div className="header-summary-column">
+          <div className="profile-completion-meter" aria-label="Profile readiness">
+            <small>Profile readiness</small>
+            <strong>{readinessScore}%</strong>
+            <span aria-hidden="true">
+              <i style={{ width: `${readinessScore}%` }} />
+            </span>
           </div>
-        ) : null}
+          {showExecutivePanel ? (
+            <div
+              className={`executive-panel tone-${decisionTone}`}
+              aria-label="Dashboard summary"
+            >
+              <p>
+                <small>Next best action</small>
+                <span>
+                  {profileReadyForExecution
+                    ? fitEvaluation.decision
+                    : "Improve profile evidence before checking more jobs"}
+                </span>
+              </p>
+            </div>
+          ) : null}
+        </div>
       </header>
 
       {showFirstRunWalkthrough ? (
@@ -4780,29 +4716,6 @@ export default function HomePage({
       {status && <p className="status-banner">{status}</p>}
 
       <div className="command-workspace">
-        <aside
-          className="command-sidebar"
-          aria-label="Dashboard menu"
-        >
-          <p>Dashboard</p>
-          <nav>
-            {commandSidebarItems.map((item) => (
-              <a
-                aria-current={
-                  activeSidebarLabel === item.label ? "page" : undefined
-                }
-                className={
-                  activeSidebarLabel === item.label ? "active" : undefined
-                }
-                href={item.href}
-                key={item.label}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-        </aside>
-
         <div
           className={
             isProfileGateRequired
@@ -4812,127 +4725,140 @@ export default function HomePage({
         >
           {profileGatePanel}
 
-          <section className="ai-copilot-panel" aria-label="Guided actions">
-            <div className="ai-copilot-header">
-              <div>
-                <p className="eyebrow">{actionPanelEyebrow}</p>
-                <h2>{actionPanelTitle}</h2>
-                <p>{actionPanelStateLabel}</p>
+          {showActionPanel ? (
+            <section className="ai-copilot-panel" aria-label="Guided actions">
+              <div className="ai-copilot-header">
+                <div>
+                  <p className="eyebrow">{actionPanelEyebrow}</p>
+                  <h2>{actionPanelTitle}</h2>
+                  <p>{actionPanelStateLabel}</p>
+                </div>
+                <span
+                  className={
+                    isProfileGateRequired ? "status-lock-pill" : undefined
+                  }
+                >
+                  {actionPanelStatus}
+                </span>
               </div>
-              <span
-                className={
-                  isProfileGateRequired ? "status-lock-pill" : undefined
-                }
-              >
-                {actionPanelStatus}
-              </span>
-            </div>
-            <div className="ai-action-row">
-              {isOverview ? (
-                <>
+              <div className="ai-action-row">
+                {isOverview ? (
+                  <>
+                    <a
+                      className="secondary-button"
+                      href="/dashboard/autofill-profile"
+                    >
+                      Finish profile
+                    </a>
+                    {profileReadyForExecution ? (
+                      <>
+                        <a
+                          className="secondary-button"
+                          href="/dashboard/match-score"
+                        >
+                          Analyse Fit
+                        </a>
+                        <a
+                          className="secondary-button"
+                          href="/dashboard/applications"
+                        >
+                          Open tracker
+                        </a>
+                      </>
+                    ) : null}
+                  </>
+                ) : isProfileGateRequired ? (
                   <a
                     className="secondary-button"
                     href="/dashboard/autofill-profile"
                   >
-                    Finish profile
+                    Complete profile
                   </a>
-                  {profileReadyForExecution ? (
-                    <>
-                      <a className="secondary-button" href="/dashboard/match-score">
-                        Analyse Fit
-                      </a>
-                      <a
-                        className="secondary-button"
-                        href="/dashboard/applications"
-                      >
-                        Open tracker
-                      </a>
-                    </>
-                  ) : null}
-                </>
-              ) : isProfileGateRequired ? (
-                <a
-                  className="secondary-button"
-                  href="/dashboard/autofill-profile"
-                >
-                  Complete profile
-                </a>
-              ) : currentTab === "jobs" ? (
-                <button
-                  disabled={
-                    isCopilotThinking || !hasJobDraft(state.jobAnalysis)
-                  }
-                  type="button"
-                  onClick={runAiJobAnalysis}
-                >
-                  {isCopilotThinking ? "Checking role" : "Ask AI to analyse fit"}
-                </button>
-              ) : activeFocus === "application-answers" ? (
-                <>
+                ) : currentTab === "jobs" ? (
                   <button
-                    disabled={!activeKitApplication}
+                    disabled={
+                      isCopilotThinking || !hasJobDraft(state.jobAnalysis)
+                    }
                     type="button"
-                    onClick={regenerateKitDraft}
+                    onClick={runAiJobAnalysis}
                   >
-                    Generate kit draft
+                    {isCopilotThinking
+                      ? "Checking role"
+                      : "Ask AI to analyse fit"}
                   </button>
-                  <button
-                    className="secondary-button"
-                    disabled={!activeKitApplication || !kitDraft}
-                    type="button"
-                    onClick={saveApplicationKitSnapshot}
-                  >
-                    Save kit to job
-                  </button>
-                </>
-              ) : activeFocus === "cv-tailor" ? (
-                <>
-                  <a className="secondary-button" href="/dashboard/autofill-profile">
-                    Edit profile evidence
-                  </a>
-                  <a className="secondary-button" href="/dashboard/application-answers">
-                    Open Application Kit
-                  </a>
-                </>
-              ) : currentTab === "profile" ? (
-                <>
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={reviewResumeForContext}
-                  >
-                    Review CV notes
-                  </button>
-                  <button type="button" onClick={applyMarketContextToProfile}>
-                    Apply market context
-                  </button>
-                </>
-              ) : currentTab === "applications" ? (
-                <>
-                  <a className="secondary-button" href="/dashboard/follow-ups">
-                    Open follow-ups
-                  </a>
-                  <a className="secondary-button" href="/dashboard/interview">
-                    Open interview prep
-                  </a>
-                </>
-              ) : (
-                <>
-                  <button type="button" onClick={generateInterviewBuddyAnswers}>
-                    Generate answers
-                  </button>
-                  <button
-                    className="secondary-button"
-                    disabled={!hasInterviewBuddyOutputs}
-                    type="button"
-                    onClick={saveFinalInterviewAnswer}
-                  >
-                    Save final answer
-                  </button>
-                </>
-              )}
-            </div>
-          </section>
+                ) : activeFocus === "application-answers" ? (
+                  <>
+                    <button
+                      disabled={!activeKitApplication}
+                      type="button"
+                      onClick={regenerateKitDraft}
+                    >
+                      Generate kit draft
+                    </button>
+                    <button
+                      className="secondary-button"
+                      disabled={!activeKitApplication || !kitDraft}
+                      type="button"
+                      onClick={saveApplicationKitSnapshot}
+                    >
+                      Save kit to job
+                    </button>
+                  </>
+                ) : activeFocus === "cv-tailor" ? (
+                  <>
+                    <a
+                      className="secondary-button"
+                      href="/dashboard/autofill-profile"
+                    >
+                      Edit profile evidence
+                    </a>
+                    <a
+                      className="secondary-button"
+                      href="/dashboard/application-answers"
+                    >
+                      Open Application Kit
+                    </a>
+                  </>
+                ) : currentTab === "profile" ? (
+                  <>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={reviewResumeForContext}
+                    >
+                      Review CV notes
+                    </button>
+                    <button type="button" onClick={applyMarketContextToProfile}>
+                      Apply market context
+                    </button>
+                  </>
+                ) : currentTab === "applications" ? (
+                  <>
+                    <a className="secondary-button" href="/dashboard/follow-ups">
+                      Open follow-ups
+                    </a>
+                    <a className="secondary-button" href="/dashboard/interview">
+                      Open interview prep
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={generateInterviewBuddyAnswers}>
+                      Generate answers
+                    </button>
+                    <button
+                      className="secondary-button"
+                      disabled={!hasInterviewBuddyOutputs}
+                      type="button"
+                      onClick={saveFinalInterviewAnswer}
+                    >
+                      Save final answer
+                    </button>
+                  </>
+                )}
+              </div>
+            </section>
+          ) : null}
 
           {isProfileGateRequired ? null : (
             <>
