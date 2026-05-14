@@ -88,6 +88,11 @@ const rateLimitWindowMs = 60_000
 const rateLimitWindowSeconds = rateLimitWindowMs / 1000
 const rateLimitMaxRequests = 20
 
+const stringListSchema = z
+  .union([z.string(), z.array(z.string())])
+  .optional()
+  .transform((value) => normaliseStringList(value))
+
 const applicationContentSchema = z.object({
   coverLetter: z.string().optional(),
   profileSummary: z.string().optional(),
@@ -102,34 +107,34 @@ const aiJobAnalysisSchema = z.object({
     .enum(["High Priority", "Worth Applying", "Stretch", "Skip"])
     .optional(),
   positioningAngle: z.string().optional(),
-  scoreFactors: z.array(z.string()).optional(),
-  skills: z.array(z.string()).optional(),
+  scoreFactors: stringListSchema,
+  skills: stringListSchema,
   seniority: z.string().optional(),
   summary: z.string().optional(),
-  gaps: z.array(z.string()).optional()
+  gaps: stringListSchema
 })
 
 const interviewPrepPackPartialSchema = z.object({
   roleSummary: z.string().optional(),
   positioningStatement: z.string().optional(),
   fitAndGapRecap: z.string().optional(),
-  likelyQuestions: z.array(z.string()).optional(),
-  starAnswerPrompts: z.array(z.string()).optional(),
-  projectTalkingPoints: z.array(z.string()).optional(),
-  skillsToRevise: z.array(z.string()).optional(),
-  questionsToAskEmployer: z.array(z.string()).optional(),
-  finalPrepChecklist: z.array(z.string()).optional()
+  likelyQuestions: stringListSchema,
+  starAnswerPrompts: stringListSchema,
+  projectTalkingPoints: stringListSchema,
+  skillsToRevise: stringListSchema,
+  questionsToAskEmployer: stringListSchema,
+  finalPrepChecklist: stringListSchema
 })
 
 const interviewAnswerCoachSchema = z.object({
   evidenceScore: z.number().optional(),
-  riskFlags: z.array(z.string()).optional(),
-  missingEvidence: z.array(z.string()).optional(),
+  riskFlags: stringListSchema,
+  missingEvidence: stringListSchema,
   professionalAnswer: z.string().optional(),
   naturalAnswer: z.string().optional(),
   lightFunnyAnswer: z.string().optional(),
   strongFinalAnswer: z.string().optional(),
-  followUpDrills: z.array(z.string()).optional(),
+  followUpDrills: stringListSchema,
   boundaryNote: z.string().optional()
 })
 
@@ -154,10 +159,10 @@ const profileContextSchema = z.object({
   urgency: z.enum(["urgent", "active", "exploring"]).optional(),
   targetCountry: z.string().optional(),
   experienceLevel: z.string().optional(),
-  targetRoles: z.string().optional(),
+  targetRoles: stringListSchema,
   workRightPrompt: z.string().optional(),
   confidence: z.enum(["Low", "Medium", "High"]).optional(),
-  reasons: z.array(z.string()).optional()
+  reasons: stringListSchema
 })
 
 let openAIClient: OpenAI | null = null
@@ -205,6 +210,27 @@ function toStringValue(value: string | undefined) {
 
 function toStringArray(value: string[] | undefined) {
   return value ?? []
+}
+
+function normaliseStringList(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => item.trim()).filter(Boolean)
+  }
+
+  if (typeof value !== "string") {
+    return []
+  }
+
+  const delimiter = /[\n;]/.test(value) ? /[\n;]/ : ","
+
+  return value
+    .split(delimiter)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function renderTargetRoles(value: string[]): string {
+  return value.join(", ")
 }
 
 function normaliseApplicationContent(
@@ -314,7 +340,7 @@ function normaliseProfileContext({
       toStringValue(value.targetCountry) || currentContext.targetCountry,
     experienceLevel:
       toStringValue(value.experienceLevel) || currentContext.experienceLevel,
-    targetRoles: toStringValue(value.targetRoles),
+    targetRoles: renderTargetRoles(value.targetRoles),
     workRightPrompt:
       toStringValue(value.workRightPrompt) ||
       (candidatePosition === "foreign-candidate"
@@ -386,6 +412,7 @@ export async function analyseJobWithOpenAI({
     instructions: [
       "You analyse UK/EU job fit for a tech candidate.",
       "Return only valid JSON with fitScore number 0-100, recommendation one of High Priority, Worth Applying, Stretch, Skip, positioningAngle string, scoreFactors string array, skills string array, seniority string, summary string, gaps string array.",
+      "List fields can be string arrays or readable newline/comma-separated strings.",
       "Be conservative. Do not infer facts not present in the profile or job text."
     ].join(" "),
     input: { draft: jobAnalysis, profile },
@@ -445,6 +472,7 @@ export async function generateInterviewPrepWithOpenAI({
       "You create truthful UK/EU job interview preparation packs.",
       "Return only valid JSON with keys roleSummary, positioningStatement, fitAndGapRecap, likelyQuestions, starAnswerPrompts, projectTalkingPoints, skillsToRevise, questionsToAskEmployer, finalPrepChecklist.",
       "All list keys must be string arrays.",
+      "If a list is returned as a readable string, AutoTime will normalise it, but arrays are preferred.",
       "Use only the supplied candidate profile, reusable answers, job analysis and application record.",
       "Do not invent experience, employers, degrees, certifications, work rights, salary, relocation facts, or outcomes.",
       "If a claim has no supplied evidence, state that evidence is missing instead of writing the claim.",
@@ -482,6 +510,7 @@ export async function generateInterviewAnswerWithOpenAI({
       "You are AutoTime Interview Coach for UK/EU cross-border job candidates.",
       "Return only valid JSON with keys evidenceScore, riskFlags, missingEvidence, professionalAnswer, naturalAnswer, lightFunnyAnswer, strongFinalAnswer, followUpDrills, boundaryNote.",
       "All list keys must be string arrays. evidenceScore is 0-100.",
+      "If a list is returned as a readable string, AutoTime will normalise it, but arrays are preferred.",
       "Follow AutoTime's motto: evidence first, transparent limits, user control, no hidden claims.",
       "Use only the user's rough draft, saved profile, reusable answers and job text.",
       "Do not invent achievements, employers, qualifications, salary, work rights, sponsorship status, relocation facts or outcomes.",
@@ -519,6 +548,7 @@ export async function reviewProfileContextWithOpenAI({
       "Return only valid JSON with keys roleMarket, candidatePosition, urgency, targetCountry, experienceLevel, targetRoles, workRightPrompt, confidence, reasons.",
       "roleMarket must be one of general-tech, fintech, enterprise-saas, data-ai, cybersecurity, healthtech, climate-energy, gov-public, ecommerce-marketplace, devtools-cloud.",
       "candidatePosition must be foreign-candidate or native-candidate. urgency must be urgent, active, or exploring. confidence must be Low, Medium, or High.",
+      "targetRoles can be a comma-separated string or an array of role strings. Keep roles readable and concise.",
       "Suggest target roles and profile context only from CV evidence and the current context.",
       "Do not invent work rights, visa status, sponsorship status, relocation facts, degrees, employers, dates, salary, or outcomes.",
       "For workRightPrompt, ask the user to confirm exact verified facts. Do not state that they have work rights unless the CV explicitly says it.",

@@ -1,7 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getRequestUser } from "../../../../lib/api-auth"
-import { diagnosticJson } from "../../../../lib/diagnostics"
+import {
+  diagnosticJson,
+  getValidationIssueMessage
+} from "../../../../lib/diagnostics"
 import {
   assertCanUseAi,
   FeatureGateError,
@@ -121,7 +124,12 @@ export async function POST(
         area: "ai",
         code: "ai.profile-context.request.invalid",
         data: null,
-        error: "Invalid request body",
+        error: getValidationIssueMessage({
+          fallback:
+            "CV review needs candidate context and at least 40 characters of CV text.",
+          issues: error.issues,
+          prefix: "CV review needs valid input for"
+        }),
         request,
         status: 400
       })

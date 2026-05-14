@@ -92,6 +92,26 @@ export function getErrorMessage(
   return error instanceof Error ? error.message : fallback
 }
 
+export function getValidationIssueMessage({
+  fallback,
+  issues,
+  prefix
+}: {
+  fallback: string
+  issues: Array<{ path: PropertyKey[] }>
+  prefix: string
+}): string {
+  const fields = issues
+    .map((issue) => issue.path.map(String).join("."))
+    .filter(Boolean)
+
+  if (fields.length === 0) {
+    return fallback
+  }
+
+  return `${prefix}: ${fields.join(", ")}.`
+}
+
 export function createDiagnostic({
   area,
   code,

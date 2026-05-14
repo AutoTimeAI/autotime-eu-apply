@@ -81,9 +81,23 @@ function toStringValue(value: unknown) {
 }
 
 function toStringArray(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : []
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+
+  if (typeof value !== "string") {
+    return []
+  }
+
+  const delimiter = /[\n;]/.test(value) ? /[\n;]/ : ","
+
+  return value
+    .split(delimiter)
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 function cleanText(value: unknown) {

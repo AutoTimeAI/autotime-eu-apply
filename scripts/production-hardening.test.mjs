@@ -75,16 +75,26 @@ test("AI rate-limit RPC uses timestamptz reset values", () => {
 })
 
 test("profile CV AI review validates input before quota checks", () => {
-  const route = read("apps/web/app/api/ai/profile-context/route.ts")
-  const parseIndex = route.indexOf("const body = requestSchema.parse")
-  const rateLimitIndex = route.indexOf("await assertAiRouteRateLimit")
-  const featureGateIndex = route.indexOf("await assertCanUseAi")
+  const routes = [
+    "apps/web/app/api/ai/analyse/route.ts",
+    "apps/web/app/api/ai/content/route.ts",
+    "apps/web/app/api/ai/interview/route.ts",
+    "apps/web/app/api/ai/interview-answer/route.ts",
+    "apps/web/app/api/ai/profile-context/route.ts"
+  ]
 
-  assert.notEqual(parseIndex, -1)
-  assert.notEqual(rateLimitIndex, -1)
-  assert.notEqual(featureGateIndex, -1)
-  assert.ok(parseIndex < rateLimitIndex)
-  assert.ok(parseIndex < featureGateIndex)
+  for (const routePath of routes) {
+    const route = read(routePath)
+    const parseIndex = route.indexOf("const body = requestSchema.parse")
+    const rateLimitIndex = route.indexOf("await assertAiRouteRateLimit")
+    const featureGateIndex = route.indexOf("await assertCanUseAi")
+
+    assert.notEqual(parseIndex, -1, routePath)
+    assert.notEqual(rateLimitIndex, -1, routePath)
+    assert.notEqual(featureGateIndex, -1, routePath)
+    assert.ok(parseIndex < rateLimitIndex, routePath)
+    assert.ok(parseIndex < featureGateIndex, routePath)
+  }
 })
 
 test("profile CV AI review handles upgrade limits before generic errors", () => {
@@ -95,6 +105,25 @@ test("profile CV AI review handles upgrade limits before generic errors", () => 
   assert.notEqual(upgradeIndex, -1)
   assert.notEqual(errorIndex, -1)
   assert.ok(upgradeIndex < errorIndex)
+})
+
+test("AI review schemas accept list fields as string or array", () => {
+  const openaiServer = read("apps/web/lib/openai-server.ts")
+  const interviewPrep = read("apps/web/lib/interview-prep.ts")
+  const route = read("apps/web/app/api/ai/profile-context/route.ts")
+
+  assert.match(
+    openaiServer,
+    /z\s*\.\s*union\(\[z\.string\(\), z\.array\(z\.string\(\)\)\]\)/
+  )
+  assert.match(openaiServer, /normaliseStringList/)
+  assert.match(openaiServer, /renderTargetRoles\(value\.targetRoles\)/)
+  assert.match(openaiServer, /scoreFactors: stringListSchema/)
+  assert.match(openaiServer, /likelyQuestions: stringListSchema/)
+  assert.match(openaiServer, /riskFlags: stringListSchema/)
+  assert.match(interviewPrep, /typeof value !== "string"/)
+  assert.match(route, /getValidationIssueMessage/)
+  assert.match(read("apps/web/lib/diagnostics.ts"), /getValidationIssueMessage/)
 })
 
 let failed = 0

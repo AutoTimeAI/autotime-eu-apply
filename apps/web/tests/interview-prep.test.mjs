@@ -151,7 +151,7 @@ test("normalizes partial AI interview prep output", () => {
     "Question one?",
     "Question two?"
   ])
-  assert.deepEqual(normalized.starAnswerPrompts, [])
+  assert.deepEqual(normalized.starAnswerPrompts, ["not an array"])
   assert.deepEqual(normalized.skillsToRevise, ["Payments"])
   assert.equal(normalized.createdAt, fallbackPack.createdAt)
   assert.equal(normalized.updatedAt, "2026-05-04T11:00:00.000Z")
