@@ -2128,6 +2128,57 @@ function inferContextFromResume(
   }
 }
 
+function getReadableResumeLines(resumeText: string) {
+  return resumeText
+    .split(/\r?\n|[\u2022*]|(?<=[.!?])\s+/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line.length >= 24)
+    .map((line) => (line.length > 240 ? `${line.slice(0, 237)}...` : line))
+}
+
+function inferEvidenceFromResume(resumeText: string) {
+  const lines = getReadableResumeLines(resumeText)
+  const experienceKeywords = [
+    "analyst",
+    "support",
+    "managed",
+    "led",
+    "delivered",
+    "improved",
+    "worked",
+    "responsible",
+    "stakeholder",
+    "requirements",
+    "operations",
+    "payments",
+    "systems"
+  ]
+  const projectKeywords = [
+    "project",
+    "migration",
+    "implementation",
+    "workflow",
+    "process",
+    "automation",
+    "integration",
+    "delivery",
+    "rollout",
+    "improvement",
+    "platform",
+    "system"
+  ]
+  const pickLines = (keywords: string[]) =>
+    lines
+      .filter((line) => includesAny(line, keywords))
+      .slice(0, 3)
+      .join("\n")
+
+  return {
+    experienceHighlights: pickLines(experienceKeywords),
+    projectSummaries: pickLines(projectKeywords)
+  }
+}
+
 function normalizeContextSuggestionForApproval({
   fallback,
   suggestion
@@ -3793,15 +3844,30 @@ export default function HomePage({
       userId
     )
     setProductContext(contextSuggestion)
+    const cvEvidenceSource = resumeIntake || state.profile.baseCvText
+    const inferredEvidence = inferEvidenceFromResume(cvEvidenceSource)
+    const filledEvidenceFields = [
+      !state.profile.experienceHighlights.trim() &&
+        inferredEvidence.experienceHighlights &&
+        "experience highlights",
+      !state.profile.projectSummaries.trim() &&
+        inferredEvidence.projectSummaries &&
+        "project examples"
+    ].filter(Boolean)
     const nextState = {
       ...state,
       profile: {
         ...state.profile,
-        baseCvText: resumeIntake || state.profile.baseCvText,
+        baseCvText: cvEvidenceSource,
         targetCountries: contextSuggestion.targetCountry,
         targetRoles: contextSuggestion.targetRoles || state.profile.targetRoles,
         workRightDetails:
-          state.profile.workRightDetails || contextSuggestion.workRightPrompt
+          state.profile.workRightDetails || contextSuggestion.workRightPrompt,
+        experienceHighlights:
+          state.profile.experienceHighlights ||
+          inferredEvidence.experienceHighlights,
+        projectSummaries:
+          state.profile.projectSummaries || inferredEvidence.projectSummaries
       },
       jobAnalysis: {
         ...state.jobAnalysis,
@@ -3816,7 +3882,11 @@ export default function HomePage({
     setContextSuggestionSource(null)
     setContextSuggestionNote("")
     window.alert(
-      "Approved CV suggestions applied to My Profile. Review the saved fields before using job checks."
+      filledEvidenceFields.length
+        ? `Approved CV suggestions applied to My Profile. AutoTime also filled ${filledEvidenceFields.join(
+            " and "
+          )} from your CV. Review the saved fields before using job checks.`
+        : "Approved CV suggestions applied to My Profile. Review the saved fields before using job checks."
     )
   }
 
