@@ -2760,6 +2760,10 @@ export default function HomePage({
   const showInterviewPrepPacks = activeFocus === "interview-prep"
   const isProfileGateRequired =
     !profileReadyForExecution && !isOverview && currentTab !== "profile"
+  const isDashboardProtocolLocked =
+    !profileReadyForExecution &&
+    activeFocus !== "autofill-profile" &&
+    activeFocus !== "settings"
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const decisionTone =
     decisionBrief.contentGate === "ready"
@@ -4725,8 +4729,33 @@ export default function HomePage({
         >
           {profileGatePanel}
 
-          {showActionPanel ? (
-            <section className="ai-copilot-panel" aria-label="Guided actions">
+          <div
+            aria-disabled={isDashboardProtocolLocked}
+            className={
+              isDashboardProtocolLocked
+                ? "dashboard-section-lock locked"
+                : "dashboard-section-lock"
+            }
+          >
+            {isDashboardProtocolLocked ? (
+              <div className="dashboard-lock-overlay" role="note">
+                <span className="profile-lock-symbol" aria-hidden="true" />
+                <div>
+                  <p className="eyebrow">Profile protocol</p>
+                  <h2>Locked until profile reaches 90%</h2>
+                  <p>
+                    Complete your Profile Evidence before using dashboard
+                    tools. Current profile readiness is {readinessScore}%.
+                  </p>
+                </div>
+                <a className="secondary-button" href="/dashboard/autofill-profile">
+                  Complete profile
+                </a>
+              </div>
+            ) : null}
+            <div className="dashboard-section-lock-content">
+              {showActionPanel ? (
+                <section className="ai-copilot-panel" aria-label="Guided actions">
               <div className="ai-copilot-header">
                 <div>
                   <p className="eyebrow">{actionPanelEyebrow}</p>
@@ -4857,11 +4886,10 @@ export default function HomePage({
                   </>
                 )}
               </div>
-            </section>
-          ) : null}
+                </section>
+              ) : null}
 
-          {isProfileGateRequired ? null : (
-            <>
+              <>
               {!isOverview &&
                 currentTab === "profile" &&
                 activeFocus === "settings" && (
@@ -7954,18 +7982,29 @@ export default function HomePage({
                   )}
                 </section>
               )}
-            </>
-          )}
+              </>
+            </div>
+          </div>
         </div>
       </div>
 
-      <details className="utility-bar">
+      <details
+        aria-disabled={isDashboardProtocolLocked}
+        className={
+          isDashboardProtocolLocked ? "utility-bar locked" : "utility-bar"
+        }
+      >
         <summary>Backups</summary>
-        <button type="button" onClick={saveDashboard}>
+        <button
+          disabled={isDashboardProtocolLocked}
+          type="button"
+          onClick={saveDashboard}
+        >
           Save changes
         </button>
         <button
           className="secondary-button"
+          disabled={isDashboardProtocolLocked}
           type="button"
           onClick={exportDashboard}
         >
@@ -7974,6 +8013,7 @@ export default function HomePage({
         <label className="import-control">
           Import backup
           <textarea
+            disabled={isDashboardProtocolLocked}
             placeholder="Paste exported AutoTime backup contents"
             value={importJson}
             onChange={(event) => setImportJson(event.target.value)}
@@ -7981,6 +8021,7 @@ export default function HomePage({
         </label>
         <button
           className="secondary-button"
+          disabled={isDashboardProtocolLocked}
           type="button"
           onClick={() => importDashboard(importJson)}
         >
