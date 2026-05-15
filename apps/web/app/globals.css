@@ -4502,6 +4502,7 @@ h4 {
 
 .dashboard-brand {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   flex: 0 0 auto;
   gap: 8px;
@@ -6445,6 +6446,61 @@ h4 {
   padding: 7px 10px;
 }
 
+@media (pointer: coarse) {
+  button,
+  .primary-link,
+  .secondary-link,
+  .secondary-button,
+  .dashboard-topnav a,
+  .dashboard-workflow-nav a,
+  .product-nav a:not(.dashboard-brand),
+  .billing-toggle button,
+  .faq-item {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  .dashboard-topnav,
+  .dashboard-workflow-nav,
+  .product-nav-links {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (hover: none) {
+  .command-centre-card:hover,
+  .overview-workflow-map a:hover,
+  .today-focus-panel a:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .landing-hero-media {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-data: reduce) {
+  .landing-hero-media {
+    display: none;
+  }
+}
+
 @media (max-width: 980px) {
   .app-header,
   .command-header-tools,
@@ -6872,6 +6928,13 @@ h4 {
   .upgrade-banner {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-topnav a,
+  .product-nav a:not(.dashboard-brand),
+  .landing-actions a,
+  .billing-toggle button {
+    min-height: 44px;
   }
 
   .dashboard-sidebar {
