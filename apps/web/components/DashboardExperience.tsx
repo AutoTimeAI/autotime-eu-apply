@@ -404,7 +404,7 @@ const dashboardFocusCopy: Record<
   "follow-ups": {
     eyebrow: "Follow-ups",
     title: "Follow-up Queue",
-    body: "Deadlines, reminders and next actions across saved applications."
+    body: "Work the next dated action across tracked jobs without duplicating the tracker."
   },
   "interview-prep": {
     eyebrow: "Interview",
@@ -414,7 +414,7 @@ const dashboardFocusCopy: Record<
   insights: {
     eyebrow: "Progress",
     title: "Progress",
-    body: "See what is working across tracked jobs."
+    body: "Read outcome signals from tracked jobs and evidence records. Progress reports what happened; it does not replace Fit Analysis."
   },
   settings: {
     eyebrow: "Settings",
@@ -1926,13 +1926,20 @@ function getReadinessScore(state: CompanionDashboardState) {
   )
 }
 
+function hasFollowUpAction(application: ApplicationRecord) {
+  return (
+    application.status !== "Archived" &&
+    application.status !== "Rejected" &&
+    Boolean(
+      application.nextAction?.trim() ||
+        application.nextActionDate ||
+        ["Applied", "Interview", "Offer"].includes(application.status)
+    )
+  )
+}
+
 function getNextActionCount(applications: ApplicationRecord[]) {
-  return applications.filter(
-    (application) =>
-      application.status !== "Archived" &&
-      application.status !== "Rejected" &&
-      (application.nextAction?.trim() || application.status === "Saved")
-  ).length
+  return applications.filter(hasFollowUpAction).length
 }
 
 function getNextActionTiming(application: ApplicationRecord) {
@@ -2951,12 +2958,7 @@ export default function HomePage({
   const activeKitApplication =
     state.applications.find((application) => application.id === kitApplicationId) ??
     state.applications[0]
-  const followUpApplications = state.applications.filter(
-    (application) =>
-      application.status !== "Archived" &&
-      application.status !== "Rejected" &&
-      (application.nextAction?.trim() || application.status === "Saved")
-  )
+  const followUpApplications = state.applications.filter(hasFollowUpAction)
   const outcomeAnalytics = useMemo(
     () => getOutcomeAnalytics(persistedOutcomeRecords),
     [persistedOutcomeRecords]
@@ -2971,6 +2973,10 @@ export default function HomePage({
       ? "Analyse Fit"
       : activeFocus === "cv-tailor"
         ? "Proof Library"
+        : activeFocus === "follow-ups"
+          ? "Follow-ups"
+          : activeFocus === "insights"
+            ? "Progress"
       : currentTab === "profile"
         ? "Profile Evidence"
         : currentTab === "applications"
@@ -4941,6 +4947,10 @@ export default function HomePage({
           ? "Prepare application content for one tracked job."
           : activeFocus === "cv-tailor"
             ? "Keep reusable proof ready without duplicating other workflows."
+            : activeFocus === "follow-ups"
+              ? "Work the next action in order."
+              : activeFocus === "insights"
+                ? "Review outcomes without changing the workflow."
             : currentTab === "profile"
           ? "Add the details AutoTime needs about you."
           : currentTab === "applications"
@@ -4962,6 +4972,14 @@ export default function HomePage({
             : "Track a job before writing application content"
           : activeFocus === "cv-tailor"
             ? "Proof Library is saved with your profile"
+            : activeFocus === "follow-ups"
+              ? activeActionCount > 0
+                ? "Only scheduled or in-flight jobs appear here"
+                : "No dated or in-flight actions are waiting"
+              : activeFocus === "insights"
+                ? outcomeAnalytics.total > 0
+                  ? "Progress is reading saved outcome records"
+                  : "Save job outcomes before reading progress"
             : currentTab === "profile"
           ? profileReadyForExecution
             ? "Profile ready for job checks"
@@ -5443,6 +5461,28 @@ export default function HomePage({
                     <button type="button" onClick={applyMarketContextToProfile}>
                       Apply market context
                     </button>
+                  </>
+                ) : activeFocus === "follow-ups" ? (
+                  <>
+                    <a className="secondary-button" href="/dashboard/applications">
+                      Open tracked jobs
+                    </a>
+                    <a className="secondary-button" href="/dashboard/insights">
+                      Review progress
+                    </a>
+                  </>
+                ) : activeFocus === "insights" ? (
+                  <>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={runOnlineAnalytics}
+                    >
+                      Run evidence report
+                    </button>
+                    <a className="secondary-button" href="/dashboard/applications">
+                      Open tracked jobs
+                    </a>
                   </>
                 ) : currentTab === "applications" ? (
                   <>
@@ -7508,6 +7548,52 @@ export default function HomePage({
                   )}
                   {showApplicationAnalytics && (
                     <>
+                      <div
+                        className="fit-decision-flow progress-flow"
+                        aria-label="Progress workflow"
+                      >
+                        <article>
+                          <span>1</span>
+                          <strong>Track outcomes</strong>
+                          <p>Update status and outcome reason in Tracked Jobs.</p>
+                        </article>
+                        <article>
+                          <span>2</span>
+                          <strong>Read evidence</strong>
+                          <p>Review saved checks and outcome records together.</p>
+                        </article>
+                        <article>
+                          <span>3</span>
+                          <strong>Run report</strong>
+                          <p>Generate a descriptive report from saved records.</p>
+                        </article>
+                        <article>
+                          <span>4</span>
+                          <strong>Improve next roles</strong>
+                          <p>Use trends to adjust targeting, not to auto-decide.</p>
+                        </article>
+                      </div>
+                      <div
+                        className="proof-library-boundary progress-boundary"
+                        aria-label="Progress responsibility"
+                      >
+                        <article>
+                          <span>Reports</span>
+                          <strong>Outcome signals and saved evidence</strong>
+                          <p>
+                            Progress reads tracker outcomes, fit-check records
+                            and interview signals.
+                          </p>
+                        </article>
+                        <article>
+                          <span>Does not duplicate</span>
+                          <strong>Fit scoring, follow-up work or proof storage</strong>
+                          <p>
+                            Fit Analysis scores roles, Follow-ups works actions,
+                            and Proof Library stores reusable proof.
+                          </p>
+                        </article>
+                      </div>
                       <section
                         className="analytics-grid"
                         aria-label="Evidence and outcome analytics"
@@ -7832,6 +7918,47 @@ export default function HomePage({
                           or reject jobs when no action is needed.
                         </p>
                       </div>
+                      <div
+                        className="fit-decision-flow follow-up-flow"
+                        aria-label="Follow-up workflow"
+                      >
+                        <article>
+                          <span>1</span>
+                          <strong>Find due action</strong>
+                          <p>Only jobs with a date, action or in-flight status appear.</p>
+                        </article>
+                        <article>
+                          <span>2</span>
+                          <strong>Update next step</strong>
+                          <p>Edit the action and due date from the queue.</p>
+                        </article>
+                        <article>
+                          <span>3</span>
+                          <strong>Open the job</strong>
+                          <p>Use the full tracker when status or outcome changes.</p>
+                        </article>
+                      </div>
+                      <div
+                        className="proof-library-boundary follow-up-boundary"
+                        aria-label="Follow-up responsibility"
+                      >
+                        <article>
+                          <span>Works</span>
+                          <strong>Next actions and due dates</strong>
+                          <p>
+                            The queue keeps time-sensitive application actions
+                            visible and editable.
+                          </p>
+                        </article>
+                        <article>
+                          <span>Does not duplicate</span>
+                          <strong>Tracker status, outcomes or content</strong>
+                          <p>
+                            Status, outcome learning and documents remain in
+                            Tracked Jobs and Application Kit.
+                          </p>
+                        </article>
+                      </div>
                       {followUpApplications.length ? (
                         <div className="follow-up-list">
                           {followUpApplications.map((application) => (
@@ -7895,6 +8022,10 @@ export default function HomePage({
                                 </a>
                                 <button
                                   className="secondary-button"
+                                  disabled={
+                                    !application.nextAction?.trim() &&
+                                    !application.nextActionDate
+                                  }
                                   type="button"
                                   onClick={() =>
                                     updateApplication(application.id, {
@@ -7903,7 +8034,7 @@ export default function HomePage({
                                     })
                                   }
                                 >
-                                  Clear action
+                                  Clear scheduled action
                                 </button>
                               </div>
                             </article>

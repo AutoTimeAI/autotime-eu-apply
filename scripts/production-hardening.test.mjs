@@ -314,6 +314,39 @@ test("Interview Prep keeps coaching, prep packs and reusable answers separated",
   assert.match(saveAnswerFlow, /scheduleDashboardSync\(next/)
 })
 
+test("Follow-ups and Progress stay ordered and do not duplicate tracker systems", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.match(dashboard, /title: "Follow-up Queue"/)
+  assert.match(dashboard, /Work the next dated action across tracked jobs/)
+  assert.match(dashboard, /function hasFollowUpAction\(application: ApplicationRecord\)/)
+  assert.match(dashboard, /application\.nextActionDate/)
+  assert.match(dashboard, /\["Applied", "Interview", "Offer"\]\.includes\(application\.status\)/)
+  assert.match(dashboard, /aria-label="Follow-up workflow"/)
+  assert.match(dashboard, /Only jobs with a date, action or in-flight status appear/)
+  assert.match(dashboard, /aria-label="Follow-up responsibility"/)
+  assert.match(dashboard, /Clear scheduled action/)
+
+  assert.match(dashboard, /title: "Progress"/)
+  assert.match(dashboard, /Progress reports what happened; it does not replace Fit Analysis/)
+  assert.match(dashboard, /aria-label="Progress workflow"/)
+  assert.match(dashboard, /Track outcomes/)
+  assert.match(dashboard, /Run report/)
+  assert.match(dashboard, /aria-label="Progress responsibility"/)
+  assert.match(dashboard, /Fit Analysis scores roles, Follow-ups works actions/)
+  assert.match(dashboard, /onClick=\{runOnlineAnalytics\}/)
+
+  const updateStart = dashboard.indexOf("const updateApplication = (")
+  const deleteStart = dashboard.indexOf("const removeApplicationFromState = (")
+  assert.notEqual(updateStart, -1)
+  assert.notEqual(deleteStart, -1)
+  const updateFlow = dashboard.slice(updateStart, deleteStart)
+
+  assert.match(updateFlow, /updateOutcomeRecordFromApplication\(/)
+  assert.match(updateFlow, /persist\(nextState, "Application and outcome record updated"\)/)
+  assert.match(updateFlow, /scheduleDashboardSync\(nextState/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
