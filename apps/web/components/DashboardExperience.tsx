@@ -2999,6 +2999,90 @@ export default function HomePage({
       : decisionBrief.contentGate === "stretch"
         ? "warn"
         : "blocked"
+  const contentGateResult =
+    decisionBrief.contentGate === "ready"
+      ? "No content blocker detected by current rules"
+      : decisionBrief.contentGate === "stretch"
+        ? "Stretch application: label the risk"
+        : "Do not write content yet"
+  const primaryRisk =
+    decisionBrief.risks[0] ||
+    decisionBrief.missingInputs[0] ||
+    "No major blocker is visible from the saved evidence."
+  const primaryEvidence =
+    decisionBrief.evidenceFound[0] || "No strong evidence found yet."
+  const fitOutcomeCards = [
+    {
+      label: "Apply decision",
+      value: fitEvaluation.decision,
+      tone: decisionTone,
+      detail: contentGateResult
+    },
+    {
+      label: "Risk result",
+      value: fitEvaluation.blockers.length
+        ? `${fitEvaluation.blockers.length} blocker${fitEvaluation.blockers.length === 1 ? "" : "s"}`
+        : decisionBrief.risks.length
+          ? `${decisionBrief.risks.length} check${decisionBrief.risks.length === 1 ? "" : "s"}`
+          : "No blocker",
+      tone: fitEvaluation.blockers.length
+        ? "blocked"
+        : decisionBrief.risks.length
+          ? "warn"
+          : "good",
+      detail: primaryRisk
+    },
+    {
+      label: "Evidence result",
+      value: `${decisionBrief.evidenceFound.length} signal${decisionBrief.evidenceFound.length === 1 ? "" : "s"}`,
+      tone: decisionBrief.missingInputs.length ? "warn" : "good",
+      detail: primaryEvidence
+    },
+    {
+      label: "Next action",
+      value:
+        decisionBrief.contentGate === "ready"
+          ? "Ready to save"
+          : decisionBrief.contentGate === "stretch"
+            ? "Review stretch"
+            : "Fix first",
+      tone: decisionTone,
+      detail: decisionBrief.nextActions[0]
+    }
+  ]
+  const fitTrustCards = [
+    {
+      label: officialSourceStatusLabel,
+      value: "Official source check",
+      tone: trustState.officialSourceReviewed ? "good" : "warn",
+      detail:
+        "Official sources and employer wording must be checked before relying on work-right, sponsorship, relocation or location-fit advice."
+    },
+    {
+      label: "AI boundary",
+      value: "Evidence controls output",
+      tone: "neutral",
+      detail:
+        "AI output cannot override official sources, saved profile evidence, parsed job text or your review."
+    }
+  ]
+  const positioningResultCards = [
+    {
+      label: "Positioning outcome",
+      value:
+        fitEvaluation.contentGate === "blocked"
+          ? "Blocked angle"
+          : "Best angle",
+      tone: decisionTone,
+      detail: fitEvaluation.positioningAngle
+    },
+    {
+      label: "Action outcome",
+      value: "Next move",
+      tone: decisionTone,
+      detail: fitEvaluation.nextBestAction
+    }
+  ]
   const followUpTone = activeActionCount > 0 ? "warn" : "good"
   const commandCentreCards = [
     {
@@ -6960,50 +7044,41 @@ export default function HomePage({
                             {fitEvaluation.overallScore}
                           </RevealMetric>
                         </strong>
-                        <span>
-                          {fitEvaluation.contentGate === "ready"
-                            ? "No content blocker detected by current rules"
-                            : fitEvaluation.contentGate === "stretch"
-                              ? "Stretch application: label the risk"
-                            : "Do not write content yet"}
-                        </span>
+                        <span>{contentGateResult}</span>
                       </div>
                       <div
-                        className="fit-decision-flow compact"
-                        aria-label="Analyse Fit decision"
+                        className="fit-outcome-dashboard"
+                        aria-label="Analyse Fit outcome dashboard"
                       >
-                        <article>
-                          <span>1</span>
-                          <strong>{fitEvaluation.decision}</strong>
-                          <p>{decisionBrief.rationale[0]}</p>
-                        </article>
-                        <article>
-                          <span>2</span>
-                          <strong>Check first</strong>
-                          <p>
-                            {decisionBrief.risks[0] ||
-                              decisionBrief.missingInputs[0] ||
-                              "No major blocker is visible from the saved evidence."}
-                          </p>
-                        </article>
-                        <article>
-                          <span>3</span>
-                          <strong>Next action</strong>
-                          <p>{decisionBrief.nextActions[0]}</p>
-                        </article>
+                        {fitOutcomeCards.map((card) => (
+                          <article
+                            className={`fit-outcome-card ${card.tone}`}
+                            key={card.label}
+                          >
+                            <span>{card.label}</span>
+                            <strong>{card.value}</strong>
+                            <p>{card.detail}</p>
+                          </article>
+                        ))}
                       </div>
                       <section
                         className="fit-trust-panel"
                         aria-label="Official source and AI integrity check"
                       >
-                        <div>
-                          <span>{officialSourceStatusLabel}</span>
-                          <strong>Official source and employer wording first</strong>
-                          <p>
-                            Official sources and employer wording must be
-                            checked before relying on work-right, sponsorship,
-                            relocation or location-fit advice.
-                          </p>
+                        <div
+                          className="fit-outcome-dashboard compact"
+                          aria-label="Integrity results"
+                        >
+                          {fitTrustCards.map((card) => (
+                            <article
+                              className={`fit-outcome-card ${card.tone}`}
+                              key={card.label}
+                            >
+                              <span>{card.label}</span>
+                              <strong>{card.value}</strong>
+                              <p>{card.detail}</p>
+                            </article>
+                          ))}
                         </div>
                         <div className="fit-trust-sources">
                           {officialSources.slice(0, 2).map((source) => (
@@ -7017,10 +7092,6 @@ export default function HomePage({
                             </a>
                           ))}
                         </div>
-                        <p className="fit-ai-boundary">
-                          AI output cannot override official sources, saved
-                          profile evidence, parsed job text or your review.
-                        </p>
                         <label className="official-review-control">
                           <input
                             checked={trustState.officialSourceReviewed}
@@ -7108,25 +7179,36 @@ export default function HomePage({
                             </article>
                           ))}
                         </div>
-                        {fitEvaluation.blockers.length ? (
-                          <ul className="bullets-list blocker-list">
-                            {fitEvaluation.blockers.map((blocker) => (
-                              <li key={blocker}>{blocker}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="empty-state">
-                            No blocker was detected by the current rules.
-                            Verify employer requirements before applying.
-                          </p>
-                        )}
-                        <ul className="evidence-list">
+                        <div className="fit-detail-dashboard">
+                          <article
+                            className={`fit-outcome-card ${
+                              fitEvaluation.blockers.length ? "blocked" : "good"
+                            }`}
+                          >
+                            <span>Blocker outcome</span>
+                            <strong>
+                              {fitEvaluation.blockers.length
+                                ? `${fitEvaluation.blockers.length} unresolved`
+                                : "Clear in rules"}
+                            </strong>
+                            <p>
+                              {fitEvaluation.blockers[0] ||
+                                "No blocker was detected by the current rules. Verify employer requirements before applying."}
+                            </p>
+                          </article>
                           {fitEvaluation.evidenceChecklist
                             .slice(0, 4)
-                            .map((item) => (
-                              <li key={item}>{item}</li>
+                            .map((item, index) => (
+                              <article
+                                className="fit-outcome-card neutral"
+                                key={item}
+                              >
+                                <span>{`Evidence check ${index + 1}`}</span>
+                                <strong>Review result</strong>
+                                <p>{item}</p>
+                              </article>
                             ))}
-                        </ul>
+                        </div>
                       </details>
                     </section>
                     <section className="panel">
@@ -7138,41 +7220,80 @@ export default function HomePage({
                             : "Best angle for this job"}
                         </h2>
                       </div>
-                      <p className="large-copy">
-                        {fitEvaluation.positioningAngle}
-                      </p>
-                      <ul className="bullets-list">
-                        {[
-                          fitEvaluation.nextBestAction,
-                          ...(state.jobAnalysis.scoreFactors ?? [])
-                        ].map((factor) => (
-                          <li key={factor}>{factor}</li>
+                      <div
+                        className="fit-outcome-dashboard compact"
+                        aria-label="Positioning outcomes"
+                      >
+                        {positioningResultCards.map((card) => (
+                          <article
+                            className={`fit-outcome-card ${card.tone}`}
+                            key={card.label}
+                          >
+                            <span>{card.label}</span>
+                            <strong>{card.value}</strong>
+                            <p>{card.detail}</p>
+                          </article>
                         ))}
-                      </ul>
+                        {(state.jobAnalysis.scoreFactors ?? []).map(
+                          (factor, index) => (
+                            <article
+                              className="fit-outcome-card neutral"
+                              key={factor}
+                            >
+                              <span>{`AI factor ${index + 1}`}</span>
+                              <strong>Review input</strong>
+                              <p>{factor}</p>
+                            </article>
+                          )
+                        )}
+                      </div>
                     </section>
                     <section className="panel">
                       <div className="section-heading">
                         <p className="eyebrow">What to check</p>
                         <h2>Skills, location and gaps</h2>
                       </div>
-                      <div className="tag-row">
-                        {(state.jobAnalysis.skills?.length
-                          ? state.jobAnalysis.skills
-                          : ["No skills detected yet"]
-                        ).map((skill) => (
-                          <span className="tag" key={skill}>
-                            {skill}
-                          </span>
-                        ))}
+                      <div
+                        className="fit-check-dashboard"
+                        aria-label="Skills and gaps results"
+                      >
+                        <article className="fit-outcome-card neutral">
+                          <span>Skills detected</span>
+                          <strong>
+                            {state.jobAnalysis.skills?.length ?? 0} saved
+                          </strong>
+                          <div className="tag-row compact">
+                            {(state.jobAnalysis.skills?.length
+                              ? state.jobAnalysis.skills
+                              : ["No skills detected yet"]
+                            ).map((skill) => (
+                              <span className="tag" key={skill}>
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </article>
+                        <article
+                          className={`fit-outcome-card ${
+                            state.jobAnalysis.gaps?.length ? "warn" : "good"
+                          }`}
+                        >
+                          <span>Gap result</span>
+                          <strong>
+                            {state.jobAnalysis.gaps?.length
+                              ? `${state.jobAnalysis.gaps.length} to review`
+                              : "No saved gaps"}
+                          </strong>
+                          <div className="result-list">
+                            {(state.jobAnalysis.gaps?.length
+                              ? state.jobAnalysis.gaps
+                              : ["No gaps saved yet."]
+                            ).map((gap) => (
+                              <p key={gap}>{gap}</p>
+                            ))}
+                          </div>
+                        </article>
                       </div>
-                      <ul className="bullets-list">
-                        {(state.jobAnalysis.gaps?.length
-                          ? state.jobAnalysis.gaps
-                          : ["No gaps saved yet."]
-                        ).map((gap) => (
-                          <li key={gap}>{gap}</li>
-                        ))}
-                      </ul>
                     </section>
                   </div>
                 </section>

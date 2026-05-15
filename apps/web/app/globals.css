@@ -3239,6 +3239,83 @@ h4 {
   line-height: 1.5;
 }
 
+.fit-outcome-dashboard,
+.fit-detail-dashboard,
+.fit-check-dashboard {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fit-outcome-dashboard.compact {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.fit-detail-dashboard {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.fit-check-dashboard {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.fit-outcome-card {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  min-height: 126px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.fit-outcome-card.good {
+  border-left-color: var(--green);
+}
+
+.fit-outcome-card.warn {
+  border-left-color: var(--amber);
+}
+
+.fit-outcome-card.blocked {
+  border-left-color: var(--red);
+}
+
+.fit-outcome-card.neutral {
+  border-left-color: var(--blue);
+}
+
+.fit-outcome-card > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.fit-outcome-card strong {
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.fit-outcome-card p {
+  margin: 0;
+  color: #3a4659;
+  line-height: 1.45;
+}
+
+.fit-outcome-card .tag-row {
+  margin: 0;
+}
+
+.result-list {
+  display: grid;
+  gap: 6px;
+}
+
 .fit-decision-actions {
   display: flex;
   grid-column: 1 / -1;
@@ -3274,8 +3351,7 @@ h4 {
 
 .fit-supporting-details > .country-rule-strip,
 .fit-supporting-details > .fit-component-grid,
-.fit-supporting-details > .bullets-list,
-.fit-supporting-details > .evidence-list,
+.fit-supporting-details > .fit-detail-dashboard,
 .fit-supporting-details > .empty-state {
   margin: 14px;
 }
@@ -3796,7 +3872,7 @@ h4 {
 
 .ai-audit-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
@@ -6053,6 +6129,16 @@ h4 {
     grid-template-columns: 1fr;
   }
 
+  .workspace-grid > .output-column {
+    position: static;
+    top: auto;
+  }
+
+  .job-check-input {
+    position: static;
+    top: auto;
+  }
+
   .metrics-strip,
   .decision-columns,
   .integrity-grid,
@@ -6214,6 +6300,11 @@ h4 {
     position: static;
   }
 
+  .workspace-grid > .output-column {
+    position: static;
+    top: auto;
+  }
+
   .application-row {
     grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.22fr) minmax(132px, 0.38fr);
   }
@@ -6303,6 +6394,8 @@ h4 {
   .segmented-options,
   .context-controls,
   .decision-columns,
+  .fit-outcome-dashboard,
+  .fit-check-dashboard,
   .pipeline-summary,
   .admin-header,
   .admin-console-hero,
@@ -6335,6 +6428,10 @@ h4 {
 
   .fit-ai-assist-panel button {
     width: 100%;
+  }
+
+  .fit-outcome-card {
+    min-height: auto;
   }
 
   .admin-shell {
