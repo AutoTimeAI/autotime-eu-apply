@@ -3288,6 +3288,35 @@ export default function HomePage({
           : "No urgent follow-up is waiting from tracked jobs."
     }
   ]
+  const strategicQualitySignals = [
+    {
+      label: "Strategic targeting",
+      value: getMarketLabel(productContext) ?? "European tech",
+      detail: `${productContext.targetCountry} / ${productContext.experienceLevel} / ${productContext.urgency}`
+    },
+    {
+      label: "Country-aware fit",
+      value: fitEvaluation.countryRule.name,
+      detail: fitEvaluation.countryRule.marketNote
+    },
+    {
+      label: "Evidence discipline",
+      value: profileReadyForExecution ? "Ready" : `${readinessScore}%`,
+      detail: profileReadyForExecution
+        ? "Profile proof can support fit checks, content and interview prep."
+        : "Complete Profile Evidence before relying on role decisions."
+    },
+    {
+      label: "Interview conversion",
+      value: `${outcomeAnalytics.interviews} signal${
+        outcomeAnalytics.interviews === 1 ? "" : "s"
+      }`,
+      detail:
+        state.interviewPrepPacks.length > 0
+          ? "Prep packs and outcomes are feeding the learning loop."
+          : "Track outcomes and interviews to improve future targeting."
+    }
+  ]
   const todayAction = !profileReadyForExecution
     ? {
         body: "Locked until your evidence profile reaches the required readiness. This keeps job checks, tracker actions and interview answers grounded in your real proof.",
@@ -5891,6 +5920,29 @@ export default function HomePage({
                   className="command-centre-overview"
                   aria-label="Homepage sections"
                 >
+                  <section
+                    className="strategic-quality-panel"
+                    aria-label="Strategic quality system"
+                  >
+                    <div>
+                      <p className="eyebrow">Quality over quantity</p>
+                      <h2>Strategic European tech application system</h2>
+                      <p>
+                        Choose stronger roles, verify country and work-right
+                        fit, prove your positioning, then learn from interview
+                        outcomes.
+                      </p>
+                    </div>
+                    <div className="strategic-signal-grid">
+                      {strategicQualitySignals.map((signal) => (
+                        <article key={signal.label}>
+                          <span>{signal.label}</span>
+                          <strong>{signal.value}</strong>
+                          <p>{signal.detail}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
                   <div className="today-focus-panel">
                     <div>
                       <p className="eyebrow">{todayAction.label}</p>

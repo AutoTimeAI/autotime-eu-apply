@@ -352,6 +352,7 @@ test("Public product promise matches the strategic European tech positioning", (
   const layout = read("apps/web/app/layout.tsx")
   const pricing = read("apps/web/app/pricing/page.tsx")
   const pricingCard = read("apps/web/components/PricingCard.tsx")
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const og = read("apps/web/app/api/og/route.tsx")
 
   assert.match(login, /Strategic European tech applications/)
@@ -369,6 +370,14 @@ test("Public product promise matches the strategic European tech positioning", (
   assert.match(pricing, /strategic targeting, country-aware fit/)
   assert.match(pricing, /quality-over-quantity workflow/)
   assert.match(pricingCard, /interview-conversion prep/)
+
+  assert.match(dashboard, /aria-label="Strategic quality system"/)
+  assert.match(dashboard, /Strategic European tech application system/)
+  assert.match(dashboard, /strategicQualitySignals/)
+  assert.match(dashboard, /Strategic targeting/)
+  assert.match(dashboard, /Country-aware fit/)
+  assert.match(dashboard, /Evidence discipline/)
+  assert.match(dashboard, /Interview conversion/)
 
   assert.match(og, /STRATEGIC TECH APPLY/)
   assert.match(og, /Better applications/)
