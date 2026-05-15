@@ -503,6 +503,79 @@ h4 {
   padding: 12px 14px;
 }
 
+.client-fallback-alert {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 120;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  width: min(460px, calc(100% - 36px));
+  align-items: center;
+  border: 1px solid rgba(173, 63, 72, 0.28);
+  border-left: 4px solid var(--red);
+  border-radius: 10px;
+  background: rgba(255, 248, 246, 0.98);
+  box-shadow: 0 24px 70px rgba(50, 44, 38, 0.18);
+  color: var(--text);
+  padding: 14px;
+}
+
+.client-fallback-alert strong,
+.client-fallback-alert p,
+.client-fallback-alert small {
+  margin: 0;
+}
+
+.client-fallback-alert div {
+  display: grid;
+  gap: 3px;
+}
+
+.client-fallback-alert strong {
+  color: var(--ink);
+}
+
+.client-fallback-alert p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.client-fallback-alert small {
+  color: var(--red);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.error-shell {
+  display: grid;
+  width: min(720px, calc(100% - 36px));
+  min-height: 100vh;
+  margin: 0 auto;
+  align-content: center;
+  gap: 14px;
+  padding: 48px 0;
+}
+
+.error-shell h1,
+.error-shell p {
+  margin: 0;
+}
+
+.error-shell > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
 .walkthrough-backdrop {
   position: fixed;
   inset: 0;

@@ -385,6 +385,34 @@ test("Public product promise matches the strategic European tech positioning", (
   assert.match(og, /Quality over quantity/)
 })
 
+test("Client fallbacks surface and record runtime and action failures", () => {
+  const layout = read("apps/web/app/layout.tsx")
+  const reporter = read("apps/web/components/ClientFallbackReporter.tsx")
+  const clientDiagnostics = read("apps/web/lib/client-diagnostics.ts")
+  const diagnosticsRoute = read("apps/web/app/api/diagnostics/client/route.ts")
+  const routeError = read("apps/web/app/error.tsx")
+  const globalError = read("apps/web/app/global-error.tsx")
+  const login = read("apps/web/components/LoginContent.tsx")
+  const pricingCard = read("apps/web/components/PricingCard.tsx")
+  const extensionConnect = read("apps/web/components/ExtensionConnect.tsx")
+
+  assert.match(layout, /<ClientFallbackReporter \/>/)
+  assert.match(reporter, /window\.addEventListener\("error"/)
+  assert.match(reporter, /window\.addEventListener\("unhandledrejection"/)
+  assert.match(reporter, /role="alert"/)
+  assert.match(reporter, /reportClientIssue/)
+  assert.match(clientDiagnostics, /\/api\/diagnostics\/client/)
+  assert.match(diagnosticsRoute, /"auth"/)
+  assert.match(diagnosticsRoute, /"billing"/)
+  assert.doesNotMatch(diagnosticsRoute, /diagnostics\.client\.auth\.blocked/)
+  assert.match(diagnosticsRoute, /authenticated: Boolean\(user\)/)
+  assert.match(routeError, /app\.route\.error-boundary/)
+  assert.match(globalError, /app\.global\.error-boundary/)
+  assert.match(login, /auth\.oauth\.start\.failed/)
+  assert.match(pricingCard, /billing\.checkout\.start\.failed/)
+  assert.match(extensionConnect, /extension\.connect\.unhandled/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

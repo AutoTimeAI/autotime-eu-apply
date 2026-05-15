@@ -2,6 +2,7 @@ import "./globals.css"
 import type { Metadata } from "next"
 import { Suspense, type ReactNode } from "react"
 import AnalyticsConsent from "../components/AnalyticsConsent"
+import { ClientFallbackReporter } from "../components/ClientFallbackReporter"
 import PostHogProvider from "../components/PostHogProvider"
 
 export const metadata: Metadata = {
@@ -51,6 +52,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <PostHogProvider />
           <AnalyticsConsent />
+          <ClientFallbackReporter />
         </Suspense>
         {children}
       </body>

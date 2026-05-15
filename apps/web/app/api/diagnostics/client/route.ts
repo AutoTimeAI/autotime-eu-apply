@@ -8,7 +8,18 @@ import {
 } from "../../../../lib/diagnostics"
 
 const clientDiagnosticSchema = z.object({
-  area: z.enum(["dashboard", "extension", "sync"]),
+  area: z.enum([
+    "account",
+    "ai",
+    "auth",
+    "billing",
+    "dashboard",
+    "env",
+    "extension",
+    "stripe",
+    "supabase",
+    "sync"
+  ]),
   code: z.string().trim().min(1).max(120),
   message: z.string().trim().min(1).max(500),
   metadata: z
@@ -27,20 +38,8 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<{ data: ClientDiagnosticData | null; error: string | null; status: number }>> {
   try {
-    const { user, error: userError } = await getRequestUser(request)
-
-    if (userError || !user) {
-      return diagnosticJson({
-        area: "dashboard",
-        code: "diagnostics.client.auth.blocked",
-        data: null,
-        error: "Unauthorised",
-        request,
-        status: 401
-      })
-    }
-
     const payload = clientDiagnosticSchema.parse(await request.json())
+    const { user } = await getRequestUser(request)
     const diagnostic = createDiagnostic({
       area: payload.area,
       code: payload.code,
@@ -51,8 +50,9 @@ export async function POST(
 
     logDiagnostic(diagnostic, {
       ...(payload.metadata ?? {}),
+      authenticated: Boolean(user),
       clientReported: true,
-      userId: user.id
+      userId: user?.id ?? null
     })
 
     return NextResponse.json({

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { z } from "zod";
+import { reportClientIssue } from "../lib/client-diagnostics";
 import type { SubscriptionPlan } from "../lib/supabase/types";
 
 type BillingInterval = "month" | "year";
@@ -123,6 +124,11 @@ function PricingCard({
             ? checkoutError.message
             : "Billing portal could not be opened";
         setError(message);
+        reportClientIssue({
+          area: "billing",
+          code: "billing.portal.open.failed",
+          message,
+        });
       } finally {
         setIsPending(false);
       }
@@ -151,6 +157,14 @@ function PricingCard({
           ? checkoutError.message
           : "Checkout could not be started";
       setError(message);
+      reportClientIssue({
+        area: "billing",
+        code: "billing.checkout.start.failed",
+        message,
+        metadata: {
+          billingInterval,
+        },
+      });
     } finally {
       setIsPending(false);
     }

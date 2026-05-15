@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { reportClientIssue } from "../lib/client-diagnostics";
 import { createBrowserClient } from "../lib/supabase/client";
 
 type OAuthProvider = "github" | "google";
@@ -41,6 +42,11 @@ function LoginForm() {
 
       if (error) {
         setStatus(`Failed: ${error.message}`);
+        reportClientIssue({
+          area: "auth",
+          code: "auth.session.read.failed",
+          message: error.message,
+        });
         return;
       }
 
@@ -101,12 +107,25 @@ function LoginForm() {
 
       if (error) {
         setStatus(`Failed: ${error.message}`);
+        reportClientIssue({
+          area: "auth",
+          code: "auth.oauth.start.failed",
+          message: error.message,
+          metadata: { provider },
+        });
         setPendingProvider(null);
         return;
       }
 
       if (!data.url) {
-        setStatus("Failed: sign-in URL was not returned. Please try again.");
+        const message = "Failed: sign-in URL was not returned. Please try again.";
+        setStatus(message);
+        reportClientIssue({
+          area: "auth",
+          code: "auth.oauth.missing-url",
+          message,
+          metadata: { provider },
+        });
         setPendingProvider(null);
         return;
       }
@@ -114,7 +133,14 @@ function LoginForm() {
       setStatus("Redirecting to identity provider...");
       window.location.assign(data.url);
     } catch (error: unknown) {
-      setStatus(`Failed: ${getErrorMessage(error)}`);
+      const message = getErrorMessage(error);
+      setStatus(`Failed: ${message}`);
+      reportClientIssue({
+        area: "auth",
+        code: "auth.oauth.unhandled",
+        message,
+        metadata: { provider },
+      });
       setPendingProvider(null);
     }
   };

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { reportClientIssue } from "../lib/client-diagnostics"
 import { createBrowserClient } from "../lib/supabase/client"
 
 type AccountMeResponse = {
@@ -200,6 +201,11 @@ export default function ExtensionConnect() {
         const message = "Sign in first, then reconnect the extension."
         addStep(message, "warning")
         setStatus(message)
+        reportClientIssue({
+          area: "extension",
+          code: "extension.connect.session.missing",
+          message
+        })
         return
       }
 
@@ -211,6 +217,11 @@ export default function ExtensionConnect() {
         const message = account.error ?? "Could not read your AutoTime account."
         addStep(message, "error")
         setStatus(message)
+        reportClientIssue({
+          area: "extension",
+          code: "extension.connect.account.read.failed",
+          message
+        })
         return
       }
 
@@ -247,6 +258,11 @@ export default function ExtensionConnect() {
         error instanceof Error ? error.message : "Extension connection failed."
       addStep(message, "error")
       setStatus(message)
+      reportClientIssue({
+        area: "extension",
+        code: "extension.connect.unhandled",
+        message
+      })
     } finally {
       setIsPending(false)
     }
