@@ -209,7 +209,7 @@ export function DashboardWorkflowSidebar() {
         <strong>Application flow</strong>
       </div>
       <nav className="dashboard-workflow-nav">
-        {dashboardWorkflowNavItems.map((item) => {
+        {dashboardWorkflowNavItems.map((item, index) => {
           const isActive = isActiveWorkflowNavItem(pathname, item)
           const isProtocolLocked =
             isLocked &&
@@ -239,7 +239,10 @@ export function DashboardWorkflowSidebar() {
                   : undefined
               }
             >
-              <span>{item.label}</span>
+              <span className="workflow-nav-title">
+                <b>{String(index + 1).padStart(2, "0")}</b>
+                <span>{item.label}</span>
+              </span>
               <small>{item.description}</small>
             </a>
           )
