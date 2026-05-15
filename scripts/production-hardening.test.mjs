@@ -175,7 +175,7 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   )
   assert.match(dashboard, /Use AI assistant/)
   assert.match(dashboard, /Open fit check/)
-  assert.match(dashboard, /Strengthen the fit analysis/)
+  assert.match(dashboard, /Strengthen the review/)
   assert.match(dashboard, /Rules first/)
   assert.match(dashboard, /AI strengthens the review, but evidence\s*controls the outcome/)
   assert.match(dashboard, /Official sources and saved proof outrank AI/)

@@ -1807,13 +1807,31 @@ h4 {
 }
 
 .job-check-brief {
-  grid-template-columns: minmax(220px, 0.42fr) minmax(170px, 0.2fr) minmax(
-      0,
-      1fr
-    );
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1120px;
+  gap: 14px;
+  margin-inline: auto;
   margin-bottom: 14px;
+  border-color: rgba(15, 118, 110, 0.28);
+  background: #f7fbfa;
   box-shadow: var(--shadow-tight);
+}
+
+.job-check-brief .decision-score {
+  border-color: rgba(15, 118, 110, 0.26);
+  border-top-color: var(--accent);
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 118, 110, 0.08);
+  padding: 16px;
+}
+
+.job-check-brief .decision-score strong {
+  color: var(--accent-strong);
+  font-size: 2rem;
+}
+
+.job-check-brief .decision-score span {
+  font-size: 1.35rem;
 }
 
 .job-check-brief .decision-columns {
@@ -3050,13 +3068,19 @@ h4 {
 }
 
 .job-check-grid {
-  grid-template-columns: minmax(320px, 0.86fr) minmax(0, 1.14fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  max-width: 1120px;
+  margin-inline: auto;
 }
 
 .job-check-input {
-  position: sticky;
-  top: 142px;
+  position: static;
+}
+
+.job-check-grid > .output-column {
+  position: static;
+  top: auto;
 }
 
 .job-check-input .section-heading p:not(.eyebrow) {
@@ -3357,11 +3381,16 @@ h4 {
 }
 
 .job-check-results {
-  gap: 14px;
+  gap: 16px;
 }
 
 .job-check-results .country-fit-panel {
   border-color: rgba(15, 118, 110, 0.22);
+}
+
+.fit-final-action-panel {
+  border-color: rgba(15, 118, 110, 0.28);
+  background: #f4fbf9;
 }
 
 .job-check-audit {
@@ -6394,6 +6423,7 @@ h4 {
   .segmented-options,
   .context-controls,
   .decision-columns,
+  .fit-decision-flow,
   .fit-outcome-dashboard,
   .fit-check-dashboard,
   .pipeline-summary,

@@ -5839,66 +5839,6 @@ export default function HomePage({
                   </section>
                 )}
 
-              {currentTab === "jobs" && (
-                <section
-                  className="decision-brief-panel job-check-brief"
-                  aria-label="UK/EU apply decision brief"
-                >
-                  <div>
-                    <p className="eyebrow">Analyse Fit</p>
-                    <h2>Evidence-led role decision</h2>
-                    <p>
-                      Load a tracked job or paste one role. AutoTime checks
-                      fit, risk and next action against your saved evidence.
-                    </p>
-                    <p className="decision-method-note">
-                      Rules first. Official sources and saved proof outrank AI.
-                    </p>
-                  </div>
-                  <div className="decision-score">
-                    <strong>
-                      <RevealMetric label="Show decision score">
-                        {decisionBrief.score}
-                      </RevealMetric>
-                    </strong>
-                    <span>{decisionBrief.decision}</span>
-                    <small>{decisionBrief.confidence} confidence</small>
-                    <small>
-                      {decisionBrief.contentGate === "ready"
-                        ? "No content blocker detected"
-                        : decisionBrief.contentGate === "stretch"
-                          ? "Stretch label required"
-                          : "Content blocked"}
-                    </small>
-                    <small>Guidance, not a guarantee</small>
-                  </div>
-                  <div
-                    className="fit-decision-flow"
-                    aria-label="Analyse Fit workflow"
-                  >
-                    <article>
-                      <span>1</span>
-                      <strong>Add role evidence</strong>
-                      <p>Load a tracked job or paste title, URL and JD.</p>
-                    </article>
-                    <article>
-                      <span>2</span>
-                      <strong>Check the decision</strong>
-                      <p>Review score, risk and missing proof.</p>
-                    </article>
-                    <article>
-                      <span>3</span>
-                      <strong>Save the role</strong>
-                      <p>Keep useful roles with the decision attached.</p>
-                    </article>
-                  </div>
-                  <p className="decision-integrity-note">
-                    AI can enrich job text. It cannot replace rules, evidence,
-                    official sources or user review.
-                  </p>
-                </section>
-              )}
-
               {isOverview && (
                 <section
                   className="command-centre-overview"
@@ -6823,8 +6763,8 @@ export default function HomePage({
                 >
                   <div className="input-column job-check-input">
                     <div className="section-heading">
-                      <p className="eyebrow">Role evidence</p>
-                      <h2>Analyse one job before you apply</h2>
+                      <p className="eyebrow">Step 1</p>
+                      <h2>Add the role evidence</h2>
                       <p>
                         Use a tracked job or paste one JD. Rules score it
                         first; AI strengthens the review.
@@ -6955,23 +6895,71 @@ export default function HomePage({
                         }
                       />
                     </label>
-                    <button
-                      disabled={!canSaveCheckedJob}
-                      type="button"
-                      onClick={saveApplicationFromJob}
-                    >
-                      Save to Tracked Jobs
-                    </button>
-                    <p className="job-check-save-note">
-                      Saves the score, risks and next action with the role.
-                    </p>
                   </div>
+
+                  <section
+                    className="decision-brief-panel job-check-brief"
+                    aria-label="UK/EU apply decision brief"
+                  >
+                    <div>
+                      <p className="eyebrow">Step 2</p>
+                      <h2>Evidence-led role decision</h2>
+                      <p>
+                        AutoTime checks fit, risk and next action against the
+                        role evidence above and your saved profile.
+                      </p>
+                      <p className="decision-method-note">
+                        Rules first. Official sources and saved proof outrank AI.
+                      </p>
+                    </div>
+                    <div className="decision-score">
+                      <strong>
+                        <RevealMetric label="Show decision score">
+                          {decisionBrief.score}
+                        </RevealMetric>
+                      </strong>
+                      <span>{decisionBrief.decision}</span>
+                      <small>{decisionBrief.confidence} confidence</small>
+                      <small>
+                        {decisionBrief.contentGate === "ready"
+                          ? "No content blocker detected"
+                          : decisionBrief.contentGate === "stretch"
+                            ? "Stretch label required"
+                            : "Content blocked"}
+                      </small>
+                      <small>Guidance, not a guarantee</small>
+                    </div>
+                    <div
+                      className="fit-decision-flow"
+                      aria-label="Analyse Fit workflow"
+                    >
+                      <article>
+                        <span>1</span>
+                        <strong>Add role evidence</strong>
+                        <p>Load a tracked job or paste title, URL and JD.</p>
+                      </article>
+                      <article>
+                        <span>2</span>
+                        <strong>Check the decision</strong>
+                        <p>Review score, risk and missing proof.</p>
+                      </article>
+                      <article>
+                        <span>3</span>
+                        <strong>Save the role</strong>
+                        <p>Keep useful roles with the decision attached.</p>
+                      </article>
+                    </div>
+                    <p className="decision-integrity-note">
+                      AI can enrich job text. It cannot replace rules, evidence,
+                      official sources or user review.
+                    </p>
+                  </section>
 
                   <div className="output-column job-check-results">
                     <section className="panel country-fit-panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Analyse Fit result</p>
-                        <h2>Should you apply?</h2>
+                        <p className="eyebrow">Step 3</p>
+                        <h2>Review the result dashboard</h2>
                         <span
                           className={`source-mode-pill ${currentJobInputMode.className}`}
                           title={currentJobInputMode.detail}
@@ -7103,20 +7091,8 @@ export default function HomePage({
                           I checked the official source for this country and
                           understand AutoTime is guidance, not work-right, visa
                           or sponsorship approval.
-                        </label>
+                          </label>
                       </section>
-                      <div className="fit-decision-actions">
-                        <button
-                          disabled={!canSaveCheckedJob}
-                          type="button"
-                          onClick={saveApplicationFromJob}
-                        >
-                          Save to Tracked Jobs
-                        </button>
-                        <a className="secondary-button" href="#analyse-fit-role">
-                          Edit role evidence
-                        </a>
-                      </div>
                       <details className="fit-supporting-details">
                         <summary>Show scoring details</summary>
                         <div className="country-rule-strip">
@@ -7213,7 +7189,7 @@ export default function HomePage({
                     </section>
                     <section className="panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Positioning first</p>
+                        <p className="eyebrow">Step 4</p>
                         <h2>
                           {fitEvaluation.contentGate === "blocked"
                             ? "Check the blocker before applying"
@@ -7250,7 +7226,7 @@ export default function HomePage({
                     </section>
                     <section className="panel">
                       <div className="section-heading">
-                        <p className="eyebrow">What to check</p>
+                        <p className="eyebrow">Step 5</p>
                         <h2>Skills, location and gaps</h2>
                       </div>
                       <div
@@ -7295,6 +7271,31 @@ export default function HomePage({
                         </article>
                       </div>
                     </section>
+                    <section
+                      className="panel fit-final-action-panel"
+                      aria-label="Final Analyse Fit action"
+                    >
+                      <div className="section-heading">
+                        <p className="eyebrow">Step 6</p>
+                        <h2>Save the decision</h2>
+                        <p>
+                          Save only after the role evidence, result, source
+                          check and gaps have been reviewed.
+                        </p>
+                      </div>
+                      <div className="fit-decision-actions">
+                        <button
+                          disabled={!canSaveCheckedJob}
+                          type="button"
+                          onClick={saveApplicationFromJob}
+                        >
+                          Save to Tracked Jobs
+                        </button>
+                        <a className="secondary-button" href="#analyse-fit-role">
+                          Edit role evidence
+                        </a>
+                      </div>
+                    </section>
                   </div>
                 </section>
               )}
@@ -7305,8 +7306,8 @@ export default function HomePage({
                   aria-label="Analyse Fit AI assistant"
                 >
                   <div className="section-heading">
-                    <p className="eyebrow">AI review</p>
-                    <h2>Strengthen the fit analysis</h2>
+                    <p className="eyebrow">Optional AI pass</p>
+                    <h2>Strengthen the review</h2>
                     <p>
                       AI summarises the JD, surfaces gaps and updates the
                       analysis. Rules, evidence and official sources stay in
