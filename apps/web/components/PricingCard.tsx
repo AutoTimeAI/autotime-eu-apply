@@ -1,92 +1,92 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { z } from "zod"
-import type { SubscriptionPlan } from "../lib/supabase/types"
+import { useState } from "react";
+import { z } from "zod";
+import type { SubscriptionPlan } from "../lib/supabase/types";
 
-type BillingInterval = "month" | "year"
-type PricingCardAction = "checkout" | "link" | "portal"
+type BillingInterval = "month" | "year";
+type PricingCardAction = "checkout" | "link" | "portal";
 
 type PricingCardFeature = {
-  label: string
-  included: boolean
-}
+  label: string;
+  included: boolean;
+};
 
 type PricingCardProps = {
-  action: PricingCardAction
-  annualPriceId?: string
-  billingInterval: BillingInterval
-  ctaLabel: string
-  description: string
-  features: PricingCardFeature[]
-  highlighted?: boolean
-  href?: string
-  monthlyPriceId?: string
-  name: string
-  price: string
-}
+  action: PricingCardAction;
+  annualPriceId?: string;
+  billingInterval: BillingInterval;
+  ctaLabel: string;
+  description: string;
+  features: PricingCardFeature[];
+  highlighted?: boolean;
+  href?: string;
+  monthlyPriceId?: string;
+  name: string;
+  price: string;
+};
 
 type PricingCardsProps = {
-  accountPlan?: SubscriptionPlan | null
-  annualPriceId: string
-  freeFeatures: PricingCardFeature[]
-  isSignedIn?: boolean
-  monthlyPriceId: string
-  proFeatures: PricingCardFeature[]
-}
+  accountPlan?: SubscriptionPlan | null;
+  annualPriceId: string;
+  freeFeatures: PricingCardFeature[];
+  isSignedIn?: boolean;
+  monthlyPriceId: string;
+  proFeatures: PricingCardFeature[];
+};
 
 const checkoutResponseSchema = z.object({
   data: z.object({ url: z.string().url() }).nullable(),
   error: z.string().nullable(),
-  status: z.number()
-})
+  status: z.number(),
+});
 
 async function startCheckout(priceId: string): Promise<string> {
   const response = await fetch("/api/stripe/checkout", {
     body: JSON.stringify({
       priceId,
-      returnUrl: `${window.location.origin}/dashboard`
+      returnUrl: `${window.location.origin}/dashboard`,
     }),
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    method: "POST"
-  })
+    method: "POST",
+  });
 
   if (response.status === 401) {
-    const redirectTo = encodeURIComponent("/pricing")
-    window.location.assign(`/login?redirectTo=${redirectTo}`)
-    return ""
+    const redirectTo = encodeURIComponent("/pricing");
+    window.location.assign(`/login?redirectTo=${redirectTo}`);
+    return "";
   }
 
-  const contentType = response.headers.get("content-type") ?? ""
+  const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
-    throw new Error("Please sign in before starting checkout")
+    throw new Error("Please sign in before starting checkout");
   }
 
-  const parsed = checkoutResponseSchema.parse(await response.json())
+  const parsed = checkoutResponseSchema.parse(await response.json());
   if (!response.ok || !parsed.data?.url) {
-    throw new Error(parsed.error ?? "Checkout could not be started")
+    throw new Error(parsed.error ?? "Checkout could not be started");
   }
 
-  return parsed.data.url
+  return parsed.data.url;
 }
 
 async function startBillingPortal(): Promise<string> {
   const response = await fetch("/api/stripe/portal", {
     body: JSON.stringify({ returnUrl: window.location.href }),
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    method: "POST"
-  })
-  const parsed = checkoutResponseSchema.parse(await response.json())
+    method: "POST",
+  });
+  const parsed = checkoutResponseSchema.parse(await response.json());
 
   if (!response.ok || !parsed.data?.url) {
-    throw new Error(parsed.error ?? "Billing portal could not be opened")
+    throw new Error(parsed.error ?? "Billing portal could not be opened");
   }
 
-  return parsed.data.url
+  return parsed.data.url;
 }
 
 function PricingCard({
@@ -100,59 +100,59 @@ function PricingCard({
   href,
   monthlyPriceId,
   name,
-  price
+  price,
 }: PricingCardProps) {
-  const [isPending, setIsPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const priceId = billingInterval === "year" ? annualPriceId : monthlyPriceId
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const priceId = billingInterval === "year" ? annualPriceId : monthlyPriceId;
 
   async function handleCheckout() {
     if (action === "link") {
-      window.location.assign(href ?? "/login")
-      return
+      window.location.assign(href ?? "/login");
+      return;
     }
 
     if (action === "portal") {
       try {
-        setError(null)
-        setIsPending(true)
-        window.location.assign(await startBillingPortal())
+        setError(null);
+        setIsPending(true);
+        window.location.assign(await startBillingPortal());
       } catch (checkoutError: unknown) {
         const message =
           checkoutError instanceof Error
             ? checkoutError.message
-            : "Billing portal could not be opened"
-        setError(message)
+            : "Billing portal could not be opened";
+        setError(message);
       } finally {
-        setIsPending(false)
+        setIsPending(false);
       }
 
-      return
+      return;
     }
 
     if (!priceId) {
-      window.location.assign("/login")
-      return
+      window.location.assign("/login");
+      return;
     }
 
     try {
-      setError(null)
-      setIsPending(true)
-      const checkoutUrl = await startCheckout(priceId)
+      setError(null);
+      setIsPending(true);
+      const checkoutUrl = await startCheckout(priceId);
 
       if (!checkoutUrl) {
-        return
+        return;
       }
 
-      window.location.assign(checkoutUrl)
+      window.location.assign(checkoutUrl);
     } catch (checkoutError: unknown) {
       const message =
         checkoutError instanceof Error
           ? checkoutError.message
-          : "Checkout could not be started"
-      setError(message)
+          : "Checkout could not be started";
+      setError(message);
     } finally {
-      setIsPending(false)
+      setIsPending(false);
     }
   }
 
@@ -189,7 +189,7 @@ function PricingCard({
       )}
       {error && <p className="pricing-error">{error}</p>}
     </article>
-  )
+  );
 }
 
 export function PricingCards({
@@ -198,13 +198,12 @@ export function PricingCards({
   freeFeatures,
   isSignedIn = false,
   monthlyPriceId,
-  proFeatures
+  proFeatures,
 }: PricingCardsProps) {
   const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("month")
-  const proPrice =
-    billingInterval === "year" ? "GBP 79/year" : "GBP 9/month"
-  const isPro = accountPlan === "pro"
+    useState<BillingInterval>("month");
+  const proPrice = billingInterval === "year" ? "GBP 79/year" : "GBP 9/month";
+  const isPro = accountPlan === "pro";
 
   return (
     <>
@@ -230,7 +229,7 @@ export function PricingCards({
           action="link"
           billingInterval={billingInterval}
           ctaLabel={isSignedIn ? "Open dashboard" : "Start free"}
-          description="Strategic targeting, country-aware fit, tracked jobs and limited AI analysis."
+          description="Strategic targeting, country-aware fit, tracked jobs and five monthly AI analyses."
           features={freeFeatures}
           href={isSignedIn ? "/dashboard" : "/login"}
           name="Free"
@@ -241,7 +240,7 @@ export function PricingCards({
           annualPriceId={annualPriceId}
           billingInterval={billingInterval}
           ctaLabel={isPro ? "Manage plan" : "Start Pro"}
-          description="Unlimited AI, full workflow sync and interview-conversion prep."
+          description="Unlimited AI, full workflow sync, application writing and interview-conversion prep."
           features={proFeatures}
           highlighted
           monthlyPriceId={monthlyPriceId}
@@ -250,5 +249,5 @@ export function PricingCards({
         />
       </div>
     </>
-  )
+  );
 }

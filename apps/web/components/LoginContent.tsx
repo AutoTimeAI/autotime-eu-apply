@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useSearchParams } from "next/navigation"
-import { Suspense, useEffect, useState } from "react"
-import { createBrowserClient } from "../lib/supabase/client"
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { createBrowserClient } from "../lib/supabase/client";
 
-type OAuthProvider = "github" | "google"
+type OAuthProvider = "github" | "google";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
-    : "Sign-in could not be started. Please try again."
+    : "Sign-in could not be started. Please try again.";
 }
 
 function LoginForm() {
-  const searchParams = useSearchParams()
-  const authError = searchParams.get("error") || searchParams.get("message")
+  const searchParams = useSearchParams();
+  const authError = searchParams.get("error") || searchParams.get("message");
   const [status, setStatus] = useState<string | null>(
     authError
       ? `Failed: ${authError}`
@@ -22,102 +22,102 @@ function LoginForm() {
         ? "Session expired. Sign in again to continue."
         : searchParams.get("loggedOut")
           ? "You have been signed out."
-          : null
-  )
+          : null,
+  );
   const [pendingProvider, setPendingProvider] = useState<OAuthProvider | null>(
-    null
-  )
-  const [accountConsent, setAccountConsent] = useState(false)
-  const redirectTo = searchParams.get("redirectTo") || "/dashboard"
+    null,
+  );
+  const [accountConsent, setAccountConsent] = useState(false);
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
   useEffect(() => {
-    let isMounted = true
-    const supabase = createBrowserClient()
+    let isMounted = true;
+    const supabase = createBrowserClient();
 
     supabase.auth.getSession().then(({ data, error }) => {
       if (!isMounted) {
-        return
+        return;
       }
 
       if (error) {
-        setStatus(`Failed: ${error.message}`)
-        return
+        setStatus(`Failed: ${error.message}`);
+        return;
       }
 
       if (data.session) {
-        setStatus("Already signed in. Redirecting to dashboard...")
-        window.location.replace(redirectTo)
+        setStatus("Already signed in. Redirecting to dashboard...");
+        window.location.replace(redirectTo);
       }
-    })
+    });
 
     const {
-      data: { subscription }
+      data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        setStatus("Signed in. Redirecting to dashboard...")
-        window.location.replace(redirectTo)
+        setStatus("Signed in. Redirecting to dashboard...");
+        window.location.replace(redirectTo);
       }
 
       if (event === "SIGNED_OUT") {
-        setStatus("Session expired. Sign in again to continue.")
-        setPendingProvider(null)
+        setStatus("Session expired. Sign in again to continue.");
+        setPendingProvider(null);
       }
-    })
+    });
 
     return () => {
-      isMounted = false
-      subscription.unsubscribe()
-    }
-  }, [redirectTo])
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [redirectTo]);
 
   const handleSignIn = async (provider: OAuthProvider) => {
     try {
       if (!accountConsent) {
-        setStatus("Please confirm account access before continuing.")
-        return
+        setStatus("Please confirm account access before continuing.");
+        return;
       }
 
-      setStatus("Opening secure sign-in...")
-      setPendingProvider(provider)
+      setStatus("Opening secure sign-in...");
+      setPendingProvider(provider);
 
-      const supabase = createBrowserClient()
-      const callbackUrl = new URL("/auth/callback", window.location.origin)
-      callbackUrl.searchParams.set("redirectTo", redirectTo)
+      const supabase = createBrowserClient();
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("redirectTo", redirectTo);
       const queryParams =
         provider === "google"
           ? {
-              prompt: "consent select_account"
+              prompt: "consent select_account",
             }
-          : undefined
+          : undefined;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           queryParams,
           redirectTo: callbackUrl.toString(),
-          skipBrowserRedirect: true
-        }
-      })
+          skipBrowserRedirect: true,
+        },
+      });
 
       if (error) {
-        setStatus(`Failed: ${error.message}`)
-        setPendingProvider(null)
-        return
+        setStatus(`Failed: ${error.message}`);
+        setPendingProvider(null);
+        return;
       }
 
       if (!data.url) {
-        setStatus("Failed: sign-in URL was not returned. Please try again.")
-        setPendingProvider(null)
-        return
+        setStatus("Failed: sign-in URL was not returned. Please try again.");
+        setPendingProvider(null);
+        return;
       }
 
-      setStatus("Redirecting to identity provider...")
-      window.location.assign(data.url)
+      setStatus("Redirecting to identity provider...");
+      window.location.assign(data.url);
     } catch (error: unknown) {
-      setStatus(`Failed: ${getErrorMessage(error)}`)
-      setPendingProvider(null)
+      setStatus(`Failed: ${getErrorMessage(error)}`);
+      setPendingProvider(null);
     }
-  }
+  };
 
   return (
     <main className="auth-shell">
@@ -125,12 +125,13 @@ function LoginForm() {
         <div>
           <p className="eyebrow">Strategic European tech applications</p>
           <h1 id="auth-intro-title">
-            Better applications.<br />
+            Better applications.
+            <br />
             Stronger interviews.
           </h1>
           <p>
-            AutoTime helps you choose better European tech roles, prove fit
-            with real evidence, and position every application around country,
+            AutoTime helps you choose better European tech roles, prove fit with
+            real evidence, and position every application around country,
             work-right and market reality. Quality over quantity, always.
           </p>
         </div>
@@ -186,7 +187,7 @@ function LoginForm() {
 
         <div className="header-actions auth-provider-actions">
           <button
-            disabled={Boolean(pendingProvider) || !accountConsent}
+            disabled={Boolean(pendingProvider)}
             type="button"
             onClick={() => handleSignIn("github")}
           >
@@ -196,7 +197,7 @@ function LoginForm() {
           </button>
           <button
             className="secondary-button"
-            disabled={Boolean(pendingProvider) || !accountConsent}
+            disabled={Boolean(pendingProvider)}
             type="button"
             onClick={() => handleSignIn("google")}
           >
@@ -206,6 +207,13 @@ function LoginForm() {
           </button>
         </div>
 
+        {!accountConsent && !status ? (
+          <p className="auth-consent-hint">
+            Confirm account permission first. The sign-in buttons will explain
+            this if you click before ticking it.
+          </p>
+        ) : null}
+
         {status ? <p className="status-banner">{status}</p> : null}
 
         <p className="auth-privacy-note">
@@ -214,7 +222,7 @@ function LoginForm() {
         </p>
       </section>
     </main>
-  )
+  );
 }
 
 export function LoginContent() {
@@ -222,5 +230,5 @@ export function LoginContent() {
     <Suspense fallback={null}>
       <LoginForm />
     </Suspense>
-  )
+  );
 }

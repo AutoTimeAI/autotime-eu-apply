@@ -819,7 +819,9 @@ h4 {
 }
 
 .follow-up-card {
-  grid-template-columns: minmax(220px, 1fr) auto minmax(180px, 0.65fr) minmax(150px, 0.45fr) auto;
+  grid-template-columns:
+    minmax(220px, 1fr) auto minmax(180px, 0.65fr) minmax(150px, 0.45fr)
+    auto;
   align-items: end;
   border: 1px solid rgba(216, 224, 235, 0.84);
   border-left: 4px solid var(--blue);
@@ -1822,8 +1824,7 @@ h4 {
 .cv-review-result-panel {
   border-color: rgba(15, 118, 110, 0.26);
   background:
-    linear-gradient(135deg, rgba(242, 251, 249, 0.9), transparent 42%),
-    #ffffff;
+    linear-gradient(135deg, rgba(242, 251, 249, 0.9), transparent 42%), #ffffff;
 }
 
 .cv-review-result-panel.loading {
@@ -2689,7 +2690,11 @@ h4 {
   border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(242, 251, 249, 0.9)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.94),
+      rgba(242, 251, 249, 0.9)
+    ),
     #ffffff;
   padding: 12px;
 }
@@ -3790,7 +3795,10 @@ h4 {
     "summary status actions"
     "summary next actions"
     "summary outcome notes";
-  grid-template-columns: minmax(280px, 1.15fr) minmax(360px, 1.35fr) minmax(144px, 0.44fr);
+  grid-template-columns: minmax(280px, 1.15fr) minmax(360px, 1.35fr) minmax(
+      144px,
+      0.44fr
+    );
   gap: 12px;
   align-items: stretch;
   border: 1px solid rgba(216, 224, 235, 0.84);
@@ -4602,12 +4610,86 @@ h4 {
 }
 
 .landing-hero {
+  position: relative;
   display: grid;
-  min-height: min(610px, calc(100vh - 70px));
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.78fr);
-  gap: 48px;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
+  min-height: min(560px, calc(100vh - 96px));
+  align-items: end;
+  overflow: hidden;
+  border: 1px solid rgba(13, 23, 40, 0.12);
+  border-radius: 12px;
+  background: #0d1728;
+  box-shadow: var(--shadow-soft);
+  margin: 8px 0 18px;
+  padding: 38px;
+}
+
+.landing-hero-media,
+.landing-hero-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.landing-hero-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.32;
+}
+
+.landing-hero-overlay {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(13, 23, 40, 0.92),
+      rgba(13, 23, 40, 0.72) 46%,
+      rgba(13, 23, 40, 0.28)
+    ),
+    linear-gradient(0deg, rgba(13, 23, 40, 0.78), rgba(13, 23, 40, 0.08));
+}
+
+.landing-hero-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(760px, 100%);
+  gap: 16px;
+  color: #ffffff;
+}
+
+.landing-hero-content h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.6rem, 8vw, 5.15rem);
+  line-height: 0.96;
+}
+
+.landing-hero-content > p:not(.eyebrow) {
+  max-width: 690px;
+  margin: 0;
+  color: rgba(245, 250, 253, 0.84);
+  font-size: 1.08rem;
+  line-height: 1.62;
+}
+
+.landing-hero-content .eyebrow {
+  color: #9ee1d4;
+}
+
+.landing-hero-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 760px;
+}
+
+.landing-hero-signals span {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: 7px 9px;
 }
 
 .landing-hero-copy {
@@ -4788,6 +4870,10 @@ h4 {
   gap: 16px;
 }
 
+.landing-step-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .landing-step,
 .landing-feature,
 .pricing-teaser {
@@ -4816,6 +4902,13 @@ h4 {
   margin: 0;
   color: var(--muted);
   line-height: 1.65;
+}
+
+.section-heading p:not(.eyebrow),
+.landing-cta-band p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.62;
 }
 
 .feature-band {
@@ -5554,6 +5647,14 @@ h4 {
 
 .auth-provider-actions {
   margin-top: -2px;
+}
+
+.auth-consent-hint {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .auth-privacy-note {
@@ -6388,8 +6489,9 @@ h4 {
   }
 
   .landing-hero {
-    min-height: auto;
-    padding: 54px 0;
+    min-height: 500px;
+    align-items: end;
+    padding: 28px;
   }
 
   .workspace-grid .output-column {
@@ -6444,7 +6546,6 @@ h4 {
   .suggestion-card {
     grid-template-columns: 1fr;
   }
-
 }
 
 @media (max-width: 1180px) and (min-width: 981px) {
@@ -6477,7 +6578,10 @@ h4 {
   }
 
   .application-row {
-    grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.22fr) minmax(132px, 0.38fr);
+    grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.22fr) minmax(
+        132px,
+        0.38fr
+      );
   }
 
   .ai-settings-panel {
@@ -6535,6 +6639,7 @@ h4 {
   }
 
   .landing-hero-copy h1,
+  .landing-hero-content h1,
   .auth-intro h1,
   .pricing-hero h1,
   .legal-header h1 {

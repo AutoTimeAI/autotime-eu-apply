@@ -1,98 +1,99 @@
-import { PublicNav } from "../../components/PublicNav"
-import { ProfileProtocolLock } from "../../components/ProfileProtocolLock"
-import { PricingCards } from "../../components/PricingCard"
-import { PricingFaq } from "../../components/PricingFaq"
-import { getServerEnv } from "../../lib/env"
-import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate"
-import { createServerClient } from "../../lib/supabase/server"
-import type { SubscriptionPlan } from "../../lib/supabase/types"
-import { getTestAuthUser } from "../../lib/test-auth"
+import { PublicNav } from "../../components/PublicNav";
+import { ProfileProtocolLock } from "../../components/ProfileProtocolLock";
+import { PricingCards } from "../../components/PricingCard";
+import { PricingFaq } from "../../components/PricingFaq";
+import { getServerEnv } from "../../lib/env";
+import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate";
+import { createServerClient } from "../../lib/supabase/server";
+import type { SubscriptionPlan } from "../../lib/supabase/types";
+import { getTestAuthUser } from "../../lib/test-auth";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 type PricingAccount = {
-  email: string
-  id: string
-  plan: SubscriptionPlan
-  remainingAiCalls: number | null
-}
+  email: string;
+  id: string;
+  plan: SubscriptionPlan;
+  remainingAiCalls: number | null;
+};
 
 async function getPricingAccount(): Promise<PricingAccount | null> {
   try {
-    const testUser = getTestAuthUser()
+    const testUser = getTestAuthUser();
 
     if (testUser) {
       return {
         email: testUser.email ?? "account",
         id: testUser.id,
         plan: await getUserPlan(testUser.id),
-        remainingAiCalls: await getRemainingAiCalls(testUser.id)
-      }
+        remainingAiCalls: await getRemainingAiCalls(testUser.id),
+      };
     }
 
-    const supabase = await createServerClient()
+    const supabase = await createServerClient();
     const {
       data: { user },
-      error
-    } = await supabase.auth.getUser()
+      error,
+    } = await supabase.auth.getUser();
 
     if (error || !user) {
-      return null
+      return null;
     }
 
-    const plan = await getUserPlan(user.id)
+    const plan = await getUserPlan(user.id);
 
     return {
       email: user.email ?? "account",
       id: user.id,
       plan,
-      remainingAiCalls: plan === "free" ? await getRemainingAiCalls(user.id) : null
-    }
+      remainingAiCalls:
+        plan === "free" ? await getRemainingAiCalls(user.id) : null,
+    };
   } catch (error: unknown) {
-    return null
+    return null;
   }
 }
 
 const faqs = [
   {
     question: "Do I need an OpenAI account?",
-    answer: "No. AutoTime provides AI through the web dashboard when available."
+    answer:
+      "No. AutoTime provides AI through the web dashboard when available.",
   },
   {
     question: "Is my data private?",
     answer:
-      "Yes - designed around GDPR principles, explicit user consent, and reputable infrastructure providers."
+      "Yes - designed around GDPR principles, explicit user consent, and reputable infrastructure providers.",
   },
   {
     question: "Can I cancel?",
-    answer: "Yes, any time from your billing portal."
+    answer: "Yes, any time from your billing portal.",
   },
   {
     question: "Does it work for non-UK candidates?",
     answer:
-      "Yes - built specifically for EU relocation and work-right scenarios."
+      "Yes - it is built for country-aware fit, relocation and work-right clarity across European tech applications.",
   },
   {
-    question: "What ATS platforms does it support?",
+    question: "What is the main advantage?",
     answer:
-      "LinkedIn visible job posts plus Greenhouse, Lever, Workday, Ashby, SmartRecruiters, iCIMS, BambooHR, Teamtailor, Recruitee, Jobvite and Personio."
-  }
-]
+      "AutoTime helps you apply less randomly: target roles strategically, check fit before writing, use real evidence and prepare for interview conversion.",
+  },
+];
 
 const freeFeatures = [
-  { label: "Chrome extension with local save first", included: true },
-  { label: "Tracked job sync to dashboard", included: true },
+  { label: "Strategic role targeting workspace", included: true },
+  { label: "Tracked jobs and progress view", included: true },
   { label: "5 AI job analyses per month", included: true },
-  { label: "Application tracking (unlimited)", included: true },
   { label: "Work-right and country fit scoring", included: true },
-  { label: "Strategic targeting and positioning workflow", included: true },
-  { label: "Visible LinkedIn and job-board import", included: true },
+  { label: "Evidence-backed positioning workflow", included: true },
+  { label: "Visible job-post import", included: true },
   { label: "CSV export", included: true },
   { label: "Full profile and workflow cloud sync", included: false },
   { label: "AI application content generation", included: false },
   { label: "Interview prep packs", included: false },
-  { label: "Unlimited AI analyses", included: false }
-]
+  { label: "Unlimited AI analyses", included: false },
+];
 
 const proFeatures = [
   { label: "Everything in Free", included: true },
@@ -100,13 +101,13 @@ const proFeatures = [
   { label: "Unlimited AI job analyses", included: true },
   { label: "AI cover letter and application content", included: true },
   { label: "Role-specific interview prep packs", included: true },
-  { label: "Priority ATS platform support", included: true },
-  { label: "Cancel any time", included: true }
-]
+  { label: "Interview conversion workflow", included: true },
+  { label: "Priority workflow support", included: true },
+];
 
 export default async function PricingPage() {
-  const serverEnv = getServerEnv()
-  const account = await getPricingAccount()
+  const serverEnv = getServerEnv();
+  const account = await getPricingAccount();
 
   return (
     <main className="pricing-shell">
@@ -118,9 +119,9 @@ export default async function PricingPage() {
             <p className="eyebrow">Pricing</p>
             <h1>Quality-first European tech applications</h1>
             <p>
-              Start free with strategic targeting, country-aware fit and
-              tracked-job sync. Upgrade when you need unlimited AI, full
-              workflow sync and interview prep.
+              Start free with strategic targeting, country-aware fit and real
+              evidence discipline. Upgrade when you need unlimited AI, full
+              workflow sync and interview conversion prep.
             </p>
           </div>
         </header>
@@ -136,7 +137,7 @@ export default async function PricingPage() {
 
         <section className="pricing-gate-panel" aria-label="Plan gate clarity">
           <div className="section-heading">
-            <p className="eyebrow">No hidden surprise</p>
+            <p className="eyebrow">No hidden surprises</p>
             <h2>What is locked, why, and what Pro unlocks</h2>
             <p>
               Free keeps the quality-over-quantity workflow usable. Pro removes
@@ -152,9 +153,11 @@ export default async function PricingPage() {
                   ? account.plan === "pro"
                     ? "Unlimited"
                     : `${account.remainingAiCalls ?? 0} this month`
-                  : "Sign in to view"}
+                  : "5/month on Free"}
               </strong>
-              <p>Free includes limited AI analysis so you can validate quality.</p>
+              <p>
+                Free includes limited AI analysis so you can validate quality.
+              </p>
             </article>
             <article>
               <span>Locked on Free</span>
@@ -168,16 +171,16 @@ export default async function PricingPage() {
               <span>Why it is locked</span>
               <strong>Cost and evidence control</strong>
               <p>
-                AI usage has real compute cost, and Pro features rely on stronger
-                account-level workflow persistence.
+                AI usage has real compute cost, and Pro features rely on
+                stronger account-level workflow persistence.
               </p>
             </article>
             <article>
               <span>Upgrade unlocks</span>
               <strong>More intelligence, same control</strong>
               <p>
-                You still review everything. AutoTime does not auto-submit or hide
-                job-site actions behind the upgrade.
+                You still review everything. AutoTime does not auto-submit or
+                hide job-site actions behind the upgrade.
               </p>
             </article>
           </div>
@@ -192,5 +195,5 @@ export default async function PricingPage() {
         </section>
       </ProfileProtocolLock>
     </main>
-  )
+  );
 }
