@@ -5,9 +5,9 @@ import AnalyticsConsent from "../components/AnalyticsConsent"
 import PostHogProvider from "../components/PostHogProvider"
 
 export const metadata: Metadata = {
-  title: "AutoTime EU Apply",
+  title: "AutoTime EU Apply - Strategic European Tech Applications",
   description:
-    "Cross-border job application copilot for Europe. Transparent gap scoring, risk flags, and next actions — no auto-submit, no spam.",
+    "Quality-first European tech applications with strategic targeting, country-aware fit, work-right clarity, evidence-backed positioning, and interview conversion.",
   metadataBase: new URL("https://autotime-eu-apply.vercel.app"),
   icons: {
     apple: "/icon.png",
@@ -15,9 +15,9 @@ export const metadata: Metadata = {
     shortcut: "/icon.png"
   },
   openGraph: {
-    title: "AutoTime EU Apply — Borderless Apply for Europe",
+    title: "AutoTime EU Apply - Strategic European Tech Applications",
     description:
-      "Know your fit before you apply. Gap scoring, risk flags, and next actions for EU cross-border tech candidates.",
+      "Apply smarter to European tech roles with country-aware fit checks, work-right clarity, evidence-backed positioning, and interview-focused workflows.",
     url: "https://autotime-eu-apply.vercel.app",
     siteName: "AutoTime EU Apply",
     images: [
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
         url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "AutoTime EU Apply — cross-border job application copilot for Europe"
+        alt: "AutoTime EU Apply - strategic European tech application workspace"
       }
     ],
     locale: "en_GB",
@@ -33,9 +33,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AutoTime EU Apply — Borderless Apply for Europe",
+    title: "AutoTime EU Apply - Strategic European Tech Applications",
     description:
-      "Gap scoring, risk flags, and next actions for EU cross-border tech candidates. No auto-submit.",
+      "Quality over quantity for European tech applications: country-aware fit, work-right clarity, evidence-backed positioning, and interview conversion.",
     images: ["/api/og"]
   }
 }

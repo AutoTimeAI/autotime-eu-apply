@@ -42,7 +42,7 @@ export async function GET() {
               textTransform: "uppercase"
             }}
           >
-            AUTOTIME · BORDERLESS APPLY
+            AUTOTIME - STRATEGIC TECH APPLY
           </span>
         </div>
 
@@ -56,30 +56,30 @@ export async function GET() {
               letterSpacing: "-0.025em"
             }}
           >
-            Your EU job search,
+            Better applications,
             <br />
-            <span style={{ color: "#2dd4bf" }}>without the guesswork.</span>
+            <span style={{ color: "#2dd4bf" }}>stronger interviews.</span>
           </div>
           <div
             style={{
               fontSize: "22px",
               color: "rgba(238,247,245,0.65)",
               lineHeight: 1.55,
-              maxWidth: "760px",
+              maxWidth: "790px",
               fontWeight: 400
             }}
           >
-            Transparent gap scoring, risk flags, and next actions — built for
-            cross-border EU tech candidates. No auto-submit.
+            Strategic targeting, country-aware fit, work-right clarity and
+            evidence-backed positioning for European tech roles.
           </div>
         </div>
 
         <div style={{ display: "flex", gap: "16px" }}>
           {(
             [
-              ["EU cross-border", "Country fit, visa risk, market context"],
-              ["No auto-submit", "You review every application"],
-              ["Transparent scoring", "Gaps, risks, next actions clearly"]
+              ["Country-aware fit", "Market context, sponsorship and location risk"],
+              ["Quality over quantity", "Choose stronger roles before applying"],
+              ["Interview conversion", "Proof, follow-ups, prep and outcomes"]
             ] as [string, string][]
           ).map(([label, sub]) => (
             <div

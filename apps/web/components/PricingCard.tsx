@@ -230,7 +230,7 @@ export function PricingCards({
           action="link"
           billingInterval={billingInterval}
           ctaLabel={isSignedIn ? "Open dashboard" : "Start free"}
-          description="Tracked-job sync, local-first saving and limited AI analysis."
+          description="Strategic targeting, country-aware fit, tracked jobs and limited AI analysis."
           features={freeFeatures}
           href={isSignedIn ? "/dashboard" : "/login"}
           name="Free"
@@ -241,7 +241,7 @@ export function PricingCards({
           annualPriceId={annualPriceId}
           billingInterval={billingInterval}
           ctaLabel={isPro ? "Manage plan" : "Start Pro"}
-          description="Unlimited AI, full workflow sync and interview prep."
+          description="Unlimited AI, full workflow sync and interview-conversion prep."
           features={proFeatures}
           highlighted
           monthlyPriceId={monthlyPriceId}

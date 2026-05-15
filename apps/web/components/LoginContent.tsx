@@ -123,38 +123,37 @@ function LoginForm() {
     <main className="auth-shell">
       <section className="auth-intro" aria-labelledby="auth-intro-title">
         <div>
-          <p className="eyebrow">AutoTime - Borderless Apply</p>
+          <p className="eyebrow">Strategic European tech applications</p>
           <h1 id="auth-intro-title">
-            Your EU job search,<br />
-            without the guesswork.
+            Better applications.<br />
+            Stronger interviews.
           </h1>
           <p>
-            Know your fit before you apply. Transparent gap scoring, risk flags,
-            and next actions, built for cross-border European tech candidates.
-            You review everything. Nothing submits without you.
+            AutoTime helps you choose better European tech roles, prove fit
+            with real evidence, and position every application around country,
+            work-right and market reality. Quality over quantity, always.
           </p>
         </div>
 
         <div className="auth-proof-grid" aria-label="Product strengths">
           <div>
-            <strong>EU cross-border</strong>
+            <strong>Strategic targeting</strong>
             <span>
-              Country fit, visa risk, and market context. No US-only
-              assumptions.
+              Spend effort on roles where market, evidence and timing line up.
             </span>
           </div>
           <div>
-            <strong>No auto-submit</strong>
+            <strong>Country-aware fit</strong>
             <span>
-              You approve every application. No bots, no hidden steps, no spam
-              risk.
+              UK/EU country context, work-right clarity and sponsorship risk
+              stay visible before you write.
             </span>
           </div>
           <div>
-            <strong>Transparent scoring</strong>
+            <strong>Interview conversion</strong>
             <span>
-              Gaps, risks, and next actions shown clearly before you commit
-              effort.
+              Evidence-backed positioning, follow-ups and prep focus on winning
+              the right interviews.
             </span>
           </div>
         </div>
@@ -165,8 +164,8 @@ function LoginForm() {
           <p className="eyebrow">Sign in</p>
           <h2>Open your dashboard</h2>
           <p>
-            Track roles, check fit, generate interview prep packs, all in one
-            workspace built for the EU market.
+            Track roles, check country-aware fit, build proof-backed content and
+            prepare for interviews in one quality-first workspace.
           </p>
         </div>
 

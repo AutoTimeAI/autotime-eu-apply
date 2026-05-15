@@ -347,6 +347,35 @@ test("Follow-ups and Progress stay ordered and do not duplicate tracker systems"
   assert.match(updateFlow, /scheduleDashboardSync\(nextState/)
 })
 
+test("Public product promise matches the strategic European tech positioning", () => {
+  const login = read("apps/web/components/LoginContent.tsx")
+  const layout = read("apps/web/app/layout.tsx")
+  const pricing = read("apps/web/app/pricing/page.tsx")
+  const pricingCard = read("apps/web/components/PricingCard.tsx")
+  const og = read("apps/web/app/api/og/route.tsx")
+
+  assert.match(login, /Strategic European tech applications/)
+  assert.match(login, /Better applications/)
+  assert.match(login, /Stronger interviews/)
+  assert.match(login, /Quality over quantity/)
+  assert.match(login, /country,\s*work-right and market reality/)
+  assert.match(login, /Interview conversion/)
+
+  assert.match(layout, /Strategic European Tech Applications/)
+  assert.match(layout, /strategic targeting, country-aware fit, work-right clarity/)
+  assert.match(layout, /interview conversion/)
+
+  assert.match(pricing, /Quality-first European tech applications/)
+  assert.match(pricing, /strategic targeting, country-aware fit/)
+  assert.match(pricing, /quality-over-quantity workflow/)
+  assert.match(pricingCard, /interview-conversion prep/)
+
+  assert.match(og, /STRATEGIC TECH APPLY/)
+  assert.match(og, /Better applications/)
+  assert.match(og, /stronger interviews/)
+  assert.match(og, /Quality over quantity/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

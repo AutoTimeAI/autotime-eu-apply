@@ -85,6 +85,7 @@ const freeFeatures = [
   { label: "5 AI job analyses per month", included: true },
   { label: "Application tracking (unlimited)", included: true },
   { label: "Work-right and country fit scoring", included: true },
+  { label: "Strategic targeting and positioning workflow", included: true },
   { label: "Visible LinkedIn and job-board import", included: true },
   { label: "CSV export", included: true },
   { label: "Full profile and workflow cloud sync", included: false },
@@ -115,10 +116,11 @@ export default async function PricingPage() {
         <header className="pricing-hero">
           <div>
             <p className="eyebrow">Pricing</p>
-            <h1>Choose your AutoTime plan</h1>
+            <h1>Quality-first European tech applications</h1>
             <p>
-              Start free with tracked-job sync. Upgrade when you need unlimited AI,
-              full workflow sync and interview prep.
+              Start free with strategic targeting, country-aware fit and
+              tracked-job sync. Upgrade when you need unlimited AI, full
+              workflow sync and interview prep.
             </p>
           </div>
         </header>
@@ -137,8 +139,9 @@ export default async function PricingPage() {
             <p className="eyebrow">No hidden surprise</p>
             <h2>What is locked, why, and what Pro unlocks</h2>
             <p>
-              Free keeps the core workflow usable. Pro removes limits when you are
-              actively applying and need unlimited AI plus full workflow sync.
+              Free keeps the quality-over-quantity workflow usable. Pro removes
+              limits when you are actively positioning for interviews and need
+              unlimited AI plus full workflow sync.
             </p>
           </div>
           <div className="pricing-gate-grid">
