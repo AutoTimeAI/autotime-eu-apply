@@ -6743,7 +6743,7 @@ export default function HomePage({
                       <h2>Analyse one job before you apply</h2>
                       <p>
                         Use a tracked job or paste one JD. Rules score it
-                        first; AI is optional.
+                        first; AI strengthens the review.
                       </p>
                     </div>
                     <section
@@ -6904,7 +6904,8 @@ export default function HomePage({
                           <strong>Rules first</strong>
                           <p>
                             Evidence-first scoring and country rules drive the
-                            decision. AI assistance is optional.
+                            decision. AI strengthens the review, but evidence
+                            controls the outcome.
                           </p>
                         </article>
                         <article>
@@ -7180,15 +7181,15 @@ export default function HomePage({
               {currentTab === "jobs" && (
                 <section
                   className="panel fit-ai-assist-panel"
-                  aria-label="Optional Analyse Fit AI assistant"
+                  aria-label="Analyse Fit AI assistant"
                 >
                   <div className="section-heading">
-                    <p className="eyebrow">Optional AI</p>
-                    <h2>Refine the role analysis</h2>
+                    <p className="eyebrow">AI review</p>
+                    <h2>Strengthen the fit analysis</h2>
                     <p>
-                      Use AI after the rules-led check to summarise the JD,
-                      surface gaps and update the analysis. Evidence and
-                      official sources stay in control.
+                      AI summarises the JD, surfaces gaps and updates the
+                      analysis. Rules, evidence and official sources stay in
+                      control.
                     </p>
                   </div>
                   <button
