@@ -413,6 +413,19 @@ test("Client fallbacks surface and record runtime and action failures", () => {
   assert.match(extensionConnect, /extension\.connect\.unhandled/)
 })
 
+test("Profile lock keeps recovery actions clickable", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.doesNotMatch(
+    dashboard,
+    /<div\s+aria-disabled={isDashboardProtocolLocked}\s+className={\s+isDashboardProtocolLocked\s+\?\s+"dashboard-section-lock locked"/
+  )
+  assert.match(
+    dashboard,
+    /<div\s+aria-disabled={isDashboardProtocolLocked}\s+className="dashboard-section-lock-content"/
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

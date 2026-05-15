@@ -5367,7 +5367,6 @@ export default function HomePage({
           {profileGatePanel}
 
           <div
-            aria-disabled={isDashboardProtocolLocked}
             className={
               isDashboardProtocolLocked
                 ? "dashboard-section-lock locked"
@@ -5390,7 +5389,10 @@ export default function HomePage({
                 </a>
               </div>
             ) : null}
-            <div className="dashboard-section-lock-content">
+            <div
+              aria-disabled={isDashboardProtocolLocked}
+              className="dashboard-section-lock-content"
+            >
               {showActionPanel ? (
                 <section className="ai-copilot-panel" aria-label="Guided actions">
               <div className="ai-copilot-header">
