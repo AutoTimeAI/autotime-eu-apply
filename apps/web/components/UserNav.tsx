@@ -92,8 +92,8 @@ const dashboardWorkflowNavItems: DashboardNavItem[] = [
   },
   {
     href: "/dashboard/cv-tailor",
-    label: "Evidence Bank",
-    description: "Reusable examples"
+    label: "Proof Library",
+    description: "Reusable proof"
   },
   {
     href: "/dashboard/interview",
@@ -147,9 +147,9 @@ export function DashboardTopNav() {
   const { userId } = useDashboardPlan()
   const { isLocked, readinessScore } = useProfileProtocolReadiness(userId)
 
-  const alertProfileLock = () => {
+  const alertProfileLock = (areaLabel: string) => {
     window.alert(
-      `Complete Profile Evidence to 90% before using this area. Current profile readiness: ${readinessScore}%.`
+      `Complete Profile Evidence to 90% before using ${areaLabel}. Current profile readiness: ${readinessScore}%.`
     )
     window.location.assign("/dashboard/autofill-profile")
   }
@@ -173,12 +173,12 @@ export function DashboardTopNav() {
             onClick={(event) => {
               if (isProtocolLocked) {
                 event.preventDefault()
-                alertProfileLock()
+                alertProfileLock(item.label)
               }
             }}
             title={
               isProtocolLocked
-                ? "Complete Profile Evidence to 90% before using this area."
+                ? `Complete Profile Evidence to 90% before using ${item.label}.`
                 : undefined
             }
           >
@@ -195,9 +195,9 @@ export function DashboardWorkflowSidebar() {
   const { userId } = useDashboardPlan()
   const { isLocked, readinessScore } = useProfileProtocolReadiness(userId)
 
-  const alertProfileLock = () => {
+  const alertProfileLock = (workflowLabel: string) => {
     window.alert(
-      `Complete Profile Evidence to 90% before using this workflow. Current profile readiness: ${readinessScore}%.`
+      `Complete Profile Evidence to 90% before using ${workflowLabel}. Current profile readiness: ${readinessScore}%.`
     )
     window.location.assign("/dashboard/autofill-profile")
   }
@@ -230,12 +230,12 @@ export function DashboardWorkflowSidebar() {
               onClick={(event) => {
                 if (isProtocolLocked) {
                   event.preventDefault()
-                  alertProfileLock()
+                  alertProfileLock(item.label)
                 }
               }}
               title={
                 isProtocolLocked
-                  ? "Complete Profile Evidence to 90% before using this workflow."
+                  ? `Complete Profile Evidence to 90% before using ${item.label}.`
                   : undefined
               }
             >

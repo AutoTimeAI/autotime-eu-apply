@@ -48,9 +48,9 @@ function isActiveSignedInNavItem(
 export function PublicNav({ currentPath, user }: PublicNavProps) {
   const { isLocked, readinessScore } = useProfileProtocolReadiness(user?.id)
 
-  const alertProfileLock = () => {
+  const alertProfileLock = (areaLabel: string) => {
     window.alert(
-      `Complete Profile Evidence to 90% before using this area. Current profile readiness: ${readinessScore}%.`
+      `Complete Profile Evidence to 90% before using ${areaLabel}. Current profile readiness: ${readinessScore}%.`
     )
     window.location.assign("/dashboard/autofill-profile")
   }
@@ -97,12 +97,12 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
                   onClick={(event: MouseEvent<HTMLAnchorElement>) => {
                     if (isProtocolLocked) {
                       event.preventDefault()
-                      alertProfileLock()
+                      alertProfileLock(item.label)
                     }
                   }}
                   title={
                     isProtocolLocked
-                      ? "Complete Profile Evidence to 90% before using this area."
+                      ? `Complete Profile Evidence to 90% before using ${item.label}.`
                       : undefined
                   }
                 >

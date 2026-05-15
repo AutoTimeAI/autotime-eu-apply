@@ -382,9 +382,9 @@ const dashboardFocusCopy: Record<
     body: "Rules-first fit check for one role against your saved profile evidence, country context and missing proof."
   },
   "cv-tailor": {
-    eyebrow: "Evidence Bank",
-    title: "Evidence Bank",
-    body: "Keep CV evidence, projects, skills and proof points ready for role-specific positioning."
+    eyebrow: "Proof Library",
+    title: "Proof Library",
+    body: "Keep reusable proof points ready for fit checks, applications and interview prep without duplicating those workflows."
   },
   "application-answers": {
     eyebrow: "Application Kit",
@@ -2968,6 +2968,8 @@ export default function HomePage({
     ? "Quick actions"
     : currentTab === "jobs"
       ? "Analyse Fit"
+      : activeFocus === "cv-tailor"
+        ? "Proof Library"
       : currentTab === "profile"
         ? "Profile Evidence"
         : currentTab === "applications"
@@ -4937,7 +4939,7 @@ export default function HomePage({
         : activeFocus === "application-answers"
           ? "Prepare application content for one tracked job."
           : activeFocus === "cv-tailor"
-            ? "Keep reusable evidence ready for stronger applications."
+            ? "Keep reusable proof ready without duplicating other workflows."
             : currentTab === "profile"
           ? "Add the details AutoTime needs about you."
           : currentTab === "applications"
@@ -4958,7 +4960,7 @@ export default function HomePage({
             ? "Draft content is tied to a tracked job"
             : "Track a job before writing application content"
           : activeFocus === "cv-tailor"
-            ? "Evidence bank is saved with your profile"
+            ? "Proof Library is saved with your profile"
             : currentTab === "profile"
           ? profileReadyForExecution
             ? "Profile ready for job checks"
@@ -5414,13 +5416,13 @@ export default function HomePage({
                       className="secondary-button"
                       href="/dashboard/autofill-profile"
                     >
-                      Edit profile evidence
+                      Update source profile
                     </a>
                     <a
                       className="secondary-button"
                       href="/dashboard/application-answers"
                     >
-                      Open Application Kit
+                      Write from proof
                     </a>
                   </>
                 ) : currentTab === "profile" ? (
@@ -5947,7 +5949,8 @@ export default function HomePage({
 
               {!isOverview &&
                 currentTab === "profile" &&
-                activeFocus !== "settings" && (
+                activeFocus !== "settings" &&
+                activeFocus !== "cv-tailor" && (
                   <section
                     className={
                       profileReadyForExecution
@@ -6236,17 +6239,39 @@ export default function HomePage({
                 activeFocus === "cv-tailor" && (
                   <section
                     className="evidence-bank-workspace"
-                    aria-label="Evidence Bank workspace"
+                    aria-label="Proof Library workspace"
                   >
                     <section className="panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Evidence Bank</p>
-                        <h2>Reusable proof points</h2>
+                        <p className="eyebrow">Proof Library</p>
+                        <h2>Reusable proof, not another workflow</h2>
                         <p>
-                          Keep factual CV evidence, projects and reusable
-                          answers in one place. This is context for fit and
-                          positioning, not a CV builder.
+                          Store facts that other workflows can use. Profile
+                          Evidence sets up your candidate record, Fit Analysis
+                          checks one role, and Application Kit writes content.
+                          Proof Library only keeps reusable proof.
                         </p>
+                      </div>
+                      <div
+                        className="proof-library-boundary"
+                        aria-label="Proof Library responsibility"
+                      >
+                        <article>
+                          <span>Stores</span>
+                          <strong>CV facts, highlights and project proof</strong>
+                          <p>
+                            Reusable evidence you can defend in applications
+                            and interviews.
+                          </p>
+                        </article>
+                        <article>
+                          <span>Does not duplicate</span>
+                          <strong>Profile setup, role scoring or documents</strong>
+                          <p>
+                            Those stay in Profile Evidence, Fit Analysis and
+                            Application Kit.
+                          </p>
+                        </article>
                       </div>
                       <label>
                         CV evidence
@@ -6287,7 +6312,7 @@ export default function HomePage({
                     </section>
                     <section className="panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Reusable answers</p>
+                        <p className="eyebrow">Proof-backed wording</p>
                         <h2>Evidence-backed answers</h2>
                         <p>
                           Save wording only when it is true and supported by

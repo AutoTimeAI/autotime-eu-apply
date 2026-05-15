@@ -164,6 +164,33 @@ test("profile evidence sync stays local-first until online save succeeds", () =>
   assert.match(dashboard, /if \(synced\) \{\s*setProfileAccountSyncEnabled\(true\)\s*\}/)
 })
 
+test("Proof Library stays a standalone reusable-proof workspace", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+  const userNav = read("apps/web/components/UserNav.tsx")
+  const publicNav = read("apps/web/components/PublicNav.tsx")
+
+  assert.match(userNav, /label: "Proof Library"/)
+  assert.match(userNav, /description: "Reusable proof"/)
+  assert.match(userNav, /before using \$\{workflowLabel\}/)
+  assert.match(userNav, /before using \$\{item\.label\}/)
+  assert.match(publicNav, /before using \$\{areaLabel\}/)
+  assert.match(dashboard, /eyebrow: "Proof Library"/)
+  assert.match(dashboard, /title: "Proof Library"/)
+  assert.match(dashboard, /aria-label="Proof Library workspace"/)
+  assert.match(dashboard, /Reusable proof, not another workflow/)
+  assert.match(dashboard, /Proof Library only keeps reusable proof/)
+  assert.match(dashboard, /Does not duplicate/)
+  assert.match(dashboard, /Profile Evidence, Fit Analysis and\s*Application Kit/)
+  assert.match(dashboard, /Proof Library is saved with your profile/)
+  assert.match(dashboard, /state\.profile\.baseCvText/)
+  assert.match(dashboard, /state\.profile\.experienceHighlights/)
+  assert.match(dashboard, /state\.profile\.projectSummaries/)
+  assert.match(dashboard, /state\.reusableAnswers\[key\]/)
+  assert.match(dashboard, /Update source profile/)
+  assert.match(dashboard, /Write from proof/)
+  assert.doesNotMatch(dashboard, /Edit profile evidence/)
+})
+
 test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const fitModel = read("packages/shared/src/fit-model.ts")
