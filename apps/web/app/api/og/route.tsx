@@ -49,6 +49,8 @@ export async function GET() {
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           <div
             style={{
+              display: "flex",
+              flexDirection: "column",
               fontSize: "68px",
               fontWeight: 700,
               color: "#ffffff",
@@ -56,8 +58,7 @@ export async function GET() {
               letterSpacing: "-0.025em"
             }}
           >
-            Better applications,
-            <br />
+            <span>Better applications,</span>
             <span style={{ color: "#2dd4bf" }}>stronger interviews.</span>
           </div>
           <div
