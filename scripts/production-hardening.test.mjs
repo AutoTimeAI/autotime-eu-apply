@@ -240,7 +240,7 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   const aiFlow = dashboard.slice(aiStart, updateStart)
 
   assert.match(createApplicationFlow, /nextAction: fitEvaluation\.nextBestAction/)
-  assert.match(createApplicationFlow, /fitScore: fitEvaluation\.overallScore/)
+  assert.match(createApplicationFlow, /fitScore: autoTimeFitReview\.fitScore/)
   assert.match(createApplicationFlow, /fitDecision: fitEvaluation\.decision/)
   assert.match(createApplicationFlow, /contentGate: fitEvaluation\.contentGate/)
 
@@ -253,13 +253,14 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   assert.match(saveFlow, /requireProfileExecutionReady\(\)/)
   assert.match(saveFlow, /hasJobDraft\(state\.jobAnalysis\)/)
   assert.match(saveFlow, /createApplication\(/)
-  assert.match(saveFlow, /fitScore: fitEvaluation\.overallScore/)
+  assert.match(saveFlow, /autoTimeFitReview/)
   assert.match(saveFlow, /createEvidenceRecords\(/)
   assert.match(saveFlow, /createOutcomeRecord\(application\)/)
   assert.match(saveFlow, /syncDashboardStateToCloud\(nextState/)
   assert.match(saveFlow, /openDashboardView\("applications"\)/)
 
   assert.match(fitModel, /export function evaluateCountryFit/)
+  assert.match(fitModel, /export function evaluateAutoTimeFitScore/)
   assert.match(fitModel, /getSponsorshipLikelihood/)
   assert.match(fitModel, /getRightToWorkCompatibility/)
   assert.match(fitModel, /getCountryLocationFit/)

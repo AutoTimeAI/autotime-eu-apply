@@ -1,5 +1,13 @@
 import { z } from "zod"
 
+const flexibleStringListToStringSchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((value) =>
+    Array.isArray(value)
+      ? value.map((item) => item.trim()).filter(Boolean).join(", ")
+      : value
+  )
+
 export const applicationStatusSchema = z.enum([
   "Saved",
   "Checking fit",
@@ -75,6 +83,35 @@ export const contentGenerationGateSchema = z.enum([
   "blocked"
 ])
 
+export const autoTimeFitLabelSchema = z.enum([
+  "Strong fit",
+  "Good fit",
+  "Stretch fit",
+  "Low fit"
+])
+
+export const autoTimeScoreBreakdownItemSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  maxPoints: z.number(),
+  points: z.number(),
+  rationale: z.string()
+})
+
+export const autoTimeFitReviewSchema = z.object({
+  fitScore: z.number(),
+  fitLabel: autoTimeFitLabelSchema,
+  confidenceLevel: z.enum(["Low", "Medium", "High"]),
+  scoreBreakdown: z.array(autoTimeScoreBreakdownItemSchema),
+  matchedSignals: z.array(z.string()),
+  missingSignals: z.array(z.string()),
+  riskAreas: z.array(z.string()),
+  suggestedCvPositioning: z.string(),
+  suggestedNextAction: z.string(),
+  shortSummary: z.string(),
+  disclaimer: z.string()
+})
+
 export const countryFitEvaluationSchema = z.object({
   overallScore: z.number(),
   decision: countryFitDecisionSchema,
@@ -105,7 +142,7 @@ export const candidateProfileSchema = z.object({
   currentCountry: z.string(),
   currentCity: z.string(),
   targetCountries: z.string(),
-  targetRoles: z.string(),
+  targetRoles: flexibleStringListToStringSchema,
   workRightDetails: z.string(),
   sponsorshipNeeded: z.boolean(),
   relocationWillingness: z.enum(["yes", "no", "depends"]),
@@ -153,6 +190,16 @@ export const jobAnalysisDraftSchema = z.object({
   summary: z.string().optional(),
   gaps: z.array(z.string()).optional(),
   fitScore: z.number().optional(),
+  fitLabel: autoTimeFitLabelSchema.optional(),
+  confidenceLevel: z.enum(["Low", "Medium", "High"]).optional(),
+  scoreBreakdown: z.array(autoTimeScoreBreakdownItemSchema).optional(),
+  matchedSignals: z.array(z.string()).optional(),
+  missingSignals: z.array(z.string()).optional(),
+  riskAreas: z.array(z.string()).optional(),
+  suggestedCvPositioning: z.string().optional(),
+  suggestedNextAction: z.string().optional(),
+  shortSummary: z.string().optional(),
+  disclaimer: z.string().optional(),
   recommendation: jobRecommendationSchema.optional(),
   positioningAngle: z.string().optional(),
   scoreFactors: z.array(z.string()).optional()
@@ -173,6 +220,16 @@ export const applicationRecordSchema = z.object({
   notes: z.string().optional(),
   outcomeReason: applicationOutcomeReasonSchema.optional(),
   fitScore: z.number().optional(),
+  fitLabel: autoTimeFitLabelSchema.optional(),
+  confidenceLevel: z.enum(["Low", "Medium", "High"]).optional(),
+  scoreBreakdown: z.array(autoTimeScoreBreakdownItemSchema).optional(),
+  matchedSignals: z.array(z.string()).optional(),
+  missingSignals: z.array(z.string()).optional(),
+  riskAreas: z.array(z.string()).optional(),
+  suggestedCvPositioning: z.string().optional(),
+  suggestedNextAction: z.string().optional(),
+  shortSummary: z.string().optional(),
+  disclaimer: z.string().optional(),
   fitDecision: countryFitDecisionSchema.optional(),
   contentGate: contentGenerationGateSchema.optional(),
   contentSnapshot: applicationContentSnapshotSchema.optional()

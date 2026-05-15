@@ -1,6 +1,9 @@
 import type { CandidateProfile, JobAnalysisDraft } from "./types.ts"
 import { getCountryRule, type CountryRule } from "./country-rules.ts"
 
+export const AUTOTIME_FIT_SCORE_DISCLAIMER =
+  "This score is a guidance signal based on your provided CV/profile and the job description. It does not guarantee interviews, offers, or employer decisions."
+
 export type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 
 export type FitComponentKey =
@@ -50,6 +53,34 @@ export type CountryFitEvaluation = {
   learningPrompt: string
 }
 
+export type AutoTimeFitLabel =
+  | "Strong fit"
+  | "Good fit"
+  | "Stretch fit"
+  | "Low fit"
+
+export type AutoTimeScoreBreakdownItem = {
+  key: string
+  label: string
+  maxPoints: number
+  points: number
+  rationale: string
+}
+
+export type AutoTimeFitReview = {
+  fitScore: number
+  fitLabel: AutoTimeFitLabel
+  confidenceLevel: "Low" | "Medium" | "High"
+  scoreBreakdown: AutoTimeScoreBreakdownItem[]
+  matchedSignals: string[]
+  missingSignals: string[]
+  riskAreas: string[]
+  suggestedCvPositioning: string
+  suggestedNextAction: string
+  shortSummary: string
+  disclaimer: string
+}
+
 type FitContext = {
   candidatePosition: CandidateMarketPosition
   targetCountry: string
@@ -94,6 +125,39 @@ const signalWords = [
   "compliance"
 ]
 
+const domainSignals = [
+  "fintech",
+  "payments",
+  "banking",
+  "insurance",
+  "saas",
+  "cloud",
+  "ai",
+  "data",
+  "cybersecurity",
+  "healthtech",
+  "ecommerce",
+  "marketplace",
+  "climate",
+  "energy",
+  "public sector",
+  "government",
+  "devtools",
+  "compliance"
+]
+
+const senioritySignals = [
+  "intern",
+  "junior",
+  "graduate",
+  "mid",
+  "senior",
+  "lead",
+  "principal",
+  "manager",
+  "head"
+]
+
 const hardBlockerKeys: FitComponentKey[] = [
   "sponsorshipLikelihood",
   "rightToWorkCompatibility",
@@ -103,6 +167,10 @@ const hardBlockerKeys: FitComponentKey[] = [
 
 function clampScore(score: number) {
   return Math.max(0, Math.min(100, Math.round(score)))
+}
+
+function clampPoints(score: number, maxPoints: number) {
+  return Math.max(0, Math.min(maxPoints, Math.round(score)))
 }
 
 function getStatus(score: number): FitComponentStatus {
@@ -135,6 +203,77 @@ function includesAny(value: string, words: string[]) {
     .map((word) => word.trim().toLowerCase())
     .filter(Boolean)
     .some((word) => text.includes(word))
+}
+
+function normaliseTextList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => normaliseTextList(item))
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+
+  if (typeof value !== "string") {
+    return []
+  }
+
+  return value
+    .split(/[,;\n|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function tokenise(value: string) {
+  return value
+    .toLowerCase()
+    .split(/[^a-z0-9+#.]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 2)
+}
+
+function unique(items: string[]) {
+  return items.filter((item, index, list) => item && list.indexOf(item) === index)
+}
+
+function getSharedSignals(source: string, candidates: string[]) {
+  const text = source.toLowerCase()
+  return unique(
+    candidates
+      .map((item) => item.trim().toLowerCase())
+      .filter((item) => item.length > 1 && text.includes(item))
+  )
+}
+
+function getFitLabel(score: number): AutoTimeFitLabel {
+  if (score >= 80) {
+    return "Strong fit"
+  }
+
+  if (score >= 65) {
+    return "Good fit"
+  }
+
+  if (score >= 50) {
+    return "Stretch fit"
+  }
+
+  return "Low fit"
+}
+
+function getWeightedComponent({
+  key,
+  label,
+  maxPoints,
+  points,
+  rationale
+}: AutoTimeScoreBreakdownItem): AutoTimeScoreBreakdownItem {
+  return {
+    key,
+    label,
+    maxPoints,
+    points: clampPoints(points, maxPoints),
+    rationale
+  }
 }
 
 function getText(profile: CandidateProfile, job: JobAnalysisDraft) {
@@ -485,6 +624,290 @@ function getConfidence(components: FitComponent[]) {
   }
 
   return strong >= 1 ? "Medium" : "Low"
+}
+
+export function evaluateAutoTimeFitScore({
+  profile,
+  job
+}: {
+  profile: CandidateProfile
+  job: JobAnalysisDraft
+}): AutoTimeFitReview {
+  const text = getText(profile, job)
+  const profileText = text.profile
+  const jobText = text.job
+  const targetRoles = normaliseTextList(profile.targetRoles)
+  const targetCountries = normaliseTextList(profile.targetCountries)
+  const roleTokens = tokenise(job.jobTitle)
+  const targetRoleMatches = targetRoles.filter(
+    (role) =>
+      includesAny(job.jobTitle, [role]) ||
+      includesAny(role, roleTokens) ||
+      includesAny(profileText, roleTokens)
+  )
+  const roleTitlePoints =
+    roleTokens.length === 0
+      ? 4
+      : targetRoleMatches.length > 0
+        ? 18
+        : includesAny(profileText, roleTokens)
+          ? 14
+          : 7
+
+  const jobSkillSignals = unique([
+    ...(job.skills ?? []).map((skill) => skill.toLowerCase()),
+    ...signalWords.filter((signal) => jobText.includes(signal))
+  ])
+  const matchedSkillSignals = getSharedSignals(profileText, jobSkillSignals)
+  const skillCoverage =
+    jobSkillSignals.length > 0
+      ? matchedSkillSignals.length / jobSkillSignals.length
+      : 0
+  const skillPoints =
+    jobSkillSignals.length === 0
+      ? 8
+      : Math.max(5, skillCoverage * 25)
+
+  const jobSeniority = senioritySignals.find((signal) =>
+    jobText.includes(signal)
+  )
+  const profileSeniority = senioritySignals.find((signal) =>
+    [profileText, job.seniority ?? ""].join(" ").toLowerCase().includes(signal)
+  )
+  const seniorityPoints =
+    !jobSeniority
+      ? 9
+      : profileSeniority === jobSeniority
+        ? 14
+        : profileSeniority
+          ? 9
+          : 5
+
+  const jobDomainSignals = domainSignals.filter((signal) =>
+    jobText.includes(signal)
+  )
+  const matchedDomainSignals = getSharedSignals(profileText, jobDomainSignals)
+  const domainPoints =
+    jobDomainSignals.length === 0
+      ? 6
+      : Math.max(3, (matchedDomainSignals.length / jobDomainSignals.length) * 10)
+
+  const workModeSignal = job.workMode !== "unknown" ? job.workMode : ""
+  const locationText = [job.location, job.jobDescription].join(" ")
+  const countryMatch =
+    targetCountries.length === 0 ||
+    targetCountries.some((country) => includesAny(locationText, [country]))
+  const workSetupMatch =
+    !workModeSignal ||
+    includesAny(profileText, [workModeSignal]) ||
+    workModeSignal === "remote" ||
+    (workModeSignal === "hybrid" && profile.relocationWillingness !== "no")
+  const workRightRisk =
+    includesAny(jobText, [
+      "must have right to work",
+      "existing right to work",
+      "no sponsorship",
+      "without sponsorship",
+      "work authorisation",
+      "work authorization"
+    ]) && !hasText(profile.workRightDetails)
+  const locationPoints = workRightRisk
+    ? 2
+    : countryMatch && workSetupMatch
+      ? 9
+      : countryMatch || workSetupMatch
+        ? 6
+        : 3
+
+  const cvEvidenceText = [
+    profile.baseCvText,
+    profile.experienceHighlights,
+    profile.projectSummaries
+  ]
+    .join(" ")
+    .trim()
+  const cvEvidencePoints =
+    cvEvidenceText.length >= 500
+      ? 10
+      : cvEvidenceText.length >= 200
+        ? 8
+        : cvEvidenceText.length >= 80
+          ? 5
+          : 2
+
+  const hasRoleEvidence = hasText(job.jobTitle) || hasText(job.jobDescription)
+  const hasCvEvidence = hasText(profile.baseCvText)
+  const hasWorkRightEvidence = hasText(profile.workRightDetails)
+  const applicationReadinessPoints =
+    (hasRoleEvidence ? 3 : 0) +
+    (hasCvEvidence ? 3 : 0) +
+    (hasWorkRightEvidence ? 2 : 0) +
+    ((job.skills?.length ?? 0) > 0 ? 2 : 0)
+
+  const breakdown = [
+    getWeightedComponent({
+      key: "roleTitleAlignment",
+      label: "Role/title alignment",
+      maxPoints: 20,
+      points: roleTitlePoints,
+      rationale: targetRoleMatches.length
+        ? `Target role matches ${targetRoleMatches.slice(0, 2).join(", ")}.`
+        : "Target role language is only partially visible in the profile."
+    }),
+    getWeightedComponent({
+      key: "requiredSkillsMatch",
+      label: "Required skills match",
+      maxPoints: 25,
+      points: skillPoints,
+      rationale: matchedSkillSignals.length
+        ? `Matched ${matchedSkillSignals.length} of ${jobSkillSignals.length} visible skill signals.`
+        : "Required skill signals are not strongly mirrored in the saved CV/profile."
+    }),
+    getWeightedComponent({
+      key: "experienceSeniorityMatch",
+      label: "Experience/seniority match",
+      maxPoints: 15,
+      points: seniorityPoints,
+      rationale: jobSeniority
+        ? `Job seniority signal: ${jobSeniority}; profile signal: ${profileSeniority ?? "not visible"}.`
+        : "No clear seniority requirement was found in the job text."
+    }),
+    getWeightedComponent({
+      key: "domainIndustryRelevance",
+      label: "Domain/industry relevance",
+      maxPoints: 10,
+      points: domainPoints,
+      rationale: matchedDomainSignals.length
+        ? `Matched domain signals: ${matchedDomainSignals.join(", ")}.`
+        : "Domain overlap is weak or not explicit from the saved evidence."
+    }),
+    getWeightedComponent({
+      key: "locationWorkSetupMatch",
+      label: "Location/work setup match",
+      maxPoints: 10,
+      points: locationPoints,
+      rationale: workRightRisk
+        ? "The role appears to require work authorisation, but profile work-right evidence is missing."
+        : countryMatch && workSetupMatch
+          ? "Target country and work setup look compatible from the provided information."
+          : "Location, work setup, or relocation practicality needs review."
+    }),
+    getWeightedComponent({
+      key: "cvEvidenceStrength",
+      label: "CV evidence strength",
+      maxPoints: 10,
+      points: cvEvidencePoints,
+      rationale:
+        cvEvidencePoints >= 8
+          ? "CV/profile evidence is detailed enough to support claims."
+          : "CV/profile evidence is thin, so recommendations should stay conservative."
+    }),
+    getWeightedComponent({
+      key: "applicationReadiness",
+      label: "Application readiness",
+      maxPoints: 10,
+      points: applicationReadinessPoints,
+      rationale:
+        applicationReadinessPoints >= 8
+          ? "Core role, CV, work-right, and skill inputs are present."
+          : "Some core inputs are missing before this can be treated as application-ready."
+    })
+  ]
+
+  const penalties = [
+    jobSkillSignals.length > 0 && skillCoverage < 0.35
+      ? {
+          label: "Missing required skill evidence",
+          points: 10
+        }
+      : null,
+    workRightRisk
+      ? {
+          label: "Location/work authorisation mismatch",
+          points: 15
+        }
+      : null,
+    jobSeniority && profileSeniority && jobSeniority !== profileSeniority
+      ? {
+          label: "Seniority mismatch",
+          points: 8
+        }
+      : null,
+    cvEvidencePoints <= 5
+      ? {
+          label: "Weak CV evidence",
+          points: 8
+        }
+      : null
+  ].filter(Boolean) as Array<{ label: string; points: number }>
+
+  const rawScore = breakdown.reduce((total, item) => total + item.points, 0)
+  const fitScore = clampScore(
+    rawScore - penalties.reduce((total, item) => total + item.points, 0)
+  )
+  const fitLabel = getFitLabel(fitScore)
+  const missingSignals = unique([
+    ...jobSkillSignals
+      .filter((signal) => !matchedSkillSignals.includes(signal))
+      .slice(0, 5)
+      .map((signal) => `Missing or weak required skill evidence: ${signal}`),
+    !targetRoleMatches.length && "Target role/title alignment is not explicit.",
+    workRightRisk && "Work-right or sponsorship evidence is missing.",
+    cvEvidencePoints <= 5 && "CV evidence is too thin for strong positioning.",
+    applicationReadinessPoints < 8 && "Application inputs are incomplete."
+  ].filter(Boolean) as string[])
+  const matchedSignals = unique([
+    ...targetRoleMatches.map((role) => `Role target: ${role}`),
+    ...matchedSkillSignals.slice(0, 6).map((skill) => `Skill: ${skill}`),
+    ...matchedDomainSignals.slice(0, 4).map((domain) => `Domain: ${domain}`),
+    countryMatch && "Target country/location evidence is compatible.",
+    cvEvidencePoints >= 8 && "CV evidence is detailed enough for positioning."
+  ].filter(Boolean) as string[])
+  const riskAreas = unique([
+    ...penalties.map((penalty) => `${penalty.label} (-${penalty.points})`),
+    fitScore < 50 && "Low fit: do not treat this as a priority application.",
+    !hasWorkRightEvidence && "Work-right clarity is missing."
+  ].filter(Boolean) as string[])
+  const suggestedCvPositioning =
+    matchedSignals.length > 0
+      ? `Lead with ${matchedSignals.slice(0, 3).join("; ")}. Keep unsupported claims out of the CV.`
+      : "Add role-relevant proof to the CV before positioning this application."
+  const suggestedNextAction =
+    fitScore >= 80
+      ? "Save the job, tailor the CV evidence, and prepare application answers."
+      : fitScore >= 65
+        ? "Apply selectively after strengthening the missing signals."
+        : fitScore >= 50
+          ? "Treat as a stretch: fix the strongest gaps before applying."
+          : "Do not prioritise this role until the missing evidence or blocker is resolved."
+
+  return {
+    fitScore,
+    fitLabel,
+    confidenceLevel:
+      hasRoleEvidence && hasCvEvidence && hasWorkRightEvidence
+        ? "High"
+        : hasRoleEvidence && hasCvEvidence
+          ? "Medium"
+          : "Low",
+    scoreBreakdown: breakdown,
+    matchedSignals:
+      matchedSignals.length > 0
+        ? matchedSignals
+        : ["No strong match signal is visible yet."],
+    missingSignals:
+      missingSignals.length > 0
+        ? missingSignals
+        : ["No major missing signal was detected from the provided text."],
+    riskAreas:
+      riskAreas.length > 0
+        ? riskAreas
+        : ["No serious blocker detected. Still verify employer and official requirements."],
+    suggestedCvPositioning,
+    suggestedNextAction,
+    shortSummary: `${fitLabel}: ${fitScore}/100 based on role alignment, skill evidence, seniority, domain, location/work setup, CV evidence, and readiness.`,
+    disclaimer: AUTOTIME_FIT_SCORE_DISCLAIMER
+  }
 }
 
 export function evaluateCountryFit({

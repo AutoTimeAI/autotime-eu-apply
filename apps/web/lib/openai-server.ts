@@ -6,6 +6,7 @@ import {
   createLocalInterviewPrepPack
 } from "./interview-prep"
 import { createAdminClient } from "./supabase/admin"
+import { AUTOTIME_FIT_SCORE_DISCLAIMER } from "shared"
 import type {
   ApplicationContentDraft,
   ApplicationRecord,
@@ -18,6 +19,16 @@ import type {
 export type AIJobAnalysisResult = Pick<
   JobAnalysisDraft,
   | "fitScore"
+  | "fitLabel"
+  | "confidenceLevel"
+  | "scoreBreakdown"
+  | "matchedSignals"
+  | "missingSignals"
+  | "riskAreas"
+  | "suggestedCvPositioning"
+  | "suggestedNextAction"
+  | "shortSummary"
+  | "disclaimer"
   | "recommendation"
   | "positioningAngle"
   | "scoreFactors"
@@ -101,8 +112,28 @@ const applicationContentSchema = z.object({
   availabilityAnswer: z.string().optional()
 })
 
+const autoTimeScoreBreakdownItemSchema = z.object({
+  key: z.string().optional(),
+  label: z.string().optional(),
+  maxPoints: z.number().optional(),
+  points: z.number().optional(),
+  rationale: z.string().optional()
+})
+
 const aiJobAnalysisSchema = z.object({
   fitScore: z.number().optional(),
+  fitLabel: z
+    .enum(["Strong fit", "Good fit", "Stretch fit", "Low fit"])
+    .optional(),
+  confidenceLevel: z.enum(["Low", "Medium", "High"]).optional(),
+  scoreBreakdown: z.array(autoTimeScoreBreakdownItemSchema).optional(),
+  matchedSignals: stringListSchema,
+  missingSignals: stringListSchema,
+  riskAreas: stringListSchema,
+  suggestedCvPositioning: z.string().optional(),
+  suggestedNextAction: z.string().optional(),
+  shortSummary: z.string().optional(),
+  disclaimer: z.string().optional(),
   recommendation: z
     .enum(["High Priority", "Worth Applying", "Stretch", "Skip"])
     .optional(),
@@ -233,6 +264,37 @@ function renderTargetRoles(value: string[]): string {
   return value.join(", ")
 }
 
+function getFitLabel(score: number): AIJobAnalysisResult["fitLabel"] {
+  if (score >= 80) {
+    return "Strong fit"
+  }
+
+  if (score >= 65) {
+    return "Good fit"
+  }
+
+  if (score >= 50) {
+    return "Stretch fit"
+  }
+
+  return "Low fit"
+}
+
+function normaliseScoreBreakdown(
+  value: z.infer<typeof autoTimeScoreBreakdownItemSchema>[] | undefined
+): NonNullable<AIJobAnalysisResult["scoreBreakdown"]> {
+  return (value ?? [])
+    .map((item) => ({
+      key: toStringValue(item.key),
+      label: toStringValue(item.label),
+      maxPoints:
+        typeof item.maxPoints === "number" ? Math.max(0, item.maxPoints) : 0,
+      points: typeof item.points === "number" ? Math.max(0, item.points) : 0,
+      rationale: toStringValue(item.rationale)
+    }))
+    .filter((item) => item.label && item.maxPoints > 0)
+}
+
 function normaliseApplicationContent(
   value: z.infer<typeof applicationContentSchema>
 ): ApplicationContentDraft {
@@ -255,6 +317,16 @@ function normaliseJobAnalysis(
 
   return {
     fitScore,
+    fitLabel: value.fitLabel ?? getFitLabel(fitScore),
+    confidenceLevel: value.confidenceLevel ?? "Medium",
+    scoreBreakdown: normaliseScoreBreakdown(value.scoreBreakdown),
+    matchedSignals: toStringArray(value.matchedSignals),
+    missingSignals: toStringArray(value.missingSignals),
+    riskAreas: toStringArray(value.riskAreas),
+    suggestedCvPositioning: toStringValue(value.suggestedCvPositioning),
+    suggestedNextAction: toStringValue(value.suggestedNextAction),
+    shortSummary: toStringValue(value.shortSummary),
+    disclaimer: value.disclaimer?.trim() || AUTOTIME_FIT_SCORE_DISCLAIMER,
     recommendation: value.recommendation ?? "Stretch",
     positioningAngle: toStringValue(value.positioningAngle),
     scoreFactors: toStringArray(value.scoreFactors),
@@ -411,8 +483,11 @@ export async function analyseJobWithOpenAI({
   const result = await createJsonResponse({
     instructions: [
       "You analyse UK/EU job fit for a tech candidate.",
-      "Return only valid JSON with fitScore number 0-100, recommendation one of High Priority, Worth Applying, Stretch, Skip, positioningAngle string, scoreFactors string array, skills string array, seniority string, summary string, gaps string array.",
+      "Use the AutoTime Fit Score out of 100: role/title alignment 20, required skills match 25, experience/seniority match 15, domain/industry relevance 10, location/work setup match 10, CV evidence strength 10, application readiness 10.",
+      "Apply conservative penalties for missing required skill, location or work-authorisation mismatch, seniority mismatch, and weak CV evidence.",
+      "Return only valid JSON with fitScore number 0-100, fitLabel one of Strong fit, Good fit, Stretch fit, Low fit, confidenceLevel Low/Medium/High, scoreBreakdown array, matchedSignals string array, missingSignals string array, riskAreas string array, suggestedCvPositioning string, suggestedNextAction string, shortSummary string, disclaimer string, recommendation one of High Priority, Worth Applying, Stretch, Skip, positioningAngle string, scoreFactors string array, skills string array, seniority string, summary string, gaps string array.",
       "List fields can be string arrays or readable newline/comma-separated strings.",
+      `The disclaimer must be exactly: ${AUTOTIME_FIT_SCORE_DISCLAIMER}`,
       "Be conservative. Do not infer facts not present in the profile or job text."
     ].join(" "),
     input: { draft: jobAnalysis, profile },

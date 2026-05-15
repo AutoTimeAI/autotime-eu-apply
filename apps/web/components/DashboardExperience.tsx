@@ -12,12 +12,14 @@ import {
 import { z } from "zod"
 import {
   companionDashboardStateSchema,
+  evaluateAutoTimeFitScore,
   evaluateCountryFit,
   getCandidateProfileBridgeIssues,
   type ApplicationOutcomeReason,
   type ApplicationRecord,
   type ApplicationContentSnapshot,
   type ApplicationStatus,
+  type AutoTimeFitReview,
   type CandidateProfile,
   type CompanionDashboardState,
   type CountryFitEvaluation,
@@ -1082,18 +1084,6 @@ function saveSyncPreferences(preferences: SyncPreferences, userId: string) {
   )
 }
 
-function getWordSignals(text: string) {
-  return Array.from(
-    new Set(
-      text
-        .toLowerCase()
-        .match(
-          /\b(requirements?|stakeholders?|uat|payments?|fintech|sql|api|agile|support|systems?|reporting|delivery|analysis)\b/g
-        ) ?? []
-    )
-  )
-}
-
 function normaliseSentence(value: string) {
   const trimmed = value.replace(/\s+/g, " ").trim()
 
@@ -1321,27 +1311,6 @@ function createLocalInterviewCoachMeta({
       "Use this as preparation, not a script. Keep the final answer truthful and editable.",
     source: "local"
   }
-}
-
-function getFitScore(profile: CandidateProfile, job: JobAnalysisDraft) {
-  const profileSignals = getWordSignals(
-    [profile.baseCvText, profile.experienceHighlights, profile.projectSummaries]
-      .join(" ")
-      .toLowerCase()
-  )
-  const jobSignals = getWordSignals(
-    [job.jobTitle, job.jobDescription, job.notes].join(" ").toLowerCase()
-  )
-
-  if (jobSignals.length === 0) {
-    return job.fitScore ?? 0
-  }
-
-  const matched = jobSignals.filter((signal) => profileSignals.includes(signal))
-  return Math.max(
-    job.fitScore ?? 0,
-    Math.round((matched.length / jobSignals.length) * 100)
-  )
 }
 
 function getHostname(url: string) {
@@ -1596,9 +1565,75 @@ function createJobAnalysisFromApplication(
   }
 }
 
+function mergeAutoTimeFitReview(
+  localReview: AutoTimeFitReview,
+  source: Partial<JobAnalysisDraft> & Partial<ApplicationRecord>
+): AutoTimeFitReview {
+  return {
+    ...localReview,
+    fitScore:
+      typeof source.fitScore === "number" ? source.fitScore : localReview.fitScore,
+    fitLabel: source.fitLabel ?? localReview.fitLabel,
+    confidenceLevel: source.confidenceLevel ?? localReview.confidenceLevel,
+    scoreBreakdown: source.scoreBreakdown?.length
+      ? source.scoreBreakdown
+      : localReview.scoreBreakdown,
+    matchedSignals: source.matchedSignals?.length
+      ? source.matchedSignals
+      : localReview.matchedSignals,
+    missingSignals: source.missingSignals?.length
+      ? source.missingSignals
+      : localReview.missingSignals,
+    riskAreas: source.riskAreas?.length
+      ? source.riskAreas
+      : localReview.riskAreas,
+    suggestedCvPositioning:
+      source.suggestedCvPositioning || localReview.suggestedCvPositioning,
+    suggestedNextAction:
+      source.suggestedNextAction || localReview.suggestedNextAction,
+    shortSummary: source.shortSummary || localReview.shortSummary,
+    disclaimer: source.disclaimer || localReview.disclaimer
+  }
+}
+
+function getJobFitReview({
+  job,
+  profile
+}: {
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}): AutoTimeFitReview {
+  return mergeAutoTimeFitReview(
+    evaluateAutoTimeFitScore({
+      profile,
+      job
+    }),
+    job
+  )
+}
+
+function getApplicationFitReview({
+  application,
+  profile
+}: {
+  application: ApplicationRecord
+  profile: CandidateProfile
+}): AutoTimeFitReview {
+  const job = createJobAnalysisFromApplication(application)
+
+  return mergeAutoTimeFitReview(
+    evaluateAutoTimeFitScore({
+      profile,
+      job
+    }),
+    application
+  )
+}
+
 function createApplication(
   job: JobAnalysisDraft,
-  fitEvaluation: CountryFitEvaluation
+  fitEvaluation: CountryFitEvaluation,
+  autoTimeFitReview: AutoTimeFitReview
 ): ApplicationRecord {
   const title = job.jobTitle || "Untitled role"
   return {
@@ -1622,7 +1657,17 @@ function createApplication(
     ]
       .filter(Boolean)
       .join(" "),
-    fitScore: fitEvaluation.overallScore,
+    fitScore: autoTimeFitReview.fitScore,
+    fitLabel: autoTimeFitReview.fitLabel,
+    confidenceLevel: autoTimeFitReview.confidenceLevel,
+    scoreBreakdown: autoTimeFitReview.scoreBreakdown,
+    matchedSignals: autoTimeFitReview.matchedSignals,
+    missingSignals: autoTimeFitReview.missingSignals,
+    riskAreas: autoTimeFitReview.riskAreas,
+    suggestedCvPositioning: autoTimeFitReview.suggestedCvPositioning,
+    suggestedNextAction: autoTimeFitReview.suggestedNextAction,
+    shortSummary: autoTimeFitReview.shortSummary,
+    disclaimer: autoTimeFitReview.disclaimer,
     fitDecision: fitEvaluation.decision,
     contentGate: fitEvaluation.contentGate
   }
@@ -2341,11 +2386,13 @@ function normalizeContextSuggestionForApproval({
 }
 
 function getDecisionBrief({
+  autoTimeFitReview,
   context,
   state,
   fitEvaluation,
   readinessScore
 }: {
+  autoTimeFitReview: AutoTimeFitReview
   context: ProductContext
   state: CompanionDashboardState
   fitEvaluation: CountryFitEvaluation
@@ -2378,24 +2425,28 @@ function getDecisionBrief({
 
   return {
     decision: fitEvaluation.decision,
-    confidence: fitEvaluation.confidence,
-    score: fitEvaluation.overallScore,
+    confidence: autoTimeFitReview.confidenceLevel,
+    score: autoTimeFitReview.fitScore,
     contentGate: fitEvaluation.contentGate,
     rationale: [
       `Assessment mode: ${getMarketLabel(context)} / ${context.targetCountry}.`,
-      "Decision index and profile readiness are available on click in the score panels.",
-      fitEvaluation.positioningAngle,
+      autoTimeFitReview.shortSummary,
+      autoTimeFitReview.suggestedCvPositioning,
       getUrgencyGuidance(context)
     ],
     evidenceFound:
-      evidenceFound.length > 0
-        ? evidenceFound
+      autoTimeFitReview.matchedSignals.length > 0
+        ? autoTimeFitReview.matchedSignals
+        : evidenceFound.length > 0
+          ? evidenceFound
         : [
             "No supporting evidence has been found yet. Add real profile, work-right and job-description details."
           ],
     risks:
-      risks.length > 0
-        ? risks
+      autoTimeFitReview.riskAreas.length > 0
+        ? autoTimeFitReview.riskAreas
+        : risks.length > 0
+          ? risks
         : [
             "No rule-based blocker was detected. This is not employer, visa or legal confirmation."
           ],
@@ -2413,7 +2464,7 @@ function getDecisionBrief({
               "Apply only if the role is strategically important."
             ]
           : [
-              fitEvaluation.nextBestAction,
+              autoTimeFitReview.suggestedNextAction,
               "Add missing target country, target roles and work-right details.",
               "Re-check the role before writing application content."
             ],
@@ -2772,10 +2823,15 @@ export default function HomePage({
   const [kitDraft, setKitDraft] = useState<ApplicationContentSnapshot | null>(
     null
   )
-  const fitScore = useMemo(
-    () => getFitScore(state.profile, state.jobAnalysis),
+  const autoTimeFitReview = useMemo(
+    () =>
+      getJobFitReview({
+        profile: state.profile,
+        job: state.jobAnalysis
+      }),
     [state.profile, state.jobAnalysis]
   )
+  const fitScore = autoTimeFitReview.fitScore
   const outcomeLearningSignals = useMemo(
     () => getOutcomeLearningSignals(state.applications),
     [state.applications]
@@ -2879,12 +2935,13 @@ export default function HomePage({
   const decisionBrief = useMemo(
     () =>
       getDecisionBrief({
+        autoTimeFitReview,
         context: productContext,
         state,
         fitEvaluation,
         readinessScore
       }),
-    [productContext, state, fitEvaluation, readinessScore]
+    [autoTimeFitReview, productContext, state, fitEvaluation, readinessScore]
   )
   const officialSources = useMemo(
     () => getOfficialSources(productContext.targetCountry),
@@ -2935,6 +2992,16 @@ export default function HomePage({
   const selectedApplication = applicationId
     ? state.applications.find((application) => application.id === applicationId)
     : undefined
+  const selectedApplicationFitReview = useMemo(() => {
+    if (!selectedApplication) {
+      return null
+    }
+
+    return getApplicationFitReview({
+      application: selectedApplication,
+      profile: state.profile
+    })
+  }, [selectedApplication, state.profile])
   const selectedApplicationEvidence = selectedApplication
     ? persistedEvidenceRecords.filter(
         (record) => record.applicationId === selectedApplication.id
@@ -3111,11 +3178,11 @@ export default function HomePage({
     },
     {
       title: "Latest job check",
-      value: `${fitEvaluation.overallScore}/100`,
+      value: `${autoTimeFitReview.fitScore}/100`,
       hideMetric: true,
       tone: decisionTone,
-      progress: fitEvaluation.overallScore,
-      body: fitEvaluation.decision
+      progress: autoTimeFitReview.fitScore,
+      body: autoTimeFitReview.fitLabel
     },
     {
       title: "Profile",
@@ -4570,7 +4637,8 @@ export default function HomePage({
             (item) => `${item.label}: ${item.rationale}`
           )
         },
-        fitEvaluation
+        fitEvaluation,
+        autoTimeFitReview
       )
       const nextState = {
         ...state,
@@ -7244,6 +7312,7 @@ export default function HomePage({
                         </RevealMetric>
                       </strong>
                       <span>{decisionBrief.decision}</span>
+                      <small>{autoTimeFitReview.fitLabel}</small>
                       <small>{decisionBrief.confidence} confidence</small>
                       <small>
                         {decisionBrief.contentGate === "ready"
@@ -7275,8 +7344,7 @@ export default function HomePage({
                       </article>
                     </div>
                     <p className="decision-integrity-note">
-                      AI can enrich job text. It cannot replace rules, evidence,
-                      official sources or user review.
+                      {autoTimeFitReview.disclaimer}
                     </p>
                   </section>
 
@@ -7354,10 +7422,10 @@ export default function HomePage({
                       <div className="fit-gate-banner">
                         <strong>
                           <RevealMetric label="Show job fit score">
-                            {fitEvaluation.overallScore}
+                            {autoTimeFitReview.fitScore}
                           </RevealMetric>
                         </strong>
-                        <span>{contentGateResult}</span>
+                        <span>{autoTimeFitReview.fitLabel}</span>
                       </div>
                       <div
                         className="fit-outcome-dashboard"
@@ -7420,6 +7488,59 @@ export default function HomePage({
                       </section>
                       <details className="fit-supporting-details">
                         <summary>Show scoring details</summary>
+                        <div className="fit-component-grid">
+                          {autoTimeFitReview.scoreBreakdown.map((item) => (
+                            <article className="fit-component" key={item.key}>
+                              <div>
+                                <strong>{item.label}</strong>
+                                <span>
+                                  <RevealMetric
+                                    label={`Show ${item.label} points`}
+                                  >
+                                    {item.points}/{item.maxPoints}
+                                  </RevealMetric>
+                                </span>
+                              </div>
+                              <small>AutoTime Fit Score</small>
+                              <p>{item.rationale}</p>
+                            </article>
+                          ))}
+                        </div>
+                        <div
+                          className="fit-outcome-dashboard compact"
+                          aria-label="AutoTime Fit Score reasoning"
+                        >
+                          <article className="fit-outcome-card good">
+                            <span>Top matches</span>
+                            <strong>{autoTimeFitReview.fitLabel}</strong>
+                            <p>{autoTimeFitReview.matchedSignals[0]}</p>
+                          </article>
+                          <article className="fit-outcome-card warn">
+                            <span>Key gaps</span>
+                            <strong>
+                              {autoTimeFitReview.missingSignals.length}
+                            </strong>
+                            <p>{autoTimeFitReview.missingSignals[0]}</p>
+                          </article>
+                          <article
+                            className={`fit-outcome-card ${
+                              autoTimeFitReview.riskAreas.some(
+                                (risk) => !risk.startsWith("No serious blocker")
+                              )
+                                ? "blocked"
+                                : "neutral"
+                            }`}
+                          >
+                            <span>Risk areas</span>
+                            <strong>{autoTimeFitReview.confidenceLevel}</strong>
+                            <p>{autoTimeFitReview.riskAreas[0]}</p>
+                          </article>
+                          <article className="fit-outcome-card neutral">
+                            <span>Next action</span>
+                            <strong>Do next</strong>
+                            <p>{autoTimeFitReview.suggestedNextAction}</p>
+                          </article>
+                        </div>
                         <div className="country-rule-strip">
                           <div>
                             <strong>{fitEvaluation.countryRule.name}</strong>
@@ -8366,10 +8487,9 @@ export default function HomePage({
                             <div>
                               <dt>Fit analysis</dt>
                               <dd>
-                                {typeof selectedApplication.fitScore ===
-                                "number" ? (
+                                {selectedApplicationFitReview ? (
                                   <RevealMetric label="Show saved fit analysis value">
-                                    {selectedApplication.fitScore}/100
+                                    {selectedApplicationFitReview.fitScore}/100
                                   </RevealMetric>
                                 ) : (
                                   "Not scored yet"
@@ -8377,10 +8497,17 @@ export default function HomePage({
                               </dd>
                             </div>
                             <div>
-                              <dt>Recommendation</dt>
+                              <dt>Fit label</dt>
                               <dd>
-                                {selectedApplication.fitDecision ??
+                                {selectedApplicationFitReview?.fitLabel ??
                                   "Not analysed"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Confidence</dt>
+                              <dd>
+                                {selectedApplicationFitReview?.confidenceLevel ??
+                                  "Not checked"}
                               </dd>
                             </div>
                             <div>
@@ -8407,6 +8534,14 @@ export default function HomePage({
                             <div>
                               <dt>URL</dt>
                               <dd>{selectedApplication.url}</dd>
+                            </div>
+                            <div>
+                              <dt>Next action</dt>
+                              <dd>
+                                {selectedApplicationFitReview?.suggestedNextAction ??
+                                  selectedApplication.nextAction ??
+                                  "Not set"}
+                              </dd>
                             </div>
                           </dl>
                         </article>
@@ -8471,6 +8606,81 @@ export default function HomePage({
                           </label>
                         </article>
                       </div>
+
+                      {selectedApplicationFitReview ? (
+                        <section
+                          className="ready-checklist"
+                          aria-label="AutoTime Fit Score detail"
+                        >
+                          <div className="section-heading">
+                            <p className="eyebrow">AutoTime Fit Score</p>
+                            <h3>
+                              {selectedApplicationFitReview.fitLabel} /{" "}
+                              {selectedApplicationFitReview.confidenceLevel} confidence
+                            </h3>
+                            <p>{selectedApplicationFitReview.shortSummary}</p>
+                          </div>
+                          <div className="fit-component-grid">
+                            {selectedApplicationFitReview.scoreBreakdown.map(
+                              (item) => (
+                                <article
+                                  className="fit-component"
+                                  key={item.key}
+                                >
+                                  <div>
+                                    <strong>{item.label}</strong>
+                                    <span>
+                                      {item.points}/{item.maxPoints}
+                                    </span>
+                                  </div>
+                                  <small>score component</small>
+                                  <p>{item.rationale}</p>
+                                </article>
+                              )
+                            )}
+                          </div>
+                          <div
+                            className="fit-outcome-dashboard compact"
+                            aria-label="AutoTime Fit Score signals"
+                          >
+                            <article className="fit-outcome-card good">
+                              <span>Top matches</span>
+                              <strong>
+                                {selectedApplicationFitReview.matchedSignals.length}
+                              </strong>
+                              <p>
+                                {selectedApplicationFitReview.matchedSignals[0]}
+                              </p>
+                            </article>
+                            <article className="fit-outcome-card warn">
+                              <span>Key gaps</span>
+                              <strong>
+                                {selectedApplicationFitReview.missingSignals.length}
+                              </strong>
+                              <p>
+                                {selectedApplicationFitReview.missingSignals[0]}
+                              </p>
+                            </article>
+                            <article className="fit-outcome-card neutral">
+                              <span>Risk areas</span>
+                              <strong>
+                                {selectedApplicationFitReview.riskAreas.length}
+                              </strong>
+                              <p>{selectedApplicationFitReview.riskAreas[0]}</p>
+                            </article>
+                            <article className="fit-outcome-card neutral">
+                              <span>Next action</span>
+                              <strong>Do next</strong>
+                              <p>
+                                {selectedApplicationFitReview.suggestedNextAction}
+                              </p>
+                            </article>
+                          </div>
+                          <p className="decision-integrity-note">
+                            {selectedApplicationFitReview.disclaimer}
+                          </p>
+                        </section>
+                      ) : null}
 
                       <section
                         className="ready-checklist"
