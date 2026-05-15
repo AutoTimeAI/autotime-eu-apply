@@ -3860,7 +3860,17 @@ h4 {
 }
 
 .prep-section {
+  display: grid;
+  gap: 16px;
   margin-top: 0;
+}
+
+.interview-prep-flow {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.interview-prep-boundary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .interview-buddy-layout {
@@ -3868,6 +3878,10 @@ h4 {
   grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
   gap: 16px;
   align-items: start;
+}
+
+.interview-prep-workflow {
+  grid-template-columns: 1fr;
 }
 
 .interview-buddy-form,
@@ -3878,6 +3892,7 @@ h4 {
 }
 
 .interview-buddy-form,
+.interview-buddy-output,
 .buddy-answer-card {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -3932,7 +3947,7 @@ h4 {
 
 .interview-coach-audit {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 

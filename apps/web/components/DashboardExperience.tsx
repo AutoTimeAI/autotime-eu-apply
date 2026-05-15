@@ -409,7 +409,7 @@ const dashboardFocusCopy: Record<
   "interview-prep": {
     eyebrow: "Interview",
     title: "Interview Prep",
-    body: "Turn rough notes into clearer interview answers."
+    body: "Prepare evidence-led interview answers and role prep packs without duplicating Profile Evidence, Proof Library or Application Kit."
   },
   insights: {
     eyebrow: "Progress",
@@ -1110,6 +1110,7 @@ function getMeaningfulTokens(value: string) {
 
 function hasLikelyKeyboardNoise(value: string) {
   const compact = value.toLowerCase().replace(/[^a-z]/g, "")
+  const tokens = getMeaningfulTokens(value)
 
   if (!compact) {
     return true
@@ -1118,7 +1119,7 @@ function hasLikelyKeyboardNoise(value: string) {
   const uniqueLetters = new Set(compact).size
   const vowelCount = compact.match(/[aeiou]/g)?.length ?? 0
   const vowelRatio = vowelCount / compact.length
-  const repeatedRuns = /(.)\1{2,}/.test(compact)
+  const repeatedRuns = tokens.some((token) => /(.)\1{3,}/.test(token))
 
   return (
     compact.length < 8 ||
@@ -5149,6 +5150,10 @@ export default function HomePage({
       next,
       `Final answer saved to ${getReusableAnswerLabel(finalAnswerStorageKey)}`
     )
+    scheduleDashboardSync(next, {
+      failureMessage: "Final answer saved locally. Dashboard sync failed",
+      successMessage: "Final answer saved and synced"
+    })
   }
 
   const speakInterviewAnswer = (text: string) => {
@@ -5451,7 +5456,7 @@ export default function HomePage({
                 ) : (
                   <>
                     <button type="button" onClick={generateInterviewBuddyAnswers}>
-                      Generate answers
+                      Run coach
                     </button>
                     <button
                       className="secondary-button"
@@ -5459,7 +5464,7 @@ export default function HomePage({
                       type="button"
                       onClick={saveFinalInterviewAnswer}
                     >
-                      Save final answer
+                      Save to Proof Library
                     </button>
                   </>
                 )}
@@ -8487,20 +8492,73 @@ export default function HomePage({
               {!isOverview && currentTab === "interview" && (
                 <section className="prep-section full-width-section">
                   <div className="section-intro">
-                    <p className="eyebrow">AI Interview Coach</p>
-                    <h2>Prepare answers from evidence, not guesswork</h2>
+                    <p className="eyebrow">Interview Prep</p>
+                    <h2>Practice from proof, then save only what is reusable</h2>
                     <p>
-                      AutoTime checks your rough answer against saved profile
-                      evidence, job context and work-right boundaries before
-                      shaping it.
+                      Interview Prep turns your rough notes and tracked roles
+                      into practice material. Profile Evidence stores candidate
+                      facts, Proof Library keeps reusable answers, and
+                      Application Kit writes application content.
                     </p>
                   </div>
 
-                  <div className="interview-buddy-layout">
+                  <div
+                    className="fit-decision-flow interview-prep-flow"
+                    aria-label="Interview Prep workflow"
+                  >
+                    <article>
+                      <span>1</span>
+                      <strong>Choose the question</strong>
+                      <p>Pick a common question or type the exact one asked.</p>
+                    </article>
+                    <article>
+                      <span>2</span>
+                      <strong>Add rough notes</strong>
+                      <p>Use facts, actions, results and anything not to overclaim.</p>
+                    </article>
+                    <article>
+                      <span>3</span>
+                      <strong>Review the coach</strong>
+                      <p>Check evidence score, risks, missing proof and versions.</p>
+                    </article>
+                    <article>
+                      <span>4</span>
+                      <strong>Save reusable wording</strong>
+                      <p>Only final answers go back to Proof Library answers.</p>
+                    </article>
+                  </div>
+
+                  <div
+                    className="proof-library-boundary interview-prep-boundary"
+                    aria-label="Interview Prep responsibility"
+                  >
+                    <article>
+                      <span>Stores</span>
+                      <strong>Practice outputs and role prep packs</strong>
+                      <p>
+                        Interview notes, answer versions, drills and saved
+                        prep packs for tracked interview roles.
+                      </p>
+                    </article>
+                    <article>
+                      <span>Does not duplicate</span>
+                      <strong>Profile facts, fit scoring or application drafts</strong>
+                      <p>
+                        Those stay in Profile Evidence, Fit Analysis, Proof
+                        Library and Application Kit.
+                      </p>
+                    </article>
+                  </div>
+
+                  <div className="interview-buddy-layout interview-prep-workflow">
                     <section
                       className="interview-buddy-form"
                       aria-label="Interview Buddy input"
                     >
+                      <div className="section-heading">
+                        <p className="eyebrow">Step 1</p>
+                        <h2>Add interview notes</h2>
+                      </div>
                       <div className="buddy-character-panel">
                         <span aria-hidden="true">AI</span>
                         <div>
@@ -8580,7 +8638,7 @@ export default function HomePage({
                           type="button"
                           onClick={saveFinalInterviewAnswer}
                         >
-                          Save Final Answer
+                          Save to Proof Library
                         </button>
                       </div>
                     </section>
@@ -8589,6 +8647,14 @@ export default function HomePage({
                       className="interview-buddy-output"
                       aria-label="Interview Buddy outputs"
                     >
+                      <div className="section-heading">
+                        <p className="eyebrow">Step 2</p>
+                        <h2>Review coach results</h2>
+                        <p>
+                          Treat these as interview practice outputs. Save only
+                          the final answer when it is true and reusable.
+                        </p>
+                      </div>
                       <div className="interview-coach-audit">
                         <article>
                           <span>Source</span>
@@ -8710,8 +8776,8 @@ export default function HomePage({
                   {showInterviewPrepPacks && (
                     <>
                       <div className="section-intro">
-                        <p className="eyebrow">Saved prep packs</p>
-                        <h2>Prep generated from applications</h2>
+                        <p className="eyebrow">Step 3</p>
+                        <h2>Saved prep packs from tracked jobs</h2>
                         <p>
                           Prep packs still use saved profile, job details and
                           application status. They remain separate from

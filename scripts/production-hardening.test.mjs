@@ -266,6 +266,54 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   assert.match(fitModel, /contentGate/)
 })
 
+test("Interview Prep keeps coaching, prep packs and reusable answers separated", () => {
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.match(dashboard, /title: "Interview Prep"/)
+  assert.match(dashboard, /Prepare evidence-led interview answers and role prep packs/)
+  assert.match(dashboard, /aria-label="Interview Prep workflow"/)
+  assert.match(dashboard, /Choose the question/)
+  assert.match(dashboard, /Add rough notes/)
+  assert.match(dashboard, /Review the coach/)
+  assert.match(dashboard, /Save reusable wording/)
+  assert.match(dashboard, /aria-label="Interview Prep responsibility"/)
+  assert.match(dashboard, /Does not duplicate/)
+  assert.match(
+    dashboard,
+    /Profile Evidence, Fit Analysis, Proof\s*Library and Application Kit/
+  )
+  assert.match(dashboard, /Save to Proof Library/)
+  assert.match(dashboard, /Saved prep packs from tracked jobs/)
+  assert.match(dashboard, /const tokens = getMeaningfulTokens\(value\)/)
+  assert.match(dashboard, /tokens\.some\(\(token\) => \/\(\.\)\\1\{3,\}\//)
+
+  const prepStart = dashboard.indexOf("const generateInterviewPrep = async")
+  const saveAnswerStart = dashboard.indexOf(
+    "const saveFinalInterviewAnswer = () =>"
+  )
+  const speakStart = dashboard.indexOf("const speakInterviewAnswer = (")
+
+  assert.notEqual(prepStart, -1)
+  assert.notEqual(saveAnswerStart, -1)
+  assert.notEqual(speakStart, -1)
+
+  const prepFlow = dashboard.slice(prepStart, saveAnswerStart)
+  const saveAnswerFlow = dashboard.slice(saveAnswerStart, speakStart)
+
+  assert.match(prepFlow, /getInterviewPrepGuardrails\(/)
+  assert.match(prepFlow, /createLocalInterviewPrepPack\(/)
+  assert.match(prepFlow, /fetch\("\/api\/ai\/interview"/)
+  assert.match(prepFlow, /saveInterviewPrepPack\(/)
+
+  assert.match(saveAnswerFlow, /requireProfileExecutionReady\(\)/)
+  assert.match(
+    saveAnswerFlow,
+    /\[finalAnswerStorageKey\]: interviewBuddyOutputs\.strongFinalAnswer/
+  )
+  assert.match(saveAnswerFlow, /persist\(/)
+  assert.match(saveAnswerFlow, /scheduleDashboardSync\(next/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
