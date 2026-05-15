@@ -2729,6 +2729,10 @@ export default function HomePage({
     useState<ContextSuggestionSource>(null)
   const [contextSuggestionNote, setContextSuggestionNote] = useState("")
   const [isReviewingCv, setIsReviewingCv] = useState(false)
+  const [isSavingApplication, setIsSavingApplication] = useState(false)
+  const [deletingApplicationIds, setDeletingApplicationIds] = useState<
+    string[]
+  >([])
   const canReviewResumeWithAi = resumeIntake.trim().length >= 40
   const resumeFileInputRef = useRef<HTMLInputElement | null>(null)
   const [interviewQuestion, setInterviewQuestion] = useState(
@@ -3382,6 +3386,11 @@ export default function HomePage({
         }
 
         if (!response.ok || body.error) {
+          console.error("Dashboard action failed: load dashboard response", {
+            error: body.error ?? "Dashboard sync read failed",
+            httpStatus: response.status,
+            route: "/api/sync/dashboard"
+          })
           if (!silent) {
             setStatus(body.error ?? "Could not load synced dashboard")
           }
@@ -3421,6 +3430,7 @@ export default function HomePage({
         }
         return true
       } catch (error: unknown) {
+        console.error("Dashboard action failed: load dashboard fetch", error)
         if (!silent) {
           setStatus(
             error instanceof Error
@@ -3471,6 +3481,11 @@ export default function HomePage({
         }
 
         if (!response.ok || body.error) {
+          console.error("Dashboard action failed: load profile response", {
+            error: body.error ?? "Profile sync read failed",
+            httpStatus: response.status,
+            route: "/api/sync/profile"
+          })
           if (!silent) {
             setStatus(body.error ?? "Could not load synced profile")
           }
@@ -3509,6 +3524,7 @@ export default function HomePage({
         }
         return true
       } catch (error: unknown) {
+        console.error("Dashboard action failed: load profile fetch", error)
         if (!silent) {
           setStatus(
             error instanceof Error
@@ -3608,7 +3624,20 @@ export default function HomePage({
         message,
         metadata
       })
-    }).catch(() => undefined)
+    }).catch((error: unknown) => {
+      console.error("Dashboard diagnostic logging failed:", error)
+    })
+  }
+
+  const logDashboardActionFailure = (
+    action: string,
+    error: unknown,
+    metadata: Record<string, string | number | boolean | null> = {}
+  ) => {
+    console.error(`Dashboard action failed: ${action}`, {
+      error,
+      metadata
+    })
   }
 
   const runOnlineAnalytics = async () => {
@@ -3645,6 +3674,7 @@ export default function HomePage({
         "Evidence report updated from tracked jobs and outcomes."
       )
     } catch (error) {
+      logDashboardActionFailure("run online analytics", error)
       setOnlineAnalyticsReport(null)
       setOnlineAnalyticsStatus(
         error instanceof Error
@@ -3709,6 +3739,14 @@ export default function HomePage({
       }
 
       if (!response.ok || body.error) {
+        logDashboardActionFailure(
+          "sync profile response",
+          body.error ?? "Profile sync failed",
+          {
+            httpStatus: response.status,
+            route: "/api/sync/profile"
+          }
+        )
         if (!silent) {
           setStatus(`${failureMessage}: ${body.error ?? "Profile sync failed"}`)
         }
@@ -3729,6 +3767,9 @@ export default function HomePage({
       }
       return true
     } catch (error: unknown) {
+      logDashboardActionFailure("sync profile fetch", error, {
+        route: "/api/sync/profile"
+      })
       if (!silent) {
         setStatus(
           `${failureMessage}: ${
@@ -3959,6 +4000,14 @@ export default function HomePage({
       }
 
       if (!response.ok || !body.data || body.error) {
+        logDashboardActionFailure(
+          "review resume context response",
+          body.error ?? "AI review unavailable",
+          {
+            httpStatus: response.status,
+            route: "/api/ai/profile-context"
+          }
+        )
         const message = body.error
           ? `AI review unavailable: ${body.error}`
           : "AI review unavailable. Local suggestions prepared."
@@ -3980,6 +4029,9 @@ export default function HomePage({
       setContextSuggestionNote("")
       setStatus("AI CV review complete. Approve suggestions before saving.")
     } catch (error: unknown) {
+      logDashboardActionFailure("review resume context fetch", error, {
+        route: "/api/ai/profile-context"
+      })
       const message =
         error instanceof Error
           ? `AI review unavailable: ${error.message}`
@@ -4027,6 +4079,14 @@ export default function HomePage({
         }
 
         if (!response.ok || !body.data?.text) {
+          logDashboardActionFailure(
+            "import Word CV response",
+            body.error ?? "Could not import this Word CV file.",
+            {
+              httpStatus: response.status,
+              route: "/api/profile/import-cv"
+            }
+          )
           setStatus(body.error ?? "Could not import this Word CV file.")
           return
         }
@@ -4038,6 +4098,9 @@ export default function HomePage({
         setStatus(`Imported ${file.name}. Review before applying suggestions.`)
         setTimeout(() => setStatus(""), 3000)
       } catch (error: unknown) {
+        logDashboardActionFailure("import Word CV fetch", error, {
+          route: "/api/profile/import-cv"
+        })
         setStatus(
           error instanceof Error
             ? `Could not import this Word CV file: ${error.message}`
@@ -4078,7 +4141,10 @@ export default function HomePage({
       setContextSuggestionNote("")
       setStatus(`Imported ${file.name}. Review before applying suggestions.`)
       setTimeout(() => setStatus(""), 3000)
-    } catch {
+    } catch (error: unknown) {
+      logDashboardActionFailure("import text CV", error, {
+        fileName: file.name
+      })
       setStatus("Could not import this CV file. Copy the text and paste it here.")
     } finally {
       event.target.value = ""
@@ -4258,6 +4324,15 @@ export default function HomePage({
       }
 
       if (!response.ok || body.error) {
+        logDashboardActionFailure(
+          "sync dashboard response",
+          body.error ?? "Dashboard sync failed",
+          {
+            applicationCount: nextState.applications.length,
+            httpStatus: response.status,
+            route: "/api/sync/dashboard"
+          }
+        )
         if (!silent) {
           setStatus(
             `${failureMessage}: ${body.error ?? "Dashboard sync failed"}`
@@ -4281,6 +4356,10 @@ export default function HomePage({
       }
       return true
     } catch (error: unknown) {
+      logDashboardActionFailure("sync dashboard fetch", error, {
+        applicationCount: nextState.applications.length,
+        route: "/api/sync/dashboard"
+      })
       if (!silent) {
         setStatus(
           `${failureMessage}: ${
@@ -4450,12 +4529,17 @@ export default function HomePage({
     try {
       await navigator.clipboard.writeText(value)
       setStatus(`${label} copied`)
-    } catch {
+    } catch (error: unknown) {
+      logDashboardActionFailure("copy application kit field", error, { label })
       setStatus("Copy failed. Select the text and copy it manually.")
     }
   }
 
   const saveApplicationFromJob = async () => {
+    if (isSavingApplication) {
+      return
+    }
+
     if (!requireProfileExecutionReady()) {
       return
     }
@@ -4467,50 +4551,60 @@ export default function HomePage({
       return
     }
 
-    const application = createApplication(
-      {
-        ...state.jobAnalysis,
-        fitScore: fitEvaluation.overallScore,
-        recommendation:
-          fitEvaluation.decision === "Apply now"
-            ? "High Priority"
-            : fitEvaluation.decision === "Stretch application"
-              ? "Stretch"
-              : fitEvaluation.decision === "Skip for now"
-                ? "Skip"
-                : "Worth Applying",
-        positioningAngle: fitEvaluation.positioningAngle,
-        scoreFactors: fitEvaluation.components.map(
-          (item) => `${item.label}: ${item.rationale}`
-        )
-      },
-      fitEvaluation
-    )
-    const nextState = {
-      ...state,
-      applications: [application, ...state.applications],
-      evidenceRecords: [
-        ...createEvidenceRecords({
-          application,
-          fitEvaluation,
-          profile: state.profile
-        }),
-        ...(state.evidenceRecords ?? [])
-      ],
-      outcomeRecords: [
-        createOutcomeRecord(application),
-        ...(state.outcomeRecords ?? [])
-      ]
-    }
+    try {
+      setIsSavingApplication(true)
+      const application = createApplication(
+        {
+          ...state.jobAnalysis,
+          fitScore: fitEvaluation.overallScore,
+          recommendation:
+            fitEvaluation.decision === "Apply now"
+              ? "High Priority"
+              : fitEvaluation.decision === "Stretch application"
+                ? "Stretch"
+                : fitEvaluation.decision === "Skip for now"
+                  ? "Skip"
+                  : "Worth Applying",
+          positioningAngle: fitEvaluation.positioningAngle,
+          scoreFactors: fitEvaluation.components.map(
+            (item) => `${item.label}: ${item.rationale}`
+          )
+        },
+        fitEvaluation
+      )
+      const nextState = {
+        ...state,
+        applications: [application, ...state.applications],
+        evidenceRecords: [
+          ...createEvidenceRecords({
+            application,
+            fitEvaluation,
+            profile: state.profile
+          }),
+          ...(state.evidenceRecords ?? [])
+        ],
+        outcomeRecords: [
+          createOutcomeRecord(application),
+          ...(state.outcomeRecords ?? [])
+        ]
+      }
 
-    persist(nextState, "Job tracked with evidence and outcome history")
-    hasUnsyncedDashboardChangesRef.current = true
-    const synced = await syncDashboardStateToCloud(nextState, {
-      failureMessage: "Job tracked locally. Dashboard sync failed",
-      successMessage: "Job tracked and synced to dashboard"
-    })
-    hasUnsyncedDashboardChangesRef.current = !synced
-    openDashboardView("applications")
+      persist(nextState, "Job tracked with evidence and outcome history")
+      hasUnsyncedDashboardChangesRef.current = true
+      const synced = await syncDashboardStateToCloud(nextState, {
+        failureMessage: "Job tracked locally. Dashboard sync failed",
+        successMessage: "Job tracked and synced to dashboard"
+      })
+      hasUnsyncedDashboardChangesRef.current = !synced
+      openDashboardView("applications")
+    } catch (error: unknown) {
+      logDashboardActionFailure("save tracked job", error)
+      setStatus(
+        error instanceof Error ? error.message : "Could not track this job"
+      )
+    } finally {
+      setIsSavingApplication(false)
+    }
   }
 
   const runAiJobAnalysis = async () => {
@@ -4545,6 +4639,14 @@ export default function HomePage({
       }
 
       if (!response.ok || body.error || !body.data?.result) {
+        logDashboardActionFailure(
+          "AI role analysis response",
+          body.error ?? "AI role analysis failed",
+          {
+            httpStatus: response.status,
+            route: "/api/ai/analyse"
+          }
+        )
         if (body.data?.upgradeUrl) {
           window.location.href = body.data.upgradeUrl
           return
@@ -4564,6 +4666,9 @@ export default function HomePage({
 
       persist(next, "AI fit assistant updated the role analysis")
     } catch (error: unknown) {
+      logDashboardActionFailure("AI role analysis fetch", error, {
+        route: "/api/ai/analyse"
+      })
       setStatus(
         error instanceof Error ? error.message : "AI role analysis failed"
       )
@@ -4580,40 +4685,53 @@ export default function HomePage({
       return
     }
 
-    const updatedAt = new Date().toISOString()
-    const updatedApplications = state.applications.map((application) =>
-      application.id === id
-        ? { ...application, ...changes, updatedAt }
-        : application
-    )
-    const updatedApplication = updatedApplications.find(
-      (application) => application.id === id
-    )
-    const existingOutcome = (state.outcomeRecords ?? []).find(
-      (record) => record.applicationId === id
-    )
-    const updatedOutcome = updatedApplication
-      ? updateOutcomeRecordFromApplication(existingOutcome, updatedApplication)
-      : null
+    try {
+      const updatedAt = new Date().toISOString()
+      const updatedApplications = state.applications.map((application) =>
+        application.id === id
+          ? { ...application, ...changes, updatedAt }
+          : application
+      )
+      const updatedApplication = updatedApplications.find(
+        (application) => application.id === id
+      )
 
-    const nextState = {
-      ...state,
-      applications: updatedApplications,
-      outcomeRecords: updatedOutcome
-        ? [
-            updatedOutcome,
-            ...(state.outcomeRecords ?? []).filter(
-              (record) => record.applicationId !== id
-            )
-          ]
-        : (state.outcomeRecords ?? [])
+      if (!updatedApplication) {
+        throw new Error("Application was not found in this dashboard")
+      }
+
+      const existingOutcome = (state.outcomeRecords ?? []).find(
+        (record) => record.applicationId === id
+      )
+      const updatedOutcome = updateOutcomeRecordFromApplication(
+        existingOutcome,
+        updatedApplication
+      )
+
+      const nextState = {
+        ...state,
+        applications: updatedApplications,
+        outcomeRecords: [
+          updatedOutcome,
+          ...(state.outcomeRecords ?? []).filter(
+            (record) => record.applicationId !== id
+          )
+        ]
+      }
+
+      persist(nextState, "Application and outcome record updated")
+      scheduleDashboardSync(nextState, {
+        failureMessage: "Application updated locally. Dashboard sync failed",
+        successMessage: "Application updated and synced to dashboard"
+      })
+    } catch (error: unknown) {
+      logDashboardActionFailure("update application", error, {
+        applicationId: id
+      })
+      setStatus(
+        error instanceof Error ? error.message : "Could not update application"
+      )
     }
-
-    persist(nextState, "Application and outcome record updated")
-    scheduleDashboardSync(nextState, {
-      failureMessage: "Application updated locally. Dashboard sync failed",
-      successMessage: "Application updated and synced to dashboard"
-    })
   }
 
   const removeApplicationFromState = (
@@ -4636,6 +4754,10 @@ export default function HomePage({
   })
 
   const deleteApplication = async (id: string) => {
+    if (deletingApplicationIds.includes(id)) {
+      return
+    }
+
     if (!requireProfileExecutionReady()) {
       return
     }
@@ -4643,10 +4765,28 @@ export default function HomePage({
     const application = state.applications.find((item) => item.id === id)
 
     if (!application) {
+      setStatus("Application was not found in this dashboard")
+      logDashboardActionFailure(
+        "delete application missing record",
+        "Application was not found in this dashboard",
+        { applicationId: id }
+      )
       return
     }
 
+    const nextState = removeApplicationFromState(state, id)
+
     try {
+      setDeletingApplicationIds((current) => [...current, id])
+
+      if (!cloudSyncReadiness.configured) {
+        persist(
+          nextState,
+          `Application deleted locally. Cloud sync remains local-first: ${cloudSyncReadiness.issues.join(", ")}.`
+        )
+        return
+      }
+
       const response = await fetch("/api/sync/dashboard", {
         method: "DELETE",
         headers: {
@@ -4663,22 +4803,38 @@ export default function HomePage({
       }
 
       if (!response.ok || body.error) {
-        setStatus(body.error ?? "Could not delete application from dashboard")
-        return
+        throw new Error(
+          body.error ?? "Could not delete application from dashboard"
+        )
       }
+
+      persist(nextState, "Application permanently deleted")
     } catch (error: unknown) {
+      logDashboardActionFailure("delete application", error, {
+        applicationId: application.id,
+        route: "/api/sync/dashboard"
+      })
+      reportClientDiagnostic(
+        "sync.dashboard.client.delete-failed",
+        error instanceof Error
+          ? error.message
+          : "Could not delete application from dashboard",
+        {
+          applicationId: application.id,
+          operation: "dashboard-delete",
+          route: "/api/sync/dashboard"
+        }
+      )
       setStatus(
         error instanceof Error
           ? error.message
           : "Could not delete application from dashboard"
       )
-      return
+    } finally {
+      setDeletingApplicationIds((current) =>
+        current.filter((applicationId) => applicationId !== id)
+      )
     }
-
-    persist(
-      removeApplicationFromState(state, id),
-      "Application permanently deleted"
-    )
   }
 
   const saveInterviewPrepPack = async (
@@ -4754,6 +4910,15 @@ export default function HomePage({
       }
 
       if (!response.ok || !body.data?.pack) {
+        logDashboardActionFailure(
+          "generate interview prep response",
+          body.error ?? "AI prep unavailable",
+          {
+            applicationId: application.id,
+            httpStatus: response.status,
+            route: "/api/ai/interview"
+          }
+        )
         if (body.data?.upgradeUrl) {
           setStatus(
             `${body.error ?? "Upgrade required"} Local prep pack saved.`
@@ -4773,6 +4938,10 @@ export default function HomePage({
         "AI interview prep pack generated and saved"
       )
     } catch (error: unknown) {
+      logDashboardActionFailure("generate interview prep fetch", error, {
+        applicationId: application.id,
+        route: "/api/ai/interview"
+      })
       setStatus(
         error instanceof Error
           ? `AI prep unavailable. Local prep pack saved: ${error.message}`
@@ -4869,7 +5038,8 @@ export default function HomePage({
       })
       scheduleProfileSync(result.data.profile)
       setImportJson("")
-    } catch {
+    } catch (error: unknown) {
+      logDashboardActionFailure("import dashboard backup", error)
       setStatus("Import failed: backup contents could not be read")
     }
   }
@@ -4882,15 +5052,24 @@ export default function HomePage({
       return
     }
 
-    const session = await getCloudSyncSessionState(
-      createBrowserCloudSyncClient()
-    )
+    try {
+      const session = await getCloudSyncSessionState(
+        createBrowserCloudSyncClient()
+      )
 
-    setStatus(
-      session.authenticated
-        ? "Account sync is ready. Profile saves as one current online record for this signed-in account."
-        : "Account sync is configured, but no signed-in session was found. Sign in before syncing profile or workflow."
-    )
+      setStatus(
+        session.authenticated
+          ? "Account sync is ready. Profile saves as one current online record for this signed-in account."
+          : "Account sync is configured, but no signed-in session was found. Sign in before syncing profile or workflow."
+      )
+    } catch (error: unknown) {
+      logDashboardActionFailure("check cloud sync status", error)
+      setStatus(
+        error instanceof Error
+          ? `Could not check account sync: ${error.message}`
+          : "Could not check account sync"
+      )
+    }
   }
 
   const syncProfileToCloud = async () => {
@@ -4923,6 +5102,14 @@ export default function HomePage({
       }
 
       if (!response.ok || body.error) {
+        logDashboardActionFailure(
+          "delete synced profile response",
+          body.error ?? "Could not delete synced profile",
+          {
+            httpStatus: response.status,
+            route: "/api/sync/profile"
+          }
+        )
         setStatus(body.error ?? "Could not delete synced profile")
         return
       }
@@ -4942,6 +5129,9 @@ export default function HomePage({
       saveState(nextState, userId)
       setStatus("Profile deleted for this account. Account sync is off.")
     } catch (error: unknown) {
+      logDashboardActionFailure("delete synced profile fetch", error, {
+        route: "/api/sync/profile"
+      })
       setStatus(
         error instanceof Error ? error.message : "Could not delete profile"
       )
@@ -5094,6 +5284,14 @@ export default function HomePage({
       }
 
       if (!response.ok || !body.data?.coach) {
+        logDashboardActionFailure(
+          "generate interview coach response",
+          body.error ?? "AI coach unavailable",
+          {
+            httpStatus: response.status,
+            route: "/api/ai/interview-answer"
+          }
+        )
         if (body.data?.upgradeUrl) {
           setStatus(
             `${body.error ?? "Upgrade required"} Open pricing to continue.`
@@ -5129,6 +5327,9 @@ export default function HomePage({
       setStatus("AI Interview Coach generated an evidence-checked answer")
       setTimeout(() => setStatus(""), 3000)
     } catch (error: unknown) {
+      logDashboardActionFailure("generate interview coach fetch", error, {
+        route: "/api/ai/interview-answer"
+      })
       setInterviewBuddyOutputs(localOutputs)
       setInterviewCoachMeta(localCoachMeta)
       setStatus(
@@ -7409,11 +7610,13 @@ export default function HomePage({
                       </div>
                       <div className="fit-decision-actions">
                         <button
-                          disabled={!canSaveCheckedJob}
+                          disabled={!canSaveCheckedJob || isSavingApplication}
                           type="button"
                           onClick={saveApplicationFromJob}
                         >
-                          Save to Tracked Jobs
+                          {isSavingApplication
+                            ? "Saving..."
+                            : "Save to Tracked Jobs"}
                         </button>
                         <a className="secondary-button" href="#analyse-fit-role">
                           Edit role evidence
@@ -8363,6 +8566,7 @@ export default function HomePage({
                             <button
                               className="secondary-button"
                               disabled={
+                                isCopilotThinking ||
                                 selectedApplication.status !== "Interview"
                               }
                               type="button"
@@ -8618,7 +8822,10 @@ export default function HomePage({
                                 </a>
                                 <button
                                   className="secondary-button"
-                                  disabled={application.status !== "Interview"}
+                                  disabled={
+                                    isCopilotThinking ||
+                                    application.status !== "Interview"
+                                  }
                                   type="button"
                                   onClick={() =>
                                     generateInterviewPrep(application)
@@ -8628,12 +8835,19 @@ export default function HomePage({
                                 </button>
                                 <button
                                   className="danger-button"
+                                  disabled={deletingApplicationIds.includes(
+                                    application.id
+                                  )}
                                   type="button"
                                   onClick={() =>
                                     deleteApplication(application.id)
                                   }
                                 >
-                                  Delete
+                                  {deletingApplicationIds.includes(
+                                    application.id
+                                  )
+                                    ? "Deleting..."
+                                    : "Delete"}
                                 </button>
                               </div>
                             </article>
