@@ -44,6 +44,7 @@ import {
   PROFILE_EXECUTION_THRESHOLD
 } from "../lib/product-protocols"
 import { getStatusTone } from "../lib/status-tone"
+import { AccountIdentityLinker } from "./AccountIdentityLinker"
 import { profileProtocolReadinessEvent } from "./ProfileProtocolLock"
 import { useDashboardPlan } from "./UserNav"
 
@@ -987,6 +988,60 @@ function saveState(state: CompanionDashboardState, userId: string) {
     JSON.stringify(state)
   )
   window.dispatchEvent(new Event(profileProtocolReadinessEvent))
+}
+
+function getBestStoredProfileRecovery(userId: string, minimumReadiness: number) {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  const currentStorageKey = getUserScopedStorageKey(storageKey, userId)
+  let best:
+    | {
+        readiness: number
+        state: CompanionDashboardState
+        storageKey: string
+      }
+    | null = null
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index)
+
+    if (!key || key === currentStorageKey || !key.startsWith(`${storageKey}:`)) {
+      continue
+    }
+
+    try {
+      const parsed = normalizeLegacyDashboardState(
+        JSON.parse(window.localStorage.getItem(key) ?? "null")
+      )
+      const result = companionDashboardStateSchema.safeParse(parsed)
+
+      if (!result.success || isLegacySampleState(result.data)) {
+        continue
+      }
+
+      const candidate = {
+        ...defaultState,
+        ...result.data,
+        evidenceRecords: result.data.evidenceRecords ?? [],
+        outcomeRecords: result.data.outcomeRecords ?? []
+      }
+      const readiness = getReadinessScore(candidate)
+
+      if (readiness > minimumReadiness && (!best || readiness > best.readiness)) {
+        best = {
+          readiness,
+          state: candidate,
+          storageKey: key
+        }
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return best
 }
 
 function getStoredProductContext(userId: string) {
@@ -1948,17 +2003,24 @@ function getStatusCounts(applications: ApplicationRecord[]) {
 }
 
 function getReadinessScore(state: CompanionDashboardState) {
+  return getProfileReadinessScore(state.profile, state.reusableAnswers)
+}
+
+function getProfileReadinessScore(
+  profile: CandidateProfile,
+  reusableAnswers: Partial<ReusableAnswers> = {}
+) {
   const requiredProfileSignals = [
-    state.profile.fullName.trim(),
-    state.profile.currentCountry.trim(),
-    state.profile.targetCountries.trim(),
-    state.profile.targetRoles.trim(),
-    state.profile.workRightDetails.trim(),
-    state.profile.baseCvText.trim()
+    profile.fullName.trim(),
+    profile.currentCountry.trim(),
+    profile.targetCountries.trim(),
+    profile.targetRoles.trim(),
+    profile.workRightDetails.trim(),
+    profile.baseCvText.trim()
   ]
   const reusableSignals = [
-    state.reusableAnswers.motivationAnswer.trim(),
-    state.reusableAnswers.strengthsAnswer.trim()
+    reusableAnswers.motivationAnswer?.trim() ?? "",
+    reusableAnswers.strengthsAnswer?.trim() ?? ""
   ]
   const requiredCompleted = requiredProfileSignals.filter(Boolean).length
   const reusableCompleted = reusableSignals.filter(Boolean).length
@@ -3577,8 +3639,38 @@ export default function HomePage({
         }
 
         const syncedProfile = body.data.profile
+        const syncedReadiness = getProfileReadinessScore(syncedProfile)
+        let profileLoadMessage: string | null = null
 
         setState((current) => {
+          const currentReadiness = getReadinessScore(current)
+          const recovered =
+            currentReadiness <= 15 && syncedReadiness <= 15
+              ? getBestStoredProfileRecovery(
+                  userId,
+                  Math.max(currentReadiness, syncedReadiness)
+                )
+              : null
+
+          if (recovered) {
+            const nextState = {
+              ...current,
+              profile: recovered.state.profile,
+              reusableAnswers: {
+                ...current.reusableAnswers,
+                ...recovered.state.reusableAnswers
+              }
+            }
+            profileLoadMessage = `Recovered a ${recovered.readiness}% profile saved in this browser. Review it, then sync it to this account.`
+            saveState(nextState, userId)
+            return nextState
+          }
+
+          if (syncedReadiness < currentReadiness) {
+            profileLoadMessage = `Kept your ${currentReadiness}% local profile because the synced account profile is only ${syncedReadiness}%.`
+            return current
+          }
+
           const nextState = {
             ...current,
             profile: syncedProfile
@@ -3587,7 +3679,9 @@ export default function HomePage({
           return nextState
         })
 
-        if (!silent) {
+        if (profileLoadMessage) {
+          setStatus(profileLoadMessage)
+        } else if (!silent) {
           setStatus(successMessage)
         }
         return true
@@ -3617,7 +3711,30 @@ export default function HomePage({
   )
 
   useEffect(() => {
-    setState(getStoredState(userId))
+    const storedState = getStoredState(userId)
+    const storedReadiness = getReadinessScore(storedState)
+    const recovered =
+      storedReadiness <= 15
+        ? getBestStoredProfileRecovery(userId, storedReadiness)
+        : null
+    const initialState = recovered
+      ? {
+          ...storedState,
+          profile: recovered.state.profile,
+          reusableAnswers: {
+            ...storedState.reusableAnswers,
+            ...recovered.state.reusableAnswers
+          }
+        }
+      : storedState
+
+    setState(initialState)
+    if (recovered) {
+      saveState(initialState, userId)
+      setStatus(
+        `Recovered a ${recovered.readiness}% profile saved in this browser. Review it, then sync it to this account.`
+      )
+    }
     setProductContext(getStoredProductContext(userId))
     setTrustState(getStoredTrustState(userId))
     setShowFirstRunWalkthrough(
@@ -3626,13 +3743,36 @@ export default function HomePage({
       ) !== "true"
     )
     const storedSyncPreferences = getStoredSyncPreferences(userId)
-    setSyncPreferences(storedSyncPreferences)
-    setCloudSyncConsent(storedSyncPreferences.profileAccountSyncEnabled)
-    if (storedSyncPreferences.profileAccountSyncEnabled) {
+    const productionSyncPreferences = cloudSyncReadiness.configured
+      ? {
+          ...storedSyncPreferences,
+          profileAccountSyncEnabled: true
+        }
+      : storedSyncPreferences
+
+    setSyncPreferences(productionSyncPreferences)
+    setCloudSyncConsent(productionSyncPreferences.profileAccountSyncEnabled)
+    if (
+      productionSyncPreferences.profileAccountSyncEnabled !==
+      storedSyncPreferences.profileAccountSyncEnabled
+    ) {
+      saveSyncPreferences(productionSyncPreferences, userId)
+    }
+    if (
+      !recovered &&
+      storedReadiness <= 15 &&
+      cloudSyncReadiness.configured
+    ) {
+      void loadProfileSnapshot({
+        silent: true,
+        successMessage: "Synced profile restored into this browser"
+      })
+    }
+    if (productionSyncPreferences.profileAccountSyncEnabled) {
       void loadDashboardSnapshot({ silent: true })
       void loadProfileSnapshot({ silent: true })
     }
-  }, [loadDashboardSnapshot, loadProfileSnapshot, userId])
+  }, [cloudSyncReadiness.configured, loadDashboardSnapshot, loadProfileSnapshot, userId])
 
   useEffect(() => {
     if (!syncPreferences.profileAccountSyncEnabled) {
@@ -4348,7 +4488,24 @@ export default function HomePage({
   }
 
   const saveDashboard = () => {
-    persist(state, "Dashboard saved locally")
+    persist(
+      state,
+      cloudSyncReadiness.configured
+        ? "Dashboard saved. Syncing to your account..."
+        : "Dashboard saved in this browser"
+    )
+
+    if (cloudSyncReadiness.configured) {
+      void syncProfileStateToCloud(state.profile, {
+        failureMessage: "Profile saved in browser cache. Account sync failed",
+        silent: true,
+        successMessage: "Profile saved to account"
+      })
+      scheduleDashboardSync(state, {
+        failureMessage: "Dashboard saved in browser cache. Account sync failed",
+        successMessage: "Dashboard saved to account"
+      })
+    }
   }
 
   const syncDashboardStateToCloud = async (
@@ -5846,14 +6003,23 @@ export default function HomePage({
                         <a href="/dashboard/autofill-profile">Edit profile</a>
                       </article>
                       <article>
-                        <span>Save online</span>
+                        <span>Account saving</span>
                         <strong>{cloudSyncReadiness.modeLabel}</strong>
                         <p>
                           {cloudSyncConsent
-                            ? "Profile and workflow saving is enabled."
-                            : "Browser-first saving is active until you choose sync."}
+                            ? "Profile and workflow saving is enabled for this signed-in account."
+                            : "Browser cache is active until account sync is configured."}
                         </p>
                         <a href="#account-sync-settings">Review saving</a>
+                      </article>
+                      <article>
+                        <span>Sign-in methods</span>
+                        <strong>Google + GitHub</strong>
+                        <p>
+                          Link both providers to keep one AutoTime profile and
+                          billing account.
+                        </p>
+                        <a href="#linked-sign-in-methods">Link accounts</a>
                       </article>
                       <article>
                         <span>Extension</span>
@@ -5893,6 +6059,14 @@ export default function HomePage({
                         <a href="#account-sync-settings">Manage data</a>
                       </article>
                     </div>
+                  </section>
+                )}
+
+              {!isOverview &&
+                currentTab === "profile" &&
+                activeFocus === "settings" && (
+                  <section id="linked-sign-in-methods">
+                    <AccountIdentityLinker />
                   </section>
                 )}
 
@@ -6762,11 +6936,12 @@ export default function HomePage({
                     </section>
                     <div className="profile-form-toolbar">
                       <div>
-                        <p className="eyebrow">Saved in this browser</p>
-                        <h2>Keep your profile up to date</h2>
+                        <p className="eyebrow">Account profile</p>
+                        <h2>Save profile changes</h2>
                         <p>
-                          Edit the steps below. Save online only when you want
-                          this profile available on another device.
+                          Your signed-in account is the main copy. This browser
+                          keeps a backup so you can recover work if the network
+                          drops.
                         </p>
                       </div>
                       <div className="profile-form-actions">
@@ -6774,16 +6949,25 @@ export default function HomePage({
                           type="button"
                           onClick={saveDashboard}
                         >
-                          Save changes
+                          Save to account
                         </button>
                         <details className="profile-action-details">
-                          <summary>Online copy</summary>
+                          <summary>Account saving</summary>
                           <label className="sync-consent-control">
                             <input
                               checked={cloudSyncConsent}
                               disabled={!cloudSyncReadiness.configured}
                               type="checkbox"
                               onChange={(event) => {
+                                if (cloudSyncReadiness.configured) {
+                                  setCloudSyncConsent(true)
+                                  setProfileAccountSyncEnabled(true)
+                                  setStatus(
+                                    "Account saving stays on in production so this profile follows your signed-in account."
+                                  )
+                                  return
+                                }
+
                                 if (event.target.checked) {
                                   setCloudSyncConsent(true)
                                   return
@@ -6793,7 +6977,8 @@ export default function HomePage({
                               }}
                             />
                             <span>
-                              I want an online copy for this signed-in account.
+                              Keep my profile and job tracker saved to this
+                              account.
                             </span>
                           </label>
                           <div className="profile-action-row">
@@ -6802,7 +6987,7 @@ export default function HomePage({
                               type="button"
                               onClick={syncProfileToCloud}
                             >
-                              Save online
+                              Save profile to account
                             </button>
                             <button
                               className="secondary-button"
@@ -6810,7 +6995,7 @@ export default function HomePage({
                               type="button"
                               onClick={loadProfileFromCloud}
                             >
-                              Load online copy
+                              Restore profile from account
                             </button>
                           </div>
                           <div className="profile-action-row">
@@ -6820,21 +7005,22 @@ export default function HomePage({
                               type="button"
                               onClick={syncDashboardToCloud}
                             >
-                              Save job tracker online
+                              Save jobs to account
                             </button>
                             <button
                               className="secondary-button"
                               type="button"
                               onClick={checkCloudSyncStatus}
                             >
-                              Check online saving
+                              Check account saving
                             </button>
                           </div>
                           <details className="sync-danger-details compact">
-                            <summary>Delete online profile</summary>
+                            <summary>Remove account profile</summary>
                             <p>
-                              Removes only the profile saved to this online
-                              account. Your browser copy stays here.
+                              Deletes the profile stored on this signed-in
+                              account. The browser backup remains on this
+                              device.
                             </p>
                             <button
                               className="danger-button"
@@ -6842,19 +7028,19 @@ export default function HomePage({
                               type="button"
                               onClick={deleteProfileForAccount}
                             >
-                              Delete online copy
+                              Delete account profile
                             </button>
                           </details>
                         </details>
                         <details className="profile-action-details">
-                          <summary>Backups</summary>
+                          <summary>Download or restore backup</summary>
                           <div className="profile-action-row">
                             <button
                               className="secondary-button"
                               type="button"
                               onClick={exportDashboard}
                             >
-                              Export
+                              Download backup
                             </button>
                             <button
                               className="secondary-button"
@@ -6873,7 +7059,7 @@ export default function HomePage({
                                 })
                               }}
                             >
-                              Import
+                              Restore from backup
                             </button>
                           </div>
                         </details>
@@ -9452,36 +9638,36 @@ export default function HomePage({
           isDashboardProtocolLocked ? "utility-bar locked" : "utility-bar"
         }
       >
-        <summary>Backups</summary>
+        <summary>Download or restore backup</summary>
         <div className="backup-actions">
           <div className="backup-action-group">
-            <span>Save</span>
+            <span>Account save</span>
             <button
               disabled={isDashboardProtocolLocked}
               type="button"
               onClick={saveDashboard}
             >
-              Save changes
+              Save to account
             </button>
           </div>
           <div className="backup-action-group">
-            <span>Export</span>
+            <span>Download</span>
             <button
               className="secondary-button"
               disabled={isDashboardProtocolLocked}
               type="button"
               onClick={exportDashboard}
             >
-              Export backup
+              Download backup
             </button>
           </div>
         </div>
         <div className="backup-import-group">
           <label className="import-control">
-            Import
+            Restore from backup
             <textarea
               disabled={isDashboardProtocolLocked}
-              placeholder="Paste exported AutoTime backup contents"
+              placeholder="Paste a backup you previously downloaded from AutoTime"
               value={importJson}
               onChange={(event) => setImportJson(event.target.value)}
             />
@@ -9492,7 +9678,7 @@ export default function HomePage({
             type="button"
             onClick={() => importDashboard(importJson)}
           >
-            Import backup
+            Restore backup
           </button>
         </div>
       </details>

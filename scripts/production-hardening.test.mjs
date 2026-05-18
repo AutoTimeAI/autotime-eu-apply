@@ -149,19 +149,24 @@ test("CV profile detail extraction stays conservative", () => {
   assert.doesNotMatch(dashboard, /gender|ethnicity|marital|nationality|dateOfBirth/i)
 })
 
-test("profile evidence sync stays local-first until online save succeeds", () => {
+test("profile evidence sync is production cloud-first with local cache", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
+  const cloudSync = read("apps/web/lib/cloud-sync.ts")
 
   assert.match(
     dashboard,
-    /if \(storedSyncPreferences\.profileAccountSyncEnabled\) \{\s*void loadDashboardSnapshot\(\{ silent: true \}\)\s*void loadProfileSnapshot\(\{ silent: true \}\)\s*\}/
+    /const productionSyncPreferences = cloudSyncReadiness\.configured\s*\?\s*\{\s*\.\.\.storedSyncPreferences,\s*profileAccountSyncEnabled: true\s*\}/
   )
   assert.match(
     dashboard,
-    /if \(!syncPreferences\.profileAccountSyncEnabled\) \{\s*return\s*\}/
+    /if \(productionSyncPreferences\.profileAccountSyncEnabled\) \{\s*void loadDashboardSnapshot\(\{ silent: true \}\)\s*void loadProfileSnapshot\(\{ silent: true \}\)\s*\}/
   )
-  assert.match(dashboard, /const synced = await syncProfileStateToCloud\(state\.profile\)/)
-  assert.match(dashboard, /if \(synced\) \{\s*setProfileAccountSyncEnabled\(true\)\s*\}/)
+  assert.match(dashboard, /scheduleProfileSync\(nextState\.profile\)/)
+  assert.match(dashboard, /scheduleDashboardSync\(state,\s*\{/)
+  assert.match(
+    cloudSync,
+    /process\.env\.NEXT_PUBLIC_AUTOTIME_ENV === "production" \? "true" : undefined/
+  )
 })
 
 test("Proof Library stays a standalone reusable-proof workspace", () => {

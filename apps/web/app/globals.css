@@ -5842,6 +5842,59 @@ h4 {
   margin-top: -2px;
 }
 
+.identity-link-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 8px;
+  background: #f7fbfa;
+  color: var(--text);
+  padding: 14px;
+}
+
+.identity-link-panel.compact {
+  gap: 10px;
+  padding: 12px;
+}
+
+.identity-link-panel h3,
+.identity-link-panel p {
+  margin: 0;
+}
+
+.identity-link-panel h3 {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.identity-link-panel > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.identity-link-panel > div:first-child p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.identity-provider-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.identity-provider-list button {
+  flex: 1 1 150px;
+}
+
+.identity-linked-copy {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
 .auth-consent-hint {
   margin: -4px 0 0;
   color: var(--muted);

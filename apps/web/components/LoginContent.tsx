@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { AccountIdentityLinker } from "./AccountIdentityLinker";
 import { reportClientIssue } from "../lib/client-diagnostics";
 import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
@@ -258,23 +259,26 @@ function LoginForm() {
         </label>
 
         {hasExistingSession ? (
-          <div className="header-actions auth-provider-actions">
-            <button
-              disabled={Boolean(pendingProvider)}
-              type="button"
-              onClick={continueWithExistingSession}
-            >
-              Continue to dashboard
-            </button>
-            <button
-              className="secondary-button"
-              disabled={Boolean(pendingProvider)}
-              type="button"
-              onClick={resetSession}
-            >
-              Use a different account
-            </button>
-          </div>
+          <>
+            <div className="header-actions auth-provider-actions">
+              <button
+                disabled={Boolean(pendingProvider)}
+                type="button"
+                onClick={continueWithExistingSession}
+              >
+                Continue to dashboard
+              </button>
+              <button
+                className="secondary-button"
+                disabled={Boolean(pendingProvider)}
+                type="button"
+                onClick={resetSession}
+              >
+                Use a different account
+              </button>
+            </div>
+            <AccountIdentityLinker compact returnTo={redirectTo} />
+          </>
         ) : (
           <div className="header-actions auth-provider-actions">
             <button
