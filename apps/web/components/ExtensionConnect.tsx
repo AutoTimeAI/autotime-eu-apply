@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { reportClientIssue } from "../lib/client-diagnostics"
+import { getStatusTone } from "../lib/status-tone"
 import { createBrowserClient } from "../lib/supabase/client"
 
 type AccountMeResponse = {
@@ -295,7 +296,9 @@ export default function ExtensionConnect() {
           Sign in first
         </a>
       </div>
-      {status ? <p className="status-banner">{status}</p> : null}
+      {status ? (
+        <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
+      ) : null}
       {steps.length ? (
         <ol className="summary-list" aria-label="Connection diagnostic log">
           {steps.map((step) => (

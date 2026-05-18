@@ -43,6 +43,7 @@ import {
   getProfileExecutionLockMessage,
   PROFILE_EXECUTION_THRESHOLD
 } from "../lib/product-protocols"
+import { getStatusTone } from "../lib/status-tone"
 import { profileProtocolReadinessEvent } from "./ProfileProtocolLock"
 import { useDashboardPlan } from "./UserNav"
 
@@ -5623,7 +5624,9 @@ export default function HomePage({
         </details>
       ) : null}
 
-      {status && <p className="status-banner">{status}</p>}
+      {status && (
+        <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
+      )}
 
       <div className="command-workspace">
         <div

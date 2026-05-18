@@ -9,6 +9,7 @@ import {
   useState
 } from "react"
 import { usePathname } from "next/navigation"
+import { getStatusTone } from "../lib/status-tone"
 import { createBrowserClient } from "../lib/supabase/client"
 import type { SubscriptionPlan } from "../lib/supabase/types"
 import { useProfileProtocolReadiness } from "./ProfileProtocolLock"
@@ -437,7 +438,11 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
           >
             Sign out
           </button>
-          {status ? <p className="empty-state">{status}</p> : null}
+          {status ? (
+            <p className={`status-banner compact ${getStatusTone(status)}`}>
+              {status}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>

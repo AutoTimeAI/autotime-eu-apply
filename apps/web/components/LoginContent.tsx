@@ -1,8 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { reportClientIssue } from "../lib/client-diagnostics";
+import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
 
 type OAuthProvider = "github" | "google";
@@ -29,6 +30,8 @@ function LoginForm() {
     null,
   );
   const [accountConsent, setAccountConsent] = useState(false);
+  const [hasExistingSession, setHasExistingSession] = useState(false);
+  const oauthStartedRef = useRef(false);
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
   useEffect(() => {
@@ -51,20 +54,30 @@ function LoginForm() {
       }
 
       if (data.session) {
-        setStatus("Already signed in. Redirecting to dashboard...");
-        window.location.replace(redirectTo);
+        setHasExistingSession(true);
+        setStatus(
+          "Already signed in. Confirm account permission, then continue to your dashboard.",
+        );
       }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
+      if (event === "SIGNED_IN" && session && oauthStartedRef.current) {
         setStatus("Signed in. Redirecting to dashboard...");
         window.location.replace(redirectTo);
       }
 
+      if (event === "SIGNED_IN" && session && !oauthStartedRef.current) {
+        setHasExistingSession(true);
+        setStatus(
+          "Already signed in. Confirm account permission, then continue to your dashboard.",
+        );
+      }
+
       if (event === "SIGNED_OUT") {
+        setHasExistingSession(false);
         setStatus("Session expired. Sign in again to continue.");
         setPendingProvider(null);
       }
@@ -83,6 +96,7 @@ function LoginForm() {
         return;
       }
 
+      oauthStartedRef.current = true;
       setStatus("Opening secure sign-in...");
       setPendingProvider(provider);
 
@@ -113,6 +127,7 @@ function LoginForm() {
           message: error.message,
           metadata: { provider },
         });
+        oauthStartedRef.current = false;
         setPendingProvider(null);
         return;
       }
@@ -126,6 +141,7 @@ function LoginForm() {
           message,
           metadata: { provider },
         });
+        oauthStartedRef.current = false;
         setPendingProvider(null);
         return;
       }
@@ -141,7 +157,37 @@ function LoginForm() {
         message,
         metadata: { provider },
       });
+      oauthStartedRef.current = false;
       setPendingProvider(null);
+    }
+  };
+
+  const continueWithExistingSession = () => {
+    if (!accountConsent) {
+      setStatus("Please confirm account access before continuing.");
+      return;
+    }
+
+    setStatus("Permission confirmed. Opening dashboard...");
+    window.location.assign(redirectTo);
+  };
+
+  const resetSession = async () => {
+    try {
+      setStatus(null);
+      setPendingProvider(null);
+      oauthStartedRef.current = false;
+      const supabase = createBrowserClient();
+      await supabase.auth.signOut();
+      setHasExistingSession(false);
+      setAccountConsent(false);
+      setStatus("Signed out. Choose Google or GitHub to authenticate again.");
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error
+          ? `Failed: ${error.message}`
+          : "Failed: could not reset the current session.",
+      );
     }
   };
 
@@ -211,27 +257,47 @@ function LoginForm() {
           </span>
         </label>
 
-        <div className="header-actions auth-provider-actions">
-          <button
-            disabled={Boolean(pendingProvider)}
-            type="button"
-            onClick={() => handleSignIn("github")}
-          >
-            {pendingProvider === "github"
-              ? "Opening GitHub..."
-              : "Sign in with GitHub"}
-          </button>
-          <button
-            className="secondary-button"
-            disabled={Boolean(pendingProvider)}
-            type="button"
-            onClick={() => handleSignIn("google")}
-          >
-            {pendingProvider === "google"
-              ? "Opening Google..."
-              : "Sign in with Google"}
-          </button>
-        </div>
+        {hasExistingSession ? (
+          <div className="header-actions auth-provider-actions">
+            <button
+              disabled={Boolean(pendingProvider)}
+              type="button"
+              onClick={continueWithExistingSession}
+            >
+              Continue to dashboard
+            </button>
+            <button
+              className="secondary-button"
+              disabled={Boolean(pendingProvider)}
+              type="button"
+              onClick={resetSession}
+            >
+              Use a different account
+            </button>
+          </div>
+        ) : (
+          <div className="header-actions auth-provider-actions">
+            <button
+              disabled={Boolean(pendingProvider)}
+              type="button"
+              onClick={() => handleSignIn("github")}
+            >
+              {pendingProvider === "github"
+                ? "Opening GitHub..."
+                : "Sign in with GitHub"}
+            </button>
+            <button
+              className="secondary-button"
+              disabled={Boolean(pendingProvider)}
+              type="button"
+              onClick={() => handleSignIn("google")}
+            >
+              {pendingProvider === "google"
+                ? "Opening Google..."
+                : "Sign in with Google"}
+            </button>
+          </div>
+        )}
 
         {!accountConsent && !status ? (
           <p className="auth-consent-hint">
@@ -240,7 +306,9 @@ function LoginForm() {
           </p>
         ) : null}
 
-        {status ? <p className="status-banner">{status}</p> : null}
+        {status ? (
+          <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
+        ) : null}
 
         <p className="auth-privacy-note">
           EU-hosted analytics only - no email used for tracking - your data is

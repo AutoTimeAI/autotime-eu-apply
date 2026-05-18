@@ -429,7 +429,7 @@ h4 {
 }
 
 .executive-panel.tone-warn {
-  border-left-color: var(--amber);
+  border-left-color: var(--red);
 }
 
 .executive-panel.tone-blocked {
@@ -496,10 +496,45 @@ h4 {
   order: 2;
   margin-bottom: 14px;
   border: 1px solid #b9dbd6;
+  border-left: 4px solid var(--green);
   border-radius: 8px;
   background: #eaf7f5;
-  color: var(--accent-strong);
+  color: var(--green);
   font-weight: 650;
+  padding: 12px 14px;
+}
+
+.status-banner.info,
+.status-banner.success {
+  border-color: #9ed8bd;
+  border-left-color: var(--green);
+  background: #e5f7ee;
+  color: var(--green);
+}
+
+.status-banner.warning,
+.status-banner.error,
+.status.error {
+  border-color: #e1b8bd;
+  border-left-color: var(--red);
+  background: #fff1f2;
+  color: var(--red);
+}
+
+.status-banner.compact {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  padding: 9px 10px;
+}
+
+.status.error {
+  margin: 0;
+  border: 1px solid #e1b8bd;
+  border-left: 4px solid var(--red);
+  border-radius: 8px;
+  font-weight: 650;
+  line-height: 1.45;
   padding: 12px 14px;
 }
 
@@ -1268,7 +1303,7 @@ h4 {
 .integrity-grid article.tone-warn,
 .overview-workflow-map a.tone-warn,
 .command-centre-card.tone-warn {
-  border-left-color: var(--amber);
+  border-left-color: var(--red);
 }
 
 .integrity-grid article.tone-blocked,
@@ -1583,7 +1618,7 @@ h4 {
 }
 
 .command-centre-card.tone-warn .dashboard-card-topline i {
-  border-color: var(--amber);
+  border-color: var(--red);
 }
 
 .command-centre-card.tone-blocked .dashboard-card-topline i {
@@ -1614,7 +1649,7 @@ h4 {
 }
 
 .command-centre-card.tone-warn .dashboard-card-meter i {
-  background: var(--amber);
+  background: var(--red);
 }
 
 .command-centre-card.tone-blocked .dashboard-card-meter i {
@@ -2544,9 +2579,9 @@ h4 {
 }
 
 .guardrail-status.warning {
-  border-color: #efd7ad;
-  background: #fff7e8;
-  color: var(--amber);
+  border-color: #e1b8bd;
+  background: #fff1f2;
+  color: var(--red);
 }
 
 .guardrail-status.blocked {
@@ -3236,7 +3271,7 @@ h4 {
 }
 
 .metric-card.warn {
-  border-top-color: var(--amber);
+  border-top-color: var(--red);
 }
 
 .metric-card span,
@@ -3509,7 +3544,7 @@ h4 {
 }
 
 .fit-outcome-card.warn {
-  border-left-color: var(--amber);
+  border-left-color: var(--red);
 }
 
 .fit-outcome-card.blocked {
@@ -5371,8 +5406,14 @@ h4 {
 
 .pricing-error {
   margin: 0;
+  border: 1px solid #e1b8bd;
+  border-left: 4px solid var(--red);
+  border-radius: 8px;
+  background: #fff1f2;
   color: var(--red);
   font-weight: 650;
+  line-height: 1.4;
+  padding: 10px 12px;
 }
 
 .extension-download-panel {
@@ -5423,9 +5464,9 @@ h4 {
 }
 
 .extension-health-pill.warning {
-  border-color: #fde68a;
-  background: #fffbeb;
-  color: #92400e;
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .extension-health-pill.critical {
@@ -5458,7 +5499,7 @@ h4 {
 
 .extension-proof-card.warning,
 .extension-proof-card.medium {
-  border-left-color: var(--amber);
+  border-left-color: var(--red);
 }
 
 .extension-proof-card.critical,
@@ -6000,7 +6041,7 @@ h4 {
 }
 
 .admin-health-card.warning {
-  border-left-color: var(--amber);
+  border-left-color: var(--red);
 }
 
 .admin-health-card.critical {
@@ -6249,7 +6290,7 @@ h4 {
 }
 
 .admin-alert-panel.warning {
-  border-left-color: var(--amber);
+  border-left-color: var(--red);
 }
 
 .admin-alert-panel p,
@@ -6414,9 +6455,9 @@ h4 {
 }
 
 .admin-log-severity.warn {
-  border-color: #efd1a3;
-  background: #fff6e8;
-  color: var(--amber);
+  border-color: #e1b8bd;
+  background: #fff1f2;
+  color: var(--red);
 }
 
 .admin-log-severity.severe {
