@@ -23,6 +23,9 @@ const defaultSettings: AccountSettingsData = {
   notificationsEnabled: false
 }
 
+const missingSettingsStorageMessage =
+  "Account settings storage is not deployed yet. Defaults are available, but saving preferences requires the Supabase account_settings migration."
+
 const settingsSchema = z.object({
   aiTone: z.enum(["concise", "coaching", "detailed"]).optional(),
   defaultRegion: z.string().trim().min(1).max(120).optional(),
@@ -45,6 +48,19 @@ function mapSettingsRow(row: {
     defaultRegion: row.default_region,
     notificationsEnabled: row.notifications_enabled
   }
+}
+
+function isMissingAccountSettingsTable(error: { code?: string; message?: string }) {
+  const message = error.message?.toLowerCase() ?? ""
+
+  return (
+    error.code === "PGRST200" ||
+    error.code === "PGRST205" ||
+    message.includes("account_settings") &&
+      (message.includes("schema cache") ||
+        message.includes("does not exist") ||
+        message.includes("could not find the table"))
+  )
 }
 
 export async function GET(
@@ -72,6 +88,14 @@ export async function GET(
       .maybeSingle()
 
     if (error) {
+      if (isMissingAccountSettingsTable(error)) {
+        return jsonResponse({
+          data: defaultSettings,
+          error: missingSettingsStorageMessage,
+          status: 200
+        })
+      }
+
       return diagnosticJson({
         area: "account",
         code: "account.settings.read.failed",
@@ -128,6 +152,20 @@ export async function PATCH(
       .maybeSingle()
 
     if (readError) {
+      if (isMissingAccountSettingsTable(readError)) {
+        return jsonResponse({
+          data: {
+            aiTone: body.aiTone ?? defaultSettings.aiTone,
+            defaultRegion: body.defaultRegion ?? defaultSettings.defaultRegion,
+            notificationsEnabled:
+              body.notificationsEnabled ??
+              defaultSettings.notificationsEnabled
+          },
+          error: missingSettingsStorageMessage,
+          status: 202
+        })
+      }
+
       return diagnosticJson({
         area: "account",
         code: "account.settings.patch.read.failed",
@@ -158,6 +196,14 @@ export async function PATCH(
       .single()
 
     if (error) {
+      if (isMissingAccountSettingsTable(error)) {
+        return jsonResponse({
+          data: mapSettingsRow(nextSettings),
+          error: missingSettingsStorageMessage,
+          status: 202
+        })
+      }
+
       return diagnosticJson({
         area: "account",
         code: "account.settings.write.failed",

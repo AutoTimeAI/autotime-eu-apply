@@ -61,6 +61,7 @@ export function SettingsControls({
         }
 
         setPreferences(payload.data)
+        setStatus(payload.error)
       } catch (error: unknown) {
         if (isActive) {
           setStatus(
@@ -102,7 +103,7 @@ export function SettingsControls({
       }
 
       setPreferences(payload.data)
-      setStatus("Preferences saved to this account.")
+      setStatus(payload.error ?? "Preferences saved to this account.")
     } catch (error: unknown) {
       setPreferences(previous)
       setStatus(
