@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-05-18T15:40:00",
+  "repo": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+  "environment": {
+    "python": "3.14.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+    "node_path": "C:\\Program Files\\nodejs\\node.EXE",
+    "pnpm_path": "C:\\Users\\rajan\\AppData\\Roaming\\npm\\pnpm.CMD"
+  },
+  "safety_boundary": {
+    "automates_linkedin": false,
+    "submits_forms": false,
+    "stores_api_keys": false,
+    "stores_cookies": false,
+    "live_site_evidence_mode": "manual"
+  },
+  "repo_shape": {
+    "repo_path": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+    "exists": true,
+    "package_json_exists": true,
+    "pnpm_lock_exists": true,
+    "pnpm_workspace_exists": true,
+    "apps_dir_exists": true,
+    "docs_dir_exists": true,
+    "scripts_dir_exists": true,
+    "expected_package_scripts": [
+      "build:extension",
+      "dev:web",
+      "market:ready:automated",
+      "market:ready:gate",
+      "validation:new"
+    ],
+    "missing_package_scripts": [],
+    "passed": true
+  },
+  "commands": [
+    {
+      "name": "node_version",
+      "command": "node --version",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-18T15:40:00",
+      "timeout_seconds": 60,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "v24.11.1",
+      "stderr": "",
+      "duration_seconds": 0.03
+    },
+    {
+      "name": "pnpm_version",
+      "command": "pnpm --version",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-18T15:40:00",
+      "timeout_seconds": 60,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "10.33.0",
+      "stderr": "",
+      "duration_seconds": 0.31
+    },
+    {
+      "name": "automated_market_gate",
+      "command": "pnpm market:ready:automated",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-18T15:40:01",
+      "timeout_seconds": 1200,
+      "returncode": 1,
+      "passed": true,
+      "manual_evidence_pending": true,
+      "environment_spawn_limited": false,
+      "stdout": "\n> autotime-eu-apply@ market:ready:automated C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/market-ready-gate.mjs --run-automated\n\n\n> autotime-eu-apply@ release:check C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/release-check.mjs\n\nRunning Extension unit tests... PASS\nRunning Repo typecheck... PASS\nRunning Repo lint... PASS\nRunning Extension production build... PASS\nRelease check report written to docs\\release-runs\\2026-05-18T14-40-18-140Z.md\n\n> autotime-eu-apply@ test:mvp:coverage C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/mvp-test-coverage.mjs\n\nMVP automated testing coverage target met: 95% automated, 5% manual\n\n> autotime-eu-apply@ test:validation-run C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/validation-run.test.mjs\n\nok - formats stable validation report dates\nok - creates a validation report with build metadata\nok - includes the automated and manual testing gates\nok - keeps LinkedIn and live platform validation explicit\nok - includes export evidence and release decision sections\nok - finds the latest markdown report in a report directory\n\n> autotime-eu-apply@ test:smoke:web C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/smoke-web-dashboard.test.mjs\n\nok - passes when deployed dashboard HTML contains expected markers\nok - fails when response status is not successful\nok - fails when response is not HTML\nok - fails when expected dashboard markers are missing\nok - fails with fetch error message when request throws an Error\nok - fails with fallback message when request throws an unknown value\nok - reads default and environment override smoke URLs\n\n> autotime-eu-apply@ test:web:interview C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node --experimental-strip-types apps/web/tests/interview-prep.test.mjs\n\nok - creates local interview prep pack without AI\nok - blocks interview prep when evidence is too thin\nok - normalizes partial AI interview prep output\nok - estimates interview prep OpenAI usage cost\nok - checks web AI budget and key availability\nok - generates AI interview prep from mocked OpenAI response\n\n> autotime-eu-apply@ test:mvp C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/mvp-automation-toolkit.mjs\n\nRunning Extension unit tests... PASS\nRunning Web AI interview-prep unit tests... PASS\nRunning Web smoke automation unit tests... PASS\nRunning Validation run generator tests... PASS\nRunning MVP automated testing coverage gate... PASS\nRunning Repo typecheck... PASS\nRunning Repo lint... PASS\nRunning Extension production build... PASS\nRunning Web production build... PASS\nMVP automation report written to docs\\automation-runs\\2026-05-18T14-41-23-207Z.md\n\u00e2\u20ac\u2030ELIFECYCLE\u00e2\u20ac\u2030 Command failed with exit code 1.",
+      "stderr": "Market-ready gate failed for docs\\founder-validation-runs\\2026-05-18T14-34-16-365Z-manual-validation.md\n- Chrome version is missing completed evidence\n- Extension Smoke Test result is not completed\n- V2 Dashboard Smoke Test result is not completed\n- LinkedIn live row needs a real role title\n- LinkedIn live row needs a real company\n- LinkedIn live row needs a country\n- LinkedIn Content OK must be marked Yes after live validation\n- LinkedIn live row needs outcome notes\n- Greenhouse live row needs a real role title\n- Greenhouse live row needs a real company\n- Greenhouse live row needs a country\n- Greenhouse Import OK must be marked Yes after live validation\n- Greenhouse Content OK must be marked Yes after live validation\n- Greenhouse live row needs outcome notes\n- Lever live row needs a real role title\n- Lever live row needs a real company\n- Lever live row needs a country\n- Lever Import OK must be marked Yes after live validation\n- Lever Content OK must be marked Yes after live validation\n- Lever live row needs outcome notes\n- Workday live row needs a real role title\n- Workday live row needs a real company\n- Workday live row needs a country\n- Workday Import OK must be marked Yes after live validation\n- Workday Content OK must be marked Yes after live validation\n- Workday live row needs outcome notes\n- Other live row needs a real role title\n- Other live row needs a real company\n- Other live row needs a country\n- Other Import OK must be marked Yes after live validation\n- Other Content OK must be marked Yes after live validation\n- Other live row needs outcome notes\n- Decision: MVP validation result must be completed",
+      "duration_seconds": 83.26
+    },
+    {
+      "name": "new_validation_report",
+      "command": "pnpm validation:new",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-18T15:41:24",
+      "timeout_seconds": 120,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "\n> autotime-eu-apply@ validation:new C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/validation-run.mjs\n\nFounder validation report created at docs\\founder-validation-runs\\2026-05-18T14-41-25-892Z-manual-validation.md",
+      "stderr": "",
+      "duration_seconds": 1.4
+    },
+    {
+      "name": "extension_build",
+      "command": "pnpm build:extension",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-18T15:41:25",
+      "timeout_seconds": 1200,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "DiagnosticEvent({\n      area: \"sync\",\n      event: completedEvent,\n      message: \"Locally saved jobs synced to dashboard.\",\n      status: \"success\",\n      details: {\n        applicationCount: syncedApplicationIds.length,\n        deletedApplicationCount: deletedApplicationIds.length\n      }\n    })\n    return undefined\n  } catch (error: unknown) {\n    const syncError = getErrorMessage(error)\n    await updateApplicationSyncState(applicationIds, \"failed\", {\n      error: syncError\n    })\n    await logDiagnosticEvent({\n      area: \"sync\",\n      event: failedEvent,\n      message: syncError,\n      status: \"warning\",\n      details: { applicationCount: applications.length }\n    })\n    return syncError\n  }\n}\n\nlet retrySyncInFlight = false\n\nasync function retryPendingApplicationSync(reason: \"installed\" | \"startup\") {\n  if (retrySyncInFlight) {\n    return\n  }\n\n  retrySyncInFlight = true\n\n  try {\n    const session = await getAccountSession()\n\n[REDACTED SENSITIVE LINE]\n      await logDiagnosticEvent({\n        area: \"sync\",\n        event: \u001b[36mretry-sync-skipped-${reason}\u001b[39m,\n        message: \"Saved job sync retry skipped because no dashboard session exists.\",\n        status: \"info\"\n      })\n      return\n    }\n\n    const [applications, syncState] = await Promise.all([\n      getApplications(),\n      getApplicationSyncState()\n    ])\n    const retryableApplications = applications.filter((application) => {\n      const status = syncState[application.id]?.status\n      return status === \"pending\" || status === \"failed\"\n    })\n\n    if (retryableApplications.length === 0) {\n      await logDiagnosticEvent({\n        area: \"sync\",\n        event: \u001b[36mretry-sync-empty-${reason}\u001b[39m,\n        message: \"No saved jobs need dashboard sync retry.\",\n        status: \"info\"\n      })\n      return\n    }\n\n    await syncApplicationsWithState({\n      applications: retryableApplications,\n      completedEvent: \u001b[36mretry-sync-completed-${reason}\u001b[39m,\n      failedEvent: \u001b[36mretry-sync-failed-${reason}\u001b[39m,\n      session,\n      startedEvent: \u001b[36mretry-sync-started-${reason}\u001b[39m\n    })\n  } finally {\n    retrySyncInFlight = false\n  }\n}\n\nasync function broadcastAccountConnected() {\n  try {\n    const tabs = await chrome.tabs.query({})\n\n    await Promise.allSettled(\n      tabs\n        .filter((tab) => tab.id)\n        .map((tab) =>\n          chrome.tabs.sendMessage(tab.id as number, {\n            type: \"AUTOTIME_ACCOUNT_CONNECTED\"\n          })\n        )\n    )\n  } catch (error: unknown) {\n    await logDiagnosticEvent({\n      area: \"connect\",\n      event: \"account-connected-broadcast-failed\",\n      message: getErrorMessage(error),\n      status: \"warning\"\n    })\n  }\n}\n\nasync function showWidgetInTab(tab: chrome.tabs.Tab) {\n  if (!tab.id || !tab.url || !/^https?:\\/\\//i.test(tab.url)) {\n    return\n  }\n\n  try {\n    await chrome.tabs.sendMessage(tab.id, {\n      type: \"AUTOTIME_SHOW_WIDGET\"\n    })\n    return\n  } catch {\n    await chrome.scripting.executeScript({\n      target: { tabId: tab.id },\n      files: [\"content-scripts/autotime.js\"]\n    })\n  }\n\n  await chrome.tabs.sendMessage(tab.id, {\n    type: \"AUTOTIME_SHOW_WIDGET\"\n  })\n}\n\nexport default defineBackground(() => {\n  chrome.action.onClicked.addListener((tab) => {\n    void showWidgetInTab(tab)\n  })\n\n  chrome.runtime.onMessage.addListener(\n    (\n      message: InternalMessage,\n      _sender,\n      sendResponse: (response: InternalResponse) => void\n    ) => {\n      if (message?.type !== \"AUTOTIME_SYNC_APPLICATIONS\") {\n        return false\n      }\n\n      void (async () => {\n        const applications = Array.isArray(message.applications)\n          ? (message.applications as ApplicationRecord[])\n          : await getApplications()\n        const applicationIds = applications.map((application) => application.id)\n        const session = await getAccountSession()\n\n[REDACTED SENSITIVE LINE]\n          await updateApplicationSyncState(applicationIds, \"pending\")\n          await logDiagnosticEvent({\n            area: \"sync\",\n            event: \"widget-sync-skipped-unconnected\",\n            message: \"Widget sync skipped because no dashboard session exists.\",\n            status: \"info\",\n            details: { applicationCount: applications.length }\n          })\n          sendResponse({\n            connected: false,\n            ok: true,\n            reason: \"Click CONNECT to sync to dashboard\",\n            synced: false\n          })\n          return\n        }\n\n        const syncError = await syncApplicationsWithState({\n          applications,\n          completedEvent: \"widget-sync-completed\",\n          failedEvent: \"widget-sync-failed\",\n          session,\n          startedEvent: \"widget-sync-started\"\n        })\n\n        sendResponse({\n          connected: true,\n          ok: true,\n          reason: syncError ? \u001b[36mDashboard sync failed: ${syncError}\u001b[39m : undefined,\n          synced: !syncError\n        })\n      })().catch((error: unknown) => {\n        void logDiagnosticEvent({\n          area: \"sync\",\n          event: \"widget-sync-unexpected-failed\",\n          message: getErrorMessage(error),\n          status: \"error\"\n        })\n        sendResponse({\n          error: getErrorMessage(error),\n          ok: false,\n          reason: \u001b[36mDashboard sync failed: ${getErrorMessage(error)}\u001b[39m,\n          synced: false\n        })\n      })\n\n      return true\n    }\n  )\n\n  chrome.runtime.onInstalled.addListener(() => {\n    void retryPendingApplicationSync(\"installed\")\n  })\n\n  chrome.runtime.onStartup.addListener(() => {\n    void retryPendingApplicationSync(\"startup\")\n  })\n\n  chrome.runtime.onMessageExternal.addListener(\n    (\n      message: ExternalMessage,\n      sender,\n      sendResponse: (response: ExternalResponse) => void\n    ) => {\n      if (!isTrustedSender(sender)) {\n        void logDiagnosticEvent({\n          area: \"connect\",\n          event: \"external-message-untrusted\",\n          message: \"Dashboard-to-extension message rejected because sender is not trusted.\",\n          status: \"error\",\n          details: { senderUrl: sender.url ?? \"missing\" }\n        })\n        sendResponse({ error: \"Untrusted sender\", ok: false })\n        return false\n      }\n\n      if (message.type === \"AUTOTIME_PING\") {\n        void logDiagnosticEvent({\n          area: \"connect\",\n          event: \"ping-received\",\n          message: \"Dashboard preflight ping reached the extension.\",\n          status: \"info\"\n        })\n        void getAccountSession()\n          .then((session) =>\n            sendResponse({\n[REDACTED SENSITIVE LINE]\n              ok: true,\n              version: chrome.runtime.getManifest().version\n            })\n          )\n          .catch(() =>\n            sendResponse({\n              connected: false,\n              ok: true,\n              version: chrome.runtime.getManifest().version\n            })\n          )\n\n        return true\n      }\n\n      const session = parseAccountSession(message)\n\n      if (!session) {\n        void logDiagnosticEvent({\n          area: \"connect\",\n          event: \"connect-invalid-message\",\n          message: \"Connection message did not include a valid account session.\",\n          status: \"error\"\n        })\n        sendResponse({ error: \"Invalid account session\", ok: false })\n        return false\n      }\n\n      void saveAccountSession(session)\n        .then(async () => {\n          await logDiagnosticEvent({\n            area: \"connect\",\n            event: \"account-session-saved\",\n            message: \"Account session saved in extension storage.\",\n            status: \"success\",\n            details: { email: session.email, plan: session.plan }\n          })\n\n          const applications = await getApplications()\n          const syncError = await syncApplicationsWithState({\n            applications,\n            completedEvent: \"connect-sync-completed\",\n            failedEvent: \"connect-sync-failed\",\n            session,\n            startedEvent: \"connect-sync-started\"\n          })\n\n          await broadcastAccountConnected()\n          await logDiagnosticEvent({\n            area: \"connect\",\n            event: \"account-connected-broadcast\",\n            message: \"Connection update broadcast to open extension tabs.\",\n            status: \"success\"\n          })\n\n          sendResponse({ ok: true, syncError })\n        })\n        .catch((error: unknown) => {\n          void logDiagnosticEvent({\n            area: \"connect\",\n            event: \"account-session-save-failed\",\n            message: getErrorMessage(error),\n            status: \"error\"\n          })\n          sendResponse({ error: \"Could not save account session\", ok: false })\n        })\n\n      return true\n    }\n  )\n})\n\n---\n\u001b[90mD\u001b[39m Transformed:\n---\nimport { defineBackground } from \"wxt/utils/define-background\"\n\ntype ExternalMessage = {\n[REDACTED SENSITIVE LINE]\n  email?: unknown\n  plan?: unknown\n  type?: unknown\n}\n\ntype ExternalResponse = {\n  connected?: boolean\n  error?: string\n  ok: boolean\n  syncError?: string\n  version?: string\n}\n\ntype InternalMessage = {\n  applications?: unknown\n  type?: unknown\n}\n\ntype InternalResponse = {\n  connected?: boolean\n  error?: string\n  ok: boolean\n  reason?: string\n  synced?: boolean\n}\n\nexport default defineBackground();\n---\n\u001b[90mD\u001b[39m vite-node transformed entrypoint C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\apps\\extension\\entrypoints\\autotime.content.ts\n\u001b[90mD\u001b[39m Original:\n---\nimport { defineContentScript } from \"wxt/utils/define-content-script\"\nimport { registerAutotimeContentScript } from \"../contents/autofill\"\n\nexport default defineContentScript({\n  matches: [\"*://*/*\"],\n  main() {\n    // Register page-level message handlers used by the side panel.\n    registerAutotimeContentScript()\n  }\n})\n\n---\n\u001b[90mD\u001b[39m Transformed:\n---\nimport { defineContentScript } from \"wxt/utils/define-content-script\"\n\nexport default defineContentScript({\n  matches: [\"*://*/*\"]\n})\n---\n\u001b[90mD\u001b[39m All entrypoints: [ { type: 'content-script',\n    name: 'autotime',\n    inputPath:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\entrypoints\\\\autotime.content.ts',\n    outputDir:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\.output\\\\chrome-mv3\\\\content-scripts',\n    options: { matches: [Array] },\n    skipped: false },\n  { type: 'background',\n    name: 'background',\n    inputPath:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\entrypoints\\\\background\\\\index.ts',\n    outputDir:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\.output\\\\chrome-mv3',\n    options: { main: undefined },\n    skipped: false } ]\n\u001b[90mD\u001b[39m Detected entrypoints: [ { type: 'content-script',\n    name: 'autotime',\n    inputPath:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\entrypoints\\\\autotime.content.ts',\n    outputDir:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\.output\\\\chrome-mv3\\\\content-scripts',\n    options: { matches: [Array] },\n    skipped: false },\n  { type: 'background',\n    name: 'background',\n    inputPath:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\entrypoints\\\\background\\\\index.ts',\n    outputDir:\n     'C:\\\\Users\\\\rajan\\\\OneDrive\\\\Desktop\\\\Autotime-EU-Apply\\\\apps\\\\extension\\\\.output\\\\chrome-mv3',\n    options: { main: undefined },\n    skipped: false } ]\n\u001b[32m\u00e2\u02c6\u0161\u001b[39m Built extension in 2.178 s\n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\manifest.json                992 B   \n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\background.js                12.41 kB\n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\content-scripts\\autotime.js  55.51 kB\n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\icons\\128.png                16.15 kB\n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\icons\\16.png                 720 B   \n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\icons\\32.png                 1.78 kB \n  \u00e2\u201d\u201d\u00e2\u201d\u20ac .output\\chrome-mv3\\icons\\48.png                 3.12 kB \n\u00ce\u00a3 Total size: 90.68 kB                             \n\u001b[32m\u00e2\u02c6\u0161\u001b[39m Finished in 3.089 s",
+      "stderr": "\u001b[33m-\u001b[39m Preparing...\n\u001b[1G",
+      "duration_seconds": 6.43
+    }
+  ],
+  "extension_output": {
+    "path": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\apps\\extension\\.output\\chrome-mv3",
+    "exists": true,
+    "required_files": {
+      "manifest.json": true
+    },
+    "manifest": {
+      "name": "AutoTime EU Apply",
+      "version": "0.0.1",
+      "manifest_version": 3,
+      "permissions": [
+        "activeTab",
+        "scripting",
+        "storage"
+      ],
+      "host_permissions_count": 7
+    },
+    "passed": true
+  },
+  "latest_paths": {
+    "latest_release_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\release-runs\\2026-05-18T14-40-18-140Z.md",
+    "latest_automation_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\automation-runs\\2026-05-18T14-41-23-207Z.md",
+    "latest_founder_validation_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\founder-validation-runs\\2026-05-18T14-41-25-892Z-manual-validation.md",
+    "python_report_dir": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\automation-runs\\python-smoke-20260518-154000"
+  },
+  "web_smoke": {
+    "skipped": true,
+    "reason": "Run with --start-web to test the local dashboard URL."
+  },
+  "overall_passed": true
+}

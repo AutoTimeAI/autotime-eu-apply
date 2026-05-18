@@ -3,15 +3,20 @@ import type {
   applicationContentDraftSchema,
   applicationContentSnapshotSchema,
   applicationOutcomeReasonSchema,
+  applicationPositioningPackSchema,
   applicationRecordSchema,
   applicationStatusSchema,
+  aiProviderSchema,
+  candidateReadinessProfileSchema,
   candidateProfileSchema,
   companionDashboardStateSchema,
+  euFitEngineResultSchema,
   evidenceRecordSchema,
   evidenceSourceTypeSchema,
   interviewPrepPackSchema,
   jobAnalysisDraftSchema,
   jobRecommendationSchema,
+  normalisedJobSchema,
   outcomeRecordSchema,
   reusableAnswersSchema,
   workModeSchema
@@ -23,6 +28,15 @@ export type ApplicationOutcomeReason = z.infer<
 >
 export type JobRecommendation = z.infer<typeof jobRecommendationSchema>
 export type WorkMode = z.infer<typeof workModeSchema>
+export type AIProvider = z.infer<typeof aiProviderSchema>
+export type NormalisedJob = z.infer<typeof normalisedJobSchema>
+export type CandidateReadinessProfile = z.infer<
+  typeof candidateReadinessProfileSchema
+>
+export type EUFitEngineResult = z.infer<typeof euFitEngineResultSchema>
+export type ApplicationPositioningPack = z.infer<
+  typeof applicationPositioningPackSchema
+>
 export type CandidateProfile = z.infer<typeof candidateProfileSchema>
 export type ReusableAnswers = z.infer<typeof reusableAnswersSchema>
 export type ApplicationContentDraft = z.infer<

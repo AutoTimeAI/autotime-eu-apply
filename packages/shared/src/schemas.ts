@@ -45,6 +45,60 @@ export const workModeSchema = z.enum([
   "unknown"
 ])
 
+export const aiProviderSchema = z.enum(["mock", "openai", "anthropic"])
+
+export const normalisedJobSchema = z.object({
+  sourceType: z.string(),
+  sourceName: z.string(),
+  sourceUrl: z.string(),
+  title: z.string(),
+  company: z.string(),
+  country: z.string(),
+  city: z.string(),
+  locationType: z.enum(["onsite", "hybrid", "remote", "unknown"]),
+  description: z.string(),
+  responsibilities: z.array(z.string()),
+  requiredSkills: z.array(z.string()),
+  preferredSkills: z.array(z.string()),
+  salaryMin: z.number().nullable(),
+  salaryMax: z.number().nullable(),
+  currency: z.string(),
+  languageSignals: z.array(z.string()),
+  sponsorshipSignals: z.array(z.string()),
+  rightToWorkSignals: z.array(z.string()),
+  relocationSignals: z.array(z.string()),
+  seniority: z.string(),
+  employerType: z.string(),
+  extractedAt: z.string(),
+  verificationStatus: z.enum([
+    "not_checked",
+    "needs_official_check",
+    "user_verified",
+    "source_verified"
+  ])
+})
+
+export const candidateReadinessProfileSchema = z.object({
+  currentLocation: z.string(),
+  workAuthorisationStatus: z.string(),
+  sponsorshipNeed: z.boolean(),
+  targetCountries: z.array(z.string()),
+  languages: z.array(z.string()),
+  yearsOfExperience: z.number().nullable(),
+  targetRoles: z.array(z.string()),
+  salaryMinimum: z.number().nullable(),
+  relocationReadiness: z.enum(["yes", "no", "depends", "unknown"]),
+  noticePeriod: z.string(),
+  strongestDomainExperience: z.string(),
+  cvStrengthLevel: z.enum(["missing", "thin", "developing", "strong"]),
+  linkedInOrPortfolioAvailability: z.enum([
+    "missing",
+    "linkedin_only",
+    "portfolio_only",
+    "both"
+  ])
+})
+
 export const fitComponentStatusSchema = z.enum([
   "strong",
   "medium",
@@ -130,6 +184,45 @@ export const countryFitEvaluationSchema = z.object({
   evidenceChecklist: z.array(z.string()),
   components: z.array(fitComponentSchema),
   learningPrompt: z.string()
+})
+
+export const euFitEngineResultSchema = z.object({
+  euFitScore: z.number(),
+  applyDecision: countryFitDecisionSchema,
+  bestCountryFit: z.string(),
+  applicationPriority: jobRecommendationSchema,
+  rightToWorkRealityCheck: z.string(),
+  languageBarrierScore: z.number(),
+  relocationPracticality: z.string(),
+  officialVerificationStatus: z.enum([
+    "not_checked",
+    "needs_official_check",
+    "user_verified",
+    "source_verified"
+  ]),
+  positiveSignals: z.array(z.string()),
+  riskSignals: z.array(z.string()),
+  whyThisRoleFits: z.array(z.string()),
+  candidatePositioningGap: z.string(),
+  bestApplicationAngle: z.string(),
+  recruiterSummaryAngle: z.string(),
+  cvImprovementSuggestion: z.string(),
+  interviewReadinessNote: z.string(),
+  trustNote: z.string(),
+  complianceNote: z.string()
+})
+
+export const applicationPositioningPackSchema = z.object({
+  recruiterSummaryAngle: z.string(),
+  bestApplicationAngle: z.string(),
+  cvImprovementSuggestion: z.string(),
+  coverLetterAngle: z.string(),
+  motivationAnswerAngle: z.string(),
+  strengthsAnswerAngle: z.string(),
+  interviewReadinessNote: z.string(),
+  followUpSuggestion: z.string(),
+  trustNote: z.string(),
+  complianceNote: z.string()
 })
 
 export const candidateProfileSchema = z.object({

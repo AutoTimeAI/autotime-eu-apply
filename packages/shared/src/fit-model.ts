@@ -1,8 +1,41 @@
-import type { CandidateProfile, JobAnalysisDraft } from "./types.ts"
+import type {
+  AIProvider,
+  ApplicationPositioningPack,
+  CandidateProfile,
+  EUFitEngineResult,
+  JobAnalysisDraft,
+  ReusableAnswers
+} from "./types.ts"
 import { getCountryRule, type CountryRule } from "./country-rules.ts"
 
 export const AUTOTIME_FIT_SCORE_DISCLAIMER =
   "This score is a guidance signal based on your provided CV/profile and the job description. It does not guarantee interviews, offers, or employer decisions."
+
+export const AUTOTIME_DEMO_ANALYSIS_LABEL =
+  "Sample/demo analysis — not live AI output."
+
+export const AUTOTIME_COMPLIANCE_NOTE =
+  "No job, visa, sponsorship, or interview guarantees. AutoTime EU Apply helps users make better application decisions, strengthen positioning, and prepare more effectively."
+
+export const AUTOTIME_OFFICIAL_SOURCE_NOTE =
+  "Visa, sponsorship, salary, and country-specific guidance should be verified against official employer, government, or EU sources before making decisions."
+
+export const AUTOTIME_APPLICATION_DRAFT_REVIEW_NOTE =
+  "Application drafts should be reviewed and personalised before submission."
+
+export function resolveAIProvider({
+  requestedProvider,
+  openAIKeyAvailable = false
+}: {
+  requestedProvider?: AIProvider | null
+  openAIKeyAvailable?: boolean
+}): AIProvider {
+  if (requestedProvider === "openai" && openAIKeyAvailable) {
+    return "openai"
+  }
+
+  return "mock"
+}
 
 export type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 
@@ -991,5 +1024,205 @@ export function evaluateCountryFit({
       (context.outcomeSignals?.totalTracked ?? 0) > 0
         ? "Outcome history is now part of this judgment. Record sponsorship, work-right and interview results so future recommendations become stricter where needed."
         : "After the outcome is known, record whether the country/work-right assumption was correct so future recommendations can become stricter or more confident."
+  }
+}
+
+function getApplicationPriority(
+  score: number
+): EUFitEngineResult["applicationPriority"] {
+  if (score >= 80) {
+    return "High Priority"
+  }
+
+  if (score >= 65) {
+    return "Worth Applying"
+  }
+
+  if (score >= 50) {
+    return "Stretch"
+  }
+
+  return "Skip"
+}
+
+function getComponentText(
+  evaluation: CountryFitEvaluation,
+  key: FitComponentKey,
+  fallback: string
+) {
+  return evaluation.components.find((item) => item.key === key)?.rationale ?? fallback
+}
+
+function getLanguageBarrierScore({
+  evaluation,
+  job,
+  profile
+}: {
+  evaluation: CountryFitEvaluation
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}) {
+  const countryRuleSignals = evaluation.countryRule.name
+    ? evaluation.components
+        .find((item) => item.key === "countryLocationFit")
+        ?.evidence.join(" ")
+        .toLowerCase() ?? ""
+    : ""
+  const text = [job.location, job.jobDescription, countryRuleSignals]
+    .join(" ")
+    .toLowerCase()
+  const profileText = [
+    profile.baseCvText,
+    profile.experienceHighlights,
+    profile.projectSummaries
+  ]
+    .join(" ")
+    .toLowerCase()
+  const visibleLanguageSignals = [
+    "german",
+    "deutsch",
+    "dutch",
+    "french",
+    "polish",
+    "english"
+  ].filter((signal) => text.includes(signal))
+
+  if (visibleLanguageSignals.length === 0) {
+    return 20
+  }
+
+  const matched = visibleLanguageSignals.filter((signal) =>
+    profileText.includes(signal)
+  )
+
+  return clampScore(80 - (matched.length / visibleLanguageSignals.length) * 55)
+}
+
+export function createMockEUFitEngineResult({
+  evaluation,
+  fitReview,
+  job,
+  profile,
+  provider = "mock",
+  officialSourceReviewed = false
+}: {
+  evaluation: CountryFitEvaluation
+  fitReview: AutoTimeFitReview
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+  provider?: AIProvider
+  officialSourceReviewed?: boolean
+}): EUFitEngineResult {
+  const positiveSignals = fitReview.matchedSignals.filter(Boolean)
+  const riskSignals = unique([
+    ...fitReview.riskAreas,
+    ...evaluation.blockers,
+    ...fitReview.missingSignals.slice(0, 3)
+  ]).filter(Boolean)
+  const role = job.jobTitle || "this role"
+  const company = job.company || "the employer"
+  const officialVerificationStatus = officialSourceReviewed
+    ? "user_verified"
+    : "needs_official_check"
+  const mockPrefix = provider === "mock" ? `${AUTOTIME_DEMO_ANALYSIS_LABEL} ` : ""
+
+  return {
+    euFitScore: fitReview.fitScore,
+    applyDecision: evaluation.decision,
+    bestCountryFit: evaluation.countryRule.name,
+    applicationPriority: getApplicationPriority(fitReview.fitScore),
+    rightToWorkRealityCheck: getComponentText(
+      evaluation,
+      "rightToWorkCompatibility",
+      "Work-right evidence needs checking against the role and official sources."
+    ),
+    languageBarrierScore: getLanguageBarrierScore({ evaluation, job, profile }),
+    relocationPracticality: getComponentText(
+      evaluation,
+      "relocationFit",
+      "Relocation practicality needs checking before applying."
+    ),
+    officialVerificationStatus,
+    positiveSignals:
+      positiveSignals.length > 0
+        ? positiveSignals
+        : ["No strong positive signal is visible yet."],
+    riskSignals:
+      riskSignals.length > 0
+        ? riskSignals
+        : ["No major blocker was detected by the current rules."],
+    whyThisRoleFits: [
+      fitReview.shortSummary,
+      ...positiveSignals.slice(0, 2)
+    ].filter(Boolean),
+    candidatePositioningGap:
+      fitReview.missingSignals[0] ||
+      "No single positioning gap is dominant from the saved evidence.",
+    bestApplicationAngle: evaluation.positioningAngle,
+    recruiterSummaryAngle:
+      fitReview.suggestedCvPositioning ||
+      `Position the candidate for ${role} at ${company} using only saved evidence.`,
+    cvImprovementSuggestion:
+      fitReview.suggestedCvPositioning ||
+      "Add role-specific proof to the CV before using stronger application claims.",
+    interviewReadinessNote:
+      fitReview.fitScore >= 65
+        ? "Prepare two truthful examples from saved evidence before interview outreach."
+        : "Improve evidence and resolve the strongest risk before treating this role as interview-ready.",
+    trustNote: `${mockPrefix}${AUTOTIME_OFFICIAL_SOURCE_NOTE}`,
+    complianceNote: AUTOTIME_COMPLIANCE_NOTE
+  }
+}
+
+export function createMockApplicationPositioningPack({
+  fitResult,
+  job,
+  profile,
+  provider = "mock",
+  reusableAnswers
+}: {
+  fitResult: EUFitEngineResult
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+  provider?: AIProvider
+  reusableAnswers?: Partial<ReusableAnswers>
+}): ApplicationPositioningPack {
+  const role = job.jobTitle || profile.targetRoles || "this role"
+  const company = job.company || "the employer"
+  const targetRoles = profile.targetRoles || "relevant roles"
+  const strongestEvidence =
+    profile.experienceHighlights ||
+    profile.projectSummaries ||
+    profile.baseCvText.slice(0, 280) ||
+    "Add saved evidence before using stronger application claims."
+  const motivationAngle =
+    reusableAnswers?.motivationAnswer ||
+    `Connect ${role} at ${company} to the candidate's target direction in ${targetRoles}, using only verified evidence.`
+  const strengthsAngle =
+    reusableAnswers?.strengthsAnswer ||
+    `Lead with the strongest saved proof: ${strongestEvidence}`
+  const providerLabel =
+    provider === "mock"
+      ? "Local/template-based draft — not live AI-refined. "
+      : ""
+
+  return {
+    recruiterSummaryAngle: fitResult.recruiterSummaryAngle,
+    bestApplicationAngle: fitResult.bestApplicationAngle,
+    cvImprovementSuggestion: fitResult.cvImprovementSuggestion,
+    coverLetterAngle: [
+      `Open with a direct application for ${role} at ${company}.`,
+      fitResult.bestApplicationAngle,
+      "Keep work-right, sponsorship and relocation wording factual and verifiable."
+    ].join(" "),
+    motivationAnswerAngle: motivationAngle,
+    strengthsAnswerAngle: strengthsAngle,
+    interviewReadinessNote: fitResult.interviewReadinessNote,
+    followUpSuggestion:
+      fitResult.applyDecision === "Apply now"
+        ? "After submitting, set a follow-up reminder and prepare two evidence-backed interview examples."
+        : "Resolve the strongest fit or evidence gap before submitting or following up.",
+    trustNote: `${providerLabel}${fitResult.trustNote}`,
+    complianceNote: `${fitResult.complianceNote} ${AUTOTIME_APPLICATION_DRAFT_REVIEW_NOTE}`
   }
 }

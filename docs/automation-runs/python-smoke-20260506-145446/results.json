@@ -1,0 +1,108 @@
+{
+  "generated_at": "2026-05-06T14:54:46",
+  "repo": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+  "environment": {
+    "python": "3.14.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+    "node_path": "C:\\Program Files\\nodejs\\node.EXE",
+    "pnpm_path": "C:\\Users\\rajan\\AppData\\Roaming\\npm\\pnpm.CMD"
+  },
+  "safety_boundary": {
+    "automates_linkedin": false,
+    "submits_forms": false,
+    "stores_api_keys": false,
+    "stores_cookies": false,
+    "live_site_evidence_mode": "manual"
+  },
+  "repo_shape": {
+    "repo_path": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+    "exists": true,
+    "package_json_exists": true,
+    "pnpm_lock_exists": true,
+    "pnpm_workspace_exists": true,
+    "apps_dir_exists": true,
+    "docs_dir_exists": true,
+    "scripts_dir_exists": true,
+    "expected_package_scripts": [
+      "build:extension",
+      "dev:web",
+      "market:ready:automated",
+      "market:ready:gate",
+      "validation:new"
+    ],
+    "missing_package_scripts": [],
+    "passed": true
+  },
+  "commands": [
+    {
+      "name": "node_version",
+      "command": "node --version",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T14:54:46",
+      "timeout_seconds": 60,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "stdout": "v24.11.1",
+      "stderr": "",
+      "duration_seconds": 0.03
+    },
+    {
+      "name": "pnpm_version",
+      "command": "pnpm --version",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T14:54:46",
+      "timeout_seconds": 60,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "stdout": "10.33.0",
+      "stderr": "",
+      "duration_seconds": 0.31
+    },
+    {
+      "name": "automated_market_gate",
+      "command": "pnpm market:ready:automated",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T14:54:46",
+      "timeout_seconds": 1200,
+      "returncode": 1,
+      "passed": false,
+      "manual_evidence_pending": false,
+      "stdout": "\n> autotime-eu-apply@ market:ready:automated C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/market-ready-gate.mjs --run-automated\n\n\n> autotime-eu-apply@ release:check C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/release-check.mjs\n\nRunning Extension unit tests... FAIL\nRunning Repo typecheck... FAIL\nRunning Repo lint... FAIL\nRunning Extension production build... FAIL\nRelease check report written to docs\\release-runs\\2026-05-06T13-54-47-883Z.md\n\u00e2\u20ac\u2030ELIFECYCLE\u00e2\u20ac\u2030 Command failed with exit code 1.\n\u00e2\u20ac\u2030ELIFECYCLE\u00e2\u20ac\u2030 Command failed with exit code 1.",
+      "stderr": "Market-ready gate failed: pnpm release:check failed",
+      "duration_seconds": 1.3
+    }
+  ],
+  "extension_output": {
+    "path": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\apps\\extension\\.output\\chrome-mv3",
+    "exists": true,
+    "required_files": {
+      "manifest.json": true
+    },
+    "manifest": {
+      "name": "AutoTime EU Apply",
+      "version": "0.0.1",
+      "manifest_version": 3,
+      "permissions": [
+        "activeTab",
+        "sidePanel",
+        "storage"
+      ],
+      "host_permissions_count": 1
+    },
+    "passed": true
+  },
+  "latest_paths": {
+    "latest_release_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\release-runs\\2026-05-06T13-54-47-883Z.md",
+    "latest_automation_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\automation-runs\\2026-05-06T13-08-15-427Z.md",
+    "latest_founder_validation_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\founder-validation-runs\\2026-05-06T13-08-16-949Z-manual-validation.md",
+    "python_report_dir": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\automation-runs\\python-smoke-20260506-145446"
+  },
+  "web_smoke": {
+    "skipped": true,
+    "reason": "Run with --start-web to test the local dashboard URL."
+  },
+  "overall_passed": false
+}

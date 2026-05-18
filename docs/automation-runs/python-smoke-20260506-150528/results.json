@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-05-06T15:05:28",
+  "repo": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+  "environment": {
+    "python": "3.14.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+    "node_path": "C:\\Program Files\\nodejs\\node.EXE",
+    "pnpm_path": "C:\\Users\\rajan\\AppData\\Roaming\\npm\\pnpm.CMD"
+  },
+  "safety_boundary": {
+    "automates_linkedin": false,
+    "submits_forms": false,
+    "stores_api_keys": false,
+    "stores_cookies": false,
+    "live_site_evidence_mode": "manual"
+  },
+  "repo_shape": {
+    "repo_path": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+    "exists": true,
+    "package_json_exists": true,
+    "pnpm_lock_exists": true,
+    "pnpm_workspace_exists": true,
+    "apps_dir_exists": true,
+    "docs_dir_exists": true,
+    "scripts_dir_exists": true,
+    "expected_package_scripts": [
+      "build:extension",
+      "dev:web",
+      "market:ready:automated",
+      "market:ready:gate",
+      "validation:new"
+    ],
+    "missing_package_scripts": [],
+    "passed": true
+  },
+  "commands": [
+    {
+      "name": "node_version",
+      "command": "node --version",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T15:05:28",
+      "timeout_seconds": 60,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "v24.11.1",
+      "stderr": "",
+      "duration_seconds": 0.03
+    },
+    {
+      "name": "pnpm_version",
+      "command": "pnpm --version",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T15:05:28",
+      "timeout_seconds": 60,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "10.33.0",
+      "stderr": "",
+      "duration_seconds": 0.32
+    },
+    {
+      "name": "automated_market_gate",
+      "command": "pnpm market:ready:automated",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T15:05:29",
+      "timeout_seconds": 1200,
+      "returncode": 1,
+      "passed": true,
+      "manual_evidence_pending": true,
+      "environment_spawn_limited": false,
+      "stdout": "\n> autotime-eu-apply@ market:ready:automated C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/market-ready-gate.mjs --run-automated\n\n\n> autotime-eu-apply@ release:check C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/release-check.mjs\n\nRunning Extension unit tests... PASS\nRunning Repo typecheck... PASS\nRunning Repo lint... PASS\nRunning Extension production build... PASS\nRelease check report written to docs\\release-runs\\2026-05-06T14-05-42-344Z.md\n\n> autotime-eu-apply@ test:mvp:coverage C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/mvp-test-coverage.mjs\n\nMVP automated testing coverage target met: 95% automated, 5% manual\n\n> autotime-eu-apply@ test:validation-run C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/validation-run.test.mjs\n\nok - formats stable validation report dates\nok - creates a validation report with build metadata\nok - includes the automated and manual testing gates\nok - keeps LinkedIn and live platform validation explicit\nok - includes export evidence and release decision sections\nok - finds the latest markdown report in a report directory\n\n> autotime-eu-apply@ test:smoke:web C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/smoke-web-dashboard.test.mjs\n\nok - passes when deployed dashboard HTML contains expected markers\nok - fails when response status is not successful\nok - fails when response is not HTML\nok - fails when expected dashboard markers are missing\nok - fails with fetch error message when request throws an Error\nok - fails with fallback message when request throws an unknown value\nok - reads default and environment override smoke URLs\n\n> autotime-eu-apply@ test:web:interview C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node --experimental-strip-types apps/web/tests/interview-prep.test.mjs\n\nok - creates local interview prep pack without AI\nok - normalizes partial AI interview prep output\nok - estimates interview prep OpenAI usage cost\nok - checks web AI budget and key availability\nok - generates AI interview prep from mocked OpenAI response\n\n> autotime-eu-apply@ test:mvp C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/mvp-automation-toolkit.mjs\n\nRunning Extension unit tests... PASS\nRunning Web AI interview-prep unit tests... PASS\nRunning Web smoke automation unit tests... PASS\nRunning Validation run generator tests... PASS\nRunning MVP automated testing coverage gate... PASS\nRunning Repo typecheck... PASS\nRunning Repo lint... PASS\nRunning Extension production build... PASS\nRunning Web production build... PASS\nMVP automation report written to docs\\automation-runs\\2026-05-06T14-06-15-619Z.md\n\u00e2\u20ac\u2030ELIFECYCLE\u00e2\u20ac\u2030 Command failed with exit code 1.",
+      "stderr": "Market-ready gate failed for docs\\founder-validation-runs\\2026-05-06T13-57-49-165Z-manual-validation.md\n- Chrome version is missing completed evidence\n- Extension Smoke Test result is not completed\n- V2 Dashboard Smoke Test result is not completed\n- LinkedIn live row needs a real role title\n- LinkedIn live row needs a real company\n- LinkedIn live row needs a country\n- LinkedIn Content OK must be marked Yes after live validation\n- LinkedIn live row needs outcome notes\n- Greenhouse live row needs a real role title\n- Greenhouse live row needs a real company\n- Greenhouse live row needs a country\n- Greenhouse Import OK must be marked Yes after live validation\n- Greenhouse Content OK must be marked Yes after live validation\n- Greenhouse live row needs outcome notes\n- Lever live row needs a real role title\n- Lever live row needs a real company\n- Lever live row needs a country\n- Lever Import OK must be marked Yes after live validation\n- Lever Content OK must be marked Yes after live validation\n- Lever live row needs outcome notes\n- Workday live row needs a real role title\n- Workday live row needs a real company\n- Workday live row needs a country\n- Workday Import OK must be marked Yes after live validation\n- Workday Content OK must be marked Yes after live validation\n- Workday live row needs outcome notes\n- Other live row needs a real role title\n- Other live row needs a real company\n- Other live row needs a country\n- Other Import OK must be marked Yes after live validation\n- Other Content OK must be marked Yes after live validation\n- Other live row needs outcome notes\n- Decision: MVP validation result must be completed",
+      "duration_seconds": 47.28
+    },
+    {
+      "name": "new_validation_report",
+      "command": "pnpm validation:new",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T15:06:16",
+      "timeout_seconds": 120,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "\n> autotime-eu-apply@ validation:new C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> node scripts/validation-run.mjs\n\nFounder validation report created at docs\\founder-validation-runs\\2026-05-06T14-06-16-980Z-manual-validation.md",
+      "stderr": "",
+      "duration_seconds": 0.68
+    },
+    {
+      "name": "extension_build",
+      "command": "pnpm build:extension",
+      "cwd": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply",
+      "started_at": "2026-05-06T15:06:17",
+      "timeout_seconds": 1200,
+      "returncode": 0,
+      "passed": true,
+      "manual_evidence_pending": false,
+      "environment_spawn_limited": false,
+      "stdout": "\n> autotime-eu-apply@ build:extension C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\n> pnpm --filter extension build\n\n\n> extension@0.0.1 build C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\apps\\extension\n> wxt build\n\n\nWXT 0.20.25\n\u001b[36m\u00e2\u201e\u00b9\u001b[39m Building chrome-mv3 for production with Vite 8.0.10\n\u001b[32m\u00e2\u0153\u201d\u001b[39m Built extension in 849 ms\n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\manifest.json                  498 B    \n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\sidepanel.html                 406 B    \n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\background.js                  2.74 kB  \n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\chunks\\sidepanel-LrJJjsva.js   283.22 kB\n  \u00e2\u201d\u0153\u00e2\u201d\u20ac .output\\chrome-mv3\\content-scripts\\autotime.js    12.88 kB \n  \u00e2\u201d\u201d\u00e2\u201d\u20ac .output\\chrome-mv3\\assets\\sidepanel-B99_DNW6.css  3.21 kB  \n\u00ce\u00a3 Total size: 302.94 kB                              \n\u001b[32m\u00e2\u0153\u201d\u001b[39m Finished in 1.265 s",
+      "stderr": "\u001b[33m-\u001b[39m Preparing...\n\u001b[1G",
+      "duration_seconds": 3.71
+    }
+  ],
+  "extension_output": {
+    "path": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\apps\\extension\\.output\\chrome-mv3",
+    "exists": true,
+    "required_files": {
+      "manifest.json": true
+    },
+    "manifest": {
+      "name": "AutoTime EU Apply",
+      "version": "0.0.1",
+      "manifest_version": 3,
+      "permissions": [
+        "activeTab",
+        "sidePanel",
+        "storage"
+      ],
+      "host_permissions_count": 1
+    },
+    "passed": true
+  },
+  "latest_paths": {
+    "latest_release_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\release-runs\\2026-05-06T14-05-42-344Z.md",
+    "latest_automation_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\automation-runs\\2026-05-06T14-06-15-619Z.md",
+    "latest_founder_validation_run": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\founder-validation-runs\\2026-05-06T14-06-16-980Z-manual-validation.md",
+    "python_report_dir": "C:\\Users\\rajan\\OneDrive\\Desktop\\Autotime-EU-Apply\\docs\\automation-runs\\python-smoke-20260506-150528"
+  },
+  "web_smoke": {
+    "skipped": true,
+    "reason": "Run with --start-web to test the local dashboard URL."
+  },
+  "overall_passed": true
+}

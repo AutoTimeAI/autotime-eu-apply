@@ -12,17 +12,22 @@ import {
 import { z } from "zod"
 import {
   companionDashboardStateSchema,
+  createMockApplicationPositioningPack,
+  createMockEUFitEngineResult,
   evaluateAutoTimeFitScore,
   evaluateCountryFit,
   getCandidateProfileBridgeIssues,
+  resolveAIProvider,
   type ApplicationOutcomeReason,
   type ApplicationRecord,
   type ApplicationContentSnapshot,
+  type ApplicationPositioningPack,
   type ApplicationStatus,
   type AutoTimeFitReview,
   type CandidateProfile,
   type CompanionDashboardState,
   type CountryFitEvaluation,
+  type EUFitEngineResult,
   type EvidenceRecord,
   type JobAnalysisDraft,
   type OutcomeRecord,
@@ -2272,11 +2277,13 @@ function createApplication(
 function createApplicationContentSnapshot({
   application,
   job,
+  positioningPack,
   profile,
   reusableAnswers
 }: {
   application: ApplicationRecord
   job: JobAnalysisDraft
+  positioningPack?: ApplicationPositioningPack
   profile: CandidateProfile
   reusableAnswers: ReusableAnswers
 }): ApplicationContentSnapshot {
@@ -2288,6 +2295,7 @@ function createApplicationContentSnapshot({
     profile.projectSummaries ||
     profile.baseCvText.slice(0, 420)
   const positioning =
+    positioningPack?.bestApplicationAngle ||
     job.positioningAngle ||
     application.fitDecision ||
     "evidence-led fit, role understanding and clear next steps"
@@ -2297,9 +2305,11 @@ function createApplicationContentSnapshot({
     "Add your verified work-right wording before using this answer."
   const motivation =
     reusableAnswers.motivationAnswer ||
+    positioningPack?.motivationAnswerAngle ||
     `I am interested in ${role} at ${company} because the role connects with my target focus in ${targetRoles}.`
   const strengths =
     reusableAnswers.strengthsAnswer ||
+    positioningPack?.strengthsAnswerAngle ||
     (profileEvidence
       ? `My strongest relevant evidence is: ${profileEvidence}`
       : "Add a specific project, outcome or responsibility from your evidence profile before using this answer.")
@@ -2313,7 +2323,8 @@ function createApplicationContentSnapshot({
     coverLetter: [
       `Dear ${company} team,`,
       "",
-      `I am applying for ${role}. My fit is strongest where the role needs ${positioning}.`,
+      positioningPack?.coverLetterAngle ||
+        `I am applying for ${role}. My fit is strongest where the role needs ${positioning}.`,
       "",
       strengths,
       "",
@@ -2323,6 +2334,7 @@ function createApplicationContentSnapshot({
     ].join("\n"),
     motivationAnswer: motivation,
     profileSummary:
+      positioningPack?.recruiterSummaryAngle ||
       profileEvidence ||
       "Add profile evidence first, then regenerate this summary from verified facts.",
     savedAt: new Date().toISOString(),
@@ -3615,6 +3627,24 @@ export default function HomePage({
       }),
     [decisionBrief, verificationChecklist]
   )
+  const euFitEngineResult: EUFitEngineResult = useMemo(
+    () =>
+      createMockEUFitEngineResult({
+        evaluation: fitEvaluation,
+        fitReview: autoTimeFitReview,
+        job: state.jobAnalysis,
+        profile: state.profile,
+        provider: "mock",
+        officialSourceReviewed: trustState.officialSourceReviewed
+      }),
+    [
+      autoTimeFitReview,
+      fitEvaluation,
+      state.jobAnalysis,
+      state.profile,
+      trustState.officialSourceReviewed
+    ]
+  )
   const profileBridgeIssues = useMemo(
     () => getCandidateProfileBridgeIssues(state.profile),
     [state.profile]
@@ -3672,6 +3702,27 @@ export default function HomePage({
   const activeKitApplication =
     state.applications.find((application) => application.id === kitApplicationId) ??
     state.applications[0]
+  const applicationKitProvider = resolveAIProvider({
+    requestedProvider: "mock",
+    openAIKeyAvailable: false
+  })
+  const applicationPositioningPack = useMemo(
+    () =>
+      createMockApplicationPositioningPack({
+        fitResult: euFitEngineResult,
+        job: state.jobAnalysis,
+        profile: state.profile,
+        provider: applicationKitProvider,
+        reusableAnswers: state.reusableAnswers
+      }),
+    [
+      applicationKitProvider,
+      euFitEngineResult,
+      state.jobAnalysis,
+      state.profile,
+      state.reusableAnswers
+    ]
+  )
   const hasCurrentJobDraft = hasJobDraft(state.jobAnalysis)
   const followUpApplications = state.applications.filter(hasFollowUpAction)
   const outcomeAnalytics = useMemo(
@@ -3741,9 +3792,21 @@ export default function HomePage({
   const fitOutcomeCards = [
     {
       label: "Apply decision",
-      value: fitEvaluation.decision,
+      value: euFitEngineResult.applyDecision,
       tone: decisionTone,
       detail: contentGateResult
+    },
+    {
+      label: "Right-to-work",
+      value:
+        euFitEngineResult.officialVerificationStatus === "user_verified"
+          ? "User checked"
+          : "Needs check",
+      tone:
+        euFitEngineResult.officialVerificationStatus === "user_verified"
+          ? "good"
+          : "warn",
+      detail: euFitEngineResult.rightToWorkRealityCheck
     },
     {
       label: "Risk result",
@@ -3760,10 +3823,17 @@ export default function HomePage({
       detail: primaryRisk
     },
     {
+      label: "Language barrier",
+      value: `${euFitEngineResult.languageBarrierScore}/100`,
+      tone: euFitEngineResult.languageBarrierScore >= 60 ? "warn" : "good",
+      detail:
+        "Lower is easier; verify employer language requirements before applying."
+    },
+    {
       label: "Evidence result",
-      value: `${decisionBrief.evidenceFound.length} signal${decisionBrief.evidenceFound.length === 1 ? "" : "s"}`,
+      value: `${euFitEngineResult.positiveSignals.length} signal${euFitEngineResult.positiveSignals.length === 1 ? "" : "s"}`,
       tone: decisionBrief.missingInputs.length ? "warn" : "good",
-      detail: primaryEvidence
+      detail: euFitEngineResult.positiveSignals[0] || primaryEvidence
     },
     {
       label: "Next action",
@@ -3796,17 +3866,29 @@ export default function HomePage({
     {
       label: "Positioning outcome",
       value:
-        fitEvaluation.contentGate === "blocked"
+        euFitEngineResult.applicationPriority === "Skip"
           ? "Blocked angle"
           : "Best angle",
       tone: decisionTone,
-      detail: fitEvaluation.positioningAngle
+      detail: euFitEngineResult.bestApplicationAngle
+    },
+    {
+      label: "CV gap",
+      value: "Improve proof",
+      tone: decisionTone,
+      detail: euFitEngineResult.candidatePositioningGap
     },
     {
       label: "Action outcome",
       value: "Next move",
       tone: decisionTone,
-      detail: fitEvaluation.nextBestAction
+      detail: euFitEngineResult.cvImprovementSuggestion
+    },
+    {
+      label: "Interview note",
+      value: "Prepare",
+      tone: decisionTone,
+      detail: euFitEngineResult.interviewReadinessNote
     }
   ]
   const followUpTone = activeActionCount > 0 ? "warn" : "good"
@@ -3945,7 +4027,7 @@ export default function HomePage({
       detail: hasJobDraft(state.jobAnalysis)
         ? fitEvaluation.decision
         : "Load an extension-parsed job or paste a JD manually before applying.",
-      cta: "Analyse Fit",
+      cta: "Open fit check",
       tone: hasJobDraft(state.jobAnalysis) ? decisionTone : "neutral"
     },
     {
@@ -3992,23 +4074,31 @@ export default function HomePage({
   ]
   const strategicQualitySignals = [
     {
-      label: "Targeting",
+      label: "Strategic targeting",
       value: getMarketLabel(productContext) ?? "European tech",
       detail: canApplyMarketContext
         ? `${productContext.targetCountry} / ${productContext.experienceLevel} / ${productContext.urgency}`
         : "Choose CV-backed direction before applying profile settings."
     },
     {
-      label: "Country context",
+      label: "Country-aware fit",
       value: fitEvaluation.countryRule.name,
       detail: fitEvaluation.countryRule.marketNote
     },
     {
-      label: "Profile evidence",
+      label: "Evidence discipline",
       value: profileReadyForExecution ? "Ready" : `${readinessScore}%`,
       detail: profileReadyForExecution
         ? "Profile is ready for job checks and interview prep."
         : "Complete Profile Evidence before relying on role decisions."
+    },
+    {
+      label: "Interview conversion",
+      value: interviewApplications.length > 0 ? "Active" : "Build",
+      detail:
+        interviewApplications.length > 0
+          ? "Use saved fit evidence to prepare stronger interview answers."
+          : "Turn quality applications into interview-ready proof."
     }
   ]
   const todayAction = !profileReadyForExecution
@@ -5234,6 +5324,7 @@ export default function HomePage({
         createApplicationContentSnapshot({
           application: activeKitApplication,
           job: state.jobAnalysis,
+          positioningPack: applicationPositioningPack,
           profile: state.profile,
           reusableAnswers: state.reusableAnswers
         })
@@ -5242,6 +5333,7 @@ export default function HomePage({
     activeFocus,
     activeKitApplication?.contentSnapshot,
     activeKitApplication?.id,
+    applicationPositioningPack,
     state.jobAnalysis,
     state.profile,
     state.reusableAnswers
@@ -5277,11 +5369,14 @@ export default function HomePage({
       createApplicationContentSnapshot({
         application: activeKitApplication,
         job: state.jobAnalysis,
+        positioningPack: applicationPositioningPack,
         profile: state.profile,
         reusableAnswers: state.reusableAnswers
       })
     )
-    setStatus("Application Kit draft regenerated from saved evidence")
+    setStatus(
+      "Application Kit draft regenerated from local/template-based evidence"
+    )
   }
 
   const saveApplicationKitSnapshot = () => {
@@ -5463,7 +5558,7 @@ export default function HomePage({
         }
       }
 
-      persist(next, "Role analysis updated")
+      persist(next, "AI fit assistant updated the role analysis")
     } catch (error: unknown) {
       logDashboardActionFailure("AI role analysis fetch", error, {
         route: "/api/ai/analyse"
@@ -7057,10 +7152,10 @@ export default function HomePage({
                   >
                     <div>
                       <p className="eyebrow">Workspace status</p>
-                      <h2>Your application workflow</h2>
+                      <h2>Strategic European tech application system</h2>
                       <p>
-                        Keep profile evidence, country fit and tracked roles in
-                        one place.
+                        Keep strategic targeting, country-aware fit, evidence
+                        discipline and interview conversion in one place.
                       </p>
                     </div>
                     <div className="strategic-signal-grid">
@@ -7195,6 +7290,9 @@ export default function HomePage({
                           Draft content from saved evidence, edit it, copy it,
                           then save the snapshot back to the job.
                         </p>
+                        <p>
+                          Local/template-based draft — not live AI-refined.
+                        </p>
                       </div>
                       {state.applications.length ? (
                         <label>
@@ -7213,6 +7311,8 @@ export default function HomePage({
                                       createApplicationContentSnapshot({
                                         application: nextApplication,
                                         job: state.jobAnalysis,
+                                        positioningPack:
+                                          applicationPositioningPack,
                                         profile: state.profile,
                                         reusableAnswers: state.reusableAnswers
                                       })
@@ -7317,6 +7417,10 @@ export default function HomePage({
                             Regenerate from evidence
                           </button>
                         </div>
+                        <p className="decision-integrity-note">
+                          {applicationPositioningPack.trustNote}{" "}
+                          {applicationPositioningPack.complianceNote}
+                        </p>
                       </section>
                     ) : null}
                   </section>
@@ -8029,10 +8133,9 @@ export default function HomePage({
                   >
                     <div className="section-heading">
                       <p className="eyebrow">Optional review</p>
-                      <h2>Strengthen the role details</h2>
+                      <h2>Strengthen the review</h2>
                       <p>
-                        Summarise the job description, surface gaps and update
-                        the analysis before checking the decision.
+                        AI strengthens the review, but evidence controls the outcome. Official sources and saved proof outrank AI.
                       </p>
                     </div>
                     <button
@@ -8042,7 +8145,7 @@ export default function HomePage({
                       type="button"
                       onClick={runAiJobAnalysis}
                     >
-                      {isCopilotThinking ? "Checking role" : "Review role"}
+                      {isCopilotThinking ? "Checking role" : "Use AI assistant"}
                     </button>
                   </section>
 
@@ -8091,7 +8194,7 @@ export default function HomePage({
                       </article>
                       <article>
                         <span>2</span>
-                        <strong>Check the decision</strong>
+                        <strong>Rules first</strong>
                         <p>Review score, risk and missing proof.</p>
                       </article>
                       <article>
@@ -8101,7 +8204,9 @@ export default function HomePage({
                       </article>
                     </div>
                     <p className="decision-integrity-note">
-                      {autoTimeFitReview.disclaimer}
+                      {autoTimeFitReview.disclaimer}{" "}
+                      {euFitEngineResult.trustNote}{" "}
+                      {euFitEngineResult.complianceNote} AI output cannot override official sources, saved profile evidence, parsed job text or your review.
                     </p>
                   </section>
 
@@ -9459,6 +9564,9 @@ export default function HomePage({
                           <div className="section-heading">
                             <p className="eyebrow">Application Kit</p>
                             <h3>Saved application content</h3>
+                            <p>
+                              Local/template-based draft — not live AI-refined.
+                            </p>
                           </div>
                           {selectedApplication.contentSnapshot ? (
                             <div className="document-snapshot">

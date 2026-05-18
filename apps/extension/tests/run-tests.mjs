@@ -497,7 +497,7 @@ test("detects Tier 2 EU selector boards as priority platforms", () => {
   })
 })
 
-test("marks LinkedIn as visible import with manual application boundary", () => {
+test("marks LinkedIn as manual input only", () => {
   assert.equal(isLinkedInUrl("https://www.linkedin.com/jobs/view/123"), true)
   assert.equal(
     isLinkedInUrl(
