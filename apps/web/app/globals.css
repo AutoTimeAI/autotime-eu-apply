@@ -4193,6 +4193,177 @@ h4 {
   margin: 0;
 }
 
+.technical-interview-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 16px;
+}
+
+.technical-interview-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.7fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.technical-interview-rule-strip {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(220px, 1.25fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(49, 95, 186, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface-blue), #ffffff);
+  padding: 10px 12px;
+}
+
+.technical-interview-rule-strip span {
+  width: fit-content;
+  border: 1px solid rgba(49, 95, 186, 0.22);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--blue);
+  font-size: 0.72rem;
+  font-weight: 850;
+  padding: 5px 9px;
+  text-transform: uppercase;
+}
+
+.technical-interview-rule-strip strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.technical-interview-rule-strip p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.technical-interview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.technical-interview-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.technical-card-header {
+  display: grid;
+  gap: 8px;
+}
+
+.technical-card-header div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.technical-card-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.technical-card-columns section {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.technical-card-details {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.technical-card-time {
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--surface-blue);
+  color: var(--blue);
+  font-size: 0.74rem;
+  font-weight: 850;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.technical-card-time-muted {
+  background: var(--surface-mint);
+  color: var(--accent-strong);
+}
+
+.technical-interview-card strong,
+.technical-interview-card h3 {
+  color: var(--ink);
+}
+
+.technical-interview-card h3 {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+}
+
+.technical-interview-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.52;
+}
+
+.technical-interview-brief {
+  display: grid;
+  gap: 8px;
+  border-block: 1px solid var(--border);
+  margin: 0;
+  padding: 10px 0;
+}
+
+.technical-interview-brief div {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.technical-interview-brief dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.technical-interview-brief dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.technical-card-hint {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+  font-weight: 650;
+}
+
+.technical-card-details summary {
+  cursor: pointer;
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
 .ai-settings-panel {
   display: grid;
   grid-template-columns:
@@ -5085,6 +5256,225 @@ h4 {
 
 .feature-band {
   align-items: stretch;
+}
+
+.eu-fit-engine {
+  display: grid;
+  gap: 20px;
+  border-block: 1px solid var(--border);
+  padding: 46px 0;
+}
+
+.eu-fit-statement {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(21, 107, 99, 0.24);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff, var(--surface-mint));
+  padding: 18px;
+}
+
+.eu-fit-statement strong {
+  color: var(--accent-strong);
+  font-size: 1.28rem;
+}
+
+.eu-fit-statement p,
+.eu-fit-card p,
+.eu-fit-trust-workflow p,
+.eu-fit-playbook p,
+.eu-fit-difference p,
+.eu-fit-notes p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.62;
+}
+
+.eu-fit-system-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.eu-fit-card,
+.eu-fit-trust-workflow,
+.eu-fit-difference,
+.eu-fit-notes {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(216, 224, 235, 0.92);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-tight);
+  padding: 18px;
+}
+
+.eu-fit-card h3,
+.eu-fit-playbook h3,
+.eu-fit-motto h3,
+.eu-fit-trust-workflow h3 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.eu-fit-card h4,
+.eu-fit-playbook h4,
+.eu-fit-signal-columns h4,
+.eu-fit-reasons h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.eu-fit-step {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.eu-fit-profile-list,
+.eu-fit-metric-grid,
+.eu-fit-positioning-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.eu-fit-profile-list div,
+.eu-fit-positioning-list div {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.eu-fit-profile-list dt,
+.eu-fit-positioning-list dt,
+.eu-fit-metric-grid dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.eu-fit-profile-list dd,
+.eu-fit-positioning-list dd,
+.eu-fit-metric-grid dd {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.48;
+}
+
+.eu-fit-analysis-card {
+  border-top: 3px solid var(--blue);
+}
+
+.eu-fit-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.eu-fit-metric-grid div {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 10px;
+}
+
+.eu-fit-metric-grid dd {
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.eu-fit-signal-columns,
+.eu-fit-motto,
+.eu-fit-country-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.eu-fit-signal-columns section,
+.eu-fit-reasons,
+.eu-fit-country-grid article,
+.eu-fit-motto article {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 14px;
+}
+
+.eu-fit-signal-columns ul,
+.eu-fit-reasons ul,
+.eu-fit-motto ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.eu-fit-trust-workflow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-color: rgba(49, 95, 186, 0.22);
+  background: linear-gradient(135deg, var(--surface-blue), #ffffff);
+}
+
+.eu-fit-trust-workflow > div {
+  display: grid;
+  gap: 7px;
+}
+
+.eu-fit-trust-workflow span {
+  border: 1px solid rgba(49, 95, 186, 0.24);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 850;
+  padding: 7px 10px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.eu-fit-playbook {
+  display: grid;
+  gap: 14px;
+}
+
+.eu-fit-country-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.eu-fit-motto {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.eu-fit-difference {
+  border-left: 4px solid var(--blue);
+}
+
+.eu-fit-difference strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.eu-fit-notes {
+  background: var(--surface-muted);
 }
 
 .pricing-teaser-grid {
@@ -6713,6 +7103,7 @@ h4 {
   .integrity-grid,
   .context-explainer,
   .interview-coach-audit,
+  .technical-interview-grid,
   .ai-audit-summary,
   .overview-workflow-map,
   .extension-proof-grid,
@@ -6725,6 +7116,10 @@ h4 {
   }
 
   .application-next-action-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .technical-interview-rule-strip {
     grid-template-columns: 1fr;
   }
 
@@ -6762,9 +7157,21 @@ h4 {
   .landing-step-grid,
   .feature-band,
   .landing-proof-grid,
+  .eu-fit-system-grid,
+  .eu-fit-country-grid,
+  .eu-fit-motto,
   .pricing-card-grid,
   .pricing-gate-grid,
   .faq-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .eu-fit-metric-grid,
+  .eu-fit-signal-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eu-fit-trust-workflow {
     grid-template-columns: 1fr;
   }
 
@@ -6962,6 +7369,10 @@ h4 {
   .context-explainer,
   .integrity-grid,
   .interview-coach-audit,
+  .technical-interview-rule-strip,
+  .technical-interview-controls,
+  .technical-card-columns,
+  .technical-interview-grid,
   .ai-audit-summary,
   .overview-workflow-map,
   .extension-proof-grid,
@@ -7002,6 +7413,10 @@ h4 {
       "outcome"
       "notes"
       "actions";
+  }
+
+  .technical-interview-brief div {
+    grid-template-columns: 1fr;
   }
 
   .application-command-strip {
@@ -7139,6 +7554,24 @@ h4 {
   .pricing-gate-grid,
   .landing-footer {
     width: 100%;
+  }
+
+  .eu-fit-metric-grid,
+  .eu-fit-signal-columns,
+  .eu-fit-profile-list div,
+  .eu-fit-positioning-list div {
+    grid-template-columns: 1fr;
+  }
+
+  .eu-fit-engine {
+    padding: 34px 0;
+  }
+
+  .eu-fit-card,
+  .eu-fit-trust-workflow,
+  .eu-fit-difference,
+  .eu-fit-notes {
+    padding: 15px;
   }
 
   .product-nav {

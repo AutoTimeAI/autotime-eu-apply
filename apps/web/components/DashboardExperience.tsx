@@ -262,6 +262,28 @@ type InterviewCoachMeta = {
   source: "ai" | "local"
 }
 
+type TechnicalInterviewDifficulty = "standard" | "advanced" | "senior"
+
+type TechnicalInterviewFocus =
+  | "systems"
+  | "debugging"
+  | "api"
+  | "data"
+  | "delivery"
+
+type TechnicalInterviewDrill = {
+  answerContract: string[]
+  evidenceHook: string
+  euContext: string[]
+  id: string
+  question: string
+  riskChecks: string[]
+  timebox: string
+  expectedSignals: string[]
+  followUps: string[]
+  prepHint: string
+}
+
 type ReusableAnswerKey = keyof ReusableAnswers
 
 type OnlineAnalyticsReport = {
@@ -374,6 +396,26 @@ const emptyInterviewCoachMeta: InterviewCoachMeta = {
     "AutoTime keeps interview prep evidence-first. Add your real notes, then review before using.",
   source: "local"
 }
+
+const technicalInterviewFocusOptions: Array<{
+  id: TechnicalInterviewFocus
+  label: string
+}> = [
+  { id: "systems", label: "Systems thinking" },
+  { id: "debugging", label: "Debugging" },
+  { id: "api", label: "APIs and integrations" },
+  { id: "data", label: "Data and SQL" },
+  { id: "delivery", label: "Technical delivery" }
+]
+
+const technicalInterviewDifficultyOptions: Array<{
+  id: TechnicalInterviewDifficulty
+  label: string
+}> = [
+  { id: "standard", label: "Standard" },
+  { id: "advanced", label: "Advanced" },
+  { id: "senior", label: "Senior" }
+]
 
 const dashboardFocusCopy: Record<
   DashboardFocus,
@@ -1479,6 +1521,380 @@ function createLocalInterviewCoachMeta({
       "Use this as preparation, not a script. Keep the final answer truthful and editable.",
     source: "local"
   }
+}
+
+function getTechnicalSignals({
+  job,
+  profile
+}: {
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}) {
+  const description = `${job.jobDescription} ${job.summary} ${profile.baseCvText} ${profile.experienceHighlights}`.toLowerCase()
+  const explicitSkills = job.skills?.filter(Boolean) ?? []
+  const inferredSkills = [
+    /\bsql|postgres|mysql|database|query|data model\b/i.test(description) &&
+      "SQL and data modelling",
+    /\bapi|rest|graphql|integration|webhook\b/i.test(description) &&
+      "API integration",
+    /\bcloud|aws|azure|gcp|serverless|vercel\b/i.test(description) &&
+      "cloud architecture",
+    /\bobservability|monitoring|logging|incident|slo|sla\b/i.test(
+      description
+    ) && "observability and incident response",
+    /\bsecurity|auth|oauth|permission|privacy|compliance\b/i.test(
+      description
+    ) && "security and access control",
+    /\bagile|delivery|stakeholder|requirements|roadmap\b/i.test(
+      description
+    ) && "technical delivery"
+  ].filter(Boolean) as string[]
+
+  return Array.from(new Set([...explicitSkills, ...inferredSkills])).slice(0, 8)
+}
+
+function getTechnicalEvidenceHook({
+  job,
+  primarySkill,
+  profile,
+  secondarySkill
+}: {
+  job: JobAnalysisDraft
+  primarySkill: string
+  profile: CandidateProfile
+  secondarySkill: string
+}) {
+  const proof = [
+    job.jobDescription.trim() && `JD signal: ${normaliseSentence(job.jobDescription).slice(0, 150)}`,
+    job.summary?.trim() && `Job summary: ${normaliseSentence(job.summary).slice(0, 150)}`,
+    profile.experienceHighlights.trim() &&
+      `Profile proof: ${normaliseSentence(profile.experienceHighlights).slice(0, 150)}`,
+    profile.projectSummaries.trim() &&
+      `Project proof: ${normaliseSentence(profile.projectSummaries).slice(0, 150)}`
+  ].filter(Boolean) as string[]
+
+  return (
+    proof[0] ??
+    `Use saved evidence around ${primarySkill} and ${secondarySkill}; add missing proof before making strong claims.`
+  )
+}
+
+function getTechnicalAnswerContract({
+  difficulty,
+  primarySkill,
+  secondarySkill
+}: {
+  difficulty: TechnicalInterviewDifficulty
+  primarySkill: string
+  secondarySkill: string
+}) {
+  return [
+    `Anchor the answer in saved evidence for ${primarySkill}.`,
+    `Name the trade-off between ${primarySkill} and ${secondarySkill}.`,
+    difficulty === "senior"
+      ? "Include failure mode, rollback path and success metric."
+      : difficulty === "advanced"
+        ? "Include one failure mode and one validation signal."
+        : "Include one assumption you would verify before delivery.",
+    "Say 'I would verify that' where the profile or JD does not prove the claim."
+  ]
+}
+
+function getTechnicalRiskChecks({
+  profile
+}: {
+  profile: CandidateProfile
+}) {
+  return [
+    "Do not invent production incidents, scale numbers, certifications or tools.",
+    "Do not claim ownership unless it is in Profile Evidence.",
+    !profile.workRightDetails.trim() &&
+      "Do not make work-right or relocation claims until profile evidence is saved.",
+    "Separate what you know, what you infer and what you would validate."
+  ].filter(Boolean) as string[]
+}
+
+function getTechnicalEuContext({
+  job,
+  profile
+}: {
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}) {
+  const market = [
+    profile.targetCountries.trim() && `Target market: ${profile.targetCountries.trim()}`,
+    job.location.trim() && `Role location: ${job.location.trim()}`,
+    job.workMode !== "unknown" && `Work setup: ${job.workMode}`,
+    profile.workRightDetails.trim()
+      ? `Work-right proof saved: ${normaliseSentence(profile.workRightDetails).slice(0, 120)}`
+      : "Work-right proof missing: keep claims factual and verify official requirements"
+  ].filter(Boolean) as string[]
+
+  return [
+    ...market.slice(0, 3),
+    "EU signal: mention privacy, security, documentation or rollout controls where relevant."
+  ]
+}
+
+function createTechnicalInterviewDrills({
+  difficulty,
+  focus,
+  job,
+  profile
+}: {
+  difficulty: TechnicalInterviewDifficulty
+  focus: TechnicalInterviewFocus
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}): TechnicalInterviewDrill[] {
+  const role = job.jobTitle.trim() || profile.targetRoles.trim() || "this role"
+  const company = job.company.trim() || "the employer"
+  const signals = getTechnicalSignals({ job, profile })
+  const primarySkill = signals[0] ?? "the main technical workflow"
+  const secondarySkill = signals[1] ?? "stakeholder requirements"
+  const evidenceHook = getTechnicalEvidenceHook({
+    job,
+    primarySkill,
+    profile,
+    secondarySkill
+  })
+  const answerContract = getTechnicalAnswerContract({
+    difficulty,
+    primarySkill,
+    secondarySkill
+  })
+  const riskChecks = getTechnicalRiskChecks({ profile })
+  const euContext = getTechnicalEuContext({ job, profile })
+  const timebox =
+    difficulty === "senior"
+      ? "6 minutes"
+      : difficulty === "advanced"
+        ? "4 minutes"
+        : "3 minutes"
+  const depth =
+    difficulty === "senior"
+      ? "include trade-offs, failure modes and how you would measure success"
+      : difficulty === "advanced"
+        ? "include trade-offs and one risk you would validate"
+        : "explain your approach clearly and name the evidence you would need"
+
+  const templates: Record<TechnicalInterviewFocus, TechnicalInterviewDrill[]> = {
+    systems: [
+      {
+        id: "systems-architecture",
+        question: `Design a reliable workflow for ${role} at ${company} where ${primarySkill} is a core dependency. Walk through components, data flow and operational risks.`,
+        timebox,
+        expectedSignals: [
+          "Clear problem framing before solutioning",
+          "Data flow, ownership and failure boundaries",
+          "Monitoring, rollback and recovery thinking"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What would you simplify for an MVP?",
+          "Where would latency or data quality fail first?",
+          "How would you prove this design is working?"
+        ],
+        prepHint: `Use saved evidence only, then ${depth}.`
+      },
+      {
+        id: "systems-scale",
+        question: `The current process works for 10 users but fails at 10,000. How would you diagnose and redesign the bottleneck?`,
+        timebox,
+        expectedSignals: [
+          "Identifies load, data and dependency bottlenecks",
+          "Separates diagnosis from redesign",
+          "Names observability and test strategy"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What metric would you inspect first?",
+          "What would you cache, queue or batch?",
+          "What would you refuse to optimise early?"
+        ],
+        prepHint: `Anchor the answer in ${primarySkill} and ${secondarySkill}.`
+      }
+    ],
+    debugging: [
+      {
+        id: "debugging-production",
+        question: `A production workflow tied to ${primarySkill} is intermittently failing and users report inconsistent results. How do you triage it live?`,
+        timebox,
+        expectedSignals: [
+          "Immediate impact and rollback assessment",
+          "Hypothesis-led debugging",
+          "Logs, traces, recent changes and reproduction path"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What do you tell non-technical stakeholders?",
+          "What evidence would change your hypothesis?",
+          "How do you prevent the same issue returning?"
+        ],
+        prepHint: `Answer like a real incident: stabilise, inspect, fix, learn.`
+      },
+      {
+        id: "debugging-data",
+        question: `A dashboard number looks wrong after a release. How would you prove whether the bug is data, UI, API or business logic?`,
+        timebox,
+        expectedSignals: [
+          "Defines expected vs actual behaviour",
+          "Checks source data before UI assumptions",
+          "Uses controlled examples or query-level validation"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "Which query or API response would you inspect?",
+          "How would you communicate uncertainty?",
+          "What automated check would you add?"
+        ],
+        prepHint: `Mention the fastest trustworthy way to isolate the layer.`
+      }
+    ],
+    api: [
+      {
+        id: "api-contract",
+        question: `You need to integrate a third-party API into ${role}. How would you design the contract, handle errors and protect user data?`,
+        timebox,
+        expectedSignals: [
+          "Contract-first thinking",
+          "Authentication, retries and idempotency",
+          "Privacy and least-privilege handling"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What would you log and what would you never log?",
+          "How do you handle rate limits?",
+          "What makes the integration testable?"
+        ],
+        prepHint: `Use ${primarySkill} as the concrete integration context.`
+      },
+      {
+        id: "api-versioning",
+        question: `An API you depend on changes response shape without warning. What breaks, and how do you make the product resilient next time?`,
+        timebox,
+        expectedSignals: [
+          "Schema validation or typed boundary",
+          "Fallback behaviour",
+          "Monitoring and provider communication"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What user-facing state should appear?",
+          "Where should validation live?",
+          "How would you roll out the fix safely?"
+        ],
+        prepHint: `Show that you can protect users while debugging the root cause.`
+      }
+    ],
+    data: [
+      {
+        id: "data-model",
+        question: `Model the data needed to track candidate applications, interview stages and follow-ups. What tables or entities matter, and what would you index?`,
+        timebox,
+        expectedSignals: [
+          "Entities, relationships and lifecycle states",
+          "Indexes based on query patterns",
+          "Auditability and deletion/privacy thinking"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "How would you prevent duplicate records?",
+          "What should be event data vs current state?",
+          "How would you support analytics later?"
+        ],
+        prepHint: `Keep the answer practical and name the most common query.`
+      },
+      {
+        id: "data-quality",
+        question: `A report has missing or duplicated interview outcomes. How would you find the source and rebuild trust in the metric?`,
+        timebox,
+        expectedSignals: [
+          "Data lineage and reconciliation",
+          "Validation checks",
+          "Explains metric limitations honestly"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What sample record would you inspect first?",
+          "What quality check would run daily?",
+          "When would you stop showing the metric?"
+        ],
+        prepHint: `Make the answer evidence-led, not dashboard-led.`
+      }
+    ],
+    delivery: [
+      {
+        id: "delivery-tradeoff",
+        question: `A stakeholder wants speed, engineering wants reliability and users need clarity. How do you decide what ships for ${role}?`,
+        timebox,
+        expectedSignals: [
+          "Frames trade-offs explicitly",
+          "Defines risk and success criteria",
+          "Shows communication across technical and non-technical groups"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What would you cut from scope?",
+          "What decision would you document?",
+          "How would you know the compromise worked?"
+        ],
+        prepHint: `Use one real project or delivery example from your profile.`
+      },
+      {
+        id: "delivery-requirements",
+        question: `Requirements are vague but the team needs implementation detail. How do you turn ambiguity into a technical plan?`,
+        timebox,
+        expectedSignals: [
+          "Clarifying questions",
+          "Assumptions and acceptance criteria",
+          "Small validation path before full build"
+        ],
+        evidenceHook,
+        euContext,
+        answerContract,
+        riskChecks,
+        followUps: [
+          "What question do you ask first?",
+          "What assumption is most dangerous?",
+          "What prototype or test would reduce risk?"
+        ],
+        prepHint: `Show how you move from ambiguity to delivery without overclaiming.`
+      }
+    ]
+  }
+
+  return templates[focus].map((drill, index) => ({
+    ...drill,
+    id: `${drill.id}-${difficulty}-${index}`
+  }))
 }
 
 function getHostname(url: string) {
@@ -3000,6 +3416,13 @@ export default function HomePage({
     useState<InterviewBuddyOutputs>(emptyInterviewBuddyOutputs)
   const [interviewCoachMeta, setInterviewCoachMeta] =
     useState<InterviewCoachMeta>(emptyInterviewCoachMeta)
+  const [technicalInterviewDifficulty, setTechnicalInterviewDifficulty] =
+    useState<TechnicalInterviewDifficulty>("advanced")
+  const [technicalInterviewFocus, setTechnicalInterviewFocus] =
+    useState<TechnicalInterviewFocus>("systems")
+  const [technicalInterviewDrills, setTechnicalInterviewDrills] = useState<
+    TechnicalInterviewDrill[]
+  >([])
   const [isCopilotThinking, setIsCopilotThinking] = useState(false)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
   const [syncPreferences, setSyncPreferences] = useState<SyncPreferences>(
@@ -5750,6 +6173,83 @@ export default function HomePage({
       })
     )
     setStatus("Local interview check generated from your draft")
+  }
+
+  const generateTechnicalInterviewDrills = async () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
+    const localDrills = createTechnicalInterviewDrills({
+      difficulty: technicalInterviewDifficulty,
+      focus: technicalInterviewFocus,
+      job: state.jobAnalysis,
+      profile: state.profile
+    })
+
+    setIsCopilotThinking(true)
+    setStatus("Generating advanced technical interview drills...")
+
+    try {
+      const response = await fetch("/api/ai/technical-interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          difficulty: technicalInterviewDifficulty,
+          focus: technicalInterviewFocus,
+          job: state.jobAnalysis,
+          profile: state.profile
+        })
+      })
+      const body = (await response.json()) as {
+        data: {
+          drills?: Array<Omit<TechnicalInterviewDrill, "id">>
+          upgradeUrl?: string
+        } | null
+        error: string | null
+      }
+
+      if (!response.ok || !body.data?.drills?.length) {
+        logDashboardActionFailure(
+          "generate technical interview drills response",
+          body.error ?? "Technical interview drill AI unavailable",
+          {
+            httpStatus: response.status,
+            route: "/api/ai/technical-interview"
+          }
+        )
+        setTechnicalInterviewDrills(localDrills)
+        setStatus(
+          body.data?.upgradeUrl
+            ? `${body.error ?? "Upgrade required"} Local technical drills used.`
+            : body.error
+              ? `AI technical drills unavailable. Local drills used: ${body.error}`
+              : "AI technical drills unavailable. Local drills used."
+        )
+        return
+      }
+
+      setTechnicalInterviewDrills(
+        body.data.drills.map((drill, index) => ({
+          ...drill,
+          id: `ai-${technicalInterviewFocus}-${technicalInterviewDifficulty}-${index}`
+        }))
+      )
+      setStatus("AI technical interview drills generated")
+      setTimeout(() => setStatus(""), 3000)
+    } catch (error: unknown) {
+      logDashboardActionFailure("generate technical interview drills fetch", error, {
+        route: "/api/ai/technical-interview"
+      })
+      setTechnicalInterviewDrills(localDrills)
+      setStatus(
+        error instanceof Error
+          ? `AI technical drills unavailable. Local drills used: ${error.message}`
+          : "AI technical drills unavailable. Local drills used."
+      )
+    } finally {
+      setIsCopilotThinking(false)
+    }
   }
 
   const saveFinalInterviewAnswer = () => {
@@ -9347,8 +9847,8 @@ export default function HomePage({
                     </article>
                     <article>
                       <span>4</span>
-                      <strong>Save reusable wording</strong>
-                      <p>Only final answers go back to Proof Library answers.</p>
+                      <strong>Drill technical follow-ups</strong>
+                      <p>Practise deeper technical prompts before saving.</p>
                     </article>
                   </div>
 
@@ -9596,10 +10096,150 @@ export default function HomePage({
                     </section>
                   </div>
 
+                  <section
+                    className="technical-interview-panel"
+                    aria-label="Advanced technical interview practice"
+                  >
+                    <div className="section-heading">
+                      <p className="eyebrow">Step 3</p>
+                      <h2>Proof-led technical simulator</h2>
+                      <p>
+                        EU-focused technical drills that stay tied to saved
+                        proof, work-right boundaries and role evidence.
+                      </p>
+                    </div>
+                    <div className="technical-interview-rule-strip">
+                      <span>EU proof simulator</span>
+                      <strong>
+                        Evidence first - trade-off - verify gaps - no hidden
+                        claims
+                      </strong>
+                      <p>
+                        Uses the saved JD, profile proof and work-right boundary
+                        before shaping technical answers.
+                      </p>
+                    </div>
+                    <div className="technical-interview-controls">
+                      <label>
+                        Focus area
+                        <select
+                          value={technicalInterviewFocus}
+                          onChange={(event) =>
+                            setTechnicalInterviewFocus(
+                              event.target.value as TechnicalInterviewFocus
+                            )
+                          }
+                        >
+                          {technicalInterviewFocusOptions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Difficulty
+                        <select
+                          value={technicalInterviewDifficulty}
+                          onChange={(event) =>
+                            setTechnicalInterviewDifficulty(
+                              event.target.value as TechnicalInterviewDifficulty
+                            )
+                          }
+                        >
+                          {technicalInterviewDifficultyOptions.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        disabled={isCopilotThinking}
+                        type="button"
+                        onClick={generateTechnicalInterviewDrills}
+                      >
+                        {isCopilotThinking
+                          ? "Generating..."
+                          : "Generate technical drills"}
+                      </button>
+                    </div>
+                    <div className="technical-interview-grid">
+                      {technicalInterviewDrills.length ? (
+                        technicalInterviewDrills.map((drill) => (
+                          <article
+                            className="technical-interview-card"
+                            key={drill.id}
+                          >
+                            <div className="technical-card-header">
+                              <div>
+                                <span className="technical-card-time">
+                                  {drill.timebox}
+                                </span>
+                                <span className="technical-card-time technical-card-time-muted">
+                                  EU context
+                                </span>
+                              </div>
+                              <strong>{drill.question}</strong>
+                            </div>
+                            <dl className="technical-interview-brief">
+                              <div>
+                                <dt>Evidence</dt>
+                                <dd>{drill.evidenceHook}</dd>
+                              </div>
+                              <div>
+                                <dt>EU lens</dt>
+                                <dd>{drill.euContext.slice(0, 3).join(" | ")}</dd>
+                              </div>
+                              <div>
+                                <dt>Answer must prove</dt>
+                                <dd>{drill.answerContract.join(" ")}</dd>
+                              </div>
+                            </dl>
+                            <div className="technical-card-columns">
+                              <section>
+                                <h3>Signals</h3>
+                                <ul className="bullets-list">
+                                  {drill.expectedSignals.map((signal) => (
+                                    <li key={signal}>{signal}</li>
+                                  ))}
+                                </ul>
+                              </section>
+                              <section>
+                                <h3>Follow-ups</h3>
+                                <ul className="bullets-list">
+                                  {drill.followUps.map((followUp) => (
+                                    <li key={followUp}>{followUp}</li>
+                                  ))}
+                                </ul>
+                              </section>
+                            </div>
+                            <details className="technical-card-details">
+                              <summary>Claim checks</summary>
+                              <ul className="bullets-list">
+                                {drill.riskChecks.map((risk) => (
+                                  <li key={risk}>{risk}</li>
+                                ))}
+                              </ul>
+                            </details>
+                            <p className="technical-card-hint">
+                              {drill.prepHint}
+                            </p>
+                          </article>
+                        ))
+                      ) : (
+                        <p className="empty-state">
+                          Choose a focus area, then generate drills for live
+                          technical interview practice.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+
                   {showInterviewPrepPacks && (
                     <>
                       <div className="section-intro">
-                        <p className="eyebrow">Step 3</p>
+                        <p className="eyebrow">Step 4</p>
                         <h2>Saved prep packs from tracked jobs</h2>
                         <p>
                           Prep packs still use saved profile, job details and

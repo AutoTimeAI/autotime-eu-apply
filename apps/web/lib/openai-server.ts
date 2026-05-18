@@ -58,6 +58,26 @@ export type InterviewAnswerCoachResult = {
   boundaryNote: string
 }
 
+export type TechnicalInterviewDifficulty = "standard" | "advanced" | "senior"
+export type TechnicalInterviewFocus =
+  | "systems"
+  | "debugging"
+  | "api"
+  | "data"
+  | "delivery"
+
+export type TechnicalInterviewDrill = {
+  answerContract: string[]
+  evidenceHook: string
+  euContext: string[]
+  question: string
+  riskChecks: string[]
+  timebox: string
+  expectedSignals: string[]
+  followUps: string[]
+  prepHint: string
+}
+
 export type ProfileContextAIResult = {
   roleMarket:
     | "general-tech"
@@ -167,6 +187,22 @@ const interviewAnswerCoachSchema = z.object({
   strongFinalAnswer: z.string().optional(),
   followUpDrills: stringListSchema,
   boundaryNote: z.string().optional()
+})
+
+const technicalInterviewDrillSchema = z.object({
+  answerContract: stringListSchema,
+  evidenceHook: z.string().optional(),
+  euContext: stringListSchema,
+  question: z.string().optional(),
+  riskChecks: stringListSchema,
+  timebox: z.string().optional(),
+  expectedSignals: stringListSchema,
+  followUps: stringListSchema,
+  prepHint: z.string().optional()
+})
+
+const technicalInterviewDrillsSchema = z.object({
+  drills: z.array(technicalInterviewDrillSchema).optional()
 })
 
 const profileContextSchema = z.object({
@@ -387,6 +423,44 @@ function normaliseInterviewAnswerCoach(
   }
 }
 
+function normaliseTechnicalInterviewDrills(
+  value: z.infer<typeof technicalInterviewDrillsSchema>
+): TechnicalInterviewDrill[] {
+  return (value.drills ?? [])
+    .map((drill) => ({
+      answerContract: toStringArray(drill.answerContract).length
+        ? toStringArray(drill.answerContract)
+        : [
+            "Anchor the answer in saved evidence.",
+            "Name the trade-off.",
+            "State what you would verify before making stronger claims."
+          ],
+      evidenceHook:
+        toStringValue(drill.evidenceHook) ||
+        "Use saved profile and job evidence; add missing proof before making strong claims.",
+      euContext: toStringArray(drill.euContext).length
+        ? toStringArray(drill.euContext)
+        : [
+            "Frame the answer for UK/EU teams: privacy, security, documentation, rollout control and work-right accuracy where relevant."
+          ],
+      question: toStringValue(drill.question),
+      riskChecks: toStringArray(drill.riskChecks).length
+        ? toStringArray(drill.riskChecks)
+        : [
+            "Do not invent scale, tools, employers or outcomes.",
+            "Separate known evidence from assumptions."
+          ],
+      timebox: toStringValue(drill.timebox) || "4 minutes",
+      expectedSignals: toStringArray(drill.expectedSignals),
+      followUps: toStringArray(drill.followUps),
+      prepHint:
+        toStringValue(drill.prepHint) ||
+        "Answer with saved evidence, clear trade-offs and explicit limits."
+    }))
+    .filter((drill) => drill.question && drill.followUps.length > 0)
+    .slice(0, 4)
+}
+
 function normaliseProfileContext({
   currentContext,
   value
@@ -600,6 +674,40 @@ export async function generateInterviewAnswerWithOpenAI({
   return {
     ...result,
     value: normaliseInterviewAnswerCoach(result.value)
+  }
+}
+
+export async function generateTechnicalInterviewDrillsWithOpenAI({
+  difficulty,
+  focus,
+  job,
+  profile
+}: {
+  difficulty: TechnicalInterviewDifficulty
+  focus: TechnicalInterviewFocus
+  job: JobAnalysisDraft
+  profile: CandidateProfile
+}): Promise<ServerAIResult<TechnicalInterviewDrill[]>> {
+  const result = await createJsonResponse({
+    instructions: [
+      "You create realistic technical interview drills for UK/EU tech roles.",
+      "Return only valid JSON with key drills. drills must be an array of objects with keys question, timebox, evidenceHook, euContext, answerContract, expectedSignals, riskChecks, followUps, prepHint.",
+      "Create 2 to 4 drills. euContext, answerContract, expectedSignals, riskChecks and followUps must be string arrays.",
+      "The drills should feel like live technical interview questions: architecture, debugging, API/data trade-offs, reliability, security, delivery decisions, and follow-up pressure.",
+      "This is an AutoTime product surface, not a generic question generator. Every drill must include a proof layer: evidenceHook explains which supplied job/profile signal the user should anchor on, answerContract states what the answer must prove, and riskChecks state what not to overclaim.",
+      "Make the drills EU-centric: include privacy-by-design, GDPR-safe logging/data handling, documentation, stakeholder clarity, measured rollout, auditability, cross-border teams, or work-right boundaries when relevant to the supplied job/profile.",
+      "Use only the supplied job and candidate profile. Do not invent employers, certifications, exact tools, production incidents or achievements.",
+      "If evidence is thin, make the question evidence-seeking and tell the user what proof to prepare.",
+      "Questions must be challenging but answerable verbally without coding tools.",
+      "No immigration, legal or hiring advice."
+    ].join(" "),
+    input: { difficulty, focus, job, profile },
+    schema: technicalInterviewDrillsSchema
+  })
+
+  return {
+    ...result,
+    value: normaliseTechnicalInterviewDrills(result.value)
   }
 }
 
