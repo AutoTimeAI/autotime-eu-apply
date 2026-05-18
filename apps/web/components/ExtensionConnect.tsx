@@ -235,23 +235,28 @@ export default function ExtensionConnect() {
       })
       addStep("Extension accepted and stored the account session.", "success")
 
-      addStep("Recording dashboard connection audit.")
-      const recordWarning = await recordExtensionConnection(
+      addStep("Recording dashboard connection.")
+      const recordError = await recordExtensionConnection(
         session.access_token,
         extensionId
       )
-      if (recordWarning) {
-        addStep(`Dashboard audit warning: ${recordWarning}`, "warning")
-      } else {
-        addStep("Dashboard connection audit recorded.", "success")
+      if (recordError) {
+        const message = `Dashboard connection could not be recorded: ${recordError}`
+        addStep(message, "error")
+        setStatus(message)
+        reportClientIssue({
+          area: "extension",
+          code: "extension.connect.record.failed",
+          message
+        })
+        return
       }
 
+      addStep("Dashboard connection recorded.", "success")
       const successMessage =
         extensionResponse.syncError
           ? `Extension connected. Tracked jobs will retry sync from Track Job. Reason: ${extensionResponse.syncError}`
-          : recordWarning
-            ? `Extension connected. Dashboard record warning: ${recordWarning}`
-            : "Extension connected. You can return to the side panel."
+          : "Extension connected. You can return to the side panel."
       setStatus(successMessage)
       addStep(successMessage, extensionResponse.syncError ? "warning" : "success")
     } catch (error: unknown) {

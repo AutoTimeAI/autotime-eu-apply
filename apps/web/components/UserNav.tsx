@@ -73,7 +73,7 @@ const dashboardTopNavItems: DashboardNavItem[] = [
 ]
 
 const dashboardWorkflowNavItems: DashboardNavItem[] = [
-  { href: "/dashboard", label: "Overview", description: "Daily command" },
+  { href: "/dashboard", label: "Overview", description: "Dashboard" },
   {
     aliases: ["/dashboard/profile"],
     href: "/dashboard/autofill-profile",

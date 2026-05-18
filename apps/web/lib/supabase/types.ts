@@ -61,6 +61,7 @@ export type SyncEntityType =
   | "interview_prep_pack"
 export type SyncAction = "created" | "updated" | "deleted"
 export type OperationalLogLevel = "severe" | "warn" | "info"
+export type AccountAiTone = "concise" | "coaching" | "detailed"
 
 export type Database = {
   public: {
@@ -171,6 +172,33 @@ export type Database = {
           full_name?: string | null
           avatar_url?: string | null
           last_sign_in_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      account_settings: {
+        Row: {
+          user_id: string
+          default_region: string
+          ai_tone: AccountAiTone
+          notifications_enabled: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          default_region?: string
+          ai_tone?: AccountAiTone
+          notifications_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          default_region?: string
+          ai_tone?: AccountAiTone
+          notifications_enabled?: boolean
           created_at?: string
           updated_at?: string
         }

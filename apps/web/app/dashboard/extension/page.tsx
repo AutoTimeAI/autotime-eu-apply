@@ -251,9 +251,17 @@ export default async function DashboardExtensionPage() {
                   >
                     Download extension v{extensionVersion}
                   </a>
-                  <a className="secondary-link" href="/extension/connect">
+                  <span
+                    aria-disabled="true"
+                    className="secondary-link disabled-link"
+                    role="link"
+                  >
                     Connect installed extension
-                  </a>
+                  </span>
+                  <small className="extension-action-hint">
+                    Install first, then use CONNECT inside the extension Account
+                    tab.
+                  </small>
                 </>
               )}
             </div>

@@ -1779,6 +1779,35 @@ h4 {
   text-decoration: none;
 }
 
+.settings-overview-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.settings-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-control-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 16px;
+}
+
+.settings-control-panel .section-heading h2,
+.settings-control-panel .section-heading p {
+  margin-bottom: 0;
+}
+
+.settings-control-grid > .status-banner {
+  grid-column: 1 / -1;
+}
+
 .market-context-panel {
   display: grid;
   gap: 16px;
@@ -4910,6 +4939,15 @@ h4 {
   color: var(--accent-strong);
 }
 
+.disabled-link,
+.disabled-link:hover {
+  border-color: #c8d0dc;
+  background: #edf1f6;
+  color: #667287;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .landing-signal-panel {
   display: grid;
   gap: 12px;
@@ -5486,6 +5524,14 @@ h4 {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.extension-action-hint {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .extension-distribution-grid {

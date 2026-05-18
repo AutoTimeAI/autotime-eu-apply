@@ -3249,6 +3249,7 @@ export default function HomePage({
   const activeKitApplication =
     state.applications.find((application) => application.id === kitApplicationId) ??
     state.applications[0]
+  const hasCurrentJobDraft = hasJobDraft(state.jobAnalysis)
   const followUpApplications = state.applications.filter(hasFollowUpAction)
   const outcomeAnalytics = useMemo(
     () => getOutcomeAnalytics(persistedOutcomeRecords),
@@ -3400,11 +3401,15 @@ export default function HomePage({
     },
     {
       title: "Latest job check",
-      value: `${autoTimeFitReview.fitScore}/100`,
-      hideMetric: true,
-      tone: decisionTone,
-      progress: autoTimeFitReview.fitScore,
-      body: autoTimeFitReview.fitLabel
+      value: hasCurrentJobDraft
+        ? `${autoTimeFitReview.fitScore}/100`
+        : "Not checked",
+      hideMetric: hasCurrentJobDraft,
+      tone: hasCurrentJobDraft ? decisionTone : "neutral",
+      progress: hasCurrentJobDraft ? autoTimeFitReview.fitScore : 0,
+      body: hasCurrentJobDraft
+        ? autoTimeFitReview.fitLabel
+        : "Run Fit Analysis on a job before reading fit."
     },
     {
       title: "Profile",
@@ -3424,17 +3429,20 @@ export default function HomePage({
     },
     {
       title: "Job risk",
-      value: riskLabel,
+      value: hasCurrentJobDraft ? riskLabel : "No job checked",
       hideMetric: false,
-      tone: decisionTone,
-      progress:
-        decisionBrief.contentGate === "ready"
+      tone: hasCurrentJobDraft ? decisionTone : "neutral",
+      progress: hasCurrentJobDraft
+        ? decisionBrief.contentGate === "ready"
           ? 100
           : decisionBrief.contentGate === "stretch"
             ? 62
-            : 28,
+            : 28
+        : 0,
       body:
-        decisionBrief.contentGate === "ready"
+        !hasCurrentJobDraft
+          ? "Check a role before reviewing blockers."
+          : decisionBrief.contentGate === "ready"
           ? "No major blocker found."
           : decisionBrief.contentGate === "stretch"
             ? "This looks like a stretch role."
@@ -3454,10 +3462,13 @@ export default function HomePage({
     {
       title: "Follow-ups",
       value: `${activeActionCount}`,
-      hideMetric: true,
+      hideMetric: activeActionCount > 0,
       tone: followUpTone,
       progress: activeActionCount > 0 ? 45 : 100,
-      body: "Next steps across tracked jobs."
+      body:
+        activeActionCount > 0
+          ? "Next steps across tracked jobs."
+          : "No follow-ups are due yet."
     },
     {
       title: "Interview",
