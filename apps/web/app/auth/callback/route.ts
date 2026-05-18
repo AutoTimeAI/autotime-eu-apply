@@ -129,7 +129,14 @@ async function runFirstLoginSetup({
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const requestUrl = new URL(request.url)
+    const oauthError =
+      requestUrl.searchParams.get("error_description") ??
+      requestUrl.searchParams.get("error")
     const code = requestUrl.searchParams.get("code")
+
+    if (oauthError) {
+      return getErrorRedirect(request, "provider-error", oauthError)
+    }
 
     if (!code) {
       return getErrorRedirect(request, "missing-code", "OAuth code was missing")
