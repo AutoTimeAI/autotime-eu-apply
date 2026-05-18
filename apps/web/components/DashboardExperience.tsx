@@ -1443,7 +1443,7 @@ function createLocalInterviewCoachMeta({
     followUpDrills: [
       "Prepare one measurable result you can explain in under 30 seconds.",
       "Prepare one trade-off or mistake and what you changed afterwards.",
-      "Prepare the honest boundary: what you know, what you would verify, and what you would not claim."
+      "Prepare one point you would verify before answering in detail."
     ],
     boundaryNote:
       getInterviewBuddyDisclaimer(question) ||
@@ -1570,6 +1570,18 @@ function getSignalStatus(score: number): ProfileQualitySignal["status"] {
   return "blocked"
 }
 
+function getProfileSignalStatusLabel(status: ProfileQualitySignal["status"]) {
+  if (status === "ready") {
+    return "Ready"
+  }
+
+  if (status === "needs-check") {
+    return "Needs review"
+  }
+
+  return "Missing"
+}
+
 function getProfileQualitySignals(
   profile: CandidateProfile,
   reusableAnswers: ReusableAnswers
@@ -1607,45 +1619,45 @@ function getProfileQualitySignals(
     {
       detail:
         evidenceScore >= 75
-          ? "Enough profile evidence for grounded job checks."
-          : "Add CV text, project summaries and experience highlights.",
-      label: "Evidence strength",
+          ? "Enough saved evidence for job checks."
+          : "Add CV text, project examples and experience highlights.",
+      label: "Evidence",
       score: evidenceScore,
       status: getSignalStatus(evidenceScore)
     },
     {
       detail:
         workRightScore >= 75
-          ? "Work-right context is available for EU checks."
+          ? "Work-right details are saved."
           : "Add only verified work-right, sponsorship and relocation facts.",
-      label: "Work-right readiness",
+      label: "Work-right details",
       score: workRightScore,
       status: getSignalStatus(workRightScore)
     },
     {
       detail:
         roleFocusScore >= 75
-          ? "Target roles and countries are clear."
-          : "Add target role families and countries before checking roles.",
-      label: "Role focus clarity",
+          ? "Target roles and countries are saved."
+          : "Add target roles and countries before checking roles.",
+      label: "Role targets",
       score: roleFocusScore,
       status: getSignalStatus(roleFocusScore)
     },
     {
       detail:
         cvFactsScore >= 75
-          ? "CV facts are available for fit and interview evidence."
+          ? "CV text is saved for fit checks and interview prep."
           : "Paste enough factual CV content to support recommendations.",
-      label: "CV facts available",
+      label: "CV",
       score: cvFactsScore,
       status: getSignalStatus(cvFactsScore)
     },
     {
       detail:
         claimBoundaryScore >= 75
-          ? "AI can use saved claims with clearer boundaries."
-          : "AutoTime will avoid unsupported claims until more evidence exists.",
-      label: "Allowed AI claims",
+          ? "Reusable answer evidence is available."
+          : "Add reusable answers only when they are backed by your profile.",
+      label: "Reusable answers",
       score: claimBoundaryScore,
       status: getSignalStatus(claimBoundaryScore)
     }
@@ -1942,10 +1954,9 @@ function createEvidenceRecords({
       sourceType: "cv",
       sourceLabel: "Saved CV text",
       missingInput: profile.baseCvText.trim() ? undefined : "CV evidence",
-      explanation:
-        "CV evidence is used to avoid inventing experience or unsupported application claims.",
+      explanation: "CV evidence is used to match the role against your profile.",
       limit:
-        "Only user-saved CV text is used; AutoTime cannot verify facts outside the provided evidence.",
+        "Only user-saved CV text is used for this check.",
       createdAt: now
     }
   ]
@@ -2741,8 +2752,7 @@ function getVerificationChecklist({
       evidence: hasCv
         ? "CV text is saved and can be compared with role language."
         : "No CV text is saved.",
-      limit:
-        "Application content should not invent achievements or role experience."
+      limit: "Review application content before using it."
     },
     {
       id: "official-source",
@@ -2823,10 +2833,9 @@ function getContentGuardrails({
             : "Core verification checks are ready."
     },
     {
-      label: "No invention rule",
+      label: "Content source",
       status: "ready",
-      reason:
-        "Generated content must only use saved profile, reusable answers and job text."
+      reason: "Drafts use saved profile, reusable answers and job text."
     }
   ]
 }
@@ -2931,8 +2940,7 @@ function getReadyToApplyChecklist({
         : application.contentGate === "stretch"
           ? "This is a stretch application."
           : "No saved blocker is currently attached to this job.",
-      action:
-        "Apply only after unsupported claims, blockers and missing evidence are resolved."
+      action: "Apply only after blockers and missing evidence are resolved."
     }
   ]
 }
@@ -3334,11 +3342,10 @@ export default function HomePage({
         "Official sources and employer wording must be checked before relying on work-right, sponsorship, relocation or location-fit advice."
     },
     {
-      label: "AI boundary",
-      value: "Evidence controls output",
+      label: "Review control",
+      value: "You approve changes",
       tone: "neutral",
-      detail:
-        "AI output cannot override official sources, saved profile evidence, parsed job text or your review."
+      detail: "Check the result before saving or using it."
     }
   ]
   const positioningResultCards = [
@@ -3449,7 +3456,7 @@ export default function HomePage({
       status: profileReadyForExecution ? "Ready" : "Needs evidence",
       hideStatusMetric: !profileReadyForExecution,
       detail: profileReadyForExecution
-        ? "Your profile can support job checks, tracker actions and AI coaching."
+        ? "Your profile can support job checks, tracker actions and interview prep."
         : "Complete the profile alert items to unlock evidence-led execution tools.",
       cta: profileReadyForExecution ? "Review profile" : "Complete profile",
       tone: profileReadyForExecution
@@ -3523,7 +3530,7 @@ export default function HomePage({
       hideStatusMetric: interviewApplications.length > 0,
       detail:
         interviewApplications.length > 0
-          ? "Generate coaching from your profile evidence and tracked role context."
+          ? "Generate interview prep from your profile evidence and tracked role context."
           : "Move a tracked application to Interview before generating prep packs.",
       cta: "Open interview coach",
       tone: interviewApplications.length > 0 ? "good" : "neutral"
@@ -3587,7 +3594,7 @@ export default function HomePage({
   ]
   const todayAction = !profileReadyForExecution
     ? {
-        body: "Locked until your evidence profile reaches the required readiness. This keeps job checks, tracker actions and interview answers grounded in your real proof.",
+        body: "Locked until your profile has enough detail for job checks, tracker actions and interview answers.",
         cta: "Unlock profile",
         href: "/dashboard/autofill-profile",
         label: "Locked",
@@ -4322,14 +4329,14 @@ export default function HomePage({
     }
 
     if (!canReviewResumeWithAi) {
-      setStatus("Add at least 40 characters of CV text before AI review.")
+      setStatus("Add at least 40 characters of CV text before reviewing.")
       setTimeout(() => setStatus(""), 3000)
       return
     }
 
     setIsReviewingCv(true)
     setContextSuggestionNote("")
-    setStatus("AI is reviewing your CV for profile suggestions...")
+    setStatus("Reviewing your CV for profile suggestions...")
 
     try {
       const localSuggestion = inferContextFromResume(resumeIntake, productContext)
@@ -4345,11 +4352,11 @@ export default function HomePage({
 
       if (body.data && "upgradeUrl" in body.data) {
         const message =
-          "Free AI review limit reached. Local suggestions prepared instead."
+          "Review limit reached. Local suggestions prepared instead."
         setContextSuggestion(localSuggestion)
         setContextSuggestionSource("limit")
         setContextSuggestionNote(message)
-        setStatus("AI limit reached. Local suggestions prepared for approval.")
+        setStatus("Review limit reached. Local suggestions prepared for approval.")
         window.alert(`${message} Review them before applying to My Profile.`)
         return
       }
@@ -4357,15 +4364,15 @@ export default function HomePage({
       if (!response.ok || !body.data || body.error) {
         logDashboardActionFailure(
           "review resume context response",
-          body.error ?? "AI review unavailable",
+          body.error ?? "CV review unavailable",
           {
             httpStatus: response.status,
             route: "/api/ai/profile-context"
           }
         )
         const message = body.error
-          ? `AI review unavailable: ${body.error}`
-          : "AI review unavailable. Local suggestions prepared."
+          ? `CV review unavailable: ${body.error}`
+          : "CV review unavailable. Local suggestions prepared."
         setContextSuggestion(localSuggestion)
         setContextSuggestionSource("error")
         setContextSuggestionNote(message)
@@ -4382,15 +4389,15 @@ export default function HomePage({
       )
       setContextSuggestionSource("ai")
       setContextSuggestionNote("")
-      setStatus("AI CV review complete. Approve suggestions before saving.")
+      setStatus("CV review complete. Approve suggestions before saving.")
     } catch (error: unknown) {
       logDashboardActionFailure("review resume context fetch", error, {
         route: "/api/ai/profile-context"
       })
       const message =
         error instanceof Error
-          ? `AI review unavailable: ${error.message}`
-          : "AI review unavailable. Local suggestions prepared."
+          ? `CV review unavailable: ${error.message}`
+          : "CV review unavailable. Local suggestions prepared."
       setContextSuggestion(inferContextFromResume(resumeIntake, productContext))
       setContextSuggestionSource("local")
       setContextSuggestionNote(message)
@@ -4986,13 +4993,13 @@ export default function HomePage({
     }
 
     if (!hasJobDraft(state.jobAnalysis)) {
-      setStatus("Add a job title, company, URL or description before asking AI")
+      setStatus("Add a job title, company, URL or description before checking the role")
       return
     }
 
     try {
       setIsCopilotThinking(true)
-      setStatus("AI fit assistant is checking the role against your profile...")
+      setStatus("Checking the role against your profile...")
       const response = await fetch("/api/ai/analyse", {
         method: "POST",
         headers: {
@@ -5014,7 +5021,7 @@ export default function HomePage({
       if (!response.ok || body.error || !body.data?.result) {
         logDashboardActionFailure(
           "AI role analysis response",
-          body.error ?? "AI role analysis failed",
+          body.error ?? "Role analysis failed",
           {
             httpStatus: response.status,
             route: "/api/ai/analyse"
@@ -5025,7 +5032,7 @@ export default function HomePage({
           return
         }
 
-        setStatus(body.error ?? "AI role analysis failed")
+        setStatus(body.error ?? "Role analysis failed")
         return
       }
 
@@ -5037,13 +5044,13 @@ export default function HomePage({
         }
       }
 
-      persist(next, "AI fit assistant updated the role analysis")
+      persist(next, "Role analysis updated")
     } catch (error: unknown) {
       logDashboardActionFailure("AI role analysis fetch", error, {
         route: "/api/ai/analyse"
       })
       setStatus(
-        error instanceof Error ? error.message : "AI role analysis failed"
+        error instanceof Error ? error.message : "Role analysis failed"
       )
     } finally {
       setIsCopilotThinking(false)
@@ -5261,7 +5268,7 @@ export default function HomePage({
     )
 
     setIsCopilotThinking(true)
-    setStatus("AI is preparing an evidence-checked interview pack...")
+    setStatus("Preparing an interview pack...")
 
     try {
       const response = await fetch("/api/ai/interview", {
@@ -5285,7 +5292,7 @@ export default function HomePage({
       if (!response.ok || !body.data?.pack) {
         logDashboardActionFailure(
           "generate interview prep response",
-          body.error ?? "AI prep unavailable",
+          body.error ?? "Interview prep unavailable",
           {
             applicationId: application.id,
             httpStatus: response.status,
@@ -5297,7 +5304,7 @@ export default function HomePage({
             `${body.error ?? "Upgrade required"} Local prep pack saved.`
           )
         } else {
-          setStatus(body.error ?? "AI prep unavailable. Local prep pack saved.")
+          setStatus(body.error ?? "Interview prep unavailable. Local prep pack saved.")
         }
         await saveInterviewPrepPack(
           localPack,
@@ -5308,7 +5315,7 @@ export default function HomePage({
 
       await saveInterviewPrepPack(
         body.data.pack,
-        "AI interview prep pack generated and saved"
+        "Interview prep pack generated and saved"
       )
     } catch (error: unknown) {
       logDashboardActionFailure("generate interview prep fetch", error, {
@@ -5317,8 +5324,8 @@ export default function HomePage({
       })
       setStatus(
         error instanceof Error
-          ? `AI prep unavailable. Local prep pack saved: ${error.message}`
-          : "AI prep unavailable. Local prep pack saved."
+          ? `Interview prep unavailable. Local prep pack saved: ${error.message}`
+          : "Interview prep unavailable. Local prep pack saved."
       )
       await saveInterviewPrepPack(
         localPack,
@@ -5634,7 +5641,7 @@ export default function HomePage({
     })
 
     setIsCopilotThinking(true)
-    setStatus("AI Interview Coach is checking evidence and boundaries...")
+    setStatus("Preparing interview answer options...")
 
     try {
       const response = await fetch("/api/ai/interview-answer", {
@@ -5659,7 +5666,7 @@ export default function HomePage({
       if (!response.ok || !body.data?.coach) {
         logDashboardActionFailure(
           "generate interview coach response",
-          body.error ?? "AI coach unavailable",
+          body.error ?? "Interview coach unavailable",
           {
             httpStatus: response.status,
             route: "/api/ai/interview-answer"
@@ -5671,7 +5678,7 @@ export default function HomePage({
           )
         } else {
           setStatus(
-            body.error ?? "AI coach unavailable. Local evidence check used."
+            body.error ?? "Interview coach unavailable. Local check used."
           )
         }
         setInterviewBuddyOutputs(localOutputs)
@@ -5697,7 +5704,7 @@ export default function HomePage({
         boundaryNote: coach.boundaryNote,
         source: "ai"
       })
-      setStatus("AI Interview Coach generated an evidence-checked answer")
+      setStatus("Interview answer options generated")
       setTimeout(() => setStatus(""), 3000)
     } catch (error: unknown) {
       logDashboardActionFailure("generate interview coach fetch", error, {
@@ -5707,8 +5714,8 @@ export default function HomePage({
       setInterviewCoachMeta(localCoachMeta)
       setStatus(
         error instanceof Error
-          ? `AI coach unavailable. Local evidence check used: ${error.message}`
-          : "AI coach unavailable. Local evidence check used."
+          ? `Interview coach unavailable. Local check used: ${error.message}`
+          : "Interview coach unavailable. Local check used."
       )
     } finally {
       setIsCopilotThinking(false)
@@ -5746,7 +5753,7 @@ export default function HomePage({
         question: activeInterviewQuestion
       })
     )
-    setStatus("Local evidence check generated from your draft")
+    setStatus("Local interview check generated from your draft")
   }
 
   const saveFinalInterviewAnswer = () => {
@@ -5808,10 +5815,8 @@ export default function HomePage({
           <p className="eyebrow">Profile evidence gate</p>
           <h2>Locked until your candidate evidence is ready</h2>
           <p>
-            AutoTime unlocks job checks, tracker actions and AI interview
-            coaching once your profile has enough verified evidence, so every
-            recommendation is tied to real role proof, work-right context and
-            candidate facts.
+            AutoTime unlocks job checks, tracker actions and interview prep
+            once your profile has enough detail.
           </p>
         </div>
       </div>
@@ -5821,7 +5826,7 @@ export default function HomePage({
           {profileGateItems.map((item) => (
             <li key={item}>{item}</li>
           ))}
-          <li>AI answers stay inside claims your profile can support.</li>
+          <li>Interview answers use your saved profile details.</li>
         </ol>
       </details>
       <a className="secondary-button" href="/dashboard/autofill-profile">
@@ -5888,7 +5893,7 @@ export default function HomePage({
               <p>
                 Better applications beat more applications. Watch the short
                 product walkthrough, then start with your evidence profile so
-                job checks, tracker actions and AI coaching make sense from the
+                job checks, tracker actions and interview prep make sense from the
                 first role.
               </p>
             </div>
@@ -6063,7 +6068,7 @@ export default function HomePage({
                       type="button"
                       onClick={reviewResumeForContext}
                     >
-                      {isReviewingCv ? "Reviewing CV" : "Review CV with AI"}
+                      {isReviewingCv ? "Reviewing CV" : "Review CV"}
                     </button>
                     <button type="button" onClick={applyMarketContextToProfile}>
                       Apply market context
@@ -6144,8 +6149,8 @@ export default function HomePage({
                           </RevealMetric>
                         </strong>
                         <p>
-                          Candidate evidence, work-right details and allowed AI
-                          claims.
+                          Candidate evidence, work-right details and role
+                          targets.
                         </p>
                         <a href="/dashboard/autofill-profile">Edit profile</a>
                       </article>
@@ -6188,7 +6193,7 @@ export default function HomePage({
                       <article>
                         <span>Plan</span>
                         <strong>
-                          {isCopilotThinking ? "AI working" : "Ready"}
+                          {isCopilotThinking ? "Working" : "Ready"}
                         </strong>
                         <p>
                           See what is included and what unlocks after profile
@@ -6241,7 +6246,7 @@ export default function HomePage({
                         <article>
                           <span>1</span>
                           <p>
-                            Import or paste your CV, then run Review CV with AI
+                            Import or paste your CV, then run Review CV
                             to generate suggested profile fields.
                           </p>
                         </article>
@@ -6292,7 +6297,7 @@ export default function HomePage({
                           type="button"
                           onClick={reviewResumeForContext}
                         >
-                          {isReviewingCv ? "Reviewing CV" : "Review CV with AI"}
+                          {isReviewingCv ? "Reviewing CV" : "Review CV"}
                         </button>
                         <button
                           className="secondary-button"
@@ -6304,7 +6309,7 @@ export default function HomePage({
                         </button>
                       </div>
                       <p className="profile-action-hint">
-                        Import or paste at least 40 characters, review with AI,
+                        Import or paste at least 40 characters, review it,
                         then approve the suggested fields before saving to your
                         profile.
                       </p>
@@ -6323,11 +6328,11 @@ export default function HomePage({
                             <div>
                               <strong>
                                 {contextSuggestionSource === "ai"
-                                  ? "AI suggestion ready"
+                                  ? "Suggestion ready"
                                   : contextSuggestionSource === "limit"
-                                    ? "Local suggestion ready - AI limit reached"
+                                    ? "Local suggestion ready - review limit reached"
                                     : contextSuggestionSource === "error"
-                                      ? "Local suggestion ready - AI unavailable"
+                                      ? "Local suggestion ready"
                                       : contextSuggestionSource === "local"
                                         ? "Local suggestion ready - connection issue"
                                       : "Suggestion ready"}
@@ -6672,8 +6677,7 @@ export default function HomePage({
                       <p>
                         Add enough candidate evidence before using job checks,
                         tracker actions or interview prep. This keeps the
-                        workflow specific, evidence-led and safe from generic AI
-                        claims.
+                        workflow specific to your real profile.
                       </p>
                     </div>
                     {profileReadyForExecution ? (
@@ -7089,22 +7093,27 @@ export default function HomePage({
                     <div className="profile-form-toolbar">
                       <div>
                         <p className="eyebrow">Account profile</p>
-                        <h2>Save profile changes</h2>
+                        <h2>Profile saves automatically</h2>
                         <p>
-                          Your signed-in account is the main copy. This browser
-                          keeps a backup so you can recover work if the network
-                          drops.
+                          Changes are saved to this signed-in account when
+                          account saving is available. This browser also keeps
+                          a recovery backup.
                         </p>
                       </div>
                       <div className="profile-form-actions">
-                        <button
-                          type="button"
-                          onClick={saveDashboard}
+                        <span
+                          className={
+                            cloudSyncReadiness.configured
+                              ? "sync-status-pill ready"
+                              : "sync-status-pill warning"
+                          }
                         >
-                          Save to account
-                        </button>
+                          {cloudSyncReadiness.configured
+                            ? "Auto-save on"
+                            : "Browser backup only"}
+                        </span>
                         <details className="profile-action-details">
-                          <summary>Account saving</summary>
+                          <summary>Account saving status</summary>
                           <label className="sync-consent-control">
                             <input
                               checked={cloudSyncConsent}
@@ -7139,7 +7148,7 @@ export default function HomePage({
                               type="button"
                               onClick={syncProfileToCloud}
                             >
-                              Save profile to account
+                              Retry profile save
                             </button>
                             <button
                               className="secondary-button"
@@ -7157,7 +7166,7 @@ export default function HomePage({
                               type="button"
                               onClick={syncDashboardToCloud}
                             >
-                              Save jobs to account
+                              Retry job tracker save
                             </button>
                             <button
                               className="secondary-button"
@@ -7185,14 +7194,14 @@ export default function HomePage({
                           </details>
                         </details>
                         <details className="profile-action-details">
-                          <summary>Download or restore backup</summary>
+                          <summary>Backup copy</summary>
                           <div className="profile-action-row">
                             <button
                               className="secondary-button"
                               type="button"
                               onClick={exportDashboard}
                             >
-                              Download backup
+                              Download copy
                             </button>
                             <button
                               className="secondary-button"
@@ -7211,7 +7220,7 @@ export default function HomePage({
                                 })
                               }}
                             >
-                              Restore from backup
+                              Restore from copy
                             </button>
                           </div>
                         </details>
@@ -7296,7 +7305,8 @@ export default function HomePage({
                         <h3>Work-right facts</h3>
                         <p>
                           Add only details you can verify. AutoTime will never
-                          invent work-right, visa or sponsorship claims.
+                          add work-right, visa or sponsorship details unless
+                          you save them.
                         </p>
                       </div>
                       <label>
@@ -7365,13 +7375,16 @@ export default function HomePage({
                   <div className="output-column">
                     <section className="panel profile-quality-panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Profile readiness</p>
-                        <h2>{profileQualityScore}/100 ready</h2>
+                        <p className="eyebrow">Profile status</p>
+                        <h2>
+                          {profileReadyForExecution
+                            ? "Ready for job checks"
+                            : "Profile needs more detail"}
+                        </h2>
                         <p>
-                          Use this as your readiness map. Green means AutoTime
-                          can use that evidence confidently; amber or red means
-                          add more proof before relying on job checks or AI
-                          coaching.
+                          Keep these details accurate so job checks,
+                          application drafts and interview prep use the right
+                          facts.
                         </p>
                       </div>
                       <div className="profile-quality-list">
@@ -7382,30 +7395,22 @@ export default function HomePage({
                           >
                             <div>
                               <strong>{signal.label}</strong>
-                              <span>{signal.score}/100</span>
+                              <span>
+                                {getProfileSignalStatusLabel(signal.status)}
+                              </span>
                             </div>
                             <p>{signal.detail}</p>
                           </article>
                         ))}
                       </div>
-                      <div className="ai-claim-boundary">
-                        <strong>AI claim boundary</strong>
-                        <p>
-                          Allowed: facts saved in your CV, profile evidence,
-                          reusable answers and parsed job text. Not allowed:
-                          invented experience, unverified work-right claims,
-                          hidden job-site actions or unsupported
-                          salary/sponsorship promises.
-                        </p>
-                      </div>
                     </section>
                     <section className="panel">
                       <div className="section-heading">
-                        <p className="eyebrow">At a glance</p>
-                        <h2>Saved facts</h2>
+                        <p className="eyebrow">Profile summary</p>
+                        <h2>Saved profile details</h2>
                         <p>
-                          These are the facts currently available for job-fit
-                          and workflow decisions.
+                          These details are currently available for job checks
+                          and application workflows.
                         </p>
                       </div>
                       <dl className="summary-list">
@@ -7449,8 +7454,8 @@ export default function HomePage({
                     <details className="panel reusable-answers-panel">
                       <summary>
                         <span>
-                          <small>Reusable answers</small>
-                          <strong>Open answer evidence</strong>
+                          <small>Application answers</small>
+                          <strong>Edit reusable answers</strong>
                         </span>
                       </summary>
                       <div className="reusable-answers-content">
@@ -7500,8 +7505,8 @@ export default function HomePage({
                       <p className="eyebrow">Step 1</p>
                       <h2>Add the role evidence</h2>
                       <p>
-                        Use a tracked job or paste one JD. Rules score it
-                        first; AI strengthens the review.
+                        Use a tracked job or paste one JD. AutoTime checks it
+                        against your saved profile.
                       </p>
                     </div>
                     <section
@@ -7643,7 +7648,8 @@ export default function HomePage({
                         role evidence above and your saved profile.
                       </p>
                       <p className="decision-method-note">
-                        Rules first. Official sources and saved proof outrank AI.
+                        Check official sources before relying on work-right or
+                        sponsorship advice.
                       </p>
                     </div>
                     <div className="decision-score">
@@ -7707,11 +7713,10 @@ export default function HomePage({
                       >
                         <article>
                           <span>Method</span>
-                          <strong>Rules first</strong>
+                          <strong>Profile and role check</strong>
                           <p>
-                            Evidence-first scoring and country rules drive the
-                            decision. AI strengthens the review, but evidence
-                            controls the outcome.
+                            The result uses your saved profile, the role text
+                            and country-specific checks.
                           </p>
                         </article>
                         <article>
@@ -7785,7 +7790,7 @@ export default function HomePage({
                       </div>
                       <section
                         className="fit-trust-panel"
-                        aria-label="Official source and AI integrity check"
+                        aria-label="Official source and review checks"
                       >
                         <div
                           className="fit-outcome-dashboard compact"
@@ -8003,7 +8008,7 @@ export default function HomePage({
                               className="fit-outcome-card neutral"
                               key={factor}
                             >
-                              <span>{`AI factor ${index + 1}`}</span>
+                              <span>{`Review factor ${index + 1}`}</span>
                               <strong>Review input</strong>
                               <p>{factor}</p>
                             </article>
@@ -8092,15 +8097,14 @@ export default function HomePage({
               {currentTab === "jobs" && (
                 <section
                   className="panel fit-ai-assist-panel"
-                  aria-label="Analyse Fit AI assistant"
+                  aria-label="Analyse Fit role review"
                 >
                   <div className="section-heading">
-                    <p className="eyebrow">Optional AI pass</p>
+                    <p className="eyebrow">Optional review</p>
                     <h2>Strengthen the review</h2>
                     <p>
-                      AI summarises the JD, surfaces gaps and updates the
-                      analysis. Rules, evidence and official sources stay in
-                      control.
+                      Summarise the job description, surface gaps and update the
+                      analysis before you save the role.
                     </p>
                   </div>
                   <button
@@ -8108,7 +8112,7 @@ export default function HomePage({
                     type="button"
                     onClick={runAiJobAnalysis}
                   >
-                    {isCopilotThinking ? "Checking role" : "Use AI assistant"}
+                    {isCopilotThinking ? "Checking role" : "Review role"}
                   </button>
                 </section>
               )}
@@ -9510,13 +9514,12 @@ export default function HomePage({
                         <h2>Add interview notes</h2>
                       </div>
                       <div className="buddy-character-panel">
-                        <span aria-hidden="true">AI</span>
+                        <span aria-hidden="true">✓</span>
                         <div>
-                          <strong>Evidence-first answer coach</strong>
+                          <strong>Interview answer coach</strong>
                           <p>
-                            Start with honest notes. The coach improves
-                            structure, flags missing proof and keeps your answer
-                            within what you can verify.
+                            Start with rough notes. The coach improves
+                            structure and highlights anything you should review.
                           </p>
                         </div>
                       </div>
@@ -9580,7 +9583,7 @@ export default function HomePage({
                           type="button"
                           onClick={generateLocalInterviewBuddyAnswers}
                         >
-                          Local evidence check
+                          Local check
                         </button>
                         <button
                           className="secondary-button"
@@ -9620,8 +9623,8 @@ export default function HomePage({
                           </strong>
                           <p>
                             {interviewCoachMeta.source === "ai"
-                              ? "AI checked against your saved evidence."
-                              : "Local readiness estimate before AI coaching."}
+                              ? "Checked against your saved profile."
+                              : "Local readiness estimate before coaching."}
                           </p>
                         </article>
                         <article>
@@ -9672,7 +9675,7 @@ export default function HomePage({
                       </div>
 
                       <article className="interview-coach-brief">
-                        <strong>AutoTime boundary</strong>
+                        <strong>Review note</strong>
                         <p>{interviewCoachMeta.boundaryNote}</p>
                       </article>
 
@@ -9790,36 +9793,30 @@ export default function HomePage({
           isDashboardProtocolLocked ? "utility-bar locked" : "utility-bar"
         }
       >
-        <summary>Download or restore backup</summary>
+        <summary>Backup copy</summary>
+        <p className="backup-helper-text">
+          Use this only if you want your own offline copy or need to restore
+          data after changing browser or device.
+        </p>
         <div className="backup-actions">
           <div className="backup-action-group">
-            <span>Account save</span>
-            <button
-              disabled={isDashboardProtocolLocked}
-              type="button"
-              onClick={saveDashboard}
-            >
-              Save to account
-            </button>
-          </div>
-          <div className="backup-action-group">
-            <span>Download</span>
+            <span>Save an offline copy</span>
             <button
               className="secondary-button"
               disabled={isDashboardProtocolLocked}
               type="button"
               onClick={exportDashboard}
             >
-              Download backup
+              Download copy
             </button>
           </div>
         </div>
         <div className="backup-import-group">
           <label className="import-control">
-            Restore from backup
+            Restore from a downloaded copy
             <textarea
               disabled={isDashboardProtocolLocked}
-              placeholder="Paste a backup you previously downloaded from AutoTime"
+              placeholder="Paste the text from your downloaded AutoTime copy"
               value={importJson}
               onChange={(event) => setImportJson(event.target.value)}
             />
@@ -9830,7 +9827,7 @@ export default function HomePage({
             type="button"
             onClick={() => importDashboard(importJson)}
           >
-            Restore backup
+            Restore copy
           </button>
         </div>
       </details>

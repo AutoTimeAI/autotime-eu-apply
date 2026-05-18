@@ -3028,6 +3028,33 @@ h4 {
   min-width: 128px;
 }
 
+.sync-status-pill {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.sync-status-pill.ready {
+  border-color: rgba(15, 118, 110, 0.28);
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.sync-status-pill.warning {
+  border-color: rgba(185, 28, 28, 0.28);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .profile-action-details {
   position: relative;
 }
@@ -4346,8 +4373,15 @@ h4 {
 
 .backup-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+}
+
+.backup-helper-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .backup-action-group,
