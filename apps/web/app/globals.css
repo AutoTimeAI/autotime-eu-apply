@@ -5467,7 +5467,7 @@ h4 {
 }
 
 .eu-fit-metric-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -5482,7 +5482,9 @@ h4 {
 
 .eu-fit-metric-grid dd {
   color: var(--accent-strong);
+  font-size: 0.96rem;
   font-weight: 800;
+  line-height: 1.32;
 }
 
 .eu-fit-signal-columns,

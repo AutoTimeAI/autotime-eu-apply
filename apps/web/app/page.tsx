@@ -90,71 +90,73 @@ const signalCards = [
 ];
 
 const readinessProfile = [
-  ["Current location", "United Kingdom"],
+  ["Market intent", "Ireland, Germany, Netherlands, United Kingdom, Remote Europe"],
+  ["Candidate positioning", "International tech candidate moving from engineering proof into systems and delivery-facing roles"],
   [
-    "Target markets",
-    "Ireland, Germany, Netherlands, United Kingdom, Remote Europe",
-  ],
-  ["Candidate type", "International tech candidate"],
-  [
-    "Experience",
-    "Software engineering, fintech systems, regulated banking software, data/analytics exposure",
+    "Evidence depth",
+    "Fintech systems, regulated banking software, technical delivery, data/analytics exposure",
   ],
   [
-    "Target roles",
+    "Role alignment",
     "Technical Business Analyst, Application Analyst, Systems Analyst, Implementation Consultant, Data/AI roles",
   ],
   [
-    "Sponsorship need",
-    "May need sponsorship or relocation support depending on country",
+    "Work-right sensitivity",
+    "Sponsorship or relocation support may be needed depending on country and employer wording",
   ],
-  ["Languages", "English-first candidate"],
   [
-    "Relocation readiness",
-    "Open to relocation if salary, visa, location and role fit are practical",
+    "Language fit",
+    "English-first profile; local-language requirements are treated as blocker risk",
   ],
-  ["Notice period", "Needs confirming before prioritising time-sensitive roles"],
-  ["Salary minimum", "Used as a practicality signal, not a guarantee"],
   [
-    "Strongest domain experience",
-    "Fintech systems, regulated environments and technical delivery",
+    "Relocation quality gate",
+    "Open only when salary, visa route, city practicality and role quality align",
   ],
-  ["CV strength level", "Evidence strength checked before application writing"],
+  ["Timing risk", "Notice period and start-date flexibility must be checked before high-priority action"],
+  ["Compensation floor", "Used as practicality pressure, never as a salary guarantee"],
   [
-    "LinkedIn/portfolio availability",
-    "Used to strengthen recruiter-facing proof where available",
+    "Proof gaps",
+    "Stakeholder-facing delivery and application support examples need sharper evidence",
+  ],
+  [
+    "External proof",
+    "LinkedIn/portfolio presence can strengthen recruiter confidence when aligned with the CV",
   ],
 ] as const;
 
 const opportunityMetrics = [
   ["EU Fit Score", "82/100"],
   ["Apply Decision", "Improve First"],
-  ["Best Country Fit", "Ireland / Germany"],
+  ["Alignment Quality", "Strong, but not automatic"],
+  ["Evidence Readiness", "Medium-high"],
+  ["Best Market Fit", "Ireland / Germany"],
   ["Application Priority", "High Priority"],
-  ["Right-to-Work Reality Check", "Unclear - needs checking"],
-  ["Language Barrier Score", "English-friendly"],
-  ["Relocation Practicality", "Possible but needs checking"],
-  ["Official Verification Status", "Needs official verification"],
+  ["Blocker Severity", "Moderate"],
+  ["Right-to-Work Reality", "Unclear - verify first"],
+  ["Source Confidence", "Employer wording only"],
+  ["Language Barrier", "English-friendly"],
+  ["Relocation Practicality", "Possible, source check needed"],
+  ["Positioning Readiness", "Reframe before applying"],
 ] as const;
 
 const positiveSignals = [
-  "FinTech background match",
-  "English-friendly role description",
-  "Hybrid flexibility",
-  "Systems/application support responsibilities",
+  "Fintech and regulated systems evidence maps to the role domain",
+  "English-friendly wording lowers immediate language risk",
+  "Hybrid flexibility may support relocation practicality",
+  "Systems/application support responsibilities fit the target pivot",
 ];
 
 const riskSignals = [
-  "Sponsorship not clearly mentioned",
-  "Salary range not listed",
-  "Some stakeholder-facing experience expected",
-  "Official sponsorship source not checked",
+  "Sponsorship and right-to-work wording is not explicit enough",
+  "Salary range is missing, so relocation practicality is not proven",
+  "Stakeholder-facing delivery evidence must be made more visible",
+  "Official employer or government source has not been checked",
 ];
 
 const whyRoleFits = [
-  "Matches fintech and regulated systems experience",
-  "Strong alignment with application support and technical analysis",
-  "Good fit for a candidate moving from software engineering into technical business/system roles",
+  "Domain alignment is credible because fintech and regulated systems proof already exists",
+  "Role responsibilities map to application support, analysis and technical delivery",
+  "The move from software engineering into systems/business-facing work is plausible if reframed with evidence",
 ];
 
 const positioningPack = [
@@ -248,10 +250,10 @@ const mottoAlignment = [
 ];
 
 const euFitSignalRail = [
+  ["Quality", "Alignment depth, evidence strength and blocker severity"],
+  ["Risk", "Sponsorship, language, relocation and source confidence"],
   ["Decision", "Apply Now / Improve First / Verify First / Skip"],
-  ["Checks", "Sponsorship, language, relocation and right-to-work signals"],
-  ["Evidence", "Job description, candidate profile and verified-source status"],
-  ["Output", "Priority, positioning angle, CV fix and interview prep"],
+  ["Action", "Priority, reframe, CV fix and interview proof"],
 ] as const;
 
 export default async function HomePage() {
@@ -348,10 +350,9 @@ export default async function HomePage() {
             <p className="eyebrow">Core product layer</p>
             <h2 id="eu-fit-title">EU Fit Engine</h2>
             <p>
-              AutoTime EU Apply helps international tech jobseekers decide which
-              UK/EU roles are realistically worth applying to, avoid weak
-              applications, and position themselves better for each country and
-              role.
+              Advanced role-quality intelligence for international tech
+              candidates deciding where UK/EU applications deserve effort, what
+              could block them, and how to position before applying.
             </p>
           </div>
           <div className="eu-fit-scorecard" aria-label="Sample fit result">
@@ -366,10 +367,9 @@ export default async function HomePage() {
             Smarter targeting. Stronger applications. More interviews.
           </strong>
           <p>
-            EU Fit Engine is designed to combine job-description signals,
-            candidate readiness, and official-source verification workflows so
-            users can make better application decisions without relying on
-            outdated or unsupported assumptions.
+            EU Fit Engine evaluates alignment quality, evidence depth, blocker
+            risk, source confidence and positioning readiness instead of acting
+            like a basic job tracker or static country guide.
           </p>
         </div>
 
@@ -389,7 +389,8 @@ export default async function HomePage() {
               <div>
                 <h3>Candidate Readiness Profile</h3>
                 <p>
-                  Candidate context first, so analysis does not become generic.
+                  The engine starts from market intent, evidence depth and
+                  blocker sensitivity, not a generic profile checklist.
                 </p>
               </div>
             </header>
@@ -409,8 +410,8 @@ export default async function HomePage() {
               <div>
                 <h3>Sample EU Fit Engine analysis</h3>
                 <p>
-                  Demo sample only. Official-source verification is planned for
-                  MVP evolution and should not be treated as confirmed guidance.
+                  Demo sample only. Advanced outputs separate fit quality,
+                  blocker risk and source confidence before recommending action.
                 </p>
               </div>
             </header>
