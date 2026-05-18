@@ -70,7 +70,6 @@ type DashboardFocus =
   | "interview-prep"
   | "insights"
   | "settings"
-type MetricTone = "neutral" | "good" | "warn"
 type RoleMarket =
   | "general-tech"
   | "fintech"
@@ -2236,18 +2235,6 @@ function getRiskLabel(state: CompanionDashboardState) {
   }
 
   return "No critical gaps logged"
-}
-
-function getMetricTone(value: number, goodAt: number): MetricTone {
-  if (value >= goodAt) {
-    return "good"
-  }
-
-  if (value > 0) {
-    return "neutral"
-  }
-
-  return "warn"
 }
 
 function resolveProductContext(context: ProductContext): ResolvedProductContext {
@@ -6682,97 +6669,6 @@ export default function HomePage({
                   </section>
                 )}
 
-              {!isOverview && currentTab === "applications" && (
-                <section
-                  className="tracker-pipeline-panel"
-                  aria-label="Tracker pipeline"
-                >
-                  <div className="section-heading">
-                    <p className="eyebrow">Tracker pipeline</p>
-                    <h2>From saved role to final outcome</h2>
-                    <p>
-                      Every job keeps status, source, notes, next action and due
-                      date so the workflow stays human-led and auditable.
-                    </p>
-                  </div>
-                  <div className="tracker-pipeline-grid">
-                    {applicationStatuses.map((status) => (
-                      <button
-                        className={
-                          applicationStatusFilter === status
-                            ? "active"
-                            : undefined
-                        }
-                        key={status}
-                        type="button"
-                        onClick={() =>
-                          setApplicationStatusFilter(
-                            applicationStatusFilter === status ? "all" : status
-                          )
-                        }
-                      >
-                        <span>{status}</span>
-                        <strong>
-                          <RevealMetric label={`Show ${status} count`}>
-                            {statusCounts[status]}
-                          </RevealMetric>
-                        </strong>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {!isOverview && currentTab === "applications" && (
-                <section
-                  className="metrics-strip"
-                  aria-label="Job search progress"
-                >
-                  <div
-                    className={`metric-card ${getMetricTone(state.applications.length, 3)}`}
-                  >
-                    <span>
-                      <RevealMetric label="Show tracked jobs count">
-                        {state.applications.length}
-                      </RevealMetric>
-                    </span>
-                    <small>Tracked jobs</small>
-                    <p>Some jobs may be active beyond tracked.</p>
-                  </div>
-                  <div
-                    className={`metric-card ${getMetricTone(interviewApplications.length, 1)}`}
-                  >
-                    <span>
-                      <RevealMetric label="Show interview count">
-                        {interviewApplications.length}
-                      </RevealMetric>
-                    </span>
-                    <small>Interviews</small>
-                    <p>Prep packs appear here when ready</p>
-                  </div>
-                  <div
-                    className={`metric-card ${activeActionCount > 0 ? "neutral" : "warn"}`}
-                  >
-                    <span>
-                      <RevealMetric label="Show next action count">
-                        {activeActionCount}
-                      </RevealMetric>
-                    </span>
-                    <small>Next actions</small>
-                    <p>Follow-ups across tracked jobs</p>
-                  </div>
-                  <div className="metric-card warn">
-                    <span>
-                      <RevealMetric label="Show last check skill count">
-                        {state.jobAnalysis.skills?.length ?? 0}
-                      </RevealMetric>
-                    </span>
-                    <small>Last check</small>
-                    <p>{riskLabel}</p>
-                  </div>
-                </section>
-              )}
-
               {!isOverview &&
                 currentTab === "profile" &&
                 activeFocus === "application-answers" && (
@@ -8232,23 +8128,6 @@ export default function HomePage({
                     <h2>{focusCopy.title}</h2>
                     <p>{focusCopy.body}</p>
                   </div>
-                  {activeFocus !== "insights" && !showFollowUpQueue && (
-                    <div
-                      className="pipeline-summary"
-                      aria-label="Application status counts"
-                    >
-                      {applicationStatuses.map((status) => (
-                        <div key={status}>
-                          <span>
-                            <RevealMetric label={`Show ${status} count`}>
-                              {statusCounts[status]}
-                            </RevealMetric>
-                          </span>
-                          <small>{status}</small>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                   {showApplicationAnalytics && (
                     <>
                       <div
