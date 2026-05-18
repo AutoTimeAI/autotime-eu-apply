@@ -3257,9 +3257,9 @@ export default function HomePage({
           ? "Tracked Jobs"
           : "Interview Prep"
   const showHeaderJobActions =
-    profileReadyForExecution &&
-    (isOverview || currentTab === "jobs" || currentTab === "applications")
-  const showActionPanel = activeFocus !== "autofill-profile"
+    profileReadyForExecution && isOverview
+  const showActionPanel =
+    activeFocus !== "autofill-profile" && activeFocus !== "application-tracker"
   const showExecutivePanel =
     isOverview || (profileReadyForExecution && currentTab === "jobs")
   const showProfileSettingsPanel =
