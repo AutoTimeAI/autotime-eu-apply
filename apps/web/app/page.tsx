@@ -247,6 +247,13 @@ const mottoAlignment = [
   },
 ];
 
+const euFitSignalRail = [
+  ["Decision", "Apply Now / Improve First / Verify First / Skip"],
+  ["Checks", "Sponsorship, language, relocation and right-to-work signals"],
+  ["Evidence", "Job description, candidate profile and verified-source status"],
+  ["Output", "Priority, positioning angle, CV fix and interview prep"],
+] as const;
+
 export default async function HomePage() {
   const account = await getPublicAccount();
 
@@ -336,15 +343,22 @@ export default async function HomePage() {
       </section>
 
       <section className="eu-fit-engine" aria-labelledby="eu-fit-title">
-        <div className="section-heading">
-          <p className="eyebrow">Core product layer</p>
-          <h2 id="eu-fit-title">EU Fit Engine</h2>
-          <p>
-            AutoTime EU Apply helps international tech jobseekers decide which
-            UK/EU roles are realistically worth applying to, avoid weak
-            applications, and position themselves better for each country and
-            role.
-          </p>
+        <div className="eu-fit-header">
+          <div className="section-heading">
+            <p className="eyebrow">Core product layer</p>
+            <h2 id="eu-fit-title">EU Fit Engine</h2>
+            <p>
+              AutoTime EU Apply helps international tech jobseekers decide which
+              UK/EU roles are realistically worth applying to, avoid weak
+              applications, and position themselves better for each country and
+              role.
+            </p>
+          </div>
+          <div className="eu-fit-scorecard" aria-label="Sample fit result">
+            <span>Sample fit result</span>
+            <strong>82</strong>
+            <p>Improve First</p>
+          </div>
         </div>
 
         <div className="eu-fit-statement">
@@ -359,14 +373,26 @@ export default async function HomePage() {
           </p>
         </div>
 
+        <div className="eu-fit-signal-rail" aria-label="EU Fit Engine workflow">
+          {euFitSignalRail.map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+
         <div className="eu-fit-system-grid">
           <article className="eu-fit-card">
-            <span className="eu-fit-step">1</span>
-            <h3>Candidate Readiness Profile</h3>
-            <p>
-              Before analysing roles, the engine needs the candidate context
-              that generic trackers usually miss.
-            </p>
+            <header className="eu-fit-card-header">
+              <span className="eu-fit-step">1</span>
+              <div>
+                <h3>Candidate Readiness Profile</h3>
+                <p>
+                  Candidate context first, so analysis does not become generic.
+                </p>
+              </div>
+            </header>
             <dl className="eu-fit-profile-list">
               {readinessProfile.map(([label, value]) => (
                 <div key={label}>
@@ -378,12 +404,16 @@ export default async function HomePage() {
           </article>
 
           <article className="eu-fit-card eu-fit-analysis-card">
-            <span className="eu-fit-step">2</span>
-            <h3>Sample EU Fit Engine analysis</h3>
-            <p>
-              Demo sample only. Live official-source verification is planned for
-              MVP evolution and should not be treated as confirmed guidance.
-            </p>
+            <header className="eu-fit-card-header">
+              <span className="eu-fit-step">2</span>
+              <div>
+                <h3>Sample EU Fit Engine analysis</h3>
+                <p>
+                  Demo sample only. Official-source verification is planned for
+                  MVP evolution and should not be treated as confirmed guidance.
+                </p>
+              </div>
+            </header>
             <dl className="eu-fit-metric-grid">
               {opportunityMetrics.map(([label, value]) => (
                 <div key={label}>
@@ -437,12 +467,15 @@ export default async function HomePage() {
         </div>
 
         <article className="eu-fit-card">
-          <span className="eu-fit-step">3</span>
-          <h3>Application Positioning Pack</h3>
-          <p>
-            The output is not just a score. It turns targeting intelligence into
-            stronger role-specific positioning.
-          </p>
+          <header className="eu-fit-card-header">
+            <span className="eu-fit-step">3</span>
+            <div>
+              <h3>Application Positioning Pack</h3>
+              <p>
+                The score becomes a practical positioning pack before applying.
+              </p>
+            </div>
+          </header>
           <dl className="eu-fit-positioning-list">
             {positioningPack.map(([label, value]) => (
               <div key={label}>

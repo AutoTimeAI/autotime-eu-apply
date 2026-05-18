@@ -6221,7 +6221,7 @@ export default function HomePage({
         setTechnicalInterviewDrills(localDrills)
         setStatus(
           body.data?.upgradeUrl
-            ? `${body.error ?? "Upgrade required"} Local technical drills used.`
+            ? "AI quota used. Local proof-led technical drills are ready; upgrade to Pro for AI-generated variations."
             : body.error
               ? `AI technical drills unavailable. Local drills used: ${body.error}`
               : "AI technical drills unavailable. Local drills used."

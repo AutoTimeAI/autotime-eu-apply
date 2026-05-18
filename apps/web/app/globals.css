@@ -5260,9 +5260,57 @@ h4 {
 
 .eu-fit-engine {
   display: grid;
-  gap: 20px;
+  gap: 18px;
   border-block: 1px solid var(--border);
   padding: 46px 0;
+}
+
+.eu-fit-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 220px);
+  gap: 18px;
+  align-items: end;
+}
+
+.eu-fit-scorecard {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  min-height: 168px;
+  border: 1px solid rgba(21, 107, 99, 0.26);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at center, rgba(232, 247, 244, 0.98), #ffffff 64%),
+    var(--surface);
+  box-shadow: var(--shadow-tight);
+  padding: 16px;
+  text-align: center;
+}
+
+.eu-fit-scorecard span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.eu-fit-scorecard strong {
+  display: grid;
+  width: 86px;
+  height: 86px;
+  place-items: center;
+  border: 8px solid rgba(21, 107, 99, 0.18);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  color: var(--accent-strong);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.eu-fit-scorecard p {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 850;
 }
 
 .eu-fit-statement {
@@ -5291,6 +5339,34 @@ h4 {
   line-height: 1.62;
 }
 
+.eu-fit-signal-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.eu-fit-signal-rail div {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(216, 224, 235, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px;
+}
+
+.eu-fit-signal-rail span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.eu-fit-signal-rail strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.38;
+}
+
 .eu-fit-system-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
@@ -5309,6 +5385,18 @@ h4 {
   background: rgba(255, 255, 255, 0.88);
   box-shadow: var(--shadow-tight);
   padding: 18px;
+}
+
+.eu-fit-card-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.eu-fit-card-header > div {
+  display: grid;
+  gap: 6px;
 }
 
 .eu-fit-card h3,
@@ -5380,6 +5468,7 @@ h4 {
 
 .eu-fit-metric-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .eu-fit-metric-grid div {
@@ -5388,7 +5477,7 @@ h4 {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-raised);
-  padding: 10px;
+  padding: 11px;
 }
 
 .eu-fit-metric-grid dd {
@@ -7157,6 +7246,7 @@ h4 {
   .landing-step-grid,
   .feature-band,
   .landing-proof-grid,
+  .eu-fit-header,
   .eu-fit-system-grid,
   .eu-fit-country-grid,
   .eu-fit-motto,
@@ -7167,6 +7257,7 @@ h4 {
   }
 
   .eu-fit-metric-grid,
+  .eu-fit-signal-rail,
   .eu-fit-signal-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -7557,10 +7648,19 @@ h4 {
   }
 
   .eu-fit-metric-grid,
+  .eu-fit-signal-rail,
   .eu-fit-signal-columns,
   .eu-fit-profile-list div,
   .eu-fit-positioning-list div {
     grid-template-columns: 1fr;
+  }
+
+  .eu-fit-card-header {
+    grid-template-columns: 1fr;
+  }
+
+  .eu-fit-scorecard {
+    min-height: auto;
   }
 
   .eu-fit-engine {
