@@ -29,6 +29,17 @@ function getLinkQueryParams(provider: OAuthProvider) {
     : undefined
 }
 
+function getIdentityLinkErrorMessage(errorMessage: string) {
+  if (errorMessage.toLowerCase().includes("manual linking is disabled")) {
+    return [
+      "Failed: account linking is not enabled in Supabase yet.",
+      "Enable Manual Linking in Supabase Dashboard > Authentication > Providers, then try linking Google again."
+    ].join(" ")
+  }
+
+  return `Failed: ${errorMessage}. Enable Manual Linking in Supabase Auth settings if it is not already enabled.`
+}
+
 export function AccountIdentityLinker({
   compact = false,
   returnTo = "/dashboard/settings"
@@ -114,9 +125,7 @@ export function AccountIdentityLinker({
       })
 
       if (error) {
-        setStatus(
-          `Failed: ${error.message}. Enable Manual Linking in Supabase Auth settings if it is not already enabled.`
-        )
+        setStatus(getIdentityLinkErrorMessage(error.message))
         reportClientIssue({
           area: "auth",
           code: "auth.identity.link.failed",
