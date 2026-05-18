@@ -6083,11 +6083,35 @@ export default function HomePage({
                     >
                       <div className="section-heading">
                         <p className="eyebrow">Start with your CV</p>
-                        <h2>Import CV first</h2>
+                        <h2>Start with your CV</h2>
                         <p>
-                          AutoTime extracts profile suggestions first. Nothing
-                          is saved until you approve it.
+                          Import or paste your CV first. AutoTime suggests
+                          profile fields, then you approve only the facts that
+                          are correct.
                         </p>
+                      </div>
+                      <div className="context-explainer">
+                        <article>
+                          <span>1</span>
+                          <p>
+                            Import or paste your CV, then run Review CV with AI
+                            to generate suggested profile fields.
+                          </p>
+                        </article>
+                        <article>
+                          <span>2</span>
+                          <p>
+                            Review the suggestions and click Apply approved
+                            suggestions only when the facts are correct.
+                          </p>
+                        </article>
+                        <article>
+                          <span>3</span>
+                          <p>
+                            Adjust role focus, work authorisation status, target
+                            country, experience level and search pace if needed.
+                          </p>
+                        </article>
                       </div>
                       <label>
                         CV or profile text
@@ -6208,33 +6232,10 @@ export default function HomePage({
                       <p className="eyebrow">Your goals</p>
                       <h2>Check and refine your profile direction</h2>
                       <p>
-                        Use the CV suggestions first, then adjust your role
-                        direction, work-right context and target country.
+                        After applying CV suggestions, fine-tune the direction
+                        AutoTime should use for job checks and application
+                        content.
                       </p>
-                    </div>
-
-                    <div className="context-explainer">
-                      <article>
-                        <span>1</span>
-                        <p>
-                          Import or paste your CV, then run Review CV with AI
-                          to generate suggested profile fields.
-                        </p>
-                      </article>
-                      <article>
-                        <span>2</span>
-                        <p>
-                          Review the suggestions and click Apply approved
-                          suggestions only when the facts are correct.
-                        </p>
-                      </article>
-                      <article>
-                        <span>3</span>
-                        <p>
-                          Adjust role focus, work authorisation status, target
-                          country, experience level and search pace if needed.
-                        </p>
-                      </article>
                     </div>
 
                     <div className="context-grid">
