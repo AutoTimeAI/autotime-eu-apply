@@ -86,6 +86,14 @@ type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 type CandidateUrgency = "urgent" | "active" | "exploring"
 
 type ProductContext = {
+  roleMarket: RoleMarket | ""
+  candidatePosition: CandidateMarketPosition | ""
+  urgency: CandidateUrgency | ""
+  targetCountry: string
+  experienceLevel: string
+}
+
+type ResolvedProductContext = {
   roleMarket: RoleMarket
   candidatePosition: CandidateMarketPosition
   urgency: CandidateUrgency
@@ -102,7 +110,7 @@ type SyncPreferences = {
   profileAccountSyncEnabled: boolean
 }
 
-type ContextSuggestion = ProductContext & {
+type ContextSuggestion = ResolvedProductContext & {
   targetRoles: string
   workRightPrompt: string
   confidence: "Low" | "Medium" | "High"
@@ -803,6 +811,14 @@ const officialCountrySources: Record<string, OfficialSource[]> = {
 }
 
 const defaultProductContext: ProductContext = {
+  roleMarket: "",
+  candidatePosition: "",
+  urgency: "",
+  targetCountry: "",
+  experienceLevel: ""
+}
+
+const fallbackProductContext: ResolvedProductContext = {
   roleMarket: "general-tech",
   candidatePosition: "foreign-candidate",
   urgency: "active",
@@ -817,28 +833,55 @@ const defaultTrustState: TrustState = {
 
 const productContextSchema = z.object({
   roleMarket: z
-    .enum(
-      roleMarkets.map((market) => market.id) as [RoleMarket, ...RoleMarket[]]
-    )
+    .union([
+      z.literal(""),
+      z.enum(
+        roleMarkets.map((market) => market.id) as [
+          RoleMarket,
+          ...RoleMarket[]
+        ]
+      )
+    ])
     .optional(),
   candidatePosition: z
-    .enum(
-      candidatePositions.map((position) => position.id) as [
-        CandidateMarketPosition,
-        ...CandidateMarketPosition[]
-      ]
-    )
+    .union([
+      z.literal(""),
+      z.enum(
+        candidatePositions.map((position) => position.id) as [
+          CandidateMarketPosition,
+          ...CandidateMarketPosition[]
+        ]
+      )
+    ])
     .optional(),
   urgency: z
-    .enum(
-      urgencyOptions.map((option) => option.id) as [
-        CandidateUrgency,
-        ...CandidateUrgency[]
-      ]
-    )
+    .union([
+      z.literal(""),
+      z.enum(
+        urgencyOptions.map((option) => option.id) as [
+          CandidateUrgency,
+          ...CandidateUrgency[]
+        ]
+      )
+    ])
     .optional(),
-  targetCountry: z.string().trim().min(1).optional(),
-  experienceLevel: z.string().trim().min(1).optional()
+  targetCountry: z
+    .string()
+    .trim()
+    .refine((value) => value === "" || euCountryOptions.includes(value), {
+      message: "Choose a supported target country."
+    })
+    .optional(),
+  experienceLevel: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || experienceLevelOptions.includes(value),
+      {
+        message: "Choose a supported experience level."
+      }
+    )
+    .optional()
 })
 
 const trustStateSchema = z.object({
@@ -861,7 +904,7 @@ const emptyProfile: CandidateProfile = {
   linkedInUrl: "",
   githubUrl: "",
   portfolioUrl: "",
-  currentCountry: "United Kingdom",
+  currentCountry: "",
   currentCity: "",
   targetCountries: "",
   targetRoles: "",
@@ -922,6 +965,34 @@ function isLegacySampleState(state: CompanionDashboardState) {
   )
 }
 
+function clearLegacyProfilePlaceholders(state: CompanionDashboardState) {
+  const profile = state.profile
+  const hasRealProfileEvidence = [
+    profile.fullName,
+    profile.email,
+    profile.phone,
+    profile.currentCity,
+    profile.targetCountries,
+    profile.targetRoles,
+    profile.workRightDetails,
+    profile.baseCvText,
+    profile.projectSummaries,
+    profile.experienceHighlights
+  ].some((value) => value.trim())
+
+  if (profile.currentCountry !== "United Kingdom" || hasRealProfileEvidence) {
+    return state
+  }
+
+  return {
+    ...state,
+    profile: {
+      ...profile,
+      currentCountry: ""
+    }
+  }
+}
+
 function normalizeLegacyDashboardState(value: unknown): unknown {
   if (typeof value !== "object" || value === null) {
     return value
@@ -970,12 +1041,12 @@ function getStoredState(userId: string) {
     )
     const result = companionDashboardStateSchema.safeParse(parsed)
     return result.success && !isLegacySampleState(result.data)
-      ? {
+      ? clearLegacyProfilePlaceholders({
           ...defaultState,
           ...result.data,
           evidenceRecords: result.data.evidenceRecords ?? [],
           outcomeRecords: result.data.outcomeRecords ?? []
-        }
+        })
       : defaultState
   } catch {
     return defaultState
@@ -1027,12 +1098,13 @@ function getBestStoredProfileRecovery(userId: string, minimumReadiness: number) 
         evidenceRecords: result.data.evidenceRecords ?? [],
         outcomeRecords: result.data.outcomeRecords ?? []
       }
-      const readiness = getReadinessScore(candidate)
+      const normalizedCandidate = clearLegacyProfilePlaceholders(candidate)
+      const readiness = getReadinessScore(normalizedCandidate)
 
       if (readiness > minimumReadiness && (!best || readiness > best.readiness)) {
         best = {
           readiness,
-          state: candidate,
+          state: normalizedCandidate,
           storageKey: key
         }
       }
@@ -1058,12 +1130,23 @@ function getStoredProductContext(userId: string) {
       )
     )
 
-    return parsed.success
-      ? {
-          ...defaultProductContext,
-          ...parsed.data
-        }
-      : defaultProductContext
+    if (!parsed.success) {
+      return defaultProductContext
+    }
+
+    const storedContext = {
+      ...defaultProductContext,
+      ...parsed.data
+    }
+    const isLegacyDefaultContext =
+      storedContext.roleMarket === fallbackProductContext.roleMarket &&
+      storedContext.candidatePosition ===
+        fallbackProductContext.candidatePosition &&
+      storedContext.urgency === fallbackProductContext.urgency &&
+      storedContext.targetCountry === fallbackProductContext.targetCountry &&
+      storedContext.experienceLevel === fallbackProductContext.experienceLevel
+
+    return isLegacyDefaultContext ? defaultProductContext : storedContext
   } catch {
     return defaultProductContext
   }
@@ -2126,6 +2209,28 @@ function getMetricTone(value: number, goodAt: number): MetricTone {
   return "warn"
 }
 
+function resolveProductContext(context: ProductContext): ResolvedProductContext {
+  return {
+    roleMarket: context.roleMarket || fallbackProductContext.roleMarket,
+    candidatePosition:
+      context.candidatePosition || fallbackProductContext.candidatePosition,
+    urgency: context.urgency || fallbackProductContext.urgency,
+    targetCountry: context.targetCountry || fallbackProductContext.targetCountry,
+    experienceLevel:
+      context.experienceLevel || fallbackProductContext.experienceLevel
+  }
+}
+
+function getMissingProductContextFields(context: ProductContext) {
+  return [
+    !context.roleMarket && "target role focus",
+    !context.candidatePosition && "work authorisation status",
+    !context.targetCountry.trim() && "target country",
+    !context.experienceLevel.trim() && "experience level",
+    !context.urgency && "search pace"
+  ].filter(Boolean) as string[]
+}
+
 function getMarketLabel(context: ProductContext) {
   return roleMarkets.find((market) => market.id === context.roleMarket)?.label
 }
@@ -2138,6 +2243,10 @@ function getRoleMarket(context: Pick<ProductContext, "roleMarket">) {
 }
 
 function getCountryGuidance(context: ProductContext) {
+  if (getMissingProductContextFields(context).length > 0) {
+    return "Start with your CV, then choose target role focus, work authorisation status, target country, experience level and search pace before applying settings to My Profile."
+  }
+
   const country = context.targetCountry || "selected country"
 
   if (context.candidatePosition === "foreign-candidate") {
@@ -2152,6 +2261,10 @@ function getMarketPositioning(context: ProductContext) {
 }
 
 function getUrgencyGuidance(context: ProductContext) {
+  if (!context.urgency) {
+    return "Choose a search pace before relying on job priority guidance."
+  }
+
   if (context.urgency === "urgent") {
     return "Prioritise roles with strong fit, clear work-right path and fast application execution. Avoid low-fit speculative applications."
   }
@@ -2235,11 +2348,15 @@ function inferContextFromResume(
   current: ProductContext
 ): ContextSuggestion {
   const words = resumeText.trim().split(/\s+/).filter(Boolean)
-  const inferredMarket = inferRoleMarketFromText(resumeText, current.roleMarket)
+  const resolvedCurrent = resolveProductContext(current)
+  const inferredMarket = inferRoleMarketFromText(
+    resumeText,
+    resolvedCurrent.roleMarket
+  )
   const roleMarket = inferredMarket.id
   const targetCountry = inferTargetCountryFromResume(
     resumeText,
-    current.targetCountry
+    current.targetCountry || resolvedCurrent.targetCountry
   )
   const candidatePosition = includesAny(resumeText, [
     "visa",
@@ -2251,7 +2368,7 @@ function inferContextFromResume(
     "skilled worker"
   ])
     ? "foreign-candidate"
-    : current.candidatePosition
+    : current.candidatePosition || resolvedCurrent.candidatePosition
   const experienceLevel = includesAny(resumeText, [
     "lead",
     "principal",
@@ -2261,7 +2378,7 @@ function inferContextFromResume(
     ? "Senior"
     : includesAny(resumeText, ["graduate", "intern", "junior", "entry level"])
       ? "Junior"
-      : current.experienceLevel
+      : current.experienceLevel || resolvedCurrent.experienceLevel
   const targetRoles = [
     includesAny(resumeText, ["technical business analyst"]) &&
       "Technical Business Analyst",
@@ -2276,7 +2393,7 @@ function inferContextFromResume(
     .join(", ")
 
   return {
-    ...current,
+    ...resolvedCurrent,
     roleMarket,
     candidatePosition,
     experienceLevel,
@@ -2899,6 +3016,15 @@ export default function HomePage({
     () => getOutcomeLearningSignals(state.applications),
     [state.applications]
   )
+  const resolvedProductContext = useMemo(
+    () => resolveProductContext(productContext),
+    [productContext]
+  )
+  const missingProductContextFields = useMemo(
+    () => getMissingProductContextFields(productContext),
+    [productContext]
+  )
+  const canApplyMarketContext = missingProductContextFields.length === 0
   const profileQualitySignals = useMemo(
     () => getProfileQualitySignals(state.profile, state.reusableAnswers),
     [state.profile, state.reusableAnswers]
@@ -2916,15 +3042,15 @@ export default function HomePage({
           fitScore
         },
         context: {
-          candidatePosition: productContext.candidatePosition,
-          targetCountry: productContext.targetCountry,
+          candidatePosition: resolvedProductContext.candidatePosition,
+          targetCountry: resolvedProductContext.targetCountry,
           outcomeSignals: outcomeLearningSignals
         }
       }),
     [
       state.profile,
       state.jobAnalysis,
-      productContext,
+      resolvedProductContext,
       fitScore,
       outcomeLearningSignals
     ]
@@ -2999,16 +3125,22 @@ export default function HomePage({
     () =>
       getDecisionBrief({
         autoTimeFitReview,
-        context: productContext,
+        context: resolvedProductContext,
         state,
         fitEvaluation,
         readinessScore
       }),
-    [autoTimeFitReview, productContext, state, fitEvaluation, readinessScore]
+    [
+      autoTimeFitReview,
+      resolvedProductContext,
+      state,
+      fitEvaluation,
+      readinessScore
+    ]
   )
   const officialSources = useMemo(
-    () => getOfficialSources(productContext.targetCountry),
-    [productContext.targetCountry]
+    () => getOfficialSources(resolvedProductContext.targetCountry),
+    [resolvedProductContext.targetCountry]
   )
   const officialSourceStatusLabel = trustState.officialSourceReviewed
     ? "Official source reviewed"
@@ -3426,7 +3558,9 @@ export default function HomePage({
     {
       label: "Strategic targeting",
       value: getMarketLabel(productContext) ?? "European tech",
-      detail: `${productContext.targetCountry} / ${productContext.experienceLevel} / ${productContext.urgency}`
+      detail: canApplyMarketContext
+        ? `${productContext.targetCountry} / ${productContext.experienceLevel} / ${productContext.urgency}`
+        : "Choose CV-backed direction before applying profile settings."
     },
     {
       label: "Country-aware fit",
@@ -4130,12 +4264,25 @@ export default function HomePage({
   }
 
   const applyMarketContextToProfile = () => {
-    const market = getRoleMarket(productContext)
-    const profileSettingsNote = `Profile settings: ${getMarketLabel(productContext)} / ${
-      productContext.candidatePosition === "foreign-candidate"
+    const missingFields = getMissingProductContextFields(productContext)
+
+    if (missingFields.length > 0) {
+      const statusMessage = `Choose ${missingFields.join(
+        ", "
+      )} before applying settings to My Profile.`
+      setStatus(statusMessage)
+      setTimeout(() => setStatus(""), 4000)
+      window.alert(statusMessage)
+      return
+    }
+
+    const confirmedContext = productContext as ResolvedProductContext
+    const market = getRoleMarket(confirmedContext)
+    const profileSettingsNote = `Profile settings: ${getMarketLabel(confirmedContext)} / ${
+      confirmedContext.candidatePosition === "foreign-candidate"
         ? "foreign or relocating"
         : "native or local"
-    } / ${productContext.targetCountry} / ${productContext.urgency}.`
+    } / ${confirmedContext.targetCountry} / ${confirmedContext.urgency}.`
     const currentJobNotes = state.jobAnalysis.notes.trim()
     const nextJobNotes = currentJobNotes.includes(profileSettingsNote)
       ? currentJobNotes
@@ -4144,17 +4291,17 @@ export default function HomePage({
       ...state,
       profile: {
         ...state.profile,
-        targetCountries: productContext.targetCountry,
+        targetCountries: confirmedContext.targetCountry,
         targetRoles: market.targetRoles,
         relocationWillingness:
-          productContext.candidatePosition === "foreign-candidate"
+          confirmedContext.candidatePosition === "foreign-candidate"
             ? "depends"
             : state.profile.relocationWillingness
       },
       jobAnalysis: {
         ...state.jobAnalysis,
-        seniority: productContext.experienceLevel,
-        positioningAngle: getMarketPositioning(productContext),
+        seniority: confirmedContext.experienceLevel,
+        positioningAngle: getMarketPositioning(confirmedContext),
         notes: nextJobNotes
       }
     }
@@ -6306,6 +6453,7 @@ export default function HomePage({
                               )
                             }
                           >
+                            <option value="">Choose target country</option>
                             {euCountryOptions.map((country) => (
                               <option key={country} value={country}>
                                 {country}
@@ -6324,6 +6472,7 @@ export default function HomePage({
                               )
                             }
                           >
+                            <option value="">Choose experience level</option>
                             {experienceLevelOptions.map((level) => (
                               <option key={level} value={level}>
                                 {level}
@@ -6338,10 +6487,11 @@ export default function HomePage({
                             onChange={(event) =>
                               updateProductContext(
                                 "urgency",
-                                event.target.value as CandidateUrgency
+                                event.target.value as CandidateUrgency | ""
                               )
                             }
                           >
+                            <option value="">Choose search pace</option>
                             {urgencyOptions.map((urgency) => (
                               <option key={urgency.id} value={urgency.id}>
                                 {urgency.label}
@@ -6351,6 +6501,7 @@ export default function HomePage({
                         </label>
                         <button
                           type="button"
+                          disabled={!canApplyMarketContext}
                           onClick={applyMarketContextToProfile}
                         >
                           Apply to My Profile
