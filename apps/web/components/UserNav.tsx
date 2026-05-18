@@ -1,6 +1,13 @@
 "use client"
 
-import { createContext, type ReactNode, useContext, useState } from "react"
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState
+} from "react"
 import { usePathname } from "next/navigation"
 import { createBrowserClient } from "../lib/supabase/client"
 import type { SubscriptionPlan } from "../lib/supabase/types"
@@ -255,8 +262,32 @@ export function DashboardWorkflowSidebar() {
 export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const shellRef = useRef<HTMLDivElement>(null)
   const planLabel = plan === "pro" ? "Pro" : "Free"
   const menuId = "user-account-menu"
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const closeOnOutsideInteraction = (event: MouseEvent | TouchEvent) => {
+      if (
+        event.target instanceof Node &&
+        !shellRef.current?.contains(event.target)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideInteraction)
+    document.addEventListener("touchstart", closeOnOutsideInteraction)
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideInteraction)
+      document.removeEventListener("touchstart", closeOnOutsideInteraction)
+    }
+  }, [isOpen])
 
   const openBillingPortal = async () => {
     try {
@@ -351,7 +382,15 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   }
 
   return (
-    <div className="user-nav-shell" onMouseLeave={() => setIsOpen(false)}>
+    <div
+      className="user-nav-shell"
+      ref={shellRef}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsOpen(false)
+        }
+      }}
+    >
       <button
         aria-controls={isOpen ? menuId : undefined}
         aria-expanded={isOpen}
