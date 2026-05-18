@@ -6517,36 +6517,6 @@ export default function HomePage({
                   className="command-centre-overview"
                   aria-label="Homepage sections"
                 >
-                  <section
-                    className="strategic-quality-panel"
-                    aria-label="Strategic quality system"
-                  >
-                    <div>
-                      <p className="eyebrow">Workspace status</p>
-                      <h2>Your application workflow</h2>
-                      <p>
-                        Keep profile evidence, country fit and tracked roles in
-                        one place.
-                      </p>
-                    </div>
-                    <div className="strategic-signal-grid">
-                      {strategicQualitySignals.map((signal) => (
-                        <article key={signal.label}>
-                          <span>{signal.label}</span>
-                          <strong>{signal.value}</strong>
-                          <p>{signal.detail}</p>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
-                  <div className="today-focus-panel">
-                    <div>
-                      <p className="eyebrow">{todayAction.label}</p>
-                      <h2>{todayAction.title}</h2>
-                      <p>{todayAction.body}</p>
-                    </div>
-                    <a href={todayAction.href}>{todayAction.cta}</a>
-                  </div>
                   <div className="section-intro">
                     <p className="eyebrow">Setup</p>
                     <h2>Follow this order</h2>
@@ -6580,6 +6550,36 @@ export default function HomePage({
                         <b>{item.cta}</b>
                       </a>
                     ))}
+                  </div>
+                  <section
+                    className="strategic-quality-panel"
+                    aria-label="Strategic quality system"
+                  >
+                    <div>
+                      <p className="eyebrow">Workspace status</p>
+                      <h2>Your application workflow</h2>
+                      <p>
+                        Keep profile evidence, country fit and tracked roles in
+                        one place.
+                      </p>
+                    </div>
+                    <div className="strategic-signal-grid">
+                      {strategicQualitySignals.map((signal) => (
+                        <article key={signal.label}>
+                          <span>{signal.label}</span>
+                          <strong>{signal.value}</strong>
+                          <p>{signal.detail}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                  <div className="today-focus-panel">
+                    <div>
+                      <p className="eyebrow">{todayAction.label}</p>
+                      <h2>{todayAction.title}</h2>
+                      <p>{todayAction.body}</p>
+                    </div>
+                    <a href={todayAction.href}>{todayAction.cta}</a>
                   </div>
                   <details className="dashboard-more-details">
                     <summary>Status details</summary>
