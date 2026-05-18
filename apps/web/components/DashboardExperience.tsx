@@ -86,6 +86,7 @@ type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 type CandidateUrgency = "urgent" | "active" | "exploring"
 
 type ProductContext = {
+  schemaVersion?: number
   roleMarket: RoleMarket | ""
   candidatePosition: CandidateMarketPosition | ""
   urgency: CandidateUrgency | ""
@@ -314,6 +315,7 @@ const analyticsServiceBaseUrl =
   process.env.NEXT_PUBLIC_ANALYTICS_URL ?? "/analytics"
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
+const productContextSchemaVersion = 2
 const trustStateStorageKey = "autotime-v2-trust-state"
 const syncPreferenceStorageKey = "autotime-v2-sync-preferences"
 const walkthroughStorageKey = "autotime-v2-first-login-walkthrough-seen"
@@ -811,6 +813,7 @@ const officialCountrySources: Record<string, OfficialSource[]> = {
 }
 
 const defaultProductContext: ProductContext = {
+  schemaVersion: productContextSchemaVersion,
   roleMarket: "",
   candidatePosition: "",
   urgency: "",
@@ -832,6 +835,7 @@ const defaultTrustState: TrustState = {
 }
 
 const productContextSchema = z.object({
+  schemaVersion: z.number().optional(),
   roleMarket: z
     .union([
       z.literal(""),
@@ -1138,15 +1142,38 @@ function getStoredProductContext(userId: string) {
       ...defaultProductContext,
       ...parsed.data
     }
-    const isLegacyDefaultContext =
-      storedContext.roleMarket === fallbackProductContext.roleMarket &&
-      storedContext.candidatePosition ===
-        fallbackProductContext.candidatePosition &&
-      storedContext.urgency === fallbackProductContext.urgency &&
-      storedContext.targetCountry === fallbackProductContext.targetCountry &&
-      storedContext.experienceLevel === fallbackProductContext.experienceLevel
+    const isCurrentContextVersion =
+      storedContext.schemaVersion === productContextSchemaVersion
 
-    return isLegacyDefaultContext ? defaultProductContext : storedContext
+    if (isCurrentContextVersion) {
+      return storedContext
+    }
+
+    return {
+      ...storedContext,
+      schemaVersion: productContextSchemaVersion,
+      roleMarket:
+        storedContext.roleMarket === fallbackProductContext.roleMarket
+          ? ""
+          : storedContext.roleMarket,
+      candidatePosition:
+        storedContext.candidatePosition ===
+        fallbackProductContext.candidatePosition
+          ? ""
+          : storedContext.candidatePosition,
+      urgency:
+        storedContext.urgency === fallbackProductContext.urgency
+          ? ""
+          : storedContext.urgency,
+      targetCountry:
+        storedContext.targetCountry === fallbackProductContext.targetCountry
+          ? ""
+          : storedContext.targetCountry,
+      experienceLevel:
+        storedContext.experienceLevel === fallbackProductContext.experienceLevel
+          ? ""
+          : storedContext.experienceLevel
+    }
   } catch {
     return defaultProductContext
   }
@@ -1155,7 +1182,10 @@ function getStoredProductContext(userId: string) {
 function saveProductContext(context: ProductContext, userId: string) {
   window.localStorage.setItem(
     getUserScopedStorageKey(productContextStorageKey, userId),
-    JSON.stringify(context)
+    JSON.stringify({
+      ...context,
+      schemaVersion: productContextSchemaVersion
+    })
   )
 }
 
@@ -3259,7 +3289,10 @@ export default function HomePage({
   const showHeaderJobActions =
     profileReadyForExecution && isOverview
   const showActionPanel =
-    activeFocus !== "autofill-profile" && activeFocus !== "application-tracker"
+    !isOverview &&
+    currentTab !== "jobs" &&
+    activeFocus !== "autofill-profile" &&
+    activeFocus !== "application-tracker"
   const showExecutivePanel =
     isOverview || (profileReadyForExecution && currentTab === "jobs")
   const showProfileSettingsPanel =
@@ -3536,60 +3569,25 @@ export default function HomePage({
       tone: interviewApplications.length > 0 ? "good" : "neutral"
     }
   ]
-  const commandQuickActions = [
-    {
-      href: "/dashboard/applications",
-      label: "Tracked Jobs",
-      title: "Review tracked roles",
-      body: "Check which roles need a decision, status update or next action."
-    },
-    {
-      href: "/dashboard/match-score",
-      label: "Analyse Fit",
-      title: canSaveCheckedJob ? "Track this job" : "Analyse a role",
-      body: canSaveCheckedJob
-        ? "A role is ready to save into your tracker with evidence attached."
-        : "Paste a job description to see fit, missing proof and limits."
-    },
-    {
-      href: "/dashboard/follow-ups",
-      label: "Follow-ups",
-      title: activeActionCount > 0 ? "Follow-ups due" : "Follow-ups are clear",
-      body:
-        activeActionCount > 0
-          ? "Move the next action forward before it gets buried."
-          : "No urgent follow-up is waiting from tracked jobs."
-    }
-  ]
   const strategicQualitySignals = [
     {
-      label: "Strategic targeting",
+      label: "Targeting",
       value: getMarketLabel(productContext) ?? "European tech",
       detail: canApplyMarketContext
         ? `${productContext.targetCountry} / ${productContext.experienceLevel} / ${productContext.urgency}`
         : "Choose CV-backed direction before applying profile settings."
     },
     {
-      label: "Country-aware fit",
+      label: "Country context",
       value: fitEvaluation.countryRule.name,
       detail: fitEvaluation.countryRule.marketNote
     },
     {
-      label: "Evidence discipline",
+      label: "Profile evidence",
       value: profileReadyForExecution ? "Ready" : `${readinessScore}%`,
       detail: profileReadyForExecution
-        ? "Profile proof can support fit checks, content and interview prep."
+        ? "Profile is ready for job checks and interview prep."
         : "Complete Profile Evidence before relying on role decisions."
-    },
-    {
-      label: "Interview conversion",
-      value: `${outcomeAnalytics.interviews} signal${
-        outcomeAnalytics.interviews === 1 ? "" : "s"
-      }`,
-      detail:
-        state.interviewPrepPacks.length > 0
-          ? "Prep packs and outcomes are feeding the learning loop."
-          : "Track outcomes and interviews to improve future targeting."
     }
   ]
   const todayAction = !profileReadyForExecution
@@ -3605,7 +3603,7 @@ export default function HomePage({
           body: "Analyse one role manually or track it from the extension. Tracked jobs will appear in your tracker.",
           cta: "Analyse Fit",
           href: "/dashboard/match-score",
-          label: "Best next step",
+          label: "Next step",
           title: "Save your first job"
         }
       : activeActionCount > 0
@@ -3613,14 +3611,14 @@ export default function HomePage({
             body: "Saved roles need a follow-up or status update.",
             cta: "Open follow-ups",
             href: "/dashboard/follow-ups",
-            label: "Best next step",
+            label: "Next step",
             title: "Handle the next action"
           }
         : {
             body: "Your tracked jobs are tidy. Review recent roles or analyse another job when you are ready.",
             cta: "Review tracker",
             href: "/dashboard/applications",
-            label: "Best next step",
+            label: "Next step",
             title: "Keep your tracker tidy"
           }
 
@@ -5346,7 +5344,7 @@ export default function HomePage({
     link.download = "autotime-v2-dashboard.json"
     link.click()
     URL.revokeObjectURL(url)
-    setStatus("Dashboard backup exported")
+    setStatus("AutoTime data exported")
   }
 
   const exportDecisionAudit = () => {
@@ -5398,7 +5396,7 @@ export default function HomePage({
 
   const importDashboard = (value: string) => {
     if (!value.trim()) {
-      setStatus("Paste an exported AutoTime backup before importing")
+      setStatus("Paste exported AutoTime data before restoring")
       return
     }
 
@@ -5407,20 +5405,20 @@ export default function HomePage({
       const result = companionDashboardStateSchema.safeParse(parsed)
 
       if (!result.success) {
-        setStatus("Import failed: this backup does not match AutoTime data")
+        setStatus("Restore failed: this does not match AutoTime data")
         return
       }
 
-      persist(result.data, "Dashboard imported")
+      persist(result.data, "AutoTime data restored")
       scheduleDashboardSync(result.data, {
-        failureMessage: "Dashboard imported locally. Dashboard sync failed",
-        successMessage: "Dashboard imported and synced"
+        failureMessage: "Data restored locally. Account sync failed",
+        successMessage: "Data restored and synced"
       })
       scheduleProfileSync(result.data.profile)
       setImportJson("")
     } catch (error: unknown) {
-      logDashboardActionFailure("import dashboard backup", error)
-      setStatus("Import failed: backup contents could not be read")
+      logDashboardActionFailure("restore dashboard data", error)
+      setStatus("Restore failed: exported data could not be read")
     }
   }
 
@@ -6023,10 +6021,6 @@ export default function HomePage({
                   >
                     Complete profile
                   </a>
-                ) : currentTab === "jobs" ? (
-                  <a className="secondary-button" href="#analyse-fit-role">
-                    Open fit check
-                  </a>
                 ) : activeFocus === "application-answers" ? (
                   <>
                     <button
@@ -6530,12 +6524,11 @@ export default function HomePage({
                     aria-label="Strategic quality system"
                   >
                     <div>
-                      <p className="eyebrow">Quality over quantity</p>
-                      <h2>Strategic European tech application system</h2>
+                      <p className="eyebrow">Workspace status</p>
+                      <h2>Your application workflow</h2>
                       <p>
-                        Choose stronger roles, verify country and work-right
-                        fit, prove your positioning, then learn from interview
-                        outcomes.
+                        Keep profile evidence, country fit and tracked roles in
+                        one place.
                       </p>
                     </div>
                     <div className="strategic-signal-grid">
@@ -6557,12 +6550,11 @@ export default function HomePage({
                     <a href={todayAction.href}>{todayAction.cta}</a>
                   </div>
                   <div className="section-intro">
-                    <p className="eyebrow">Clear onboarding</p>
-                    <h2>Follow the AutoTime order</h2>
+                    <p className="eyebrow">Setup</p>
+                    <h2>Follow this order</h2>
                     <p>
-                      Complete each step once, then repeat the quality loop:
-                      capture the right role, check fit, track the next action
-                      and prepare with evidence.
+                      Complete the profile first, then check one role and save
+                      the next action.
                     </p>
                   </div>
                   <div
@@ -6591,20 +6583,8 @@ export default function HomePage({
                       </a>
                     ))}
                   </div>
-                  <div
-                    className="command-action-dock"
-                    aria-label="Recommended actions"
-                  >
-                    {commandQuickActions.map((action) => (
-                      <a href={action.href} key={action.href}>
-                        <span>{action.label}</span>
-                        <strong>{action.title}</strong>
-                        <p>{action.body}</p>
-                      </a>
-                    ))}
-                  </div>
                   <details className="dashboard-more-details">
-                    <summary>More details</summary>
+                    <summary>Status details</summary>
                     <div className="command-centre-grid">
                       {commandCentreCards.map((card) => (
                         <article
@@ -7194,14 +7174,14 @@ export default function HomePage({
                           </details>
                         </details>
                         <details className="profile-action-details">
-                          <summary>Backup copy</summary>
+                          <summary>Data export</summary>
                           <div className="profile-action-row">
                             <button
                               className="secondary-button"
                               type="button"
                               onClick={exportDashboard}
                             >
-                              Download copy
+                              Export data
                             </button>
                             <button
                               className="secondary-button"
@@ -7220,7 +7200,7 @@ export default function HomePage({
                                 })
                               }}
                             >
-                              Restore from copy
+                              Need to restore?
                             </button>
                           </div>
                         </details>
@@ -7632,9 +7612,32 @@ export default function HomePage({
                         onChange={(event) =>
                           updateJob("jobDescription", event.target.value)
                         }
-                      />
+                        />
                     </label>
                   </div>
+
+                  <section
+                    className="panel fit-ai-assist-panel"
+                    aria-label="Analyse Fit role review"
+                  >
+                    <div className="section-heading">
+                      <p className="eyebrow">Optional review</p>
+                      <h2>Strengthen the role details</h2>
+                      <p>
+                        Summarise the job description, surface gaps and update
+                        the analysis before checking the decision.
+                      </p>
+                    </div>
+                    <button
+                      disabled={
+                        isCopilotThinking || !hasJobDraft(state.jobAnalysis)
+                      }
+                      type="button"
+                      onClick={runAiJobAnalysis}
+                    >
+                      {isCopilotThinking ? "Checking role" : "Review role"}
+                    </button>
+                  </section>
 
                   <section
                     className="decision-brief-panel job-check-brief"
@@ -8091,29 +8094,6 @@ export default function HomePage({
                       </div>
                     </section>
                   </div>
-                </section>
-              )}
-
-              {currentTab === "jobs" && (
-                <section
-                  className="panel fit-ai-assist-panel"
-                  aria-label="Analyse Fit role review"
-                >
-                  <div className="section-heading">
-                    <p className="eyebrow">Optional review</p>
-                    <h2>Strengthen the review</h2>
-                    <p>
-                      Summarise the job description, surface gaps and update the
-                      analysis before you save the role.
-                    </p>
-                  </div>
-                  <button
-                    disabled={isCopilotThinking || !hasJobDraft(state.jobAnalysis)}
-                    type="button"
-                    onClick={runAiJobAnalysis}
-                  >
-                    {isCopilotThinking ? "Checking role" : "Review role"}
-                  </button>
                 </section>
               )}
 
@@ -9786,51 +9766,56 @@ export default function HomePage({
         </div>
       </div>
 
-      <details
-        id="dashboard-backups"
-        aria-disabled={isDashboardProtocolLocked}
-        className={
-          isDashboardProtocolLocked ? "utility-bar locked" : "utility-bar"
-        }
-      >
-        <summary>Backup copy</summary>
-        <p className="backup-helper-text">
-          Use this only if you want your own offline copy or need to restore
-          data after changing browser or device.
-        </p>
-        <div className="backup-actions">
-          <div className="backup-action-group">
-            <span>Save an offline copy</span>
-            <button
-              className="secondary-button"
-              disabled={isDashboardProtocolLocked}
-              type="button"
-              onClick={exportDashboard}
-            >
-              Download copy
-            </button>
+      {!isOverview ? (
+        <details
+          id="dashboard-backups"
+          aria-disabled={isDashboardProtocolLocked}
+          className={
+            isDashboardProtocolLocked ? "utility-bar locked" : "utility-bar"
+          }
+        >
+          <summary>Data export</summary>
+          <p className="backup-helper-text">
+            Download your AutoTime data for your own records. Account saving
+            stays automatic when available.
+          </p>
+          <div className="backup-actions">
+            <div className="backup-action-group">
+              <span>Export</span>
+              <button
+                className="secondary-button"
+                disabled={isDashboardProtocolLocked}
+                type="button"
+                onClick={exportDashboard}
+              >
+                Export data
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="backup-import-group">
-          <label className="import-control">
-            Restore from a downloaded copy
-            <textarea
-              disabled={isDashboardProtocolLocked}
-              placeholder="Paste the text from your downloaded AutoTime copy"
-              value={importJson}
-              onChange={(event) => setImportJson(event.target.value)}
-            />
-          </label>
-          <button
-            className="secondary-button"
-            disabled={isDashboardProtocolLocked}
-            type="button"
-            onClick={() => importDashboard(importJson)}
-          >
-            Restore copy
-          </button>
-        </div>
-      </details>
+          <details className="restore-data-details">
+            <summary>Need to restore data?</summary>
+            <div className="backup-import-group">
+              <label className="import-control">
+                Paste exported data
+                <textarea
+                  disabled={isDashboardProtocolLocked}
+                  placeholder="Paste data exported from AutoTime"
+                  value={importJson}
+                  onChange={(event) => setImportJson(event.target.value)}
+                />
+              </label>
+              <button
+                className="secondary-button"
+                disabled={isDashboardProtocolLocked}
+                type="button"
+                onClick={() => importDashboard(importJson)}
+              >
+                Restore data
+              </button>
+            </div>
+          </details>
+        </details>
+      ) : null}
     </main>
   )
 }

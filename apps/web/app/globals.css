@@ -4411,6 +4411,21 @@ h4 {
   width: 100%;
 }
 
+.restore-data-details {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.restore-data-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .backup-import-group {
   grid-template-columns: minmax(0, 1fr) minmax(150px, 0.22fr);
   align-items: end;
