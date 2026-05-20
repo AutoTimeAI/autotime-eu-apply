@@ -32,11 +32,13 @@ export type ReusableAnswers = {
 
 export type ApplicationStatus =
   | "Saved"
-  | "Applying"
+  | "Checking fit"
+  | "Ready to apply"
   | "Applied"
   | "Interview"
+  | "Offer"
   | "Rejected"
-  | "Closed"
+  | "Archived"
 
 export type ApplicationContentSnapshot = ApplicationContentDraft & {
   savedAt: string
@@ -80,6 +82,8 @@ export type ApplicationSyncState = {
 
 type LegacyApplicationStatus =
   | ApplicationStatus
+  | "Applying"
+  | "Closed"
   | "draft"
   | "applied"
   | "interview"
@@ -214,22 +218,28 @@ function normalizeApplicationStatus(
   status: LegacyApplicationStatus | undefined
 ): ApplicationStatus {
   switch (status) {
-    case "Applying":
+    case "Checking fit":
+    case "Ready to apply":
     case "Applied":
     case "Interview":
+    case "Offer":
     case "Rejected":
-    case "Closed":
+    case "Archived":
     case "Saved":
       return status
+    case "Applying":
+      return "Ready to apply"
     case "applied":
       return "Applied"
     case "interview":
       return "Interview"
+    case "offer":
+      return "Offer"
     case "rejected":
       return "Rejected"
-    case "offer":
     case "closed":
-      return "Closed"
+    case "Closed":
+      return "Archived"
     case "draft":
     default:
       return "Saved"

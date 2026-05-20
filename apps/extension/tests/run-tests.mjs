@@ -1460,7 +1460,7 @@ test("saves and loads tracker draft", async () => {
     roleTitle: "Frontend Engineer",
     company: "Example Co",
     applicationUrl: "https://example.com/jobs/frontend",
-    status: "Applying",
+    status: "Ready to apply",
     nextAction: "Tailor cover letter",
     nextActionDate: "2026-05-01",
     notes: "Manual tracker draft only.",
@@ -1765,7 +1765,7 @@ test("loads legacy application statuses as spec statuses", async () => {
     })),
     [
       { id: "draft", status: "Saved" },
-      { id: "offer", status: "Closed" }
+      { id: "offer", status: "Offer" }
     ]
   )
 })
@@ -2011,11 +2011,13 @@ test("exports founder validation metrics to csv", () => {
     outcomeNoteCoveragePercent: 50,
     statusCounts: {
       Saved: 0,
-      Applying: 0,
+      "Checking fit": 0,
+      "Ready to apply": 0,
       Applied: 1,
       Interview: 1,
+      Offer: 0,
       Rejected: 0,
-      Closed: 0
+      Archived: 0
     },
     sourceCounts: [{ source: "jobs.example.com", count: 2 }]
   })
@@ -2034,11 +2036,13 @@ test("exports founder validation metrics to csv", () => {
       "",
       '"Status","Count"',
       '"Saved","0"',
-      '"Applying","0"',
+      '"Checking fit","0"',
+      '"Ready to apply","0"',
       '"Applied","1"',
       '"Interview","1"',
+      '"Offer","0"',
       '"Rejected","0"',
-      '"Closed","0"',
+      '"Archived","0"',
       "",
       '"Source","Count"',
       '"jobs.example.com","2"'

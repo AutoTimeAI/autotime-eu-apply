@@ -109,11 +109,13 @@ export const emptyTrackerDraft: TrackerDraft = {
 
 export const applicationStatuses: ApplicationStatus[] = [
   "Saved",
-  "Applying",
+  "Checking fit",
+  "Ready to apply",
   "Applied",
   "Interview",
+  "Offer",
   "Rejected",
-  "Closed"
+  "Archived"
 ]
 
 export const noticePeriodOptions = [

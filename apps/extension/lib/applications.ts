@@ -199,11 +199,13 @@ export function getApplicationValidationMetrics(
 ): ApplicationValidationMetrics {
   const statusCounts: Record<ApplicationStatus, number> = {
     Saved: 0,
-    Applying: 0,
+    "Checking fit": 0,
+    "Ready to apply": 0,
     Applied: 0,
     Interview: 0,
+    Offer: 0,
     Rejected: 0,
-    Closed: 0
+    Archived: 0
   }
   const sourceCounts = new Map<string, number>()
   let applicationsWithContentSnapshots = 0
@@ -222,7 +224,7 @@ export function getApplicationValidationMetrics(
     }
 
     if (
-      ["Applied", "Interview", "Rejected", "Closed"].includes(
+      ["Applied", "Interview", "Offer", "Rejected", "Archived"].includes(
         application.status
       ) &&
       application.notes?.trim()

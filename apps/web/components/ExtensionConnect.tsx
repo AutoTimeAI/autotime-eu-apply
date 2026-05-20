@@ -149,9 +149,10 @@ async function pingExtension(extensionId: string) {
 export default function ExtensionConnect() {
   const searchParams = useSearchParams()
   const extensionId = searchParams.get("extensionId") ?? ""
-  const signInRedirect = extensionId
+  const hasExtensionId = Boolean(extensionId.trim())
+  const signInRedirect = hasExtensionId
     ? `/extension/connect?extensionId=${encodeURIComponent(extensionId)}`
-    : "/extension/connect"
+    : "/dashboard/extension"
   const signInHref = `/login?redirectTo=${encodeURIComponent(signInRedirect)}`
   const [status, setStatus] = useState<string | null>(null)
   const [steps, setSteps] = useState<ConnectStep[]>([])
@@ -179,7 +180,7 @@ export default function ExtensionConnect() {
       setIsPending(true)
       setStatus(null)
 
-      if (!extensionId.trim()) {
+      if (!hasExtensionId) {
         const message =
           "Open CONNECT from the AutoTime job-page widget or extension Account tab."
         addStep(message, "warning")
@@ -272,16 +273,16 @@ export default function ExtensionConnect() {
     } finally {
       setIsPending(false)
     }
-  }, [addStep, extensionId])
+  }, [addStep, extensionId, hasExtensionId])
 
   useEffect(() => {
-    if (connectAttemptedRef.current || !extensionId.trim()) {
+    if (connectAttemptedRef.current || !hasExtensionId) {
       return
     }
 
     connectAttemptedRef.current = true
     void handleConnect()
-  }, [extensionId, handleConnect])
+  }, [hasExtensionId, handleConnect])
 
   return (
     <section className="market-context-panel">
