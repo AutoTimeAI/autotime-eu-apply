@@ -83,6 +83,7 @@ export default async function DashboardExtensionPage() {
   const capturedJobsCount = capturedJobsResult.count
   const latestCapturedJob = latestCapturedJobResult.data?.[0]
   const activeConnection = connections.find((item) => !item.revoked_at)
+  const activeConnectionExtensionId = activeConnection?.extension_id?.trim()
   const latestExtensionSync = syncEvents.find(
     (item) => item.source_surface === "extension"
   )
@@ -238,7 +239,16 @@ export default async function DashboardExtensionPage() {
                   <a className="primary-link" href="/dashboard/applications">
                     Open tracker
                   </a>
-                  <a className="secondary-link" href="/extension/connect">
+                  <a
+                    className="secondary-link"
+                    href={
+                      activeConnectionExtensionId
+                        ? `/extension/connect?extensionId=${encodeURIComponent(
+                            activeConnectionExtensionId
+                          )}`
+                        : "/extension/connect"
+                    }
+                  >
                     Reconnect extension
                   </a>
                 </>
