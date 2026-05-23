@@ -8,5 +8,5 @@ Sentry.init({
   environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
   sendDefaultPii: false,
   tracesSampleRate:
-    process.env.NODE_ENV === "production" ? 0.1 : 1.0
+    process.env.NODE_ENV === "production" ? 0.1 : 0.2
 })

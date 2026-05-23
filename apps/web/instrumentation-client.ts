@@ -6,12 +6,18 @@ Sentry.init({
   dsn,
   enabled: Boolean(dsn),
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV,
-  integrations: [Sentry.replayIntegration()],
+  integrations: [
+    Sentry.replayIntegration({
+      blockAllMedia: true,
+      maskAllInputs: true,
+      maskAllText: true
+    })
+  ],
   replaysOnErrorSampleRate: 1.0,
-  replaysSessionSampleRate: 0.1,
+  replaysSessionSampleRate: 0,
   sendDefaultPii: false,
   tracesSampleRate:
-    process.env.NODE_ENV === "production" ? 0.1 : 1.0
+    process.env.NODE_ENV === "production" ? 0.1 : 0.2
 })
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getRequestUser } from "../../../../lib/api-auth"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { extractDocxText } from "../../../../lib/docx-cv"
+import { addMvpBreadcrumb } from "../../../../lib/sentry-breadcrumbs"
 
 type ApiResponse = {
   data: { text: string } | null
@@ -33,6 +34,9 @@ export async function POST(
 
   const formData = await request.formData()
   const file = formData.get("file")
+  addMvpBreadcrumb("job_import_started", {
+    filePresent: file instanceof File
+  })
 
   if (!(file instanceof File)) {
     return jsonResponse({

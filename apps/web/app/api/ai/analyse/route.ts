@@ -20,6 +20,7 @@ import {
   diagnosticJson,
   getValidationIssueMessage
 } from "../../../../lib/diagnostics"
+import { addMvpBreadcrumb } from "../../../../lib/sentry-breadcrumbs"
 
 type ApiResponse<T> = {
   data: T | null
@@ -67,6 +68,10 @@ export async function POST(
 
     await assertAiRouteRateLimit(user.id)
     await assertCanUseAi(user.id)
+    addMvpBreadcrumb("eu_fit_checked", {
+      hasProfile: Boolean(body.profile),
+      hasJobDescription: Boolean(body.jobAnalysis.jobDescription.trim())
+    })
 
     const result = await analyseJobWithOpenAI(body)
 
