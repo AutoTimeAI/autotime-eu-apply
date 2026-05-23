@@ -4,7 +4,7 @@ Last updated: 2026-05-23
 
 ## Executive Summary
 
-AutoTime EU Apply is ready for Private Beta v1 founder-led early users with browser E2E verified.
+AutoTime EU Apply is ready for Private Beta v1 founder-led early users with browser E2E verified. Formal UAT with real early users is the next step and is not yet complete.
 
 This is a private beta / early access beta, not a full public SaaS launch. The core beta flow is complete as a product journey, and the Playwright browser E2E suite now passes for the journey from job import through EU fit, saved tracked job, application kit, and waitlist / feedback.
 
@@ -12,12 +12,12 @@ Early users should be guided or onboarded by the founder. Feedback from these us
 
 ## Final Beta Verdict
 
-Private Beta v1 — Ready for founder-led early users with browser E2E verified.
+Private Beta v1 - Ready for founder-led early users with browser E2E verified.
 
 ## Completed Areas
 
 - Core flow: Completed and browser E2E verified.
-- Sentry: Completed and verified for beta monitoring.
+- Sentry: Completed and verified for beta runtime monitoring.
 - QA: Completed; `pnpm test:e2e` passed with 9 of 9 browser tests.
 - Early-user feedback loop: Ready.
 - Beta positioning: Private Beta v1 / Early Access Beta language is present.
@@ -34,9 +34,8 @@ Private Beta v1 — Ready for founder-led early users with browser E2E verified.
 
 ## Remaining Non-Blocking Improvements
 
-- Investigate non-blocking `/api/sync/profile` local test diagnostics.
-- Investigate the non-blocking React warning about updating `DashboardTopNav` while rendering `HomePage`.
-- Fix or re-run the production smoke check after confirming the deployed URL is reachable.
+- Production smoke check is still not passed: `pnpm smoke:web` returns `fetch failed` for the live URL, including after network-enabled rerun.
+- Complete founder-led UAT with 3 to 5 early users.
 - Add more golden outcome-quality tests for EU fit scenarios.
 - Add automated application kit quality assertions.
 - Continue Sentry dashboard spot-checks during early-user sessions.

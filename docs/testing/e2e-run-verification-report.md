@@ -1,6 +1,6 @@
 # E2E Run Verification Report
 
-Last updated: 2026-05-23 23:23:44 +01:00
+Last updated: 2026-05-23 23:43:13 +01:00
 
 ## E2E Setup Status
 
@@ -28,7 +28,8 @@ Job import -> EU fit check -> Save EU fit result -> application kit -> waitlist 
 | --- | --- | --- |
 | `pnpm build` | Passed with escalation | Root build runs the extension build. The sandbox attempt failed with Windows `EPERM` on generated output, then passed outside the sandbox. |
 | `pnpm build:web` | Passed with escalation | Next.js production build, TypeScript, and static page generation completed. The sandbox attempt failed with Windows `EPERM` on `.next`, then passed outside the sandbox. |
-| `pnpm test:e2e` | Passed | 9 passed, 0 failed, 0 skipped. |
+| `pnpm test:e2e` | Passed | 9 passed, 0 failed, 0 skipped on the latest rerun. |
+| `pnpm smoke:web` | Failed | Live URL fetch returned `fetch failed`, including after network-enabled rerun. This is separate from local browser E2E. |
 
 ## Result Summary
 
@@ -73,3 +74,5 @@ Production cloud-sync failures are still surfaced by the `/api/sync/profile` rou
 Passed.
 
 Private Beta v1 browser E2E automation is verified for the core founder-led beta flow.
+
+Production smoke is not marked as passed. The live URL fetch still needs deployment/network verification before a public launch gate.
