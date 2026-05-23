@@ -200,13 +200,12 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const fitModel = read("packages/shared/src/fit-model.ts")
 
-  assert.match(dashboard, /title: "Analyse Fit before you apply"/)
+  assert.match(dashboard, /title: "Check EU fit before you apply"/)
   assert.match(
     dashboard,
     /Rules-first fit check for one role against your saved profile evidence/
   )
-  assert.match(dashboard, /Use AI assistant/)
-  assert.match(dashboard, /Open fit check/)
+  assert.match(dashboard, /Check EU fit/)
   assert.match(dashboard, /Strengthen the review/)
   assert.match(dashboard, /Rules first/)
   assert.match(dashboard, /AI strengthens the review, but evidence\s*controls the outcome/)

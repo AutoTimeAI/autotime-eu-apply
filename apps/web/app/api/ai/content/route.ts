@@ -22,7 +22,7 @@ import {
   diagnosticJson,
   getValidationIssueMessage
 } from "../../../../lib/diagnostics"
-import { addMvpBreadcrumb } from "../../../../lib/sentry-breadcrumbs"
+import { trackApplicationKitGenerated } from "../../../../lib/sentry-breadcrumbs"
 
 type ApiResponse<T> = {
   data: T | null
@@ -135,8 +135,9 @@ export async function POST(
       })
     }
 
-    addMvpBreadcrumb("application_kit_generated", {
-      targetCountry: body.context?.targetCountry ?? null
+    trackApplicationKitGenerated({
+      route: "/api/ai/content",
+      status: "started"
     })
     const result = await generateContentWithOpenAI(body)
 

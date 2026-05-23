@@ -49,6 +49,7 @@ import {
   PROFILE_EXECUTION_THRESHOLD
 } from "../lib/product-protocols"
 import { getStatusTone } from "../lib/status-tone"
+import { trackWaitlistSubmitted } from "../lib/sentry-breadcrumbs"
 import { AccountIdentityLinker } from "./AccountIdentityLinker"
 import { profileProtocolReadinessEvent } from "./ProfileProtocolLock"
 import { useDashboardPlan } from "./UserNav"
@@ -429,7 +430,7 @@ const dashboardFocusCopy: Record<
   dashboard: {
     eyebrow: "Dashboard",
     title: "Your EU application workspace",
-    body: "Track jobs, analyse fit, prepare stronger applications and keep every next action visible."
+    body: "Track jobs, check EU fit, prepare stronger applications and keep every next action visible."
   },
   "job-inbox": {
     eyebrow: "Tracked Jobs",
@@ -437,8 +438,8 @@ const dashboardFocusCopy: Record<
     body: "Roles captured from the extension or tracked from a fit analysis."
   },
   "match-score": {
-    eyebrow: "Analyse Fit",
-    title: "Analyse Fit before you apply",
+    eyebrow: "EU fit",
+    title: "Check EU fit before you apply",
     body: "Rules-first fit check for one role against your saved profile evidence, country context and missing proof."
   },
   "cv-tailor": {
@@ -1108,7 +1109,9 @@ function saveState(state: CompanionDashboardState, userId: string) {
     getUserScopedStorageKey(storageKey, userId),
     JSON.stringify(state)
   )
-  window.dispatchEvent(new Event(profileProtocolReadinessEvent))
+  queueMicrotask(() => {
+    window.dispatchEvent(new Event(profileProtocolReadinessEvent))
+  })
 }
 
 function getBestStoredProfileRecovery(userId: string, minimumReadiness: number) {
@@ -3318,7 +3321,7 @@ function getReadyToApplyChecklist({
       evidence: application.fitDecision
         ? `Saved recommendation: ${application.fitDecision}`
         : "No saved decision index is attached to this job.",
-      action: "Analyse the role before treating this job as ready."
+      action: "Check EU fit before treating this job as ready."
     },
     {
       id: "evidence-records",
@@ -3736,7 +3739,7 @@ export default function HomePage({
   const actionPanelEyebrow = isOverview
     ? "Quick actions"
     : currentTab === "jobs"
-      ? "Analyse Fit"
+      ? "EU fit"
       : activeFocus === "cv-tailor"
         ? "Proof Library"
         : activeFocus === "follow-ups"
@@ -4004,7 +4007,7 @@ export default function HomePage({
     {
       href: "/dashboard/extension",
       step: "Step 2",
-      title: "Connect the extension",
+      title: "Import a job",
       status:
         state.applications.length > 0 ? "Capturing jobs" : "Not connected",
       hideStatusMetric: false,
@@ -4013,13 +4016,13 @@ export default function HomePage({
           ? "Tracked roles are reaching your dashboard."
           : "Install and connect the browser extension so job descriptions can be parsed automatically.",
       cta:
-        state.applications.length > 0 ? "View connection" : "Connect extension",
+        state.applications.length > 0 ? "View imported jobs" : "Import job",
       tone: state.applications.length > 0 ? "good" : "neutral"
     },
     {
       href: "/dashboard/match-score",
       step: "Step 3",
-      title: "Check one quality role",
+      title: "Check EU fit",
       status: hasJobDraft(state.jobAnalysis)
         ? `${fitEvaluation.overallScore}/100 match`
         : "Waiting for a role",
@@ -4027,49 +4030,38 @@ export default function HomePage({
       detail: hasJobDraft(state.jobAnalysis)
         ? fitEvaluation.decision
         : "Load an extension-parsed job or paste a JD manually before applying.",
-      cta: "Open fit check",
+      cta: "Check EU fit",
       tone: hasJobDraft(state.jobAnalysis) ? decisionTone : "neutral"
     },
     {
-      href: "/dashboard/applications",
+      href: "/dashboard/application-answers",
       step: "Step 4",
-      title: "Track the next action",
+      title: "Generate application kit",
       status:
         state.applications.length > 0
           ? `${state.applications.length} saved`
           : "No tracked jobs yet",
       hideStatusMetric: state.applications.length > 0,
       detail:
-        activeActionCount > 0
-          ? "Follow-ups need attention."
-          : state.applications.length > 0
-            ? "Keep status, notes and next steps visible in the tracker."
-            : "Save your first role before managing tracker stages.",
-      cta: "Open tracker",
+        state.applications.length > 0
+          ? "Create copy-friendly draft wording from the saved role and profile evidence."
+          : "Save one EU fit result before generating application wording.",
+      cta: "Generate application kit",
       tone:
-        activeActionCount > 0
-          ? "warn"
-          : state.applications.length > 0
-            ? "good"
-            : "neutral"
+        state.applications.length > 0
+          ? "good"
+          : "neutral"
     },
     {
-      href: "/dashboard/interview",
+      href: "#mvp-feedback",
       step: "Step 5",
-      title: "Prepare evidence-led interviews",
-      status:
-        interviewApplications.length > 0
-          ? `${interviewApplications.length} interview role${
-              interviewApplications.length === 1 ? "" : "s"
-            }`
-          : "Not ready yet",
-      hideStatusMetric: interviewApplications.length > 0,
+      title: "Join waitlist or leave feedback",
+      status: "MVP feedback",
+      hideStatusMetric: false,
       detail:
-        interviewApplications.length > 0
-          ? "Generate interview prep from your profile evidence and tracked role context."
-          : "Move a tracked application to Interview before generating prep packs.",
-      cta: "Open interview coach",
-      tone: interviewApplications.length > 0 ? "good" : "neutral"
+        "Tell us what blocked you, what felt useful and what should be clearer before launch.",
+      cta: "Join waitlist",
+      tone: "neutral"
     }
   ]
   const strategicQualitySignals = [
@@ -4111,8 +4103,8 @@ export default function HomePage({
       }
     : state.applications.length === 0
       ? {
-          body: "Analyse one role manually or track it from the extension. Tracked jobs will appear in your tracker.",
-          cta: "Analyse Fit",
+          body: "Check one role manually or import it from the extension. Tracked jobs will appear in your tracker.",
+          cta: "Check EU fit",
           href: "/dashboard/match-score",
           label: "Next step",
           title: "Save your first job"
@@ -4126,7 +4118,7 @@ export default function HomePage({
             title: "Handle the next action"
           }
         : {
-            body: "Your tracked jobs are tidy. Review recent roles or analyse another job when you are ready.",
+            body: "Your tracked jobs are tidy. Review recent roles or check another job when you are ready.",
             cta: "Review tracker",
             href: "/dashboard/applications",
             label: "Next step",
@@ -6433,11 +6425,15 @@ export default function HomePage({
           <p className="eyebrow">{focusCopy.eyebrow}</p>
           <h1>{focusCopy.title}</h1>
           <p>{focusCopy.body}</p>
+          <p className="decision-method-note">
+            Private Beta v1: limited early access with founder-led onboarding
+            and feedback-led improvement.
+          </p>
           {showHeaderJobActions ? (
             <div className="command-header-tools">
               {currentTab !== "jobs" ? (
                 <a className="secondary-button" href="/dashboard/match-score">
-                  Analyse Fit
+                  Check EU fit
                 </a>
               ) : null}
               <a className="secondary-button" href="/dashboard/applications">
@@ -6596,7 +6592,7 @@ export default function HomePage({
                           className="secondary-button"
                           href="/dashboard/match-score"
                         >
-                          Analyse Fit
+                          Check EU fit
                         </a>
                         <a
                           className="secondary-button"
@@ -6621,7 +6617,7 @@ export default function HomePage({
                       type="button"
                       onClick={regenerateKitDraft}
                     >
-                      Generate kit draft
+                      Generate application kit
                     </button>
                     <button
                       className="secondary-button"
@@ -7176,6 +7172,58 @@ export default function HomePage({
                     </div>
                     <a href={todayAction.href}>{todayAction.cta}</a>
                   </div>
+                  <section
+                    className="strategic-quality-panel"
+                    id="mvp-feedback"
+                    aria-label="MVP waitlist and feedback"
+                  >
+                    <div>
+                      <p className="eyebrow">MVP verification</p>
+                      <h2>Join waitlist or leave feedback</h2>
+                      <p>
+                        This demo can help structure applications, but it does
+                        not guarantee a job, interview, visa, sponsorship or
+                        employer response. Verify role details with the
+                        employer and official government sources before acting.
+                      </p>
+                    </div>
+                    <div className="strategic-signal-grid">
+                      <article>
+                        <span>Waitlist</span>
+                        <strong>Join waitlist</strong>
+                        <p>
+                          Share interest in the MVP without adding CV text,
+                          job descriptions or private application details.
+                        </p>
+                        <a
+                          className="secondary-button"
+                          href="mailto:support@autotime.ai?subject=Join%20AutoTime%20EU%20Apply%20waitlist"
+                          onClick={() =>
+                            trackWaitlistSubmitted({
+                              route: "/dashboard",
+                              status: "started"
+                            })
+                          }
+                        >
+                          Join waitlist
+                        </a>
+                      </article>
+                      <article>
+                        <span>Feedback</span>
+                        <strong>Leave feedback</strong>
+                        <p>
+                          Tell us what felt unclear, slow or missing in the
+                          import, EU fit and application kit flow.
+                        </p>
+                        <a
+                          className="secondary-button"
+                          href="mailto:support@autotime.ai?subject=AutoTime%20EU%20Apply%20MVP%20feedback"
+                        >
+                          Leave feedback
+                        </a>
+                      </article>
+                    </div>
+                  </section>
                   <details className="dashboard-more-details">
                     <summary>Status details</summary>
                     <div className="command-centre-grid">
@@ -7291,7 +7339,14 @@ export default function HomePage({
                           then save the snapshot back to the job.
                         </p>
                         <p>
-                          Local/template-based draft — not live AI-refined.
+                          Copy-friendly MVP draft only. It does not guarantee a
+                          job, interview, visa, sponsorship or employer
+                          response.
+                        </p>
+                        <p>
+                          Local/template-based draft - not live AI-refined.
+                          Verify employer and government requirements before
+                          sending.
                         </p>
                       </div>
                       {state.applications.length ? (
@@ -7337,14 +7392,14 @@ export default function HomePage({
                         <div className="empty-state rich-empty-state">
                           <strong>No tracked job yet</strong>
                           <p>
-                            Analyse and track one role before writing application
-                            content for it.
+                            Check EU fit and track one role before writing
+                            application content for it.
                           </p>
                           <a
                             className="secondary-button"
                             href="/dashboard/match-score"
                           >
-                            Analyse a role
+                            Check EU fit
                           </a>
                         </div>
                       )}
@@ -7414,12 +7469,16 @@ export default function HomePage({
                             type="button"
                             onClick={regenerateKitDraft}
                           >
-                            Regenerate from evidence
+                            Generate application kit
                           </button>
                         </div>
                         <p className="decision-integrity-note">
                           {applicationPositioningPack.trustNote}{" "}
-                          {applicationPositioningPack.complianceNote}
+                          {applicationPositioningPack.complianceNote} This is
+                          draft support only: no job guarantee, no interview
+                          guarantee, no visa or sponsorship guarantee. Verify
+                          all employer and government requirements before using
+                          the wording.
                         </p>
                       </section>
                     ) : null}
@@ -8039,7 +8098,7 @@ export default function HomePage({
                               }
                             }}
                           >
-                            <option value="">Load tracked job...</option>
+                            <option value="">Import tracked job...</option>
                             {trackedJobSourceOptions.map((application) => (
                               <option
                                 key={application.id}
@@ -8065,7 +8124,7 @@ export default function HomePage({
                                 )
                               }
                             >
-                              Use latest
+                              Import latest job
                             </button>
                           ) : null}
                         </div>
@@ -8074,7 +8133,7 @@ export default function HomePage({
                           className="secondary-button"
                           href="/dashboard/extension"
                         >
-                          Connect extension
+                          Import job with extension
                         </a>
                       )}
                     </section>
@@ -8145,7 +8204,7 @@ export default function HomePage({
                       type="button"
                       onClick={runAiJobAnalysis}
                     >
-                      {isCopilotThinking ? "Checking role" : "Use AI assistant"}
+                      {isCopilotThinking ? "Checking EU fit" : "Check EU fit"}
                     </button>
                   </section>
 
@@ -8206,7 +8265,7 @@ export default function HomePage({
                     <p className="decision-integrity-note">
                       {autoTimeFitReview.disclaimer}{" "}
                       {euFitEngineResult.trustNote}{" "}
-                      {euFitEngineResult.complianceNote} AI output cannot override official sources, saved profile evidence, parsed job text or your review.
+                      {euFitEngineResult.complianceNote} AI output cannot override official sources, saved profile evidence, parsed job text or your review. This is not a job, interview, visa or sponsorship guarantee.
                     </p>
                   </section>
 
@@ -8598,7 +8657,7 @@ export default function HomePage({
                         >
                           {isSavingApplication
                             ? "Saving..."
-                            : "Save to Tracked Jobs"}
+                            : "Save EU fit result"}
                         </button>
                         <a className="secondary-button" href="#analyse-fit-role">
                           Edit role evidence
@@ -9243,7 +9302,7 @@ export default function HomePage({
                           <strong>No follow-ups waiting</strong>
                           <p>
                             Add a next action from Tracked Jobs or save a role
-                            from Analyse Fit.
+                            from EU fit.
                           </p>
                           <a
                             className="secondary-button"
@@ -9565,7 +9624,9 @@ export default function HomePage({
                             <p className="eyebrow">Application Kit</p>
                             <h3>Saved application content</h3>
                             <p>
-                              Local/template-based draft — not live AI-refined.
+                              Copy-friendly draft saved from the Application
+                              Kit. Verify employer and government requirements
+                              before using it.
                             </p>
                           </div>
                           {selectedApplication.contentSnapshot ? (
@@ -9903,7 +9964,7 @@ export default function HomePage({
                                   className="secondary-button"
                                   href="/dashboard/extension"
                                 >
-                                  Connect extension
+                                  Import job with extension
                                 </a>
                                 <a
                                   className="secondary-button"

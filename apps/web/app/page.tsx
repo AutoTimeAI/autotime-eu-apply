@@ -275,12 +275,15 @@ export default async function HomePage() {
         />
         <div className="landing-hero-overlay" />
         <div className="landing-hero-content">
-          <p className="eyebrow">Strategic European tech applications</p>
+          <p className="eyebrow">
+            Private Beta v1 - founder-led early access
+          </p>
           <h1 id="landing-title">AutoTime AI</h1>
           <p>
             A quality-first workspace for targeting stronger European tech
             roles, checking country-aware fit, proving your experience and
-            converting more interviews.
+            improving applications with guided beta feedback. This is not the
+            final public SaaS launch.
           </p>
           <div className="landing-actions">
             <Link

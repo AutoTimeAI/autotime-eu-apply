@@ -107,6 +107,26 @@ async function getSyncedProfileReadiness(
   }
 }
 
+function hasPublicEnvValue(value: string | undefined) {
+  return typeof value === "string" && value.trim().length > 0
+}
+
+function shouldReadSyncedProfile() {
+  if (process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true") {
+    return false
+  }
+
+  const cloudSyncEnabled =
+    process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED ??
+    (process.env.NEXT_PUBLIC_AUTOTIME_ENV === "production" ? "true" : undefined)
+
+  return (
+    cloudSyncEnabled === "true" &&
+    hasPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    hasPublicEnvValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  )
+}
+
 export function useProfileProtocolReadiness(userId?: string) {
   const [readinessScore, setReadinessScore] = useState(0)
 
@@ -122,6 +142,11 @@ export function useProfileProtocolReadiness(userId?: string) {
 
       const localReadiness = getStoredProfileReadiness(userId)
       setReadinessScore(localReadiness)
+
+      if (!shouldReadSyncedProfile()) {
+        return
+      }
+
       activeController?.abort()
       activeController = new AbortController()
 

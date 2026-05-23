@@ -453,26 +453,32 @@ export async function readSyncedProfile(
 }
 
 export function getBrowserCloudSyncReadiness() {
+  const e2eLocalOnly =
+    process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true"
   const productionDefault =
     process.env.NEXT_PUBLIC_AUTOTIME_ENV === "production" ? "true" : undefined
 
   return getCloudSyncReadiness({
-    enabled:
-      process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED ??
-      productionDefault,
+    enabled: e2eLocalOnly
+      ? "false"
+      : process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED ??
+        productionDefault,
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   })
 }
 
 export function createBrowserCloudSyncClient() {
+  const e2eLocalOnly =
+    process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true"
   const productionDefault =
     process.env.NEXT_PUBLIC_AUTOTIME_ENV === "production" ? "true" : undefined
 
   return createCloudSyncClient({
-    enabled:
-      process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED ??
-      productionDefault,
+    enabled: e2eLocalOnly
+      ? "false"
+      : process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED ??
+        productionDefault,
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   })

@@ -16,6 +16,7 @@ import {
 } from "shared"
 import { getRequestUser } from "../../../../lib/api-auth"
 import { diagnosticJson } from "../../../../lib/diagnostics"
+import { trackJobImportStarted } from "../../../../lib/sentry-breadcrumbs"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { isTestAuthUserId } from "../../../../lib/test-auth"
 import type { Database } from "../../../../lib/supabase/types"
@@ -601,6 +602,13 @@ export async function POST(
     const payload = dashboardWorkflowSchema.parse(
       normalizeLegacyDashboardPayload(await request.json())
     )
+    const sourceSurface = getSourceSurface(request)
+    trackJobImportStarted({
+      applicationCount: payload.applications.length,
+      route: "/api/sync/dashboard",
+      sourceSurface,
+      status: "started"
+    })
 
     if (isTestAuthUserId(auth.user.id)) {
       return jsonResponse({
@@ -611,7 +619,6 @@ export async function POST(
     }
 
     const supabase = createAdminClient()
-    const sourceSurface = getSourceSurface(request)
     const applicationUrlKeys = payload.applications.map((application) =>
       normalizeApplicationUrlKey(application.url || application.id)
     )
