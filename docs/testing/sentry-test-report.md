@@ -1,6 +1,6 @@
 # Sentry Test Report
 
-Last updated: 2026-05-23
+Last updated: 2026-05-24
 
 ## Setup Status
 
@@ -113,10 +113,18 @@ Covered event areas:
 - `/sentry-test`: development only; production returns not found.
 - `/api/sentry-test`: development enabled; production returns 404 unless
   `SENTRY_TEST_API_ENABLED=true`.
+- Current production route re-protection evidence: live check on 2026-05-24
+  returned HTTP 404 for `/api/sentry-test`.
 
 ## Risks And Next Actions
 
 - Manual Sentry dashboard spot-check is still required after deployment.
+- Sentry dashboard/insights are accessible, but live production event
+  verification remains pending until an actual AutoTime EU Apply issue is
+  opened and checked for environment, breadcrumbs, replay, stack trace, and
+  sensitive data.
+- Use `docs/testing/sentry-live-dashboard-verification.md` as the live evidence
+  checklist.
 - Alerts are a dashboard configuration task and are not verified in code.
 - Existing root-level Sentry wizard files outside `apps/web` should not be
   committed or deployed unless intentionally migrated.

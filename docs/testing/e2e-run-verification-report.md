@@ -1,10 +1,24 @@
 # E2E Run Verification Report
 
-Last updated: 2026-05-23 23:43:13 +01:00
+Last updated: 2026-05-24
 
 ## E2E Setup Status
 
 Implemented and verified.
+
+AutoTime EU Apply Private Beta v1 has completed internal technical readiness
+testing, including browser E2E verification. The product is ready for
+founder-led early users, but full beta validation is not complete until
+Sentry live verification, early-user UAT, and outcome usefulness/trust
+validation are completed.
+
+## Readiness Percentages
+
+| Scope | Current Percentage | Meaning |
+| --- | --- | --- |
+| Internal technical readiness | 80-85% complete | Build, web build, browser E2E and Sentry privacy/config checks are verified for private beta. |
+| Overall beta validation | 65-70% complete | Production smoke now passes, but real early-user UAT, Sentry dashboard live verification and outcome validation are still pending. |
+| Public launch readiness | Not ready yet | Public launch requires production smoke, UAT evidence, live monitoring spot-checks and stronger outcome-quality validation. |
 
 - `@playwright/test` is installed at the workspace root.
 - `playwright.config.ts` exists.
@@ -73,6 +87,6 @@ Production cloud-sync failures are still surfaced by the `/api/sync/profile` rou
 
 Passed.
 
-Private Beta v1 browser E2E automation is verified for the core founder-led beta flow.
+Private Beta v1 — Founder-led early-user ready with browser E2E and production smoke verified. Full beta validation pending until Sentry live dashboard verification and founder-led UAT are completed.
 
 Production smoke is not marked as passed. The live URL fetch still needs deployment/network verification before a public launch gate.

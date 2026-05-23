@@ -1,17 +1,45 @@
 # Private Beta v1 Flaw Closure Report
 
-Last updated: 2026-05-23 23:43:13 +01:00
+Last updated: 2026-05-24
 
 ## Executive Summary
 
-AutoTime EU Apply Private Beta v1 is ready for founder-led early users with
-browser E2E verified. The verified local browser suite passes 9 of 9 Playwright
-tests, the root build passes after rerunning outside the Windows sandbox file
-lock, and the Next.js web build passes after the same file-lock workaround.
+AutoTime EU Apply Private Beta v1 has completed internal technical readiness
+testing, including browser E2E verification. The product is ready for
+founder-led early users, but full beta validation is not complete until
+Sentry live verification, early-user UAT, and outcome usefulness/trust
+validation are completed.
+
+The verified local browser suite passes 9 of 9 Playwright tests, the root build
+passes after rerunning outside the Windows sandbox file lock, and the Next.js
+web build passes after the same file-lock workaround.
 
 Formal UAT with real early users is pending. Production smoke against the live
-URL is not passed because `pnpm smoke:web` currently returns `fetch failed`,
-including after a network-enabled rerun.
+URL now passes after the smoke script was updated for the current Private Beta
+v1 homepage and Node was run with system CA trust.
+
+## Readiness Percentages
+
+| Scope | Current Percentage | Meaning |
+| --- | --- | --- |
+| Internal technical readiness | 80-85% complete | Build, web build, browser E2E and Sentry privacy/config checks are verified for private beta. |
+| Overall beta validation | 65-70% complete | Production smoke now passes, but real early-user UAT, Sentry dashboard live verification and outcome validation are still pending. |
+| Public launch readiness | Not ready yet | Public launch requires production smoke, UAT evidence, live monitoring spot-checks and stronger outcome-quality validation. |
+
+## Readiness Table
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Build/web build | Complete | Passed after rerun outside Windows EPERM sandbox file-lock. |
+| Browser E2E | Complete, 9/9 passed | Full Playwright browser suite passed with 0 failures. |
+| Core beta flow | Complete | Job import -> EU fit -> application kit -> waitlist / feedback is browser verified. |
+| Sentry config/privacy tests | Complete for beta | Error-only replay and privacy redaction are configured and tested. |
+| Product-level Sentry observability | Partial/basic to moderate | Config, breadcrumbs and test routes exist; live dashboard spot-check remains pending. |
+| Production smoke | Complete | `pnpm smoke:web` passed against `https://autotime-eu-apply.vercel.app` on 2026-05-24. |
+| Sentry dashboard live spot-check | Pending Manual Evidence | Sentry dashboard/insights are accessible, but live production event verification remains pending until an actual AutoTime EU Apply issue is opened and checked for environment, breadcrumbs, replay, stack trace, and sensitive data. |
+| Founder-led UAT | Pending | 3 to 5 selected early users still need guided sessions. |
+| Outcome usefulness/trust | Pending real-user validation | Application kit usefulness and EU fit trust need UAT feedback. |
+| Public launch readiness | Not ready yet | Private beta readiness does not equal public launch readiness. |
 
 ## Known Flaws Found
 
@@ -123,7 +151,7 @@ Privacy posture is beta-safe:
 
 ## Final Beta Verdict
 
-Private Beta v1 - Ready for founder-led early users with browser E2E verified.
+Private Beta v1 — Founder-led early-user ready with browser E2E and production smoke verified. Full beta validation pending until Sentry live dashboard verification and founder-led UAT are completed.
 
 Conditions before wider public launch:
 

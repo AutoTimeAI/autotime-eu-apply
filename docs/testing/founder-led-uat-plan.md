@@ -1,12 +1,26 @@
 # Founder-Led UAT Plan
 
-Last updated: 2026-05-23 23:43:13 +01:00
+Last updated: 2026-05-24
 
 ## Purpose
 
 Founder-led UAT is the next validation step for AutoTime EU Apply Private Beta
 v1. It is not yet complete. Browser E2E verifies that the product flow works;
 UAT verifies whether real early users understand, trust and value the outcome.
+
+AutoTime EU Apply Private Beta v1 has completed internal technical readiness
+testing, including browser E2E verification. The product is ready for
+founder-led early users, but full beta validation is not complete until
+Sentry live verification, early-user UAT, and outcome usefulness/trust
+validation are completed.
+
+## Current Readiness
+
+| Scope | Current Percentage | Meaning |
+| --- | --- | --- |
+| Internal technical readiness | 80-85% complete | Build, web build, browser E2E and Sentry privacy/config checks are verified for private beta. |
+| Overall beta validation | 65-70% complete | Production smoke now passes, but real early-user UAT, Sentry dashboard live verification and outcome validation are still pending. |
+| Public launch readiness | Not ready yet | Public launch requires production smoke, UAT evidence, live monitoring spot-checks and stronger outcome-quality validation. |
 
 ## Participants
 
@@ -72,3 +86,6 @@ Pending UAT.
 
 The product is ready for founder-led early users with browser E2E verified, but
 formal UAT is not complete until real early users run the guided sessions.
+
+Final verdict: Private Beta v1 — Ready for founder-led early users with browser
+E2E verified.

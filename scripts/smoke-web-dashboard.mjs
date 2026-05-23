@@ -4,44 +4,38 @@ export const defaultUrl = "https://autotime-eu-apply.vercel.app"
 
 export const expectedMarkers = [
   "AutoTime EU Apply",
+  "Private Beta v1 - founder-led early access",
+  "This is not the final public SaaS launch",
+  "Start free",
+  "Workflow system",
+  "Country-aware fit",
+  "Evidence discipline",
+  "Interview conversion",
+  "EU Fit Engine",
   "Smarter targeting. Stronger applications. More interviews.",
-  "Smarter Targeting",
-  "Stronger Applications",
-  "Outcome Evidence",
-  "More Interviews",
-  "Which country, work-right path and role family should be prioritised?",
-  "Mandatory MVP Profile Bridge",
-  "Production Sync Track",
-  "Local mode stays active for founder validation",
-  "Sign-in locked",
-  "Session check blocked",
-  "I consent to sync my candidate profile",
-  "General tech",
-  "FinTech",
-  "Enterprise SaaS",
-  "Data & AI",
-  "Cybersecurity",
-  "HealthTech",
-  "Climate & Energy",
-  "GovTech & Public Sector",
-  "Ecommerce & Marketplaces",
-  "DevTools & Cloud",
-  "Foreign / relocating",
-  "Native / local",
-  "Stronger Application Wording",
-  "Review Positioning Fit",
-  "Approve Target Lane",
-  "Apply, pause, or improve positioning?",
-  "Apply Smarter Path",
-  "Save Job Decision",
-  "Export Validation Evidence",
-  "Save Local Application Evidence",
-  "Export Application Evidence",
-  "Import Evidence"
+  "Official Verification Status",
+  "No job, visa, sponsorship, or interview guarantees"
 ]
 
 export function getWebSmokeUrl(env = process.env) {
-  return env.WEB_SMOKE_URL ?? defaultUrl
+  return env.SMOKE_BASE_URL ?? env.WEB_SMOKE_URL ?? env.PLAYWRIGHT_BASE_URL ?? defaultUrl
+}
+
+function describeFetchError(error) {
+  if (!(error instanceof Error)) {
+    return "request failed"
+  }
+
+  const cause =
+    error.cause && typeof error.cause === "object"
+      ? /** @type {{ code?: string, message?: string }} */ (error.cause)
+      : undefined
+
+  const causeText = cause?.message
+    ? `; cause: ${cause.code ? `${cause.code} ` : ""}${cause.message}`
+    : ""
+
+  return `${error.message}${causeText}`
 }
 
 export async function runWebDashboardSmoke({
@@ -60,7 +54,7 @@ export async function runWebDashboardSmoke({
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "request failed"
+      message: describeFetchError(error)
     }
   }
 
@@ -99,7 +93,9 @@ async function main() {
   const result = await runWebDashboardSmoke({ url })
 
   if (result.ok) {
-    console.log("PASS - deployed web dashboard returned expected V2 HTML")
+    console.log(
+      "PASS - deployed web dashboard returned expected Private Beta v1 HTML"
+    )
     return
   }
 

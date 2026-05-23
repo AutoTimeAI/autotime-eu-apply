@@ -72,7 +72,7 @@ test("fails when expected dashboard markers are missing", async () => {
     fetchImpl: createFetch(
       createResponse({
         body: expectedMarkers
-          .filter((marker) => marker !== "Smarter Targeting")
+          .filter((marker) => marker !== "EU Fit Engine")
           .join("\n")
       })
     )
@@ -80,7 +80,7 @@ test("fails when expected dashboard markers are missing", async () => {
 
   assert.equal(result.ok, false)
   assert.match(result.message, /missing dashboard markers/)
-  assert.match(result.message, /Smarter Targeting/)
+  assert.match(result.message, /EU Fit Engine/)
 })
 
 test("fails with fetch error message when request throws an Error", async () => {
@@ -108,8 +108,20 @@ test("reads default and environment override smoke URLs", () => {
   assert.equal(defaultUrl, "https://autotime-eu-apply.vercel.app")
   assert.equal(getWebSmokeUrl({}), defaultUrl)
   assert.equal(
+    getWebSmokeUrl({ PLAYWRIGHT_BASE_URL: "https://playwright.example.test" }),
+    "https://playwright.example.test"
+  )
+  assert.equal(
     getWebSmokeUrl({ WEB_SMOKE_URL: "https://preview.example.test" }),
     "https://preview.example.test"
+  )
+  assert.equal(
+    getWebSmokeUrl({
+      SMOKE_BASE_URL: "https://smoke.example.test",
+      WEB_SMOKE_URL: "https://preview.example.test",
+      PLAYWRIGHT_BASE_URL: "https://playwright.example.test"
+    }),
+    "https://smoke.example.test"
   )
 })
 
