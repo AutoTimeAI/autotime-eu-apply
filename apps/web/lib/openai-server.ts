@@ -1,4 +1,5 @@
 import OpenAI from "openai"
+import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
 import { getServerEnv } from "./env"
 import {
@@ -522,23 +523,41 @@ async function createJsonResponse<T>({
   schema: z.ZodType<T>
 }): Promise<ServerAIResult<T>> {
   try {
-    const response = await getOpenAIClient().responses.create({
-      model,
-      instructions,
-      input: JSON.stringify(input),
-      max_output_tokens: maxOutputTokens
-    })
-    const promptTokens = response.usage?.input_tokens ?? 0
-    const completionTokens = response.usage?.output_tokens ?? 0
-    const parsed = schema.parse(parseJsonObject(response.output_text))
+    return await Sentry.startSpan(
+      {
+        attributes: {
+          "ai.model": model,
+          "ai.provider": "openai",
+          "ai.request.max_output_tokens": maxOutputTokens
+        },
+        name: "OpenAI Responses JSON generation",
+        op: "ai.generate"
+      },
+      async (span) => {
+        const response = await getOpenAIClient().responses.create({
+          model,
+          instructions,
+          input: JSON.stringify(input),
+          max_output_tokens: maxOutputTokens
+        })
+        const promptTokens = response.usage?.input_tokens ?? 0
+        const completionTokens = response.usage?.output_tokens ?? 0
+        const costUsd = estimateCostUsd({ promptTokens, completionTokens })
+        const parsed = schema.parse(parseJsonObject(response.output_text))
 
-    return {
-      value: parsed,
-      model,
-      promptTokens,
-      completionTokens,
-      costUsd: estimateCostUsd({ promptTokens, completionTokens })
-    }
+        span.setAttribute("ai.usage.input_tokens", promptTokens)
+        span.setAttribute("ai.usage.output_tokens", completionTokens)
+        span.setAttribute("ai.usage.cost_usd", costUsd)
+
+        return {
+          value: parsed,
+          model,
+          promptTokens,
+          completionTokens,
+          costUsd
+        }
+      }
+    )
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "OpenAI request failed"

@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
 
 const contentSecurityPolicy = [
@@ -51,4 +52,17 @@ const nextConfig: NextConfig = {
   transpilePackages: ["shared"]
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  tunnelRoute: "/monitoring",
+  webpack: {
+    automaticVercelMonitors: true,
+    treeshake: {
+      removeDebugLogging: true
+    }
+  },
+  widenClientFileUpload: true
+})

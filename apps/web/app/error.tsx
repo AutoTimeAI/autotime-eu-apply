@@ -1,5 +1,6 @@
 "use client"
 
+import * as Sentry from "@sentry/nextjs"
 import { useEffect } from "react"
 import {
   getClientErrorMessage,
@@ -16,6 +17,7 @@ export default function ErrorFallback({
   const message = getClientErrorMessage(error, "Dashboard view failed")
 
   useEffect(() => {
+    Sentry.captureException(error)
     reportClientIssue({
       area: "dashboard",
       code: "app.route.error-boundary",
