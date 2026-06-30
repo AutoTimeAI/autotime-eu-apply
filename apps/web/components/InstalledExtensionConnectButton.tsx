@@ -39,7 +39,7 @@ function getChromeRuntime(): ExtensionRuntime | null {
 
 function formatRuntimeError(message: string) {
   if (/receiving end does not exist|does not exist/i.test(message)) {
-    return "We could not reach that AutoTime extension. Check the ID, or open the extension and use CONNECT from its Account tab."
+    return "We could not reach the AutoTime extension. Open the extension and use CONNECT from its Account tab."
   }
 
   if (/not allowed|access|permission/i.test(message)) {
@@ -81,14 +81,12 @@ export function InstalledExtensionConnectButton({
 }: InstalledExtensionConnectButtonProps) {
   const [status, setStatus] = useState<string | null>(null)
   const [isChecking, setIsChecking] = useState(false)
-  const [manualExtensionId, setManualExtensionId] = useState("")
   const knownExtensionId = candidateExtensionId?.trim()
-  const extensionId = knownExtensionId || manualExtensionId.trim()
 
   async function handleClick() {
-    if (!extensionId) {
+    if (!knownExtensionId) {
       setStatus(
-        "Enter the AutoTime extension ID shown on Chrome's extensions page, or open the extension and use CONNECT from its Account tab."
+        "Open the AutoTime extension from Chrome, then press CONNECT in the Account tab."
       )
       return
     }
@@ -96,9 +94,9 @@ export function InstalledExtensionConnectButton({
     try {
       setIsChecking(true)
       setStatus("Checking installed extension...")
-      await pingKnownExtension(extensionId)
+      await pingKnownExtension(knownExtensionId)
       window.location.assign(
-        `/extension/connect?extensionId=${encodeURIComponent(extensionId)}`
+        `/extension/connect?extensionId=${encodeURIComponent(knownExtensionId)}`
       )
     } catch (error: unknown) {
       setStatus(
@@ -113,30 +111,22 @@ export function InstalledExtensionConnectButton({
 
   return (
     <>
-      {!knownExtensionId ? (
-        <label className="extension-id-field">
-          <span>AutoTime extension ID</span>
-          <input
-            autoComplete="off"
-            inputMode="text"
-            placeholder="Paste the ID shown in Chrome"
-            value={manualExtensionId}
-            onChange={(event) => setManualExtensionId(event.target.value)}
-          />
-        </label>
-      ) : null}
       <button
         className="secondary-link"
         disabled={isChecking}
         type="button"
         onClick={handleClick}
       >
-        {isChecking ? "Checking extension" : "Connect installed extension"}
+        {isChecking
+          ? "Checking extension"
+          : knownExtensionId
+            ? "Reconnect extension"
+            : "Open extension to connect"}
       </button>
       <small className="extension-action-hint">
-        {extensionId
+        {knownExtensionId
           ? "We will confirm the extension is available before linking it to your account."
-          : "Find the ID on Chrome's extensions page, under AutoTime EU Apply."}
+          : "Use the AutoTime extension Account tab to link this dashboard."}
       </small>
       {status ? (
         <p className={`status-banner compact ${getStatusTone(status)}`}>

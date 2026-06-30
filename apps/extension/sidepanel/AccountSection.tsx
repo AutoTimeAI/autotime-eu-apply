@@ -90,11 +90,11 @@ export function AccountSection({
         ) : (
           <>
             <div className="summary-card">
-              <h3>Not signed in</h3>
-              <p>Sign in for cloud sync and unlimited AI.</p>
+              <h3>Connect dashboard</h3>
+              <p>Link this extension to your AutoTime account for sync and AI.</p>
             </div>
             <button type="button" onClick={openExtensionConnect}>
-              Sign in for cloud sync and unlimited AI
+              CONNECT
             </button>
             <button
               className="secondary-button"
