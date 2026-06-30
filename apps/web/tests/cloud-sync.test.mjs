@@ -4,7 +4,8 @@ import {
   createProfileSyncPayload,
   prepareProfileSyncAction,
   getCloudSyncSessionState,
-  getCloudSyncReadiness
+  getCloudSyncReadiness,
+  getBrowserCloudSyncReadiness
 } from "../lib/cloud-sync.ts"
 
 const tests = []
@@ -83,6 +84,36 @@ test("marks cloud sync ready only when public env is present", () => {
   assert.deepEqual(readiness.issues, [])
 })
 
+test("enables browser cloud sync by default in production builds", () => {
+  const previousNodeEnv = process.env.NODE_ENV
+  const previousAutoTimeEnv = process.env.NEXT_PUBLIC_AUTOTIME_ENV
+  const previousEnabled = process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED
+  const previousLocalOnly = process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY
+  const previousSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const previousSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  try {
+    process.env.NODE_ENV = "production"
+    delete process.env.NEXT_PUBLIC_AUTOTIME_ENV
+    delete process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED
+    delete process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co"
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "public-anon-key"
+
+    const readiness = getBrowserCloudSyncReadiness()
+
+    assert.equal(readiness.enabled, true)
+    assert.equal(readiness.configured, true)
+    assert.deepEqual(readiness.issues, [])
+  } finally {
+    process.env.NODE_ENV = previousNodeEnv
+    process.env.NEXT_PUBLIC_AUTOTIME_ENV = previousAutoTimeEnv
+    process.env.NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED = previousEnabled
+    process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY = previousLocalOnly
+    process.env.NEXT_PUBLIC_SUPABASE_URL = previousSupabaseUrl
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = previousSupabaseAnonKey
+  }
+})
 test("does not create a Supabase client until readiness is complete", () => {
   const result = createCloudSyncClient({
     enabled: "true",

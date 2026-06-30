@@ -456,7 +456,10 @@ export function getBrowserCloudSyncReadiness() {
   const e2eLocalOnly =
     process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true"
   const productionDefault =
-    process.env.NEXT_PUBLIC_AUTOTIME_ENV === "production" ? "true" : undefined
+    process.env.NEXT_PUBLIC_AUTOTIME_ENV === "production" ||
+    process.env.NODE_ENV === "production"
+      ? "true"
+      : undefined
 
   return getCloudSyncReadiness({
     enabled: e2eLocalOnly
@@ -472,7 +475,10 @@ export function createBrowserCloudSyncClient() {
   const e2eLocalOnly =
     process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true"
   const productionDefault =
-    process.env.NEXT_PUBLIC_AUTOTIME_ENV === "production" ? "true" : undefined
+    process.env.NEXT_PUBLIC_AUTOTIME_ENV === "production" ||
+    process.env.NODE_ENV === "production"
+      ? "true"
+      : undefined
 
   return createCloudSyncClient({
     enabled: e2eLocalOnly
