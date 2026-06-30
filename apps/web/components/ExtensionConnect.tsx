@@ -65,11 +65,11 @@ function getChromeRuntime(): ExtensionRuntime | null {
 
 function formatRuntimeError(message: string) {
   if (/receiving end does not exist/i.test(message)) {
-    return "AutoTime extension is not reachable. Reload the extension in Chrome, then open CONNECT from the job-page widget again."
+    return "AutoTime extension is not reachable. Reload the extension in Chrome, then click Connect from AutoTime again."
   }
 
   if (/does not exist/i.test(message)) {
-    return "Chrome could not find this extension ID. Open CONNECT from the installed AutoTime widget so the current extension ID is used."
+    return "Chrome could not find this extension ID. Click Connect from the installed AutoTime extension so the current extension is used."
   }
 
   if (/not allowed|access|permission/i.test(message)) {
@@ -182,7 +182,7 @@ export default function ExtensionConnect() {
 
       if (!hasExtensionId) {
         const message =
-          "Open CONNECT from the AutoTime job-page widget or extension Account tab."
+          "Open AutoTime from your browser toolbar and click Connect."
         addStep(message, "warning")
         setStatus(message)
         return
