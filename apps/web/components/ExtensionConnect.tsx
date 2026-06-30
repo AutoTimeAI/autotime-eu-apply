@@ -157,6 +157,7 @@ export default function ExtensionConnect() {
   const [status, setStatus] = useState<string | null>(null)
   const [steps, setSteps] = useState<ConnectStep[]>([])
   const [isPending, setIsPending] = useState(false)
+  const [needsSignIn, setNeedsSignIn] = useState(false)
 
   const connectAttemptedRef = useRef(false)
 
@@ -179,6 +180,7 @@ export default function ExtensionConnect() {
     try {
       setIsPending(true)
       setStatus(null)
+      setNeedsSignIn(false)
 
       if (!hasExtensionId) {
         const message =
@@ -203,6 +205,7 @@ export default function ExtensionConnect() {
         const message = "Sign in first, then reconnect the extension."
         addStep(message, "warning")
         setStatus(message)
+        setNeedsSignIn(true)
         reportClientIssue({
           area: "extension",
           code: "extension.connect.session.missing",
@@ -298,9 +301,11 @@ export default function ExtensionConnect() {
         <button disabled={isPending} type="button" onClick={handleConnect}>
           {isPending ? "Connecting" : "Connect extension"}
         </button>
-        <a className="secondary-link" href={signInHref}>
-          Sign in first
-        </a>
+        {needsSignIn ? (
+          <a className="secondary-link" href={signInHref}>
+            Sign in first
+          </a>
+        ) : null}
       </div>
       {status ? (
         <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
