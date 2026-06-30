@@ -4,7 +4,7 @@ import { ProfileProtocolLock } from "../../../components/ProfileProtocolLock"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
-const extensionVersion = "0.0.2"
+const extensionVersion = "0.0.3"
 
 export const dynamic = "force-dynamic"
 
@@ -281,7 +281,7 @@ export default async function DashboardExtensionPage() {
               <li>Download and unzip the extension package.</li>
               <li>Open Chrome extensions and enable Developer mode.</li>
               <li>Load the unzipped folder as an unpacked extension.</li>
-              <li>Open the extension Account tab and connect AutoTime.</li>
+              <li>Click the AutoTime icon in Chrome, then click Connect.</li>
             </ol>
           </section>
         </div>

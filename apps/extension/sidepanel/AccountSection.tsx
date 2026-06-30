@@ -94,7 +94,7 @@ export function AccountSection({
               <p>Link this extension to your AutoTime account for sync and AI.</p>
             </div>
             <button type="button" onClick={openExtensionConnect}>
-              CONNECT
+              Connect
             </button>
             <button
               className="secondary-button"

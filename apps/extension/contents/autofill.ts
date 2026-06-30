@@ -343,7 +343,7 @@ async function syncTrackedApplicationsToDashboard(
 
   if (!session?.authToken.trim()) {
     return {
-      reason: "Click CONNECT to sync to dashboard",
+      reason: "Click Connect to sync to dashboard",
       synced: false
     }
   }
@@ -1351,13 +1351,13 @@ function getWidgetMarkup({
       : normalizedStatus.includes("dashboard sync failed")
         ? isDashboardConnected
           ? "Dashboard account is connected, but the sync request failed. Retry Track Job or check extension logs."
-          : "Use the CONNECT button in this widget to link your dashboard account."
+          : "Use the Connect button in this widget to link your dashboard account."
       : normalizedStatus.includes("saved locally") ||
           normalizedStatus.includes("tracked in extension") ||
           normalizedStatus.includes("connect the extension")
         ? isDashboardConnected
           ? "Saved locally in the extension. Retry Track Job to sync this role to the dashboard."
-          : "Use the CONNECT button in this widget to link your dashboard account."
+          : "Use the Connect button in this widget to link your dashboard account."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
           : "Check the visible job page and try again."
@@ -1793,7 +1793,7 @@ function getWidgetMarkup({
         </div>
         <div class="header-actions" aria-label="Widget actions">
           <button class="header-action-button" data-autotime-track-job type="button">TRACK JOB</button>
-          <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard data-autotime-dashboard-url="${escapeHtml(dashboardUrl)}" type="button">${isDashboardConnected ? "DASHBOARD" : "CONNECT"}</button>
+          <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard data-autotime-dashboard-url="${escapeHtml(dashboardUrl)}" type="button">${isDashboardConnected ? "Dashboard" : "Connect"}</button>
         </div>
       </div>
       ${

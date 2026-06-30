@@ -278,7 +278,7 @@ export default defineBackground(() => {
           sendResponse({
             connected: false,
             ok: true,
-            reason: "Click CONNECT to sync to dashboard",
+            reason: "Click Connect to sync to dashboard",
             synced: false
           })
           return
