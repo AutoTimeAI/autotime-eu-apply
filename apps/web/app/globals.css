@@ -6014,6 +6014,34 @@ h4 {
   font-weight: 650;
   line-height: 1.45;
 }
+.extension-id-field {
+  display: grid;
+  flex: 1 1 260px;
+  gap: 6px;
+  min-width: min(100%, 260px);
+}
+
+.extension-id-field span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.extension-id-field input {
+  min-height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+  font: inherit;
+  padding: 9px 11px;
+}
+
+.extension-id-field input:focus {
+  border-color: var(--accent);
+  outline: 2px solid rgba(18, 132, 123, 0.18);
+}
 
 .extension-distribution-grid {
   display: grid;

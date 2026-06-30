@@ -1,7 +1,7 @@
 {
   "name": "extension",
   "displayName": "AutoTime EU Apply",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Cross-border job application copilot for Europe",
   "private": true,
   "type": "module",

@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "../../../../lib/supabase/server"
 import { getTestAuthUser } from "../../../../lib/test-auth"
 
-const extensionFileName = "autotime-eu-apply-chrome-mv3-0.0.1.zip"
+const extensionFileName = "autotime-eu-apply-chrome-mv3-0.0.2.zip"
 
 export async function GET(request: NextRequest) {
   const testUser = getTestAuthUser()

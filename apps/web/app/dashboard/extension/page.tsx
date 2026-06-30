@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation"
+import { InstalledExtensionConnectButton } from "../../../components/InstalledExtensionConnectButton"
 import { ProfileProtocolLock } from "../../../components/ProfileProtocolLock"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
-const extensionVersion = "0.0.1"
+const extensionVersion = "0.0.2"
 
 export const dynamic = "force-dynamic"
 
@@ -84,6 +85,10 @@ export default async function DashboardExtensionPage() {
   const latestCapturedJob = latestCapturedJobResult.data?.[0]
   const activeConnection = connections.find((item) => !item.revoked_at)
   const activeConnectionExtensionId = activeConnection?.extension_id?.trim()
+  const candidateExtensionId =
+    activeConnectionExtensionId ??
+    connections.find((item) => item.extension_id?.trim())?.extension_id?.trim() ??
+    process.env.NEXT_PUBLIC_AUTOTIME_EXTENSION_ID?.trim()
   const latestExtensionSync = syncEvents.find(
     (item) => item.source_surface === "extension"
   )
@@ -261,17 +266,9 @@ export default async function DashboardExtensionPage() {
                   >
                     Download extension v{extensionVersion}
                   </a>
-                  <span
-                    aria-disabled="true"
-                    className="secondary-link disabled-link"
-                    role="link"
-                  >
-                    Connect installed extension
-                  </span>
-                  <small className="extension-action-hint">
-                    Install first, then use CONNECT inside the extension Account
-                    tab.
-                  </small>
+                  <InstalledExtensionConnectButton
+                    candidateExtensionId={candidateExtensionId}
+                  />
                 </>
               )}
             </div>
