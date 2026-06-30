@@ -42,6 +42,7 @@ import {
   createBrowserCloudSyncClient,
   getBrowserCloudSyncReadiness,
   getCloudSyncSessionState,
+  type CloudSyncSessionState,
   prepareProfileSyncAction
 } from "../lib/cloud-sync"
 import {
@@ -3440,6 +3441,8 @@ export default function HomePage({
   >([])
   const [isCopilotThinking, setIsCopilotThinking] = useState(false)
   const [cloudSyncConsent, setCloudSyncConsent] = useState(false)
+  const [cloudSyncSessionState, setCloudSyncSessionState] =
+    useState<CloudSyncSessionState | null>(null)
   const [syncPreferences, setSyncPreferences] = useState<SyncPreferences>(
     defaultSyncPreferences
   )
@@ -4181,6 +4184,14 @@ export default function HomePage({
         }
 
         if (!body.data?.dashboard) {
+          setCloudSyncSessionState((current) =>
+            current ?? {
+              checked: true,
+              authenticated: false,
+              userEmail: null,
+              message: "No synced dashboard workflow found for this account yet"
+            }
+          )
           if (!silent) {
             setStatus("No synced dashboard workflow found for this account yet")
           }
@@ -4413,6 +4424,9 @@ export default function HomePage({
       })
     }
     if (cloudSyncReadiness.configured) {
+      void getCloudSyncSessionState(createBrowserCloudSyncClient()).then(
+        setCloudSyncSessionState
+      )
       void loadDashboardSnapshot({ force: true, silent: true })
       void loadProfileSnapshot({ silent: true })
     }
@@ -9962,6 +9976,13 @@ export default function HomePage({
                                   ? "Tracked roles from the extension and saved role checks appear here. If the list is still empty, sign in with the same AutoTime account the extension used and refresh this page."
                                   : "Tracked roles from the extension and saved role checks appear here."}
                             </p>
+                            {!state.applications.length && cloudSyncReadiness.configured && cloudSyncSessionState ? (
+                              <p className="sync-status-note">
+                                {cloudSyncSessionState.authenticated
+                                  ? `Signed in as ${cloudSyncSessionState.userEmail ?? "your AutoTime account"}.`
+                                  : cloudSyncSessionState.message}
+                              </p>
+                            ) : null}
                             {!state.applications.length ? (
                               <div className="empty-state-actions">
                                 <a
