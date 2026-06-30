@@ -39,11 +39,11 @@ function getChromeRuntime(): ExtensionRuntime | null {
 
 function formatRuntimeError(message: string) {
   if (/receiving end does not exist|does not exist/i.test(message)) {
-    return "AutoTime extension was not found for the known extension ID. Open CONNECT inside the installed extension Account tab."
+    return "We could not reach that AutoTime extension. Check the ID, or open the extension and use CONNECT from its Account tab."
   }
 
   if (/not allowed|access|permission/i.test(message)) {
-    return "Chrome blocked the dashboard from checking the extension. Reload the extension and open CONNECT from its Account tab."
+    return "AutoTime could not complete the browser check. Reload the extension, then use CONNECT from its Account tab."
   }
 
   return message
@@ -88,7 +88,7 @@ export function InstalledExtensionConnectButton({
   async function handleClick() {
     if (!extensionId) {
       setStatus(
-        "Paste the AutoTime extension ID from chrome://extensions, or open the installed extension and press CONNECT in the Account tab."
+        "Enter the AutoTime extension ID shown on Chrome's extensions page, or open the extension and use CONNECT from its Account tab."
       )
       return
     }
@@ -115,11 +115,11 @@ export function InstalledExtensionConnectButton({
     <>
       {!knownExtensionId ? (
         <label className="extension-id-field">
-          <span>Extension ID</span>
+          <span>AutoTime extension ID</span>
           <input
             autoComplete="off"
             inputMode="text"
-            placeholder="Paste ID from chrome://extensions"
+            placeholder="Paste the ID shown in Chrome"
             value={manualExtensionId}
             onChange={(event) => setManualExtensionId(event.target.value)}
           />
@@ -135,8 +135,8 @@ export function InstalledExtensionConnectButton({
       </button>
       <small className="extension-action-hint">
         {extensionId
-          ? "Checks that AutoTime responds before connecting this account."
-          : "Chrome does not let websites discover a fresh unpacked extension automatically."}
+          ? "We will confirm the extension is available before linking it to your account."
+          : "Find the ID on Chrome's extensions page, under AutoTime EU Apply."}
       </small>
       {status ? (
         <p className={`status-banner compact ${getStatusTone(status)}`}>
