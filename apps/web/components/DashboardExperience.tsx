@@ -3921,8 +3921,8 @@ export default function HomePage({
       progress: activeActionCount > 0 ? 66 : 100,
       body:
         activeActionCount > 0
-          ? "Follow-ups or status updates need attention."
-          : "Nothing urgent is waiting."
+          ? "Open Follow-ups and clear the next dated action."
+          : "No dated actions are waiting."
     },
     {
       title: "Latest job check",
@@ -3934,7 +3934,7 @@ export default function HomePage({
       progress: hasCurrentJobDraft ? autoTimeFitReview.fitScore : 0,
       body: hasCurrentJobDraft
         ? autoTimeFitReview.fitLabel
-        : "Run Fit Analysis on a job before reading fit."
+        : "Check one saved job before reading fit."
     },
     {
       title: "Profile",
@@ -3949,8 +3949,8 @@ export default function HomePage({
       progress: readinessScore,
       body:
         decisionBrief.missingInputs.length > 0
-          ? "Some decision inputs are missing."
-          : "Ready for job checks."
+          ? "Add the missing profile details first."
+          : "Ready to check jobs."
     },
     {
       title: "Job risk",
@@ -3981,8 +3981,8 @@ export default function HomePage({
       progress: Math.min(100, state.applications.length * 24),
       body:
         statusCounts.Applied + statusCounts.Interview > 0
-          ? "Some tracked jobs have progressed."
-          : "No tracked jobs have progressed yet."
+          ? "Some jobs have moved forward."
+          : "Saved jobs appear here after you track them."
     },
     {
       title: "Follow-ups",
@@ -3992,8 +3992,8 @@ export default function HomePage({
       progress: activeActionCount > 0 ? 45 : 100,
       body:
         activeActionCount > 0
-          ? "Next steps across tracked jobs."
-          : "No follow-ups are due yet."
+          ? "Open the queue and handle the next action."
+          : "No follow-ups are due."
     },
     {
       title: "Interview",
@@ -4001,19 +4001,19 @@ export default function HomePage({
       hideMetric: state.interviewPrepPacks.length > 0,
       tone: state.interviewPrepPacks.length > 0 ? "good" : "neutral",
       progress: Math.min(100, state.interviewPrepPacks.length * 34),
-      body: "Tracked jobs and interview stages feed prep."
+      body: "Prepare from saved proof when a job reaches interview."
     }
   ]
   const onboardingSteps = [
     {
       href: "/dashboard/autofill-profile",
       step: "Step 1",
-      title: "Build your evidence profile",
+      title: "Complete Profile Evidence",
       status: profileReadyForExecution ? "Ready" : "Needs evidence",
       hideStatusMetric: !profileReadyForExecution,
       detail: profileReadyForExecution
-        ? "Your profile can support job checks, tracker actions and interview prep."
-        : "Complete the profile alert items to unlock evidence-led execution tools.",
+        ? "Your facts are ready for job checks, proof and interview prep."
+        : "Add the required facts first so the rest of the product can stay specific.",
       cta: profileReadyForExecution ? "Review profile" : "Complete profile",
       tone: profileReadyForExecution
         ? "good"
@@ -4024,36 +4024,36 @@ export default function HomePage({
     {
       href: "/dashboard/extension",
       step: "Step 2",
-      title: "Import a job",
+      title: "Save a job",
       status:
         state.applications.length > 0 ? "Capturing jobs" : "Not connected",
       hideStatusMetric: false,
       detail:
         state.applications.length > 0
-          ? "Tracked roles are reaching your dashboard."
-          : "Install and connect the browser extension so job descriptions can be parsed automatically.",
+          ? "Saved jobs are reaching your dashboard."
+          : "Use the extension or Fit Analysis to save one real role.",
       cta:
-        state.applications.length > 0 ? "View imported jobs" : "Import job",
+        state.applications.length > 0 ? "View saved jobs" : "Save a job",
       tone: state.applications.length > 0 ? "good" : "neutral"
     },
     {
       href: "/dashboard/match-score",
       step: "Step 3",
-      title: "Check EU fit",
+      title: "Check fit",
       status: hasJobDraft(state.jobAnalysis)
         ? `${fitEvaluation.overallScore}/100 match`
         : "Waiting for a role",
       hideStatusMetric: hasJobDraft(state.jobAnalysis),
       detail: hasJobDraft(state.jobAnalysis)
         ? fitEvaluation.decision
-        : "Load an extension-parsed job or paste a JD manually before applying.",
+        : "Choose a saved job or paste a job description before applying.",
       cta: "Check EU fit",
       tone: hasJobDraft(state.jobAnalysis) ? decisionTone : "neutral"
     },
     {
       href: "/dashboard/application-answers",
       step: "Step 4",
-      title: "Generate application kit",
+      title: "Save job proof",
       status:
         state.applications.length > 0
           ? `${state.applications.length} saved`
@@ -4061,29 +4061,31 @@ export default function HomePage({
       hideStatusMetric: state.applications.length > 0,
       detail:
         state.applications.length > 0
-          ? "Create copy-friendly draft wording from the saved role and profile evidence."
-          : "Save one EU fit result before generating application wording.",
-      cta: "Generate application kit",
+          ? "Generate wording, review it, then save the useful reasons to Proof Library."
+          : "Save one checked job before generating proof-backed wording.",
+      cta: "Open Application Kit",
       tone:
         state.applications.length > 0
           ? "good"
           : "neutral"
     },
     {
-      href: "#mvp-feedback",
+      href: "/dashboard/follow-ups",
       step: "Step 5",
-      title: "Join waitlist or leave feedback",
-      status: "MVP feedback",
-      hideStatusMetric: false,
+      title: "Work the next action",
+      status: activeActionCount > 0 ? `${activeActionCount} waiting` : "Clear",
+      hideStatusMetric: activeActionCount > 0,
       detail:
-        "Tell us what blocked you, what felt useful and what should be clearer before launch.",
-      cta: "Join waitlist",
-      tone: "neutral"
+        activeActionCount > 0
+          ? "Handle follow-ups, recruiter replies or status checks from one queue."
+          : "No dated action is waiting; review saved jobs or check another role.",
+      cta: "Open follow-ups",
+      tone: activeActionCount > 0 ? "warn" : "good"
     }
   ]
   const strategicQualitySignals = [
     {
-      label: "Strategic targeting",
+      label: "Target roles",
       value: getMarketLabel(productContext) ?? "European tech",
       detail: canApplyMarketContext
         ? `${productContext.targetCountry} / ${productContext.experienceLevel} / ${productContext.urgency}`
@@ -4095,14 +4097,14 @@ export default function HomePage({
       detail: fitEvaluation.countryRule.marketNote
     },
     {
-      label: "Evidence discipline",
+      label: "Profile proof",
       value: profileReadyForExecution ? "Ready" : `${readinessScore}%`,
       detail: profileReadyForExecution
         ? "Profile is ready for job checks and interview prep."
         : "Complete Profile Evidence before relying on role decisions."
     },
     {
-      label: "Interview conversion",
+      label: "Interview prep",
       value: interviewApplications.length > 0 ? "Active" : "Build",
       detail:
         interviewApplications.length > 0

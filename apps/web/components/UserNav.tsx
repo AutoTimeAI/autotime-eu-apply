@@ -73,50 +73,50 @@ const dashboardTopNavItems: DashboardNavItem[] = [
 ]
 
 const dashboardWorkflowNavItems: DashboardNavItem[] = [
-  { href: "/dashboard", label: "Overview", description: "Dashboard" },
+  { href: "/dashboard", label: "Overview", description: "Start here" },
   {
     aliases: ["/dashboard/profile"],
     href: "/dashboard/autofill-profile",
     label: "Profile Evidence",
-    description: "Candidate proof"
+    description: "Your facts"
   },
   {
     aliases: ["/dashboard/inbox"],
     href: "/dashboard/applications",
     label: "Tracked Jobs",
-    description: "Saved roles"
+    description: "Saved jobs"
   },
   {
     aliases: ["/dashboard/jobs"],
     href: "/dashboard/match-score",
     label: "Fit Analysis",
-    description: "Role quality"
+    description: "Check fit"
   },
   {
     aliases: ["/dashboard/documents"],
     href: "/dashboard/application-answers",
     label: "Application Kit",
-    description: "Answers and notes"
+    description: "Write proof"
   },
   {
     href: "/dashboard/cv-tailor",
     label: "Proof Library",
-    description: "Reusable proof"
+    description: "Final reasons"
   },
   {
     href: "/dashboard/interview",
     label: "Interview Prep",
-    description: "Practice answers"
+    description: "Prepare answers"
   },
   {
     href: "/dashboard/follow-ups",
     label: "Follow-ups",
-    description: "Next actions"
+    description: "What to do next"
   },
   {
     href: "/dashboard/insights",
     label: "Progress",
-    description: "Application signals"
+    description: "What happened"
   }
 ]
 
@@ -213,8 +213,8 @@ export function DashboardWorkflowSidebar() {
   return (
     <aside className="dashboard-sidebar" aria-label="Workflow navigation">
       <div className="dashboard-sidebar-heading">
-        <span>Workflows</span>
-        <strong>Application flow</strong>
+        <span>Navigation</span>
+        <strong>Follow the steps</strong>
       </div>
       <nav className="dashboard-workflow-nav">
         {dashboardWorkflowNavItems.map((item, index) => {
