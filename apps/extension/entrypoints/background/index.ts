@@ -325,6 +325,12 @@ export default defineBackground(() => {
     void retryPendingApplicationSync("startup")
   })
 
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes["account-session"]) {
+      void retryPendingApplicationSync("startup")
+    }
+  })
+
   chrome.runtime.onMessageExternal.addListener(
     (
       message: ExternalMessage,

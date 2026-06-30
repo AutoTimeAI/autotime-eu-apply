@@ -602,10 +602,12 @@ function SidePanelApp() {
     const applicationIds = applicationsToSync.map((application) => application.id)
 
     if (!accountSession?.authToken.trim()) {
-      await updateApplicationSyncState(applicationIds, "pending")
+      await updateApplicationSyncState(applicationIds, "failed", {
+        error: "Sign in to sync to dashboard."
+      })
       setApplicationSyncState(await getApplicationSyncState())
       return {
-        reason: "Sign in to sync to dashboard.",
+        reason: "Saved locally only. Sign in to sync to dashboard.",
         synced: false
       }
     }
@@ -659,7 +661,7 @@ function SidePanelApp() {
     setApplicationsStatus(
       result.synced
         ? "Tracked jobs synced to dashboard"
-        : `Saved locally. ${result.reason}`
+        : `Saved locally only. ${result.reason}`
     )
     setTimeout(() => setApplicationsStatus(""), 4500)
   }
@@ -689,7 +691,7 @@ function SidePanelApp() {
       setApplicationsStatus(
         syncResult.synced
           ? "This job is already tracked and synced to dashboard"
-          : `This job is already saved locally. ${syncResult.reason}`
+          : `This job is already saved locally only. ${syncResult.reason}`
       )
       setTimeout(() => setApplicationsStatus(""), 4500)
       return
@@ -722,7 +724,7 @@ function SidePanelApp() {
     setApplicationsStatus(
       syncResult.synced
         ? "Job tracked and synced to dashboard"
-        : `Job saved locally. ${syncResult.reason}`
+        : `Job saved locally only. ${syncResult.reason}`
     )
 
     setTimeout(() => setApplicationsStatus(""), 4500)
