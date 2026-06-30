@@ -704,10 +704,10 @@ function SidePanelApp() {
     const result = await syncApplicationListToDashboard(applications)
     setApplicationsStatus(
       result.synced
-        ? "Tracked jobs are now synced to your dashboard"
+        ? "Tracked jobs are now synced to your dashboard — they'll appear there within a few seconds."
         : `Saved locally only. ${result.reason}`
     )
-    setTimeout(() => setApplicationsStatus(""), 4500)
+    setTimeout(() => setApplicationsStatus(""), 6000)
   }
 
   const saveCurrentTabAsApplication = async () => {
@@ -736,13 +736,15 @@ function SidePanelApp() {
       })
       if (syncResult.synced) {
         setApplications(applications)
-        setApplicationsStatus("This job is already tracked and synced to dashboard")
+        setApplicationsStatus(
+          "This job is already tracked and synced to dashboard — it'll be up to date there within a few seconds."
+        )
       } else {
         setApplicationsStatus(
           `This job is saved locally for now. ${syncResult.reason}`
         )
       }
-      setTimeout(() => setApplicationsStatus(""), 4500)
+      setTimeout(() => setApplicationsStatus(""), 6000)
       return
     }
 
@@ -774,11 +776,11 @@ function SidePanelApp() {
     setApplications(updatedApplications)
     setApplicationsStatus(
       syncResult.synced
-        ? "Job tracked and synced to dashboard"
+        ? "Job tracked and synced to dashboard — it'll appear there within a few seconds (the dashboard refreshes automatically while open)."
         : `Job saved locally for now. ${syncResult.reason}`
     )
 
-    setTimeout(() => setApplicationsStatus(""), 4500)
+    setTimeout(() => setApplicationsStatus(""), 6000)
   }
 
   const exportApplications = () => {
