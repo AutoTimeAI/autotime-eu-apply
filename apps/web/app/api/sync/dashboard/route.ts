@@ -500,6 +500,9 @@ export async function GET(
     }
 
     if (isTestAuthUserId(auth.user.id)) {
+      console.warn(
+        "autotime_test_auth_bypass: GET /api/sync/dashboard short-circuited by AUTOTIME_TEST_AUTH_ENABLED - returning an empty dashboard without reading the database. If this is unexpected, check the AUTOTIME_TEST_AUTH_ENABLED environment variable for this deployment."
+      )
       return jsonResponse({
         data: { dashboard: emptyDashboard() },
         error: null,
@@ -626,6 +629,9 @@ export async function POST(
     })
 
     if (isTestAuthUserId(auth.user.id)) {
+      console.warn(
+        "autotime_test_auth_bypass: POST /api/sync/dashboard short-circuited by AUTOTIME_TEST_AUTH_ENABLED - reporting synced without writing to the database. If this is unexpected, check the AUTOTIME_TEST_AUTH_ENABLED environment variable for this deployment."
+      )
       return jsonResponse({
         data: { deletedApplicationIds: [], synced: true },
         error: null,

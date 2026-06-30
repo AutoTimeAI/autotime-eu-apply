@@ -9,7 +9,15 @@ export function isTestAuthEnabled(): boolean {
   return (
     process.env.AUTOTIME_TEST_AUTH_ENABLED === "true" &&
     process.env.NODE_ENV !== "production" &&
-    process.env.NEXT_PUBLIC_AUTOTIME_ENV !== "production"
+    process.env.NEXT_PUBLIC_AUTOTIME_ENV !== "production" &&
+    // VERCEL_ENV is injected automatically by Vercel per-deployment and
+    // cannot be misconfigured the way NEXT_PUBLIC_AUTOTIME_ENV can (e.g.
+    // set correctly for Production but left unset/wrong for Preview). A
+    // misconfigured AUTOTIME_TEST_AUTH_ENABLED flag previously caused
+    // /api/sync/dashboard to silently report success without ever
+    // writing to the database - this guard makes that impossible on any
+    // real Vercel deployment, regardless of other env var mistakes.
+    process.env.VERCEL_ENV !== "production"
   )
 }
 
