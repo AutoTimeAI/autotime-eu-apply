@@ -4127,9 +4127,11 @@ export default function HomePage({
 
   const loadDashboardSnapshot = useCallback(
     async ({
+      force = false,
       silent = false,
       successMessage = "Synced dashboard workflow loaded"
     }: {
+      force?: boolean
       silent?: boolean
       successMessage?: string
     } = {}) => {
@@ -4142,7 +4144,7 @@ export default function HomePage({
         return false
       }
 
-      if (silent && hasUnsyncedDashboardChangesRef.current) {
+      if (!force && silent && hasUnsyncedDashboardChangesRef.current) {
         return false
       }
 
@@ -4411,7 +4413,7 @@ export default function HomePage({
       })
     }
     if (cloudSyncReadiness.configured) {
-      void loadDashboardSnapshot({ silent: true })
+      void loadDashboardSnapshot({ force: true, silent: true })
       void loadProfileSnapshot({ silent: true })
     }
   }, [cloudSyncReadiness.configured, loadDashboardSnapshot, loadProfileSnapshot, userId])
@@ -4422,7 +4424,7 @@ export default function HomePage({
     }
 
     const refreshSyncedWorkflow = () => {
-      void loadDashboardSnapshot({ silent: true })
+      void loadDashboardSnapshot({ force: true, silent: true })
       void loadProfileSnapshot({ silent: true })
     }
     const refreshWhenVisible = () => {
