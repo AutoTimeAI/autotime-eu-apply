@@ -20,6 +20,7 @@ import {
   resolveAIProvider,
   type ApplicationOutcomeReason,
   type ApplicationRecord,
+  type ApplicationContentDraft,
   type ApplicationContentSnapshot,
   type ApplicationPositioningPack,
   type ApplicationStatus,
@@ -449,7 +450,7 @@ const dashboardFocusCopy: Record<
     body: "Keep reusable proof points ready for fit checks, applications and interview prep without duplicating those workflows."
   },
   "application-answers": {
-    eyebrow: "Application Kit",
+    eyebrow: "Application workspace",
     title: "Application Kit",
     body: "Prepare profile summaries, cover notes and reusable answers from verified evidence."
   },
@@ -5382,24 +5383,87 @@ export default function HomePage({
     )
   }
 
-  const regenerateKitDraft = () => {
+  const regenerateKitDraft = async () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
     if (!activeKitApplication) {
       setStatus("Track a job first, then generate application content")
       return
     }
 
-    setKitDraft(
-      createApplicationContentSnapshot({
-        application: activeKitApplication,
-        job: state.jobAnalysis,
-        positioningPack: applicationPositioningPack,
-        profile: state.profile,
-        reusableAnswers: state.reusableAnswers
+    const localDraft = createApplicationContentSnapshot({
+      application: activeKitApplication,
+      job: state.jobAnalysis,
+      positioningPack: applicationPositioningPack,
+      profile: state.profile,
+      reusableAnswers: state.reusableAnswers
+    })
+
+    setIsCopilotThinking(true)
+    setStatus("Generating application kit with AutoTime AI...")
+
+    try {
+      const response = await fetch("/api/ai/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job: state.jobAnalysis,
+          profile: state.profile,
+          reusableAnswers: state.reusableAnswers,
+          context: {
+            candidatePosition: resolvedProductContext.candidatePosition,
+            targetCountry: resolvedProductContext.targetCountry
+          }
+        })
       })
-    )
-    setStatus(
-      "Application Kit draft regenerated from local/template-based evidence"
-    )
+      const body = (await response.json()) as {
+        data: {
+          content?: ApplicationContentDraft
+          upgradeUrl?: string
+        } | null
+        error: string | null
+      }
+
+      if (!response.ok || !body.data?.content) {
+        logDashboardActionFailure(
+          "generate application kit response",
+          body.error ?? "Application Kit AI content unavailable",
+          {
+            applicationId: activeKitApplication.id,
+            httpStatus: response.status,
+            route: "/api/ai/content"
+          }
+        )
+        setKitDraft(localDraft)
+        setStatus(
+          body.data?.upgradeUrl
+            ? `${body.error ?? "Upgrade required"} Local draft generated.`
+            : body.error ?? "AI content unavailable. Local draft generated."
+        )
+        return
+      }
+
+      setKitDraft({
+        ...localDraft,
+        ...body.data.content
+      })
+      setStatus("Application Kit draft generated with AutoTime AI")
+    } catch (error: unknown) {
+      logDashboardActionFailure("generate application kit fetch", error, {
+        applicationId: activeKitApplication.id,
+        route: "/api/ai/content"
+      })
+      setKitDraft(localDraft)
+      setStatus(
+        error instanceof Error
+          ? `AI content unavailable. Local draft generated: ${error.message}`
+          : "AI content unavailable. Local draft generated."
+      )
+    } finally {
+      setIsCopilotThinking(false)
+    }
   }
 
   const saveApplicationKitSnapshot = () => {
@@ -5429,6 +5493,8 @@ export default function HomePage({
       )
     }
 
+    setKitApplicationId(activeKitApplication.id)
+    setKitDraft(snapshot)
     persist(nextState, "Application Kit saved to tracked job")
     scheduleDashboardSync(nextState, {
       failureMessage: "Application Kit saved locally. Dashboard sync failed",
@@ -5469,33 +5535,71 @@ export default function HomePage({
 
     try {
       setIsSavingApplication(true)
+
+      let jobForTracking = state.jobAnalysis
+      let reviewForTracking = autoTimeFitReview
+      let evaluationForTracking = fitEvaluation
+
+      if (!state.jobAnalysis.scoreBreakdown?.length) {
+        setStatus("Checking the role against your profile before saving...")
+        const aiResult = await fetchAiJobAnalysis({
+          jobAnalysis: state.jobAnalysis,
+          profile: state.profile
+        })
+
+        if (aiResult.result) {
+          jobForTracking = { ...state.jobAnalysis, ...aiResult.result }
+          reviewForTracking = getJobFitReview({
+            job: jobForTracking,
+            profile: state.profile
+          })
+          evaluationForTracking = evaluateCountryFit({
+            profile: state.profile,
+            job: { ...jobForTracking, fitScore: reviewForTracking.fitScore },
+            context: {
+              candidatePosition: resolvedProductContext.candidatePosition,
+              targetCountry: resolvedProductContext.targetCountry,
+              outcomeSignals: outcomeLearningSignals
+            }
+          })
+        }
+        // If the AI check failed, hit a rate limit, or needs an upgrade,
+        // tracking still proceeds with the local heuristic review - same
+        // safe fallback the explicit "Check role" button already has,
+        // just silent here since saving shouldn't be blocked by it.
+      }
+
       const application = createApplication(
         {
-          ...state.jobAnalysis,
-          fitScore: fitEvaluation.overallScore,
+          ...jobForTracking,
+          fitScore: evaluationForTracking.overallScore,
           recommendation:
-            fitEvaluation.decision === "Apply now"
+            evaluationForTracking.decision === "Apply now"
               ? "High Priority"
-              : fitEvaluation.decision === "Stretch application"
+              : evaluationForTracking.decision === "Stretch application"
                 ? "Stretch"
-                : fitEvaluation.decision === "Skip for now"
+                : evaluationForTracking.decision === "Skip for now"
                   ? "Skip"
                   : "Worth Applying",
-          positioningAngle: fitEvaluation.positioningAngle,
-          scoreFactors: fitEvaluation.components.map(
+          positioningAngle: evaluationForTracking.positioningAngle,
+          scoreFactors: evaluationForTracking.components.map(
             (item) => `${item.label}: ${item.rationale}`
           )
         },
-        fitEvaluation,
-        autoTimeFitReview
+        evaluationForTracking,
+        reviewForTracking
       )
       const nextState = {
         ...state,
+        jobAnalysis:
+          jobForTracking === state.jobAnalysis
+            ? state.jobAnalysis
+            : jobForTracking,
         applications: [application, ...state.applications],
         evidenceRecords: [
           ...createEvidenceRecords({
             application,
-            fitEvaluation,
+            fitEvaluation: evaluationForTracking,
             profile: state.profile
           }),
           ...(state.evidenceRecords ?? [])
@@ -5524,28 +5628,24 @@ export default function HomePage({
     }
   }
 
-  const runAiJobAnalysis = async () => {
-    if (!requireProfileExecutionReady()) {
-      return
-    }
-
-    if (!hasJobDraft(state.jobAnalysis)) {
-      setStatus("Add a job title, company, URL or description before checking the role")
-      return
-    }
-
+  const fetchAiJobAnalysis = async ({
+    jobAnalysis,
+    profile
+  }: {
+    jobAnalysis: JobAnalysisDraft
+    profile: CandidateProfile
+  }): Promise<{
+    result?: Partial<JobAnalysisDraft>
+    error?: string
+    upgradeUrl?: string
+  }> => {
     try {
-      setIsCopilotThinking(true)
-      setStatus("Checking the role against your profile...")
       const response = await fetch("/api/ai/analyse", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          jobAnalysis: state.jobAnalysis,
-          profile: state.profile
-        })
+        body: JSON.stringify({ jobAnalysis, profile })
       })
       const body = (await response.json()) as {
         data: {
@@ -5564,12 +5664,48 @@ export default function HomePage({
             route: "/api/ai/analyse"
           }
         )
-        if (body.data?.upgradeUrl) {
-          window.location.href = body.data.upgradeUrl
+        return {
+          error: body.error ?? "Role analysis failed",
+          upgradeUrl: body.data?.upgradeUrl
+        }
+      }
+
+      return { result: body.data.result }
+    } catch (error: unknown) {
+      logDashboardActionFailure("AI role analysis fetch", error, {
+        route: "/api/ai/analyse"
+      })
+      return {
+        error: error instanceof Error ? error.message : "Role analysis failed"
+      }
+    }
+  }
+
+  const runAiJobAnalysis = async () => {
+    if (!requireProfileExecutionReady()) {
+      return
+    }
+
+    if (!hasJobDraft(state.jobAnalysis)) {
+      setStatus("Add a job title, company, URL or description before checking the role")
+      return
+    }
+
+    try {
+      setIsCopilotThinking(true)
+      setStatus("Checking the role against your profile...")
+      const aiResult = await fetchAiJobAnalysis({
+        jobAnalysis: state.jobAnalysis,
+        profile: state.profile
+      })
+
+      if (!aiResult.result) {
+        if (aiResult.upgradeUrl) {
+          window.location.href = aiResult.upgradeUrl
           return
         }
 
-        setStatus(body.error ?? "Role analysis failed")
+        setStatus(aiResult.error ?? "Role analysis failed")
         return
       }
 
@@ -5577,7 +5713,7 @@ export default function HomePage({
         ...state,
         jobAnalysis: {
           ...state.jobAnalysis,
-          ...body.data.result
+          ...aiResult.result
         }
       }
 
@@ -6644,11 +6780,11 @@ export default function HomePage({
                 ) : activeFocus === "application-answers" ? (
                   <>
                     <button
-                      disabled={!activeKitApplication}
+                      disabled={!activeKitApplication || isCopilotThinking}
                       type="button"
                       onClick={regenerateKitDraft}
                     >
-                      Generate application kit
+                      {isCopilotThinking ? "Generating kit" : "Generate application kit"}
                     </button>
                     <button
                       className="secondary-button"
@@ -7375,7 +7511,8 @@ export default function HomePage({
                           response.
                         </p>
                         <p>
-                          Local/template-based draft - not live AI-refined.
+                          AutoTime AI drafts from saved evidence when available;
+                          local evidence-based drafting remains the fallback.
                           Verify employer and government requirements before
                           sending.
                         </p>
@@ -7497,10 +7634,11 @@ export default function HomePage({
                           </button>
                           <button
                             className="secondary-button"
+                            disabled={isCopilotThinking}
                             type="button"
                             onClick={regenerateKitDraft}
                           >
-                            Generate application kit
+                            {isCopilotThinking ? "Generating kit" : "Generate application kit"}
                           </button>
                         </div>
                         <p className="decision-integrity-note">
