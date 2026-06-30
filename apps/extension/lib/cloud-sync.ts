@@ -36,15 +36,28 @@ type DashboardSyncResponse = {
   synced: true
 }
 
+export class SyncRequestError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = "SyncRequestError"
+    this.status = status
+  }
+}
+
 async function parseSyncResponse<T>(response: Response): Promise<T> {
   const body = (await response.json()) as ApiEnvelope<T>
 
   if (!response.ok || body.error) {
-    throw new Error(body.error ?? `Sync request failed with ${response.status}`)
+    throw new SyncRequestError(
+      body.error ?? `Sync request failed with ${response.status}`,
+      response.status
+    )
   }
 
   if (!body.data) {
-    throw new Error("Sync response did not include data.")
+    throw new SyncRequestError("Sync response did not include data.", response.status)
   }
 
   return body.data
@@ -113,14 +126,23 @@ export async function syncApplicationsToDashboard({
   const readData = await parseSyncResponse<DashboardReadResponse>(readResponse)
   const dashboard = readData.dashboard
 
+  // Intentionally sent empty: Track Job only ever adds or updates
+  // applications. Evidence records, outcome records, and interview prep
+  // packs are dashboard-only concepts the extension never creates or
+  // edits, so echoing back whatever was just read here would be a pure
+  // echo - and if a genuine edit to one of those rows (from the web
+  // dashboard) lands between this read and this write, the echo would
+  // silently overwrite it with stale data. Sending empty arrays means
+  // the server's per-row upsert for these tables never fires, so the
+  // dashboard's own data is left untouched either way.
   const payload: DashboardWorkflow = {
     applications: mergeDashboardApplications(
       applications,
       dashboard?.applications ?? []
     ),
-    evidenceRecords: dashboard?.evidenceRecords ?? [],
-    interviewPrepPacks: dashboard?.interviewPrepPacks ?? [],
-    outcomeRecords: dashboard?.outcomeRecords ?? []
+    evidenceRecords: [],
+    interviewPrepPacks: [],
+    outcomeRecords: []
   }
 
   const writeResponse = await fetch(`${appUrl}/api/sync/dashboard`, {

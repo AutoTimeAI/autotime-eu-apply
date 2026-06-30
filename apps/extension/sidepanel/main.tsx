@@ -25,7 +25,6 @@ import {
   clearReusableAnswers,
   clearTrackerDraft,
   deleteApplication,
-  getAccountSession,
   getAIUsageLog,
   getApplicationSyncState,
   getApplications,
@@ -65,6 +64,7 @@ import {
   syncApplicationsToDashboard,
   syncProfileToDashboard
 } from "../lib/cloud-sync"
+import { getActiveSession, withFreshSession } from "../lib/session"
 import {
   createV2DashboardState,
   v2DashboardStateToJson
@@ -98,7 +98,7 @@ import { UsageLogSection } from "./UsageLogSection"
 import { ValidationMetricsSection } from "./ValidationMetricsSection"
 import type { AutofillResponse, JobPageResponse, SaveAttempts } from "./types"
 import { useJobAnalysis } from "./useJobAnalysis"
-import { getHostname, getStatusClassName, normalizeApplicationUrl } from "./utils"
+import { formatProviderLabel, getHostname, getStatusClassName, normalizeApplicationUrl } from "./utils"
 import {
   validateApplicationContentDraft,
   validateProfile,
@@ -326,7 +326,8 @@ function SidePanelApp() {
 
   const loadAccountSession = async () => {
     await clearLegacyOpenAISettings()
-    setAccountSession(await getAccountSession())
+    const { session } = await getActiveSession()
+    setAccountSession(session)
   }
 
   useEffect(() => {
@@ -600,14 +601,27 @@ function SidePanelApp() {
     applicationsToSync: ApplicationRecord[]
   ) => {
     const applicationIds = applicationsToSync.map((application) => application.id)
+    const { session: activeSession, warning: sessionWarning } =
+      await getActiveSession()
 
-    if (!accountSession?.authToken.trim()) {
+    if (activeSession?.authToken !== accountSession?.authToken) {
+      setAccountSession(activeSession)
+    }
+
+    if (!activeSession?.authToken.trim()) {
       await updateApplicationSyncState(applicationIds, "failed", {
-        error: "Sign in to sync to dashboard."
+        error: sessionWarning ?? "Sign in to sync to dashboard."
       })
       setApplicationSyncState(await getApplicationSyncState())
+      await logDiagnosticEvent({
+        area: "sync",
+        event: "track-job-sync-skipped-unconnected",
+        message: sessionWarning ?? "Sign in to sync to dashboard.",
+        status: "warning",
+        details: { applicationCount: applicationsToSync.length }
+      })
       return {
-        reason: "Saved locally only. Sign in to sync to dashboard.",
+        reason: sessionWarning ?? "Saved locally only. Sign in to sync to dashboard.",
         synced: false
       }
     }
@@ -616,10 +630,22 @@ function SidePanelApp() {
     setApplicationSyncState(await getApplicationSyncState())
 
     try {
-      const syncResult = await syncApplicationsToDashboard({
-        applications: applicationsToSync,
-        session: accountSession
-      })
+      const { result: syncResult, session: usedSession, error: retryError } =
+        await withFreshSession((session) =>
+          syncApplicationsToDashboard({
+            applications: applicationsToSync,
+            session
+          })
+        )
+
+      if (usedSession && usedSession.authToken !== accountSession?.authToken) {
+        setAccountSession(usedSession)
+      }
+
+      if (!syncResult) {
+        throw new Error(retryError ?? "Dashboard sync failed")
+      }
+
       const deletedApplicationIds = syncResult.deletedApplicationIds ?? []
       const syncedApplicationIds = applicationIds.filter(
         (id) => !deletedApplicationIds.includes(id)
@@ -636,12 +662,26 @@ function SidePanelApp() {
         setApplications(await getApplications())
       }
       setApplicationSyncState(await getApplicationSyncState())
+      await logDiagnosticEvent({
+        area: "sync",
+        event: "track-job-sync-completed",
+        message: "Tracked jobs synced to the cloud-backed dashboard.",
+        status: "success",
+        details: { applicationCount: syncedApplicationIds.length }
+      })
       return { synced: true }
     } catch (error: unknown) {
       const reason =
         error instanceof Error ? error.message : "Dashboard sync failed"
       await updateApplicationSyncState(applicationIds, "failed", { error: reason })
       setApplicationSyncState(await getApplicationSyncState())
+      await logDiagnosticEvent({
+        area: "sync",
+        event: "track-job-sync-failed",
+        message: reason,
+        status: "warning",
+        details: { applicationCount: applicationsToSync.length }
+      })
       return {
         reason,
         synced: false
@@ -820,6 +860,13 @@ function SidePanelApp() {
 
   const openProfileSetup = () => {
     chrome.tabs.create({ url: `${appUrl}/dashboard` })
+  }
+
+  const openExtensionConnect = () => {
+    const extensionId = encodeURIComponent(chrome.runtime.id)
+    chrome.tabs.create({
+      url: `${appUrl}/extension/connect?extensionId=${extensionId}`
+    })
   }
 
   const handleAutofillCurrentPage = async () => {
@@ -1170,7 +1217,7 @@ function SidePanelApp() {
       })
       await syncProfileToDashboard({
         profile: savedProfile,
-        session: accountSession
+        session: (await getActiveSession()).session
       })
       await logDiagnosticEvent({
         area: "sync",
@@ -1222,7 +1269,9 @@ function SidePanelApp() {
 
   const handleLoadProfileFromDashboard = async () => {
     try {
-      const syncedProfile = await loadProfileFromDashboard(accountSession)
+      const syncedProfile = await loadProfileFromDashboard(
+        (await getActiveSession()).session
+      )
 
       if (!syncedProfile) {
         setAccountStatus("No synced dashboard profile found.")
@@ -1271,6 +1320,23 @@ function SidePanelApp() {
         <img alt="" aria-hidden="true" src="/icons/128.png" />
         <h1>AutoTime EU Apply</h1>
       </header>
+
+      {accountSession ? (
+        <p className="account-identity-badge account-identity-connected">
+          <span className="account-identity-dot" aria-hidden="true" />
+          Signed in as {accountSession.email} via{" "}
+          {formatProviderLabel(accountSession.provider)}
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="account-identity-badge account-identity-disconnected"
+          onClick={openExtensionConnect}
+        >
+          <span className="account-identity-dot" aria-hidden="true" />
+          Not connected — tracked jobs save locally only. Click to connect.
+        </button>
+      )}
 
       <section className="track-job-panel" aria-label="Track job">
         <div className="job-insights-panel">

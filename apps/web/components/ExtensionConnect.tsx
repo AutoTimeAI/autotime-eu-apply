@@ -10,6 +10,7 @@ type AccountMeResponse = {
   data: {
     email: string
     plan: "free" | "pro"
+    provider: string
   } | null
   error: string | null
   status: number
@@ -17,8 +18,11 @@ type AccountMeResponse = {
 
 type ExtensionConnectMessage = {
   authToken: string
+  refreshToken: string
+  expiresAt: number
   email: string
   plan: "free" | "pro"
+  provider: string
   type: "AUTOTIME_CONNECT_ACCOUNT"
 }
 
@@ -146,6 +150,19 @@ async function pingExtension(extensionId: string) {
   return sendToExtension(extensionId, { type: "AUTOTIME_PING" })
 }
 
+function formatProviderLabel(provider: string): string {
+  switch (provider) {
+    case "github":
+      return "GitHub"
+    case "google":
+      return "Google"
+    case "email":
+      return "Email sign-in"
+    default:
+      return provider
+  }
+}
+
 export default function ExtensionConnect() {
   const searchParams = useSearchParams()
   const extensionId = searchParams.get("extensionId") ?? ""
@@ -231,10 +248,16 @@ export default function ExtensionConnect() {
       }
 
       addStep("Sending account session to extension.")
+      const expiresAt =
+        (session.expires_at ??
+          Math.floor(Date.now() / 1000) + session.expires_in) * 1000
       const extensionResponse = await sendToExtension(extensionId, {
         authToken: session.access_token,
+        refreshToken: session.refresh_token,
+        expiresAt,
         email: account.data.email,
         plan: account.data.plan,
+        provider: account.data.provider,
         type: "AUTOTIME_CONNECT_ACCOUNT"
       })
       addStep("Extension accepted and stored the account session.", "success")
@@ -258,10 +281,11 @@ export default function ExtensionConnect() {
 
       addStep("Dashboard connection recorded.", "success")
       const accountLabel = account.data.email.trim()
+      const providerLabel = formatProviderLabel(account.data.provider)
       const successMessage =
         extensionResponse.syncError
-          ? `Extension connected for ${accountLabel}. Tracked jobs will retry sync from Track Job. ${extensionResponse.syncError}`
-          : `Extension connected for ${accountLabel}. You can return to the side panel.`
+          ? `Extension connected for ${accountLabel} (${providerLabel}). Tracked jobs will retry sync from Track Job. ${extensionResponse.syncError}`
+          : `Extension connected for ${accountLabel} (${providerLabel}). You can return to the side panel.`
       setStatus(successMessage)
       addStep(successMessage, extensionResponse.syncError ? "warning" : "success")
     } catch (error: unknown) {

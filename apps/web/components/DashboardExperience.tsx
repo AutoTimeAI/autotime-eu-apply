@@ -2500,6 +2500,19 @@ function updateOutcomeRecordFromApplication(
   }
 }
 
+function formatProviderLabel(provider: string): string {
+  switch (provider) {
+    case "github":
+      return "GitHub"
+    case "google":
+      return "Google"
+    case "email":
+      return "Email sign-in"
+    default:
+      return provider
+  }
+}
+
 function getOutcomeLearningSignals(
   applications: ApplicationRecord[]
 ): OutcomeLearningSignals {
@@ -4189,6 +4202,7 @@ export default function HomePage({
               checked: true,
               authenticated: false,
               userEmail: null,
+              provider: null,
               message: "No synced jobs found for this account yet"
             }
           )
@@ -4577,6 +4591,7 @@ export default function HomePage({
         checked: true,
         authenticated: true,
         userEmail: "signed-in-account",
+        provider: null,
         message: "Dashboard session will be checked by the sync endpoint."
       },
       profile,
@@ -9979,7 +9994,7 @@ export default function HomePage({
                             {!state.applications.length && cloudSyncReadiness.configured ? (
                               <p className="sync-status-note">
                                 {cloudSyncSessionState?.authenticated
-                                  ? `Signed in as ${cloudSyncSessionState.userEmail ?? "your AutoTime account"}.`
+                                  ? `Signed in as ${cloudSyncSessionState.userEmail ?? "your AutoTime account"}${cloudSyncSessionState.provider ? ` via ${formatProviderLabel(cloudSyncSessionState.provider)}` : ""}.`
                                   : "Dashboard account not confirmed yet. Sign in with the same AutoTime account the extension uses."}
                               </p>
                             ) : null}

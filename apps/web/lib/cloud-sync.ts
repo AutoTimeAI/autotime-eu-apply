@@ -39,6 +39,7 @@ export type CloudSyncSessionState = {
   checked: boolean
   authenticated: boolean
   userEmail: string | null
+  provider: string | null
   message: string
 }
 
@@ -179,6 +180,7 @@ export async function getCloudSyncSessionState(
       checked: false,
       authenticated: false,
       userEmail: null,
+      provider: null,
       message: "Session check blocked until cloud-sync readiness is complete."
     }
   }
@@ -190,6 +192,7 @@ export async function getCloudSyncSessionState(
       checked: true,
       authenticated: false,
       userEmail: null,
+      provider: null,
       message: error.message
     }
   }
@@ -198,6 +201,7 @@ export async function getCloudSyncSessionState(
     checked: true,
     authenticated: Boolean(data.session?.user),
     userEmail: data.session?.user?.email ?? null,
+    provider: data.session?.user?.app_metadata?.provider ?? null,
     message: data.session?.user
       ? "Authenticated session detected. Profile sync still requires explicit user action."
       : "No authenticated session detected."

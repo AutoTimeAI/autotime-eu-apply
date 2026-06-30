@@ -1107,19 +1107,44 @@ test("saves and clears account session", async () => {
 
   await saveAccountSession({
     authToken: "supabase-token",
+    refreshToken: "supabase-refresh-token",
+    expiresAt: 1893456000000,
     email: "user@example.com",
-    plan: "pro"
+    plan: "pro",
+    provider: "github"
   })
 
   assert.deepEqual(await getAccountSession(), {
     authToken: "supabase-token",
+    refreshToken: "supabase-refresh-token",
+    expiresAt: 1893456000000,
     email: "user@example.com",
-    plan: "pro"
+    plan: "pro",
+    provider: "github"
   })
 
   await clearAccountSession()
 
   assert.equal(await getAccountSession(), null)
+})
+
+test("normalizes a legacy account session saved before refresh tokens existed", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "legacy-token",
+    email: "legacy@example.com",
+    plan: "free"
+  })
+
+  assert.deepEqual(await getAccountSession(), {
+    authToken: "legacy-token",
+    refreshToken: "",
+    expiresAt: 0,
+    email: "legacy@example.com",
+    plan: "free",
+    provider: "email"
+  })
 })
 
 test("tracks application sync state from pending to synced", async () => {

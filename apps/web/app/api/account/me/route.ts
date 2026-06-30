@@ -13,6 +13,11 @@ type ApiResponse<T> = {
 type AccountMeData = {
   email: string
   plan: SubscriptionPlan
+  provider: string
+}
+
+function getAuthProvider(user: { app_metadata?: { provider?: string } }): string {
+  return user.app_metadata?.provider ?? "email"
 }
 
 function jsonResponse(
@@ -43,7 +48,8 @@ export async function GET(
     return jsonResponse({
       data: {
         email: user.email,
-        plan
+        plan,
+        provider: getAuthProvider(user)
       },
       error: null,
       status: 200

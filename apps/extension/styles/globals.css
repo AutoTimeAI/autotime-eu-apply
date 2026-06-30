@@ -118,6 +118,49 @@ section {
   gap: 20px;
 }
 
+.account-identity-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  text-align: left;
+  width: fit-content;
+  cursor: default;
+  font-family: inherit;
+}
+
+.account-identity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.account-identity-connected {
+  color: #14643f;
+  background: #e7f7ee;
+  border-color: #96d4b5;
+}
+
+.account-identity-connected .account-identity-dot {
+  background: #1f9d5c;
+}
+
+.account-identity-disconnected {
+  color: #8a4b00;
+  background: #fff3e0;
+  border-color: #f0c789;
+  cursor: pointer;
+}
+
+.account-identity-disconnected .account-identity-dot {
+  background: #d97a06;
+}
+
 .track-job-panel {
   display: grid;
   grid-template-areas:

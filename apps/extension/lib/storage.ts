@@ -54,8 +54,11 @@ export type AIUsageLogEntry = {
 
 export type AccountSession = {
   authToken: string
+  refreshToken: string
+  expiresAt: number
   email: string
   plan: "free" | "pro"
+  provider: string
 }
 
 export type DiagnosticLogEntry = {
@@ -392,8 +395,11 @@ function normalizeAccountSession(
 
   return {
     authToken: session.authToken,
+    refreshToken: session.refreshToken ?? "",
+    expiresAt: Number.isFinite(session.expiresAt) ? Number(session.expiresAt) : 0,
     email: session.email,
-    plan: session.plan === "pro" ? "pro" : "free"
+    plan: session.plan === "pro" ? "pro" : "free",
+    provider: session.provider?.trim() || "email"
   }
 }
 

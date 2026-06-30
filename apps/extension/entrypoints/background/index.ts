@@ -11,12 +11,16 @@ import {
   type AccountSession,
   type ApplicationRecord
 } from "../../lib/storage"
+import { getActiveSession, withFreshSession } from "../../lib/session"
 import { syncApplicationsToDashboard } from "../../lib/cloud-sync"
 
 type ExternalMessage = {
   authToken?: unknown
+  refreshToken?: unknown
+  expiresAt?: unknown
   email?: unknown
   plan?: unknown
+  provider?: unknown
   type?: unknown
 }
 
@@ -64,8 +68,13 @@ function parseAccountSession(message: ExternalMessage): AccountSession | null {
 
   return {
     authToken: message.authToken,
+    refreshToken: typeof message.refreshToken === "string" ? message.refreshToken : "",
+    expiresAt: typeof message.expiresAt === "number" ? message.expiresAt : 0,
     email: message.email,
-    plan: message.plan === "pro" ? "pro" : "free"
+    plan: message.plan === "pro" ? "pro" : "free",
+    provider: typeof message.provider === "string" && message.provider.trim()
+      ? message.provider
+      : "email"
   }
 }
 
@@ -77,13 +86,11 @@ async function syncApplicationsWithState({
   applications,
   completedEvent,
   failedEvent,
-  session,
   startedEvent
 }: {
   applications: ApplicationRecord[]
   completedEvent: string
   failedEvent: string
-  session: AccountSession
   startedEvent: string
 }) {
   if (applications.length === 0) {
@@ -101,10 +108,21 @@ async function syncApplicationsWithState({
       status: "info",
       details: { applicationCount: applications.length }
     })
-    const syncResult = await syncApplicationsToDashboard({
-      applications,
-      session
-    })
+
+    const { result: syncResult, error: sessionError } = await withFreshSession(
+      (activeSession) =>
+        syncApplicationsToDashboard({
+          applications,
+          session: activeSession
+        })
+    )
+
+    if (!syncResult) {
+      throw new Error(
+        sessionError ?? "Dashboard sync failed because the session could not be refreshed."
+      )
+    }
+
     const deletedApplicationIds = syncResult.deletedApplicationIds ?? []
     const syncedApplicationIds = applicationIds.filter(
       (id) => !deletedApplicationIds.includes(id)
@@ -154,7 +172,7 @@ async function retryPendingApplicationSync(reason: "installed" | "startup") {
   retrySyncInFlight = true
 
   try {
-    const session = await getAccountSession()
+    const { session } = await getActiveSession()
 
     if (!session?.authToken.trim()) {
       await logDiagnosticEvent({
@@ -189,7 +207,6 @@ async function retryPendingApplicationSync(reason: "installed" | "startup") {
       applications: retryableApplications,
       completedEvent: `retry-sync-completed-${reason}`,
       failedEvent: `retry-sync-failed-${reason}`,
-      session,
       startedEvent: `retry-sync-started-${reason}`
     })
   } finally {
@@ -262,7 +279,7 @@ export default defineBackground(() => {
           ? (message.applications as ApplicationRecord[])
           : await getApplications()
         const applicationIds = applications.map((application) => application.id)
-        const session = await getAccountSession()
+        const { session } = await getActiveSession()
 
         if (!session?.authToken.trim()) {
           await updateApplicationSyncState(applicationIds, "pending")
@@ -286,7 +303,6 @@ export default defineBackground(() => {
           applications,
           completedEvent: "widget-sync-completed",
           failedEvent: "widget-sync-failed",
-          session,
           startedEvent: "widget-sync-started"
         })
 
@@ -393,7 +409,7 @@ export default defineBackground(() => {
             event: "account-session-saved",
             message: "Account session saved in extension storage.",
             status: "success",
-            details: { email: session.email, plan: session.plan }
+            details: { email: session.email, plan: session.plan, provider: session.provider }
           })
 
           const applications = await getApplications()
@@ -401,7 +417,6 @@ export default defineBackground(() => {
             applications,
             completedEvent: "connect-sync-completed",
             failedEvent: "connect-sync-failed",
-            session,
             startedEvent: "connect-sync-started"
           })
 

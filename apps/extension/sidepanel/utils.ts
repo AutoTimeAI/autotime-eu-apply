@@ -25,6 +25,19 @@ export function formatCreatedDate(createdAt: string) {
   })
 }
 
+export function formatProviderLabel(provider: string): string {
+  switch (provider) {
+    case "github":
+      return "GitHub"
+    case "google":
+      return "Google"
+    case "email":
+      return "Email sign-in"
+    default:
+      return provider
+  }
+}
+
 export function getStatusClassName(message: string) {
   return message.startsWith("Complete ") || message.startsWith("Could not ")
     ? "status-message status-message-error"

@@ -1,7 +1,7 @@
 import type { Ref } from "react"
 import type { AccountSession, DiagnosticLogEntry } from "../lib/storage"
 import { appUrl } from "../lib/openai"
-import { getStatusClassName } from "./utils"
+import { formatProviderLabel, getStatusClassName } from "./utils"
 
 type AccountSectionProps = {
   canSyncProfile: boolean
@@ -56,6 +56,10 @@ export function AccountSection({
                 <div>
                   <dt>Email</dt>
                   <dd>{session.email}</dd>
+                </div>
+                <div>
+                  <dt>Signed in with</dt>
+                  <dd>{formatProviderLabel(session.provider)}</dd>
                 </div>
                 <div>
                   <dt>Plan</dt>

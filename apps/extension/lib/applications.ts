@@ -19,7 +19,8 @@ function normalizeApplicationUrl(url: string) {
     const parsed = new URL(url)
     parsed.hash = ""
     parsed.hostname = parsed.hostname.toLowerCase()
-    return parsed.toString().replace(/\/$/, "")
+    parsed.pathname = parsed.pathname.replace(/\/+$/, "")
+    return parsed.toString().replace(/\/$/, "").toLowerCase()
   } catch {
     return url.trim().toLowerCase().replace(/\/$/, "")
   }
