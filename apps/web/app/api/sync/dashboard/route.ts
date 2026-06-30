@@ -608,9 +608,15 @@ export async function POST(
       })
     }
 
+    const rawBody = (await request.json()) as Record<string, unknown>
     const payload = dashboardWorkflowSchema.parse(
-      normalizeLegacyDashboardPayload(await request.json())
+      normalizeLegacyDashboardPayload(rawBody)
     )
+    const resurrectUrlKeys = Array.isArray(rawBody.resurrectUrlKeys)
+      ? rawBody.resurrectUrlKeys.filter(
+          (value): value is string => typeof value === "string" && value.trim().length > 0
+        )
+      : []
     const sourceSurface = getSourceSurface(request)
     trackJobImportStarted({
       applicationCount: payload.applications.length,
@@ -628,6 +634,27 @@ export async function POST(
     }
 
     const supabase = createAdminClient()
+
+    if (resurrectUrlKeys.length) {
+      const { error: resurrectError } = await supabase
+        .from("deleted_application_tombstones")
+        .delete()
+        .eq("user_id", auth.user.id)
+        .in("url_key", resurrectUrlKeys)
+
+      if (resurrectError) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.resurrect.failed",
+          data: null,
+          error: resurrectError.message,
+          log: true,
+          request,
+          status: 500
+        })
+      }
+    }
+
     const applicationUrlKeys = payload.applications.map((application) =>
       normalizeApplicationUrlKey(application.url || application.id)
     )

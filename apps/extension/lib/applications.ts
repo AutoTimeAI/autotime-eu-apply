@@ -14,7 +14,7 @@ export type ApplicationValidationMetrics = {
   sourceCounts: Array<{ source: string; count: number }>
 }
 
-function normalizeApplicationUrl(url: string) {
+export function normalizeApplicationUrl(url: string) {
   try {
     const parsed = new URL(url)
     parsed.hash = ""

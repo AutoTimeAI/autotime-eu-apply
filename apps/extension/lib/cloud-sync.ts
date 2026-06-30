@@ -105,9 +105,11 @@ export async function loadProfileFromDashboard(session: AccountSession | null) {
 
 export async function syncApplicationsToDashboard({
   applications,
+  resurrectUrlKeys,
   session
 }: {
   applications: ApplicationRecord[]
+  resurrectUrlKeys?: string[]
   session: AccountSession | null
 }) {
   if (!session?.authToken.trim()) {
@@ -135,14 +137,15 @@ export async function syncApplicationsToDashboard({
   // silently overwrite it with stale data. Sending empty arrays means
   // the server's per-row upsert for these tables never fires, so the
   // dashboard's own data is left untouched either way.
-  const payload: DashboardWorkflow = {
+  const payload: DashboardWorkflow & { resurrectUrlKeys?: string[] } = {
     applications: mergeDashboardApplications(
       applications,
       dashboard?.applications ?? []
     ),
     evidenceRecords: [],
     interviewPrepPacks: [],
-    outcomeRecords: []
+    outcomeRecords: [],
+    ...(resurrectUrlKeys?.length ? { resurrectUrlKeys } : {})
   }
 
   const writeResponse = await fetch(`${appUrl}/api/sync/dashboard`, {

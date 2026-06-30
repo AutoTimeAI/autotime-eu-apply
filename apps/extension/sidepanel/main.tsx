@@ -11,6 +11,7 @@ import {
   filterApplications,
   getApplicationValidationMetrics,
   hasApplicationWithUrl,
+  normalizeApplicationUrl as normalizeApplicationUrlKey,
   validationMetricsToCsv,
   type ApplicationStatusFilter
 } from "../lib/applications"
@@ -598,7 +599,8 @@ function SidePanelApp() {
   }
 
   const syncApplicationListToDashboard = async (
-    applicationsToSync: ApplicationRecord[]
+    applicationsToSync: ApplicationRecord[],
+    options: { resurrectUrlKey?: string } = {}
   ) => {
     const applicationIds = applicationsToSync.map((application) => application.id)
     const { session: activeSession, warning: sessionWarning } =
@@ -634,6 +636,9 @@ function SidePanelApp() {
         await withFreshSession((session) =>
           syncApplicationsToDashboard({
             applications: applicationsToSync,
+            resurrectUrlKeys: options.resurrectUrlKey
+              ? [options.resurrectUrlKey]
+              : undefined,
             session
           })
         )
@@ -726,7 +731,9 @@ function SidePanelApp() {
 
     if (hasApplicationWithUrl(applications, details.url)) {
       setTrackedJobDetails(details)
-      const syncResult = await syncApplicationListToDashboard(applications)
+      const syncResult = await syncApplicationListToDashboard(applications, {
+        resurrectUrlKey: normalizeApplicationUrlKey(details.url)
+      })
       if (syncResult.synced) {
         setApplications(applications)
         setApplicationsStatus("This job is already tracked and synced to dashboard")
@@ -759,7 +766,9 @@ function SidePanelApp() {
 
     setTrackedJobDetails(details)
     const updatedApplications = [record, ...applications]
-    const syncResult = await syncApplicationListToDashboard(updatedApplications)
+    const syncResult = await syncApplicationListToDashboard(updatedApplications, {
+      resurrectUrlKey: normalizeApplicationUrlKey(record.url)
+    })
 
     await saveApplication(record)
     setApplications(updatedApplications)
