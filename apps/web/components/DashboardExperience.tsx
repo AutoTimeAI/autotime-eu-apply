@@ -432,32 +432,32 @@ const dashboardFocusCopy: Record<
   dashboard: {
     eyebrow: "Dashboard",
     title: "Your EU application workspace",
-    body: "Track jobs, check EU fit, prepare stronger applications and keep every next action visible."
+    body: "Start with your profile, check one role, save job proof, then manage follow-ups from one dashboard."
   },
   "job-inbox": {
     eyebrow: "Tracked Jobs",
     title: "Tracked Jobs",
-    body: "Roles captured from the extension or tracked from a fit analysis."
+    body: "Review every role you saved from the extension or Fit Analysis, then update status, outcome and next action."
   },
   "match-score": {
     eyebrow: "EU fit",
     title: "Check EU fit before you apply",
-    body: "Rules-first fit check for one role against your saved profile evidence, country context and missing proof."
+    body: "Check one role against your profile, country context and missing proof before deciding whether to apply."
   },
   "cv-tailor": {
     eyebrow: "Proof Library",
     title: "Proof Library",
-    body: "Keep reusable proof points ready for fit checks, applications and interview prep without duplicating those workflows."
+    body: "Keep the final reasons and proof you can reuse when applying or preparing for interviews."
   },
   "application-answers": {
     eyebrow: "Application workspace",
     title: "Application Kit",
-    body: "Prepare profile summaries, cover notes and reusable answers from verified evidence."
+    body: "Generate job-specific wording from saved proof, then save the useful parts back to Proof Library."
   },
   "autofill-profile": {
     eyebrow: "Profile setup",
     title: "Profile Evidence",
-    body: "Add the profile details AutoTime needs for fit analysis and application preparation."
+    body: "Add the facts AutoTime needs before it checks jobs, writes proof-backed answers or prepares interviews."
   },
   "application-tracker": {
     eyebrow: "Tracked Jobs",
@@ -467,22 +467,22 @@ const dashboardFocusCopy: Record<
   "follow-ups": {
     eyebrow: "Follow-ups",
     title: "Follow-up Queue",
-    body: "Work the next dated action across tracked jobs without duplicating the tracker."
+    body: "See which tracked job needs action next, update the date, then open the job when the status changes."
   },
   "interview-prep": {
     eyebrow: "Interview",
     title: "Interview Prep",
-    body: "Prepare evidence-led interview answers and role prep packs without duplicating Profile Evidence, Proof Library or Application Kit."
+    body: "Turn saved job proof into interview answers and prep packs, then keep reusable reasons in Proof Library."
   },
   insights: {
     eyebrow: "Progress",
     title: "Progress",
-    body: "Read outcome signals from tracked jobs and evidence records. Progress reports what happened; it does not replace Fit Analysis."
+    body: "Review what happened across tracked jobs so the next applications become sharper and more evidence-led."
   },
   settings: {
     eyebrow: "Settings",
     title: "Settings",
-    body: "Account, sync and profile controls."
+    body: "Manage account sync, profile controls and dashboard settings."
   }
 }
 
@@ -7293,8 +7293,8 @@ export default function HomePage({
                     <p className="eyebrow">Setup</p>
                     <h2>Follow this order</h2>
                     <p>
-                      Complete the profile first, then check one role and save
-                      the next action.
+                      Complete your profile, check one role, save job proof,
+                      then work the next follow-up.
                     </p>
                   </div>
                   <div
@@ -7329,10 +7329,10 @@ export default function HomePage({
                   >
                     <div>
                       <p className="eyebrow">Workspace status</p>
-                      <h2>Strategic European tech application system</h2>
+                      <h2>Your application workflow</h2>
                       <p>
-                        Keep strategic targeting, country-aware fit, evidence
-                        discipline and interview conversion in one place.
+                        Move through the same simple loop each time: profile,
+                        job check, proof, follow-up, outcome.
                       </p>
                     </div>
                     <div className="strategic-signal-grid">
@@ -7516,13 +7516,13 @@ export default function HomePage({
                         <p className="eyebrow">Application Kit</p>
                         <h2>Write for one tracked job</h2>
                         <p>
-                          Draft content from saved evidence, edit it, copy it,
-                          then save the snapshot back to the job.
+                          Choose a tracked job, generate proof-backed wording,
+                          edit it, then save the useful parts to Proof Library.
                         </p>
                         <p>
-                          Copy-friendly MVP draft only. It does not guarantee a
-                          job, interview, visa, sponsorship or employer
-                          response.
+                          Use the draft as editable support only. It does not
+                          guarantee a job, interview, visa, sponsorship or
+                          employer response.
                         </p>
                         <p>
                           AutoTime AI drafts from saved evidence when available;
@@ -7678,12 +7678,11 @@ export default function HomePage({
                     <section className="panel">
                       <div className="section-heading">
                         <p className="eyebrow">Proof Library</p>
-                        <h2>Reusable proof, not another workflow</h2>
+                        <h2>Your final job proof</h2>
                         <p>
-                          Store facts that other workflows can use. Profile
-                          Evidence sets up your candidate record, Fit Analysis
-                          checks one role, and Application Kit writes content.
-                          Proof Library only keeps reusable proof.
+                          Keep the strongest reasons, evidence and answer
+                          wording you can reuse across applications and
+                          interviews.
                         </p>
                       </div>
                       <div
@@ -7691,19 +7690,19 @@ export default function HomePage({
                         aria-label="Proof Library responsibility"
                       >
                         <article>
-                          <span>Stores</span>
-                          <strong>CV facts, highlights and project proof</strong>
+                          <span>Use this for</span>
+                          <strong>Reusable reasons and proof</strong>
                           <p>
-                            Reusable evidence you can defend in applications
-                            and interviews.
+                            Save facts, project examples and job reasons you
+                            can defend in applications and interviews.
                           </p>
                         </article>
                         <article>
-                          <span>Does not duplicate</span>
-                          <strong>Profile setup, role scoring or documents</strong>
+                          <span>Where to start</span>
+                          <strong>Profile first, job proof second</strong>
                           <p>
-                            Those stay in Profile Evidence, Fit Analysis and
-                            Application Kit.
+                            Add profile facts first, then let Application Kit
+                            and Interview Prep feed reusable proof back here.
                           </p>
                         </article>
                       </div>
@@ -9036,16 +9035,16 @@ export default function HomePage({
                           <span>Reports</span>
                           <strong>Outcome signals and saved evidence</strong>
                           <p>
-                            Progress reads tracker outcomes, fit-check records
-                            and interview signals.
+                            Progress reads tracker outcomes, saved proof,
+                            fit-check records and interview signals.
                           </p>
                         </article>
                         <article>
-                          <span>Does not duplicate</span>
-                          <strong>Fit scoring, follow-up work or proof storage</strong>
+                          <span>What to do next</span>
+                          <strong>Use the right section after reading progress</strong>
                           <p>
-                            Fit Analysis scores roles, Follow-ups works actions,
-                            and Proof Library stores the final job proof and reusable reasons.
+                            Use Fit Analysis to score a role, Follow-ups to act,
+                            and Proof Library to keep final job proof.
                           </p>
                         </article>
                       </div>
@@ -9369,8 +9368,8 @@ export default function HomePage({
                         <p className="eyebrow">Follow-ups</p>
                         <h2>Next actions across tracked jobs</h2>
                         <p>
-                          Work from the role that needs attention next. Archive
-                          or reject jobs when no action is needed.
+                          See what needs action next, update the due date, and
+                          open the job when the status or outcome changes.
                         </p>
                       </div>
                       <div
@@ -9398,19 +9397,19 @@ export default function HomePage({
                         aria-label="Follow-up responsibility"
                       >
                         <article>
-                          <span>Works</span>
+                          <span>Use this for</span>
                           <strong>Next actions and due dates</strong>
                           <p>
-                            The queue keeps time-sensitive application actions
-                            visible and editable.
+                            Keep follow-up emails, recruiter replies and status
+                            checks visible until they are done.
                           </p>
                         </article>
                         <article>
-                          <span>Does not duplicate</span>
-                          <strong>Tracker status, outcomes or job proof</strong>
+                          <span>Where to start</span>
+                          <strong>Status, outcomes and proof</strong>
                           <p>
-                            Status and outcome learning stay in Tracked Jobs;
-                            final reasons and proof stay in Proof Library.
+                            Open the tracked job to update status, outcome
+                            learning or saved job proof.
                           </p>
                         </article>
                       </div>
@@ -10198,12 +10197,11 @@ export default function HomePage({
                 <section className="prep-section full-width-section">
                   <div className="section-intro">
                     <p className="eyebrow">Interview Prep</p>
-                    <h2>Practice from proof, then save only what is reusable</h2>
+                    <h2>Prepare for interviews from saved proof</h2>
                     <p>
-                      Interview Prep turns your rough notes and tracked roles
-                      into practice material. Profile Evidence stores candidate
-                      facts, Proof Library keeps reusable answers, and
-                      Application Kit writes application content.
+                      Start with a tracked job and rough notes. AutoTime turns
+                      saved proof into answer options, prep packs and reusable
+                      reasons for Proof Library.
                     </p>
                   </div>
 
@@ -10238,19 +10236,19 @@ export default function HomePage({
                     aria-label="Interview Prep responsibility"
                   >
                     <article>
-                      <span>Stores</span>
-                      <strong>Practice outputs and role prep packs</strong>
+                      <span>Use this for</span>
+                      <strong>Interview answers and prep packs</strong>
                       <p>
-                        Interview notes, answer versions, drills and saved
-                        prep packs for tracked interview roles.
+                        Prepare answers, drills and role prep from the proof
+                        already saved for the job.
                       </p>
                     </article>
                     <article>
-                      <span>Does not duplicate</span>
-                      <strong>Profile facts, fit scoring or application drafts</strong>
+                      <span>What gets saved</span>
+                      <strong>Reusable reasons go to Proof Library</strong>
                       <p>
-                        Those stay in Profile Evidence, Fit Analysis, Proof
-                        Library and Application Kit.
+                        The full prep pack stays with the job; reusable
+                        motivation and strengths are saved to Proof Library.
                       </p>
                     </article>
                   </div>
