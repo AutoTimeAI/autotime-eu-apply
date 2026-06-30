@@ -161,6 +161,68 @@ section {
   background: #d97a06;
 }
 
+.sync-diagnostics-panel {
+  border: 1px solid #d8dee8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.sync-diagnostics-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.sync-diagnostics-hint {
+  color: #5b6475;
+  margin: 8px 0;
+}
+
+.sync-diagnostics-empty {
+  color: #5b6475;
+}
+
+.sync-diagnostics-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sync-diagnostics-entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #f5f7fa;
+}
+
+.sync-diagnostics-entry.status-error,
+.sync-diagnostics-entry.status-warning {
+  background: #fff3e0;
+}
+
+.sync-diagnostics-entry.status-success {
+  background: #e7f7ee;
+}
+
+.sync-diagnostics-event {
+  font-weight: 700;
+}
+
+.sync-diagnostics-time {
+  color: #5b6475;
+}
+
+.sync-diagnostics-message {
+  flex-basis: 100%;
+  color: #2c3340;
+}
+
 .track-job-panel {
   display: grid;
   grid-template-areas:

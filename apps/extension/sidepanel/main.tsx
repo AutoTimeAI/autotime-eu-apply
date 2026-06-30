@@ -1459,6 +1459,45 @@ function SidePanelApp() {
         </div>
       </section>
 
+      <details className="sync-diagnostics-panel">
+        <summary>Sync diagnostics</summary>
+        <p className="sync-diagnostics-hint">
+          Shows what actually happened during the last few Track Job syncs —
+          useful if a job says &quot;synced&quot; but isn&apos;t showing up
+          in the dashboard.
+        </p>
+        {diagnosticLog.filter(
+          (entry) => entry.area === "sync" || entry.area === "connect"
+        ).length === 0 ? (
+          <p className="sync-diagnostics-empty">No sync events recorded yet.</p>
+        ) : (
+          <ul className="sync-diagnostics-list">
+            {diagnosticLog
+              .filter((entry) => entry.area === "sync" || entry.area === "connect")
+              .slice(0, 8)
+              .map((entry) => (
+                <li key={entry.id} className={`sync-diagnostics-entry status-${entry.status}`}>
+                  <span className="sync-diagnostics-event">{entry.event}</span>
+                  <span className="sync-diagnostics-time">
+                    {new Date(entry.createdAt).toLocaleTimeString()}
+                  </span>
+                  {entry.message ? (
+                    <span className="sync-diagnostics-message">{entry.message}</span>
+                  ) : null}
+                </li>
+              ))}
+          </ul>
+        )}
+        <button
+          className="secondary-button"
+          disabled={diagnosticLog.length === 0}
+          type="button"
+          onClick={handleExportDiagnosticLog}
+        >
+          Export full diagnostic log
+        </button>
+      </details>
+
       {renderLegacyTools ? (
         <>
           <Onboarding onNavigate={goToSection} />
