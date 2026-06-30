@@ -296,11 +296,46 @@ type BackgroundSyncResponse = {
   synced?: boolean
 }
 
+const BACKGROUND_SYNC_TIMEOUT_MS = 20000
+
 function sendApplicationsToBackgroundSync(
   applications: ApplicationRecord[],
   resurrectUrlKeys?: string[]
 ): Promise<BackgroundSyncResponse> {
   return new Promise((resolve) => {
+    let settled = false
+    let timeoutId: number | undefined
+
+    const settle = (value: BackgroundSyncResponse) => {
+      if (settled) {
+        return
+      }
+      settled = true
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      resolve(value)
+    }
+
+    // MV3 service workers can be recycled during a multi-step sync. If the
+    // background worker never responds, keep Track Job recoverable.
+    timeoutId = window.setTimeout(() => {
+      void logDiagnosticEvent({
+        area: "sync",
+        event: "widget-sync-timed-out",
+        message: "Background sync did not respond in time.",
+        status: "warning",
+        details: { applicationCount: applications.length }
+      })
+      settle({
+        ok: false,
+        reason: formatSyncFailureMessage(
+          "Dashboard sync timed out. The job is saved locally - try Track Job again."
+        ),
+        synced: false
+      })
+    }, BACKGROUND_SYNC_TIMEOUT_MS)
+
     chrome.runtime.sendMessage(
       {
         applications,
@@ -309,7 +344,7 @@ function sendApplicationsToBackgroundSync(
       },
       (response?: BackgroundSyncResponse) => {
         if (chrome.runtime.lastError) {
-          resolve({
+          settle({
             ok: false,
             reason: formatSyncFailureMessage(
               chrome.runtime.lastError.message ??
@@ -320,7 +355,7 @@ function sendApplicationsToBackgroundSync(
           return
         }
 
-        resolve(
+        settle(
           response ?? {
             ok: false,
             reason: formatSyncFailureMessage(

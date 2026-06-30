@@ -54,7 +54,8 @@ async function refreshSession(
     const response = await fetch(`${appUrl}/api/sync/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: session.refreshToken })
+      body: JSON.stringify({ refreshToken: session.refreshToken }),
+      signal: AbortSignal.timeout(12000)
     })
     const body = (await response.json()) as RefreshResponse
 

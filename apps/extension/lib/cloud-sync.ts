@@ -6,6 +6,14 @@ import type {
   CandidateProfile
 } from "./storage"
 
+// No fetch in this file should be able to hang forever. A stuck request
+// keeps Track Job waiting with no way to recover short of reloading.
+const REQUEST_TIMEOUT_MS = 12000
+
+function withTimeoutSignal(): AbortSignal {
+  return AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+}
+
 type ApiEnvelope<T> = {
   data: T | null
   error: string | null
@@ -81,7 +89,8 @@ export async function syncProfileToDashboard({
       "Content-Type": "application/json",
       "x-autotime-source": "extension"
     },
-    body: JSON.stringify(profile)
+    body: JSON.stringify(profile),
+    signal: withTimeoutSignal()
   })
 
   await parseSyncResponse<ProfileSyncResponse>(response)
@@ -96,7 +105,8 @@ export async function loadProfileFromDashboard(session: AccountSession | null) {
     headers: {
       Authorization: `Bearer ${session.authToken}`,
       "x-autotime-source": "extension"
-    }
+    },
+    signal: withTimeoutSignal()
   })
   const data = await parseSyncResponse<ProfileReadResponse>(response)
 
@@ -123,7 +133,8 @@ export async function syncApplicationsToDashboard({
   }
 
   const readResponse = await fetch(`${appUrl}/api/sync/dashboard`, {
-    headers
+    headers,
+    signal: withTimeoutSignal()
   })
   const readData = await parseSyncResponse<DashboardReadResponse>(readResponse)
   const dashboard = readData.dashboard
@@ -151,7 +162,8 @@ export async function syncApplicationsToDashboard({
   const writeResponse = await fetch(`${appUrl}/api/sync/dashboard`, {
     method: "POST",
     headers,
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: withTimeoutSignal()
   })
 
   return parseSyncResponse<DashboardSyncResponse>(writeResponse)
