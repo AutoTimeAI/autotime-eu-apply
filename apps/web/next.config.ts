@@ -46,9 +46,6 @@ const nextConfig: NextConfig = {
       }
     ]
   },
-  outputFileTracingIncludes: {
-    "/dashboard/extension/download": ["./private-downloads/**/*"]
-  },
   transpilePackages: ["shared"]
 }
 

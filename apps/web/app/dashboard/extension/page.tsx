@@ -4,8 +4,6 @@ import { ProfileProtocolLock } from "../../../components/ProfileProtocolLock"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
-const extensionVersion = "0.0.3"
-
 export const dynamic = "force-dynamic"
 
 function formatDate(value: string | null | undefined) {
@@ -258,13 +256,9 @@ export default async function DashboardExtensionPage() {
                 </>
               ) : (
                 <>
-                  <a
-                    className="primary-link"
-                    download
-                    href="/dashboard/extension/download"
-                  >
-                    Download extension v{extensionVersion}
-                  </a>
+                  <span className="status warning">
+                    Extension download is temporarily unavailable.
+                  </span>
                   <InstalledExtensionConnectButton
                     candidateExtensionId={candidateExtensionId}
                   />
@@ -277,7 +271,7 @@ export default async function DashboardExtensionPage() {
             <p className="eyebrow">Setup checklist</p>
             <h2>Install path</h2>
             <ol>
-              <li>Download and unzip the extension package.</li>
+              <li>Use the currently approved unpacked extension package.</li>
               <li>Open Chrome extensions and enable Developer mode.</li>
               <li>Load the unzipped folder as an unpacked extension.</li>
               <li>Click the AutoTime icon in Chrome, then click Connect.</li>
