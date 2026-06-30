@@ -39,11 +39,11 @@ function getChromeRuntime(): ExtensionRuntime | null {
 
 function formatRuntimeError(message: string) {
   if (/receiving end does not exist|does not exist/i.test(message)) {
-    return "We could not reach the AutoTime extension. Open the extension and use CONNECT from its Account tab."
+    return "We could not reach the AutoTime extension. Open the extension and choose CONNECT."
   }
 
   if (/not allowed|access|permission/i.test(message)) {
-    return "AutoTime could not complete the browser check. Reload the extension, then use CONNECT from its Account tab."
+    return "AutoTime could not complete the browser check. Reload the extension, then choose CONNECT."
   }
 
   return message
@@ -86,7 +86,7 @@ export function InstalledExtensionConnectButton({
   async function handleClick() {
     if (!knownExtensionId) {
       setStatus(
-        "Open the AutoTime extension from Chrome, then press CONNECT in the Account tab."
+        "Open the AutoTime extension and choose CONNECT."
       )
       return
     }
@@ -126,7 +126,7 @@ export function InstalledExtensionConnectButton({
       <small className="extension-action-hint">
         {knownExtensionId
           ? "We will confirm the extension is available before linking it to your account."
-          : "Use the AutoTime extension Account tab to link this dashboard."}
+          : "Open the AutoTime extension to link this dashboard."}
       </small>
       {status ? (
         <p className={`status-banner compact ${getStatusTone(status)}`}>
