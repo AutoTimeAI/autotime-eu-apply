@@ -6220,6 +6220,7 @@ export default function HomePage({
     activeInterviewQuestion
   )
   const finalAnswerStorageKey = inferReusableAnswerKey(activeInterviewQuestion)
+  const hasInterviewDraftAnswer = Boolean(interviewDraftAnswer.trim())
   const hasInterviewBuddyOutputs = Boolean(
     interviewBuddyOutputs.strongFinalAnswer.trim()
   )
@@ -6241,7 +6242,7 @@ export default function HomePage({
           ? "Add the details AutoTime needs about you."
           : currentTab === "applications"
             ? "Review tracked jobs and update the next step."
-            : "Prepare a clearer interview answer."
+            : "Add notes, then run the interview coach."
   const actionPanelStateLabel = isProfileGateRequired
     ? "Your profile needs more verified evidence before AutoTime can avoid generic advice."
     : isOverview
@@ -6275,8 +6276,10 @@ export default function HomePage({
               ? "Next actions are waiting"
               : "No urgent next action"
             : hasInterviewBuddyOutputs
-              ? "Answer draft ready"
-              : "Waiting for your rough answer"
+              ? "Answer ready to save"
+              : hasInterviewDraftAnswer
+                ? "Rough answer ready for coaching"
+                : "Add your rough answer first"
   const actionPanelStatus = isCopilotThinking
     ? "Working"
     : isProfileGateRequired
@@ -6287,7 +6290,9 @@ export default function HomePage({
           ? "Input needed"
           : currentTab === "profile" && !profileReadyForExecution
             ? "Incomplete"
-            : "Ready"
+            : currentTab === "interview" && !hasInterviewDraftAnswer
+              ? "Input needed"
+              : "Ready"
 
   const generateInterviewBuddyAnswers = async () => {
     if (!requireProfileExecutionReady()) {
@@ -6871,8 +6876,12 @@ export default function HomePage({
                   </>
                 ) : (
                   <>
-                    <button type="button" onClick={generateInterviewBuddyAnswers}>
-                      Run coach
+                    <button
+                      disabled={!hasInterviewDraftAnswer || isCopilotThinking}
+                      type="button"
+                      onClick={generateInterviewBuddyAnswers}
+                    >
+                      {isCopilotThinking ? "Coaching..." : "Run coach"}
                     </button>
                     <button
                       className="secondary-button"
@@ -10320,7 +10329,7 @@ export default function HomePage({
 
                       <div className="header-actions">
                         <button
-                          disabled={isCopilotThinking}
+                          disabled={!hasInterviewDraftAnswer || isCopilotThinking}
                           type="button"
                           onClick={generateInterviewBuddyAnswers}
                         >
@@ -10328,7 +10337,7 @@ export default function HomePage({
                         </button>
                         <button
                           className="secondary-button"
-                          disabled={isCopilotThinking}
+                          disabled={!hasInterviewDraftAnswer || isCopilotThinking}
                           type="button"
                           onClick={generateLocalInterviewBuddyAnswers}
                         >
