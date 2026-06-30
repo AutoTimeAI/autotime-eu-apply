@@ -78,7 +78,7 @@ function LoginForm() {
           setIdentityProviderLabel(null);
         }
         setStatus(
-          "Already signed in. Confirm account permission, then continue to your dashboard.",
+          "Already signed in. Confirm this account, then continue to your dashboard.",
         );
       }
     });
@@ -94,7 +94,7 @@ function LoginForm() {
       if (event === "SIGNED_IN" && session && !oauthStartedRef.current) {
         setHasExistingSession(true);
         setStatus(
-          "Already signed in. Confirm account permission, then continue to your dashboard.",
+          "Already signed in. Confirm this account, then continue to your dashboard.",
         );
       }
 

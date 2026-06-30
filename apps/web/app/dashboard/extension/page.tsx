@@ -87,8 +87,7 @@ export default async function DashboardExtensionPage() {
   const activeConnectionExtensionId = activeConnection?.extension_id?.trim()
   const candidateExtensionId =
     activeConnectionExtensionId ??
-    connections.find((item) => item.extension_id?.trim())?.extension_id?.trim() ??
-    process.env.NEXT_PUBLIC_AUTOTIME_EXTENSION_ID?.trim()
+    connections.find((item) => item.extension_id?.trim())?.extension_id?.trim()
   const latestExtensionSync = syncEvents.find(
     (item) => item.source_surface === "extension"
   )
