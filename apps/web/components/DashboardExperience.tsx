@@ -3362,14 +3362,14 @@ function getReadyToApplyChecklist({
     },
     {
       id: "application-content",
-      label: "Application content saved",
+      label: "Job proof saved",
       status: hasContentSnapshot ? "ready" : "needs-check",
       evidence: hasContentSnapshot
         ? `Saved on ${new Date(
             application.contentSnapshot?.savedAt ?? application.createdAt
           ).toLocaleDateString()}.`
-        : "No tailored answer or cover-letter snapshot is saved yet.",
-      action: "Save a tailored content snapshot before applying."
+        : "No job proof snapshot is saved yet.",
+      action: "Save job proof from Application Kit or Interview Prep before applying."
     },
     {
       id: "work-right",
@@ -5482,6 +5482,12 @@ export default function HomePage({
     }
     const nextState = {
       ...state,
+      reusableAnswers: {
+        ...state.reusableAnswers,
+        availabilityAnswer: snapshot.availabilityAnswer,
+        motivationAnswer: snapshot.motivationAnswer,
+        strengthsAnswer: snapshot.strengthsAnswer
+      },
       applications: state.applications.map((application) =>
         application.id === activeKitApplication.id
           ? {
@@ -5495,10 +5501,10 @@ export default function HomePage({
 
     setKitApplicationId(activeKitApplication.id)
     setKitDraft(snapshot)
-    persist(nextState, "Application Kit saved to tracked job")
+    persist(nextState, "Application Kit saved to job proof and Proof Library")
     scheduleDashboardSync(nextState, {
-      failureMessage: "Application Kit saved locally. Dashboard sync failed",
-      successMessage: "Application Kit saved and synced"
+      failureMessage: "Job proof saved locally. Dashboard sync failed",
+      successMessage: "Job proof and Proof Library saved and synced"
     })
   }
 
@@ -5898,8 +5904,16 @@ export default function HomePage({
       return
     }
 
+    const interviewProofStrengths = pack.projectTalkingPoints.length
+      ? pack.projectTalkingPoints.join("\n")
+      : pack.fitAndGapRecap
     const nextState = {
       ...state,
+      reusableAnswers: {
+        ...state.reusableAnswers,
+        motivationAnswer: pack.positioningStatement || pack.roleSummary,
+        strengthsAnswer: interviewProofStrengths
+      },
       interviewPrepPacks: [
         pack,
         ...state.interviewPrepPacks.filter(
@@ -5908,11 +5922,11 @@ export default function HomePage({
       ]
     }
 
-    persist(nextState, message)
+    persist(nextState, `${message}; Proof Library updated`)
     hasUnsyncedDashboardChangesRef.current = true
     const synced = await syncDashboardStateToCloud(nextState, {
-      failureMessage: "Interview prep saved locally. Dashboard sync failed",
-      successMessage: "Interview prep saved and synced to dashboard"
+      failureMessage: "Interview prep saved locally. Proof Library sync failed",
+      successMessage: "Interview prep and Proof Library synced to dashboard"
     })
     hasUnsyncedDashboardChangesRef.current = !synced
     openDashboardView("interview")
@@ -7732,23 +7746,18 @@ export default function HomePage({
                     </section>
                     <section className="panel">
                       <div className="section-heading">
-                        <p className="eyebrow">Proof-backed wording</p>
+                        <p className="eyebrow">Reusable job proof</p>
                         <h2>Evidence-backed answers</h2>
                         <p>
-                          Save wording only when it is true and supported by
-                          the evidence above.
+                          Keep only reusable application wording that can be
+                          supported by the proof above.
                         </p>
                       </div>
                       {(
                         [
                           ["motivationAnswer", "Motivation answer"],
                           ["strengthsAnswer", "Strengths answer"],
-                          ["workAuthorisationAnswer", "Work authorisation"],
-                          ["relocationAnswer", "Relocation"],
-                          ["availabilityAnswer", "Availability"],
-                          ["noticePeriodAnswer", "Notice period"],
-                          ["salaryExpectationAnswer", "Salary expectation"],
-                          ["sponsorshipAnswer", "Sponsorship"]
+                          ["availabilityAnswer", "Availability"]
                         ] as Array<[ReusableAnswerKey, string]>
                       ).map(([key, label]) => (
                         <label key={key}>
@@ -9036,7 +9045,7 @@ export default function HomePage({
                           <strong>Fit scoring, follow-up work or proof storage</strong>
                           <p>
                             Fit Analysis scores roles, Follow-ups works actions,
-                            and Proof Library stores reusable proof.
+                            and Proof Library stores the final job proof and reusable reasons.
                           </p>
                         </article>
                       </div>
@@ -9398,10 +9407,10 @@ export default function HomePage({
                         </article>
                         <article>
                           <span>Does not duplicate</span>
-                          <strong>Tracker status, outcomes or content</strong>
+                          <strong>Tracker status, outcomes or job proof</strong>
                           <p>
-                            Status, outcome learning and documents remain in
-                            Tracked Jobs and Application Kit.
+                            Status and outcome learning stay in Tracked Jobs;
+                            final reasons and proof stay in Proof Library.
                           </p>
                         </article>
                       </div>
@@ -9420,6 +9429,11 @@ export default function HomePage({
                                   {application.company || "Unknown company"} /{" "}
                                   {application.status}
                                 </span>
+                                <small>
+                                  {application.contentSnapshot
+                                    ? "Job proof saved"
+                                    : "Job proof not saved"}
+                                </small>
                               </div>
                               <span
                                 className={`action-timing ${
@@ -9811,16 +9825,16 @@ export default function HomePage({
                         <section className="panel">
                           <div className="section-heading">
                             <p className="eyebrow">Application Kit</p>
-                            <h3>Saved application content</h3>
+                            <h3>Saved job proof</h3>
                             <p>
-                              Copy-friendly draft saved from the Application
-                              Kit. Verify employer and government requirements
-                              before using it.
+                              Proof-backed draft saved from Application Kit or
+                              Interview Prep. Verify employer and government
+                              requirements before using it.
                             </p>
                           </div>
                           {selectedApplication.contentSnapshot ? (
                             <div className="document-snapshot">
-                              <strong>Saved content snapshot</strong>
+                              <strong>Saved job proof snapshot</strong>
                               <p>
                                 {
                                   selectedApplication.contentSnapshot
@@ -9836,7 +9850,7 @@ export default function HomePage({
                             </div>
                           ) : (
                             <p className="empty-state">
-                              No content snapshot is saved for this job yet.
+                              No job proof snapshot is saved for this job yet.
                             </p>
                           )}
                           <div className="application-actions">
