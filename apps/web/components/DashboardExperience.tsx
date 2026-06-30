@@ -4453,7 +4453,7 @@ export default function HomePage({
       if (document.visibilityState === "visible") {
         refreshSyncedWorkflow()
       }
-    }, 5000)
+    }, 3000)
 
     return () => {
       window.removeEventListener("focus", refreshSyncedWorkflow)
