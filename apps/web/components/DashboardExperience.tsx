@@ -9956,7 +9956,9 @@ export default function HomePage({
                             <p>
                               {state.applications.length
                                 ? "Clear filters or search for another role, company or action."
-                                : "Tracked roles from the extension and saved role checks appear here."}
+                                : cloudSyncReadiness.configured
+                                  ? "Tracked roles from the extension and saved role checks appear here. If the list is still empty, sign in with the same AutoTime account the extension used and refresh this page."
+                                  : "Tracked roles from the extension and saved role checks appear here."}
                             </p>
                             {!state.applications.length ? (
                               <div className="empty-state-actions">
