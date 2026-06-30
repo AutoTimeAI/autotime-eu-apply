@@ -20,7 +20,10 @@ import {
   type JobPageDetails,
   type JobPlatform
 } from "../lib/job-page"
-import { hasApplicationWithUrl } from "../lib/applications"
+import {
+  hasApplicationWithUrl,
+  normalizeApplicationUrl as normalizeApplicationUrlKey
+} from "../lib/applications"
 import { appUrl } from "../lib/openai"
 import {
   canFillInput,
@@ -294,12 +297,14 @@ type BackgroundSyncResponse = {
 }
 
 function sendApplicationsToBackgroundSync(
-  applications: ApplicationRecord[]
+  applications: ApplicationRecord[],
+  resurrectUrlKeys?: string[]
 ): Promise<BackgroundSyncResponse> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
       {
         applications,
+        resurrectUrlKeys,
         type: "AUTOTIME_SYNC_APPLICATIONS"
       },
       (response?: BackgroundSyncResponse) => {
@@ -330,7 +335,8 @@ function sendApplicationsToBackgroundSync(
 }
 
 async function syncTrackedApplicationsToDashboard(
-  applications: ApplicationRecord[]
+  applications: ApplicationRecord[],
+  resurrectUrlKeys?: string[]
 ) {
   const session = await getAccountSession()
   void logDiagnosticEvent({
@@ -349,7 +355,10 @@ async function syncTrackedApplicationsToDashboard(
   }
 
   try {
-    const response = await sendApplicationsToBackgroundSync(applications)
+    const response = await sendApplicationsToBackgroundSync(
+      applications,
+      resurrectUrlKeys
+    )
 
     if (!response.synced) {
       return {
@@ -1314,6 +1323,19 @@ function renderList(items: string[], className = "") {
     .join("")}</ul>`
 }
 
+function formatProviderLabel(provider: string): string {
+  switch (provider) {
+    case "github":
+      return "GitHub"
+    case "google":
+      return "Google"
+    case "email":
+      return "Email sign-in"
+    default:
+      return provider
+  }
+}
+
 function getWidgetMarkup({
   accountSession,
   details,
@@ -1429,6 +1451,46 @@ function getWidgetMarkup({
         align-items: center;
         gap: 8px;
         min-width: 0;
+      }
+
+      .account-identity {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        max-width: 100%;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.35;
+        padding: 3px 8px;
+        border-radius: 999px;
+        width: fit-content;
+        overflow-wrap: anywhere;
+      }
+
+      .account-identity-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex: 0 0 auto;
+      }
+
+      .account-identity-connected {
+        color: #14643f;
+        background: #e7f7ee;
+      }
+
+      .account-identity-connected .account-identity-dot {
+        background: #1f9d5c;
+      }
+
+      .account-identity-disconnected {
+        color: #8a4b00;
+        background: #fff3e0;
+      }
+
+      .account-identity-disconnected .account-identity-dot {
+        background: #d97a06;
       }
 
       .brand-logo,
@@ -1791,6 +1853,14 @@ function getWidgetMarkup({
             <button class="icon-button" data-autotime-collapse-widget type="button" title="Close" aria-label="Close AutoTime widget">&times;</button>
           </div>
         </div>
+        <div class="account-identity ${isDashboardConnected ? "account-identity-connected" : "account-identity-disconnected"}">
+          <span class="account-identity-dot" aria-hidden="true"></span>
+          ${
+            isDashboardConnected && accountSession
+              ? `Signed in as ${escapeHtml(accountSession.email)} via ${escapeHtml(formatProviderLabel(accountSession.provider))}`
+              : "Not connected - tracked jobs save locally only"
+          }
+        </div>
         <div class="header-actions" aria-label="Widget actions">
           <button class="header-action-button" data-autotime-track-job type="button">TRACK JOB</button>
           <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard data-autotime-dashboard-url="${escapeHtml(dashboardUrl)}" type="button">${isDashboardConnected ? "Dashboard" : "Connect"}</button>
@@ -1864,6 +1934,7 @@ async function saveDetectedJob(details: JobPageResponse | null) {
   }
 
   const applications = await getApplications()
+  const resurrectUrlKeys = [normalizeApplicationUrlKey(details.url)]
 
   if (hasApplicationWithUrl(applications, details.url)) {
     void logDiagnosticEvent({
@@ -1873,9 +1944,12 @@ async function saveDetectedJob(details: JobPageResponse | null) {
       status: "info",
       details: { url: details.url }
     })
-    const syncStatus = await syncTrackedApplicationsToDashboard(applications)
+    const syncStatus = await syncTrackedApplicationsToDashboard(
+      applications,
+      resurrectUrlKeys
+    )
     return syncStatus.synced
-      ? "This job is already tracked and synced to dashboard"
+      ? "This job is already tracked and synced to dashboard - it'll be up to date there within a few seconds."
       : `This job is already saved locally. ${syncStatus.reason}`
   }
 
@@ -1895,11 +1969,13 @@ async function saveDetectedJob(details: JobPageResponse | null) {
     }
   })
 
-  const syncStatus =
-    await syncTrackedApplicationsToDashboard(updatedApplications)
+  const syncStatus = await syncTrackedApplicationsToDashboard(
+    updatedApplications,
+    resurrectUrlKeys
+  )
 
   return syncStatus.synced
-    ? "Job tracked and synced to dashboard"
+    ? "Job tracked and synced to dashboard - it'll appear there within a few seconds (the dashboard refreshes automatically while open)."
     : `Job saved locally. ${syncStatus.reason}`
 }
 

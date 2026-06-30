@@ -34,6 +34,7 @@ type ExternalResponse = {
 
 type InternalMessage = {
   applications?: unknown
+  resurrectUrlKeys?: unknown
   type?: unknown
 }
 
@@ -86,11 +87,13 @@ async function syncApplicationsWithState({
   applications,
   completedEvent,
   failedEvent,
+  resurrectUrlKeys,
   startedEvent
 }: {
   applications: ApplicationRecord[]
   completedEvent: string
   failedEvent: string
+  resurrectUrlKeys?: string[]
   startedEvent: string
 }) {
   if (applications.length === 0) {
@@ -113,6 +116,7 @@ async function syncApplicationsWithState({
       (activeSession) =>
         syncApplicationsToDashboard({
           applications,
+          resurrectUrlKeys,
           session: activeSession
         })
     )
@@ -278,6 +282,11 @@ export default defineBackground(() => {
         const applications = Array.isArray(message.applications)
           ? (message.applications as ApplicationRecord[])
           : await getApplications()
+        const resurrectUrlKeys = Array.isArray(message.resurrectUrlKeys)
+          ? message.resurrectUrlKeys.filter(
+              (value): value is string => typeof value === "string"
+            )
+          : undefined
         const applicationIds = applications.map((application) => application.id)
         const { session } = await getActiveSession()
 
@@ -303,6 +312,7 @@ export default defineBackground(() => {
           applications,
           completedEvent: "widget-sync-completed",
           failedEvent: "widget-sync-failed",
+          resurrectUrlKeys,
           startedEvent: "widget-sync-started"
         })
 

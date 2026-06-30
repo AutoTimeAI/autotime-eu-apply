@@ -175,6 +175,7 @@ export default function ExtensionConnect() {
   const [steps, setSteps] = useState<ConnectStep[]>([])
   const [isPending, setIsPending] = useState(false)
   const [needsSignIn, setNeedsSignIn] = useState(false)
+  const [needsExtensionInstall, setNeedsExtensionInstall] = useState(false)
 
   const connectAttemptedRef = useRef(false)
 
@@ -198,12 +199,27 @@ export default function ExtensionConnect() {
       setIsPending(true)
       setStatus(null)
       setNeedsSignIn(false)
+      setNeedsExtensionInstall(false)
 
       if (!hasExtensionId) {
         const message =
           "Open AutoTime from your browser toolbar and click Connect."
         addStep(message, "warning")
         setStatus(message)
+        return
+      }
+
+      if (!getChromeRuntime()) {
+        const message =
+          "Chrome can't find an installed AutoTime extension in this browser window."
+        addStep(message, "error")
+        setStatus(message)
+        setNeedsExtensionInstall(true)
+        reportClientIssue({
+          area: "extension",
+          code: "extension.connect.runtime.missing",
+          message
+        })
         return
       }
 
@@ -293,6 +309,9 @@ export default function ExtensionConnect() {
         error instanceof Error ? error.message : "Extension connection failed."
       addStep(message, "error")
       setStatus(message)
+      if (/messaging is unavailable/i.test(message)) {
+        setNeedsExtensionInstall(true)
+      }
       reportClientIssue({
         area: "extension",
         code: "extension.connect.unhandled",
@@ -334,6 +353,36 @@ export default function ExtensionConnect() {
       </div>
       {status ? (
         <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
+      ) : null}
+      {needsExtensionInstall ? (
+        <div className="extension-install-guidance" role="alert">
+          <strong>AutoTime extension not detected in this browser</strong>
+          <p>
+            This isn&apos;t a sign-in problem. Chrome itself can&apos;t find
+            a running AutoTime extension to connect to. Check the following,
+            then click Connect extension again:
+          </p>
+          <ol>
+            <li>
+              Open <code>chrome://extensions</code> in this same browser
+              window.
+            </li>
+            <li>
+              Confirm <strong>AutoTime EU Apply</strong> is listed and the
+              toggle is switched on. If it shows a red &quot;Errors&quot;
+              button, click it and check for a crash.
+            </li>
+            <li>
+              If it&apos;s not listed, load it with{" "}
+              <strong>Load unpacked</strong> pointing at the extension&apos;s
+              build folder.
+            </li>
+            <li>
+              Click the reload icon on the extension&apos;s card, then
+              retry.
+            </li>
+          </ol>
+        </div>
       ) : null}
       {steps.length ? (
         <ol className="summary-list" aria-label="Connection diagnostic log">

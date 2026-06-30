@@ -526,6 +526,41 @@ h4 {
   padding: 9px 10px;
 }
 
+.extension-install-guidance {
+  order: 2;
+  margin-bottom: 14px;
+  border: 1px solid #e1b8bd;
+  border-left: 4px solid var(--red);
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #4a2228;
+  padding: 14px 16px;
+}
+
+.extension-install-guidance strong {
+  color: var(--red);
+}
+
+.extension-install-guidance p {
+  margin: 8px 0;
+}
+
+.extension-install-guidance ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.extension-install-guidance code {
+  background: #ffffff;
+  border: 1px solid #e1b8bd;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+
 .status.error {
   margin: 0;
   border: 1px solid #e1b8bd;
