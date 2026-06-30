@@ -197,7 +197,7 @@ export default function ExtensionConnect() {
       } = await supabase.auth.getSession()
 
       if (error || !session?.access_token) {
-        const message = "Sign in first, then reconnect the extension."
+        const message = "Please sign in, then connect the extension again."
         addStep(message, "warning")
         setStatus(message)
         setNeedsSignIn(true)
@@ -257,10 +257,11 @@ export default function ExtensionConnect() {
       }
 
       addStep("Dashboard connection recorded.", "success")
+      const accountLabel = account.data.email.trim()
       const successMessage =
         extensionResponse.syncError
-          ? `Extension connected. Tracked jobs will retry sync from Track Job. Reason: ${extensionResponse.syncError}`
-          : "Extension connected. You can return to the side panel."
+          ? `Extension connected for ${accountLabel}. Tracked jobs will retry sync from Track Job. ${extensionResponse.syncError}`
+          : `Extension connected for ${accountLabel}. You can return to the side panel.`
       setStatus(successMessage)
       addStep(successMessage, extensionResponse.syncError ? "warning" : "success")
     } catch (error: unknown) {

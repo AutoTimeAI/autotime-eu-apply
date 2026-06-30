@@ -32,6 +32,7 @@ function LoginForm() {
   );
   const [accountConsent, setAccountConsent] = useState(false);
   const [hasExistingSession, setHasExistingSession] = useState(false);
+  const [identityProviderLabel, setIdentityProviderLabel] = useState<string | null>(null);
   const oauthStartedRef = useRef(false);
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
@@ -39,7 +40,7 @@ function LoginForm() {
     let isMounted = true;
     const supabase = createBrowserClient();
 
-    supabase.auth.getSession().then(({ data, error }) => {
+    supabase.auth.getSession().then(async ({ data, error }) => {
       if (!isMounted) {
         return;
       }
@@ -56,6 +57,26 @@ function LoginForm() {
 
       if (data.session) {
         setHasExistingSession(true);
+        try {
+          const { data: identities, error: identitiesError } = await supabase.auth.getUserIdentities();
+          if (!isMounted) {
+            return;
+          }
+
+          if (!identitiesError) {
+            const providers = identities.identities
+              .map((identity) => identity.provider)
+              .filter(Boolean);
+            const providerLabel = providers.includes("github")
+              ? "GitHub"
+              : providers.includes("google")
+                ? "Google"
+                : null;
+            setIdentityProviderLabel(providerLabel);
+          }
+        } catch {
+          setIdentityProviderLabel(null);
+        }
         setStatus(
           "Already signed in. Confirm account permission, then continue to your dashboard.",
         );
@@ -147,7 +168,7 @@ function LoginForm() {
         return;
       }
 
-      setStatus("Redirecting to identity provider...");
+      setStatus("Taking you to the sign-in provider...");
       window.location.assign(data.url);
     } catch (error: unknown) {
       const message = getErrorMessage(error);
@@ -181,6 +202,7 @@ function LoginForm() {
       const supabase = createBrowserClient();
       await supabase.auth.signOut();
       setHasExistingSession(false);
+      setIdentityProviderLabel(null);
       setAccountConsent(false);
       setStatus("Signed out. Choose Google or GitHub to authenticate again.");
     } catch (error: unknown) {
@@ -260,6 +282,11 @@ function LoginForm() {
 
         {hasExistingSession ? (
           <>
+            {identityProviderLabel ? (
+              <p className="auth-consent-hint">
+                Signed in with {identityProviderLabel}.
+              </p>
+            ) : null}
             <div className="header-actions auth-provider-actions">
               <button
                 disabled={Boolean(pendingProvider)}

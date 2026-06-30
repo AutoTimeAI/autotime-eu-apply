@@ -4189,11 +4189,11 @@ export default function HomePage({
               checked: true,
               authenticated: false,
               userEmail: null,
-              message: "No synced dashboard workflow found for this account yet"
+              message: "No synced jobs found for this account yet"
             }
           )
           if (!silent) {
-            setStatus("No synced dashboard workflow found for this account yet")
+            setStatus("No synced jobs found for this account yet")
           }
           return false
         }
@@ -5369,7 +5369,7 @@ export default function HomePage({
 
   const regenerateKitDraft = () => {
     if (!activeKitApplication) {
-      setStatus("Track a job before generating application content")
+      setStatus("Track a job first, then generate application content")
       return
     }
 
@@ -5393,7 +5393,7 @@ export default function HomePage({
     }
 
     if (!activeKitApplication || !kitDraft) {
-      setStatus("Track a job before saving application content")
+      setStatus("Track a job first, then save application content")
       return
     }
 
@@ -6090,7 +6090,7 @@ export default function HomePage({
         : activeFocus === "application-answers"
           ? activeKitApplication
             ? "Draft content is tied to a tracked job"
-            : "Track a job before writing application content"
+            : "Track a job first, then write application content"
           : activeFocus === "cv-tailor"
             ? "Proof Library is saved with your profile"
             : activeFocus === "follow-ups"
@@ -8089,7 +8089,7 @@ export default function HomePage({
                           <p>
                             {latestTrackedJobSource
                               ? "Load saved role details and JD text."
-                              : "Track a job from the extension or paste the JD below."}
+                              : "Track a job from the extension or paste the job description below."}
                           </p>
                         </div>
                         <span
@@ -9981,6 +9981,13 @@ export default function HomePage({
                                 {cloudSyncSessionState.authenticated
                                   ? `Signed in as ${cloudSyncSessionState.userEmail ?? "your AutoTime account"}.`
                                   : cloudSyncSessionState.message}
+                              </p>
+                            ) : null}
+                            {!state.applications.length && cloudSyncReadiness.configured ? (
+                              <p className="sync-status-note">
+                                {cloudSyncSessionState?.authenticated
+                                  ? `Dashboard account: ${cloudSyncSessionState.userEmail ?? "unknown"}.`
+                                  : "Dashboard account not confirmed yet."}
                               </p>
                             ) : null}
                             {!state.applications.length ? (
