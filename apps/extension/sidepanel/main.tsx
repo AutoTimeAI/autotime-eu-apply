@@ -688,11 +688,14 @@ function SidePanelApp() {
     if (hasApplicationWithUrl(applications, details.url)) {
       setTrackedJobDetails(details)
       const syncResult = await syncApplicationListToDashboard(applications)
-      setApplicationsStatus(
-        syncResult.synced
-          ? "This job is already tracked and synced to dashboard"
-          : `This job is already saved locally only. ${syncResult.reason}`
-      )
+      if (syncResult.synced) {
+        setApplications(applications)
+        setApplicationsStatus("This job is already tracked and synced to dashboard")
+      } else {
+        setApplicationsStatus(
+          `This job is already saved locally only. ${syncResult.reason}`
+        )
+      }
       setTimeout(() => setApplicationsStatus(""), 4500)
       return
     }
@@ -715,12 +718,12 @@ function SidePanelApp() {
         .join("\n\n")
     }
 
-    await saveApplication(record)
     setTrackedJobDetails(details)
     const updatedApplications = [record, ...applications]
-    setApplications(updatedApplications)
-
     const syncResult = await syncApplicationListToDashboard(updatedApplications)
+
+    await saveApplication(record)
+    setApplications(updatedApplications)
     setApplicationsStatus(
       syncResult.synced
         ? "Job tracked and synced to dashboard"
