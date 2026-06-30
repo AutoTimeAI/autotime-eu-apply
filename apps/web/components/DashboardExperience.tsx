@@ -4410,14 +4410,14 @@ export default function HomePage({
         successMessage: "Synced profile restored into this browser"
       })
     }
-    if (productionSyncPreferences.profileAccountSyncEnabled) {
+    if (cloudSyncReadiness.configured) {
       void loadDashboardSnapshot({ silent: true })
       void loadProfileSnapshot({ silent: true })
     }
   }, [cloudSyncReadiness.configured, loadDashboardSnapshot, loadProfileSnapshot, userId])
 
   useEffect(() => {
-    if (!syncPreferences.profileAccountSyncEnabled) {
+    if (!cloudSyncReadiness.configured) {
       return
     }
 
