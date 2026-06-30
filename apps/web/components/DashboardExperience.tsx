@@ -1439,14 +1439,29 @@ function getReusableAnswerLabel(key: ReusableAnswerKey) {
   return labels[key]
 }
 
+function getProofLibraryContextForInterview(reusableAnswers: ReusableAnswers) {
+  return [
+    reusableAnswers.motivationAnswer &&
+      `Motivation proof: ${normaliseSentence(reusableAnswers.motivationAnswer)}`,
+    reusableAnswers.strengthsAnswer &&
+      `Strength proof: ${normaliseSentence(reusableAnswers.strengthsAnswer)}`,
+    reusableAnswers.availabilityAnswer &&
+      `Availability proof: ${normaliseSentence(reusableAnswers.availabilityAnswer)}`
+  ]
+    .filter(Boolean)
+    .join(" ")
+}
+
 function createInterviewBuddyOutputs({
   draft,
   profile,
-  question
+  question,
+  reusableAnswers
 }: {
   draft: string
   profile: CandidateProfile
   question: string
+  reusableAnswers: ReusableAnswers
 }): InterviewBuddyOutputs {
   const cleanQuestion = question.trim()
   const cleanDraft = normaliseSentence(draft)
@@ -1455,9 +1470,12 @@ function createInterviewBuddyOutputs({
     question
   })
   const profileContext = getProfileContextForInterview(profile)
-  const evidenceLine = profileContext
-    ? `I would connect that to my profile evidence: ${normaliseSentence(profileContext)}`
-    : "I would keep the answer limited to the experience I can clearly evidence."
+  const proofLibraryContext = getProofLibraryContextForInterview(reusableAnswers)
+  const evidenceLine = proofLibraryContext
+    ? `I would connect that to my Proof Library: ${proofLibraryContext}`
+    : profileContext
+      ? `I would connect that to my profile evidence: ${normaliseSentence(profileContext)}`
+      : "I would keep the answer limited to the experience I can clearly evidence."
   const limitLine =
     "I would avoid adding claims that are not already in my draft or saved profile."
 
@@ -1493,13 +1511,19 @@ function createInterviewBuddyOutputs({
 function createLocalInterviewCoachMeta({
   draft,
   profile,
-  question
+  question,
+  reusableAnswers
 }: {
   draft: string
   profile: CandidateProfile
   question: string
+  reusableAnswers: ReusableAnswers
 }): InterviewCoachMeta {
+  const hasProofLibraryContent = Boolean(
+    getProofLibraryContextForInterview(reusableAnswers).trim()
+  )
   const missingEvidence = [
+    !hasProofLibraryContent && "Add Proof Library reason or strength first",
     !profile.experienceHighlights.trim() && "Add experience highlights",
     !profile.projectSummaries.trim() && "Add one project or delivery example",
     !profile.workRightDetails.trim() && "Add verified work-right details",
@@ -6223,6 +6247,9 @@ export default function HomePage({
   )
   const finalAnswerStorageKey = inferReusableAnswerKey(activeInterviewQuestion)
   const hasInterviewDraftAnswer = Boolean(interviewDraftAnswer.trim())
+  const hasProofLibraryInterviewContent = Boolean(
+    getProofLibraryContextForInterview(state.reusableAnswers).trim()
+  )
   const hasInterviewBuddyOutputs = Boolean(
     interviewBuddyOutputs.strongFinalAnswer.trim()
   )
@@ -6280,7 +6307,9 @@ export default function HomePage({
             : hasInterviewBuddyOutputs
               ? "Answer ready to save"
               : hasInterviewDraftAnswer
-                ? "Rough answer ready for coaching"
+                ? hasProofLibraryInterviewContent
+                  ? "Rough answer ready for coaching"
+                  : "Add Proof Library proof before coaching"
                 : "Add your rough answer first"
   const actionPanelStatus = isCopilotThinking
     ? "Working"
@@ -6292,7 +6321,8 @@ export default function HomePage({
           ? "Input needed"
           : currentTab === "profile" && !profileReadyForExecution
             ? "Incomplete"
-            : currentTab === "interview" && !hasInterviewDraftAnswer
+            : currentTab === "interview" &&
+                (!hasInterviewDraftAnswer || !hasProofLibraryInterviewContent)
               ? "Input needed"
               : "Ready"
 
@@ -6316,6 +6346,13 @@ export default function HomePage({
       question: activeInterviewQuestion
     })
 
+    if (!hasProofLibraryInterviewContent) {
+      setStatus(
+        "Add a motivation, strength or availability proof in Proof Library before running the coach"
+      )
+      return
+    }
+
     if (validationError) {
       setInterviewBuddyOutputs(emptyInterviewBuddyOutputs)
       setInterviewCoachMeta(emptyInterviewCoachMeta)
@@ -6326,12 +6363,14 @@ export default function HomePage({
     const localOutputs = createInterviewBuddyOutputs({
       draft: interviewDraftAnswer,
       profile: state.profile,
-      question: activeInterviewQuestion
+      question: activeInterviewQuestion,
+        reusableAnswers: state.reusableAnswers
     })
     const localCoachMeta = createLocalInterviewCoachMeta({
       draft: interviewDraftAnswer,
       profile: state.profile,
-      question: activeInterviewQuestion
+      question: activeInterviewQuestion,
+        reusableAnswers: state.reusableAnswers
     })
 
     setIsCopilotThinking(true)
@@ -6346,7 +6385,7 @@ export default function HomePage({
           job: state.jobAnalysis,
           profile: state.profile,
           question: activeInterviewQuestion,
-          reusableAnswers: state.reusableAnswers
+        reusableAnswers: state.reusableAnswers
         })
       })
       const body = (await response.json()) as {
@@ -6426,6 +6465,13 @@ export default function HomePage({
       question: activeInterviewQuestion
     })
 
+    if (!hasProofLibraryInterviewContent) {
+      setStatus(
+        "Add a motivation, strength or availability proof in Proof Library before running the local check"
+      )
+      return
+    }
+
     if (validationError) {
       setInterviewBuddyOutputs(emptyInterviewBuddyOutputs)
       setInterviewCoachMeta(emptyInterviewCoachMeta)
@@ -6437,14 +6483,16 @@ export default function HomePage({
       createInterviewBuddyOutputs({
         draft: interviewDraftAnswer,
         profile: state.profile,
-        question: activeInterviewQuestion
+        question: activeInterviewQuestion,
+        reusableAnswers: state.reusableAnswers
       })
     )
     setInterviewCoachMeta(
       createLocalInterviewCoachMeta({
         draft: interviewDraftAnswer,
         profile: state.profile,
-        question: activeInterviewQuestion
+        question: activeInterviewQuestion,
+        reusableAnswers: state.reusableAnswers
       })
     )
     setStatus("Local interview check generated from your draft")
@@ -6547,11 +6595,11 @@ export default function HomePage({
 
     persist(
       next,
-      `Final answer saved to ${getReusableAnswerLabel(finalAnswerStorageKey)}`
+      `Interview Answer Bank updated in Proof Library: ${getReusableAnswerLabel(finalAnswerStorageKey)}`
     )
     scheduleDashboardSync(next, {
-      failureMessage: "Final answer saved locally. Dashboard sync failed",
-      successMessage: "Final answer saved and synced"
+      failureMessage: "Interview answer saved locally. Dashboard sync failed",
+      successMessage: "Interview Answer Bank saved and synced"
     })
   }
 
@@ -6879,7 +6927,11 @@ export default function HomePage({
                 ) : (
                   <>
                     <button
-                      disabled={!hasInterviewDraftAnswer || isCopilotThinking}
+                      disabled={
+                        !hasInterviewDraftAnswer ||
+                        !hasProofLibraryInterviewContent ||
+                        isCopilotThinking
+                      }
                       type="button"
                       onClick={generateInterviewBuddyAnswers}
                     >
@@ -6891,7 +6943,7 @@ export default function HomePage({
                       type="button"
                       onClick={saveFinalInterviewAnswer}
                     >
-                      Save to Proof Library
+                      Save to Interview Bank
                     </button>
                   </>
                 )}
@@ -10331,7 +10383,11 @@ export default function HomePage({
 
                       <div className="header-actions">
                         <button
-                          disabled={!hasInterviewDraftAnswer || isCopilotThinking}
+                          disabled={
+                            !hasInterviewDraftAnswer ||
+                            !hasProofLibraryInterviewContent ||
+                            isCopilotThinking
+                          }
                           type="button"
                           onClick={generateInterviewBuddyAnswers}
                         >
@@ -10339,7 +10395,11 @@ export default function HomePage({
                         </button>
                         <button
                           className="secondary-button"
-                          disabled={!hasInterviewDraftAnswer || isCopilotThinking}
+                          disabled={
+                            !hasInterviewDraftAnswer ||
+                            !hasProofLibraryInterviewContent ||
+                            isCopilotThinking
+                          }
                           type="button"
                           onClick={generateLocalInterviewBuddyAnswers}
                         >
@@ -10351,7 +10411,7 @@ export default function HomePage({
                           type="button"
                           onClick={saveFinalInterviewAnswer}
                         >
-                          Save to Proof Library
+                          Save to Interview Bank
                         </button>
                       </div>
                     </section>
