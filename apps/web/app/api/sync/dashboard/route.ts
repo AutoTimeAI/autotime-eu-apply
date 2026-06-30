@@ -49,13 +49,17 @@ type DashboardReadData = {
 
 type SourceSurface = Database["public"]["Tables"]["sync_events"]["Insert"]["source_surface"]
 
-const dashboardWorkflowSchema = companionDashboardStateSchema.pick({
-  reusableAnswers: true,
-  applications: true,
-  evidenceRecords: true,
-  outcomeRecords: true,
-  interviewPrepPacks: true
-})
+const dashboardWorkflowSchema = companionDashboardStateSchema
+  .pick({
+    reusableAnswers: true,
+    applications: true,
+    evidenceRecords: true,
+    outcomeRecords: true,
+    interviewPrepPacks: true
+  })
+  .partial({
+    reusableAnswers: true
+  })
 
 const emptyReusableAnswers: ReusableAnswers = {
   sponsorshipAnswer: "",
@@ -294,23 +298,28 @@ function mapSyncEvents({
   applicationIdMap,
   payload,
   sourceSurface,
-  userId
+  userId,
+  includeReusableAnswers = true
 }: {
   applicationIdMap?: Map<string, string>
   payload: DashboardWorkflowPayload
   sourceSurface: SourceSurface
   userId: string
+  includeReusableAnswers?: boolean
 }): Database["public"]["Tables"]["sync_events"]["Insert"][] {
-  const events: Database["public"]["Tables"]["sync_events"]["Insert"][] = [
-    {
-      action: "updated",
-      entity_id: userId,
-      entity_type: "reusable_answers",
-      message: "Reusable answers synced to dashboard.",
-      source_surface: sourceSurface,
-      user_id: userId
-    }
-  ]
+  const events: Database["public"]["Tables"]["sync_events"]["Insert"][] =
+    includeReusableAnswers
+      ? [
+          {
+            action: "updated",
+            entity_id: userId,
+            entity_type: "reusable_answers",
+            message: "Reusable answers synced to dashboard.",
+            source_surface: sourceSurface,
+            user_id: userId
+          }
+        ]
+      : []
 
   for (const application of payload.applications) {
     events.push({
@@ -699,27 +708,29 @@ export async function POST(
       }
     }
 
-    const reusableAnswersResult = await supabase
-      .from("reusable_answers")
-      .upsert(
-        mapReusableAnswersToRow(
-          auth.user.id,
-          payload.reusableAnswers,
-          sourceSurface
-        ),
-        { onConflict: "user_id" }
-      )
+    if (payload.reusableAnswers) {
+      const reusableAnswersResult = await supabase
+        .from("reusable_answers")
+        .upsert(
+          mapReusableAnswersToRow(
+            auth.user.id,
+            payload.reusableAnswers,
+            sourceSurface
+          ),
+          { onConflict: "user_id" }
+        )
 
-    if (reusableAnswersResult.error) {
-      return diagnosticJson({
-        area: "sync",
-        code: "sync.dashboard.answers.failed",
-        data: null,
-        error: reusableAnswersResult.error.message,
-        log: true,
-        request,
-        status: 500
-      })
+      if (reusableAnswersResult.error) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.answers.failed",
+          data: null,
+          error: reusableAnswersResult.error.message,
+          log: true,
+          request,
+          status: 500
+        })
+      }
     }
 
     if (activeApplications.length) {
@@ -847,7 +858,8 @@ export async function POST(
         interviewPrepPacks: activeInterviewPrepPacks
       },
       sourceSurface,
-      userId: auth.user.id
+      userId: auth.user.id,
+      includeReusableAnswers: Boolean(payload.reusableAnswers)
     })
 
     if (syncEvents.length) {

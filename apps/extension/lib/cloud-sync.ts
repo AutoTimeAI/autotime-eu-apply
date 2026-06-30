@@ -3,8 +3,7 @@ import { appUrl } from "./openai"
 import type {
   AccountSession,
   ApplicationRecord,
-  CandidateProfile,
-  ReusableAnswers
+  CandidateProfile
 } from "./storage"
 
 type ApiEnvelope<T> = {
@@ -26,7 +25,6 @@ type DashboardWorkflow = {
   evidenceRecords: unknown[]
   interviewPrepPacks: unknown[]
   outcomeRecords: unknown[]
-  reusableAnswers: ReusableAnswers
 }
 
 type DashboardReadResponse = {
@@ -36,17 +34,6 @@ type DashboardReadResponse = {
 type DashboardSyncResponse = {
   deletedApplicationIds?: string[]
   synced: true
-}
-
-const emptyReusableAnswers: ReusableAnswers = {
-  sponsorshipAnswer: "",
-  relocationAnswer: "",
-  workAuthorisationAnswer: "",
-  noticePeriodAnswer: "",
-  salaryExpectationAnswer: "",
-  motivationAnswer: "",
-  strengthsAnswer: "",
-  availabilityAnswer: ""
 }
 
 async function parseSyncResponse<T>(response: Response): Promise<T> {
@@ -105,11 +92,9 @@ export async function loadProfileFromDashboard(session: AccountSession | null) {
 
 export async function syncApplicationsToDashboard({
   applications,
-  reusableAnswers,
   session
 }: {
   applications: ApplicationRecord[]
-  reusableAnswers: ReusableAnswers | null
   session: AccountSession | null
 }) {
   if (!session?.authToken.trim()) {
@@ -135,9 +120,7 @@ export async function syncApplicationsToDashboard({
     ),
     evidenceRecords: dashboard?.evidenceRecords ?? [],
     interviewPrepPacks: dashboard?.interviewPrepPacks ?? [],
-    outcomeRecords: dashboard?.outcomeRecords ?? [],
-    reusableAnswers:
-      dashboard?.reusableAnswers ?? reusableAnswers ?? emptyReusableAnswers
+    outcomeRecords: dashboard?.outcomeRecords ?? []
   }
 
   const writeResponse = await fetch(`${appUrl}/api/sync/dashboard`, {

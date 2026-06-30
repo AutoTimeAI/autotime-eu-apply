@@ -5,7 +5,6 @@ import {
   getApplications,
   getAccountSession,
   getApplicationSyncState,
-  getReusableAnswers,
   logDiagnosticEvent,
   saveAccountSession,
   updateApplicationSyncState,
@@ -104,7 +103,6 @@ async function syncApplicationsWithState({
     })
     const syncResult = await syncApplicationsToDashboard({
       applications,
-      reusableAnswers: await getReusableAnswers(),
       session
     })
     const deletedApplicationIds = syncResult.deletedApplicationIds ?? []

@@ -618,7 +618,6 @@ function SidePanelApp() {
     try {
       const syncResult = await syncApplicationsToDashboard({
         applications: applicationsToSync,
-        reusableAnswers: savedReusableAnswers ?? reusableAnswers,
         session: accountSession
       })
       const deletedApplicationIds = syncResult.deletedApplicationIds ?? []
