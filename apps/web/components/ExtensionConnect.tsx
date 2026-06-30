@@ -190,11 +190,6 @@ export default function ExtensionConnect() {
         return
       }
 
-      setStatus("Checking installed extension...")
-      addStep("Checking installed extension reachability.")
-      await pingExtension(extensionId)
-      addStep("Extension preflight reached the installed extension.", "success")
-
       const supabase = createBrowserClient()
       const {
         data: { session },
@@ -213,6 +208,11 @@ export default function ExtensionConnect() {
         })
         return
       }
+
+      setStatus("Checking installed extension...")
+      addStep("Checking installed extension reachability.")
+      await pingExtension(extensionId)
+      addStep("Extension preflight reached the installed extension.", "success")
 
       setStatus("Connecting dashboard account to extension...")
       addStep("Dashboard session detected. Reading account plan.")
