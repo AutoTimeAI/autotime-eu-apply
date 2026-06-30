@@ -4453,7 +4453,7 @@ export default function HomePage({
       if (document.visibilityState === "visible") {
         refreshSyncedWorkflow()
       }
-    }, 15000)
+    }, 5000)
 
     return () => {
       window.removeEventListener("focus", refreshSyncedWorkflow)
@@ -9976,18 +9976,11 @@ export default function HomePage({
                                   ? "Tracked roles from the extension and saved role checks appear here. If the list is still empty, sign in with the same AutoTime account the extension used and refresh this page."
                                   : "Tracked roles from the extension and saved role checks appear here."}
                             </p>
-                            {!state.applications.length && cloudSyncReadiness.configured && cloudSyncSessionState ? (
-                              <p className="sync-status-note">
-                                {cloudSyncSessionState.authenticated
-                                  ? `Signed in as ${cloudSyncSessionState.userEmail ?? "your AutoTime account"}.`
-                                  : cloudSyncSessionState.message}
-                              </p>
-                            ) : null}
                             {!state.applications.length && cloudSyncReadiness.configured ? (
                               <p className="sync-status-note">
                                 {cloudSyncSessionState?.authenticated
-                                  ? `Dashboard account: ${cloudSyncSessionState.userEmail ?? "unknown"}.`
-                                  : "Dashboard account not confirmed yet."}
+                                  ? `Signed in as ${cloudSyncSessionState.userEmail ?? "your AutoTime account"}.`
+                                  : "Dashboard account not confirmed yet. Sign in with the same AutoTime account the extension uses."}
                               </p>
                             ) : null}
                             {!state.applications.length ? (
