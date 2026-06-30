@@ -8829,6 +8829,26 @@ export default function HomePage({
 
               {!isOverview && currentTab === "applications" && (
                 <section className="applications-section full-width-section">
+                  {!cloudSyncReadiness.configured && (
+                    <div className="cloud-sync-misconfigured-banner" role="alert">
+                      <strong>Cloud sync isn&apos;t configured on this deployment</strong>
+                      <p>
+                        Jobs tracked from the extension are written to the
+                        server, but this dashboard isn&apos;t set up to read
+                        them back yet - they won&apos;t appear here until this
+                        is fixed.
+                      </p>
+                      <p>
+                        Missing or misconfigured:{" "}
+                        {cloudSyncReadiness.issues.join(", ")}. If you just
+                        added these as environment variables in Vercel, note
+                        that <code>NEXT_PUBLIC_</code>-prefixed variables are
+                        inlined at build time - a plain &quot;Redeploy&quot;
+                        of a cached build won&apos;t pick them up; trigger a
+                        fresh deployment.
+                      </p>
+                    </div>
+                  )}
                   <div className="section-intro">
                     <p className="eyebrow">{focusCopy.eyebrow}</p>
                     <h2>{focusCopy.title}</h2>

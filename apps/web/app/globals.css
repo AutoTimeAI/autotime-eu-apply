@@ -561,6 +561,32 @@ h4 {
   font-size: 0.9em;
 }
 
+.cloud-sync-misconfigured-banner {
+  border: 1px solid #e1b8bd;
+  border-left: 4px solid var(--red);
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #4a2228;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.cloud-sync-misconfigured-banner strong {
+  color: var(--red);
+}
+
+.cloud-sync-misconfigured-banner p {
+  margin: 8px 0 0;
+}
+
+.cloud-sync-misconfigured-banner code {
+  background: #ffffff;
+  border: 1px solid #e1b8bd;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+
 .status.error {
   margin: 0;
   border: 1px solid #e1b8bd;
