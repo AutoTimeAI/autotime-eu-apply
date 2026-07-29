@@ -1,52 +1,76 @@
-import { redirect } from "next/navigation"
-import { AccountIdentityLinker } from "../../../components/AccountIdentityLinker"
-import { SettingsControls } from "../../../components/SettingsControls"
-import { getRemainingAiCalls, getUserPlan } from "../../../lib/feature-gate"
-import { createAdminClient } from "../../../lib/supabase/admin"
-import { createServerClient } from "../../../lib/supabase/server"
+import { redirect } from "next/navigation";
+import { AccountIdentityLinker } from "../../../components/AccountIdentityLinker";
+import { SettingsControls } from "../../../components/SettingsControls";
+import { getRemainingAiCalls, getUserPlan } from "../../../lib/feature-gate";
+import { createAdminClient } from "../../../lib/supabase/admin";
+import { createServerClient } from "../../../lib/supabase/server";
+import { getTestAuthUser } from "../../../lib/test-auth";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
-    return "Not recorded"
+    return "Not recorded";
   }
 
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value))
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 export default async function DashboardSettingsPage() {
-  const supabase = await createServerClient()
-  const {
-    data: { user }
-  } = await supabase.auth.getUser()
-
+  const testUser = getTestAuthUser();
+  let user = testUser;
   if (!user) {
-    redirect("/login?redirectTo=/dashboard/settings")
+    const supabase = await createServerClient();
+    const {
+      data: { user: sessionUser },
+    } = await supabase.auth.getUser();
+    user = sessionUser;
   }
 
-  const admin = createAdminClient()
-  const plan = await getUserPlan(user.id)
+  if (!user) {
+    redirect("/login?redirectTo=/dashboard/settings");
+  }
+
+  const plan = await getUserPlan(user.id);
   const [remainingCalls, profileResult, applicationsResult, extensionResult] =
-    await Promise.all([
-      plan === "free" ? getRemainingAiCalls(user.id) : Promise.resolve(0),
-      admin.from("profiles").select("updated_at").eq("user_id", user.id).maybeSingle(),
-      admin
-        .from("applications")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id),
-      admin
-        .from("extension_connections")
-        .select("last_connected_at, last_synced_at, revoked_at")
-        .eq("user_id", user.id)
-        .is("revoked_at", null)
-        .order("last_connected_at", { ascending: false })
-        .limit(1)
-    ])
-  const activeExtension = extensionResult.data?.[0]
+    testUser
+      ? [
+          0,
+          { data: null as { updated_at: string } | null },
+          { count: 0 },
+          {
+            data: [] as Array<{
+              last_connected_at: string;
+              last_synced_at: string | null;
+            }>,
+          },
+        ]
+      : await (async () => {
+          const admin = createAdminClient();
+          return Promise.all([
+            plan === "free" ? getRemainingAiCalls(user.id) : Promise.resolve(0),
+            admin
+              .from("profiles")
+              .select("updated_at")
+              .eq("user_id", user.id)
+              .maybeSingle(),
+            admin
+              .from("applications")
+              .select("*", { count: "exact", head: true })
+              .eq("user_id", user.id),
+            admin
+              .from("extension_connections")
+              .select("last_connected_at, last_synced_at, revoked_at")
+              .eq("user_id", user.id)
+              .is("revoked_at", null)
+              .order("last_connected_at", { ascending: false })
+              .limit(1),
+          ]);
+        })();
+  const activeExtension = extensionResult.data?.[0];
 
   return (
     <main className="dashboard-shell">
@@ -78,8 +102,13 @@ export default async function DashboardSettingsPage() {
           </article>
           <article>
             <span>Sync</span>
-            <strong>{profileResult.data ? "Account profile saved" : "Browser first"}</strong>
-            <p>Last account profile save: {formatDate(profileResult.data?.updated_at)}</p>
+            <strong>
+              {profileResult.data ? "Account profile saved" : "Browser first"}
+            </strong>
+            <p>
+              Last account profile save:{" "}
+              {formatDate(profileResult.data?.updated_at)}
+            </p>
             <a href="/dashboard/autofill-profile">Profile Evidence</a>
           </article>
           <article>
@@ -111,5 +140,5 @@ export default async function DashboardSettingsPage() {
         userId={user.id}
       />
     </main>
-  )
+  );
 }

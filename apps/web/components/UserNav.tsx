@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   createContext,
@@ -6,168 +6,153 @@ import {
   useContext,
   useEffect,
   useRef,
-  useState
-} from "react"
-import { usePathname } from "next/navigation"
-import { getStatusTone } from "../lib/status-tone"
-import { createBrowserClient } from "../lib/supabase/client"
-import type { SubscriptionPlan } from "../lib/supabase/types"
-import { useProfileProtocolReadiness } from "./ProfileProtocolLock"
+  useState,
+} from "react";
+import { usePathname } from "next/navigation";
+import { getStatusTone } from "../lib/status-tone";
+import { createBrowserClient } from "../lib/supabase/client";
+import type { SubscriptionPlan } from "../lib/supabase/types";
+import { useProfileProtocolReadiness } from "./ProfileProtocolLock";
 
 type DashboardPlanContextValue = {
-  plan: SubscriptionPlan
-  userId: string
-}
+  plan: SubscriptionPlan;
+  userId: string;
+};
 
 type UserNavProps = {
-  email: string
-  isAdmin?: boolean
-  plan: SubscriptionPlan
-}
+  email: string;
+  isAdmin?: boolean;
+  plan: SubscriptionPlan;
+};
 
 type DashboardNavItem = {
-  aliases?: string[]
-  description?: string
-  href: string
-  label: string
-}
+  aliases?: string[];
+  description?: string;
+  href: string;
+  label: string;
+};
 
-const DashboardPlanContext =
-  createContext<DashboardPlanContextValue | null>(null)
+const DashboardPlanContext = createContext<DashboardPlanContextValue | null>(
+  null,
+);
 
 export function useDashboardPlan(): DashboardPlanContextValue {
-  const context = useContext(DashboardPlanContext)
+  const context = useContext(DashboardPlanContext);
 
   if (!context) {
-    throw new Error("useDashboardPlan must be used inside DashboardPlanProvider")
+    throw new Error(
+      "useDashboardPlan must be used inside DashboardPlanProvider",
+    );
   }
 
-  return context
+  return context;
 }
 
 export function DashboardPlanProvider({
   children,
   plan,
-  userId
+  userId,
 }: {
-  children: ReactNode
-  plan: SubscriptionPlan
-  userId: string
+  children: ReactNode;
+  plan: SubscriptionPlan;
+  userId: string;
 }) {
   return (
     <DashboardPlanContext.Provider value={{ plan, userId }}>
       {children}
     </DashboardPlanContext.Provider>
-  )
+  );
 }
 
 function getInitial(email: string): string {
-  return email.trim().charAt(0).toUpperCase() || "A"
+  return email.trim().charAt(0).toUpperCase() || "A";
 }
 
 const dashboardTopNavItems: DashboardNavItem[] = [
   { href: "/dashboard", label: "Home" },
-  { href: "/dashboard/extension", label: "Extension" },
-  { href: "/pricing", label: "Plans" },
-  { href: "/dashboard/settings", label: "Settings" }
-]
+];
 
 const dashboardWorkflowNavItems: DashboardNavItem[] = [
   { href: "/dashboard", label: "Overview", description: "Start here" },
   {
-    aliases: ["/dashboard/profile"],
-    href: "/dashboard/autofill-profile",
-    label: "Profile Evidence",
-    description: "Your facts"
+    aliases: ["/dashboard/match-score"],
+    href: "/dashboard/jobs",
+    label: "Jobs",
+    description: "Analyse and tailor",
   },
   {
-    aliases: ["/dashboard/inbox"],
+    aliases: [
+      "/dashboard/inbox",
+      "/dashboard/application-answers",
+      "/dashboard/documents",
+      "/dashboard/interview",
+      "/dashboard/follow-ups",
+    ],
     href: "/dashboard/applications",
-    label: "Tracked Jobs",
-    description: "Saved jobs"
+    label: "Applications",
+    description: "Track and progress",
   },
   {
-    aliases: ["/dashboard/jobs"],
-    href: "/dashboard/match-score",
-    label: "Fit Analysis",
-    description: "Check fit"
+    href: "/dashboard/international",
+    label: "International",
+    description: "Mobility evidence",
   },
   {
-    aliases: ["/dashboard/documents"],
-    href: "/dashboard/application-answers",
-    label: "Application Kit",
-    description: "Write proof"
-  },
-  {
-    href: "/dashboard/cv-tailor",
-    label: "Proof Library",
-    description: "Final reasons"
-  },
-  {
-    href: "/dashboard/interview",
-    label: "Interview Prep",
-    description: "Prepare answers"
-  },
-  {
-    href: "/dashboard/follow-ups",
-    label: "Follow-ups",
-    description: "What to do next"
+    aliases: ["/dashboard/profile", "/dashboard/cv-tailor"],
+    href: "/dashboard/autofill-profile",
+    label: "Profile",
+    description: "Facts and proof",
   },
   {
     href: "/dashboard/insights",
-    label: "Progress",
-    description: "What happened"
-  }
-]
-
+    label: "Insights",
+    description: "Outcomes and progress",
+  },
+];
 function isPathInSection(pathname: string, sectionPath: string) {
-  return pathname === sectionPath || pathname.startsWith(`${sectionPath}/`)
+  return pathname === sectionPath || pathname.startsWith(`${sectionPath}/`);
 }
 
-function isActiveTopNavItem(
-  pathname: string,
-  item: DashboardNavItem
-) {
-  const sectionPaths = [item.href, ...(item.aliases ?? [])]
+function isActiveTopNavItem(pathname: string, item: DashboardNavItem) {
+  const sectionPaths = [item.href, ...(item.aliases ?? [])];
 
   return sectionPaths.some((sectionPath) =>
     sectionPath === "/dashboard"
       ? pathname === sectionPath
-      : isPathInSection(pathname, sectionPath)
-  )
+      : isPathInSection(pathname, sectionPath),
+  );
 }
 
-function isActiveWorkflowNavItem(
-  pathname: string,
-  item: DashboardNavItem
-) {
-  const sectionPaths = [item.href, ...(item.aliases ?? [])]
+function isActiveWorkflowNavItem(pathname: string, item: DashboardNavItem) {
+  const sectionPaths = [item.href, ...(item.aliases ?? [])];
 
   return sectionPaths.some((sectionPath) =>
     sectionPath === "/dashboard"
       ? pathname === sectionPath
-      : isPathInSection(pathname, sectionPath)
-  )
+      : isPathInSection(pathname, sectionPath),
+  );
 }
 
 export function DashboardTopNav() {
-  const pathname = usePathname()
-  const { userId } = useDashboardPlan()
-  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId)
+  const pathname = usePathname();
+  const { userId } = useDashboardPlan();
+  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId);
 
   const alertProfileLock = (areaLabel: string) => {
     window.alert(
-      `Complete Profile Evidence to 90% before using ${areaLabel}. Current profile readiness: ${readinessScore}%.`
-    )
-    window.location.assign("/dashboard/autofill-profile")
-  }
+      `Complete Profile Evidence to 90% before using ${areaLabel}. Current profile readiness: ${readinessScore}%.`,
+    );
+    window.location.assign("/dashboard/autofill-profile");
+  };
 
   return (
     <nav className="dashboard-topnav" aria-label="Global dashboard navigation">
       {dashboardTopNavItems.map((item) => {
-        const isActive = isActiveTopNavItem(pathname, item)
+        const isActive = isActiveTopNavItem(pathname, item);
         const isProtocolLocked =
-          isLocked && item.href !== "/dashboard" && item.href !== "/dashboard/autofill-profile"
+          isLocked &&
+          item.href !== "/dashboard" &&
+          item.href !== "/dashboard/autofill-profile";
 
         return (
           <a
@@ -180,8 +165,8 @@ export function DashboardTopNav() {
             key={item.href}
             onClick={(event) => {
               if (isProtocolLocked) {
-                event.preventDefault()
-                alertProfileLock(item.label)
+                event.preventDefault();
+                alertProfileLock(item.label);
               }
             }}
             title={
@@ -192,23 +177,23 @@ export function DashboardTopNav() {
           >
             {item.label}
           </a>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }
 
 export function DashboardWorkflowSidebar() {
-  const pathname = usePathname()
-  const { userId } = useDashboardPlan()
-  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId)
+  const pathname = usePathname();
+  const { userId } = useDashboardPlan();
+  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId);
 
   const alertProfileLock = (workflowLabel: string) => {
     window.alert(
-      `Complete Profile Evidence to 90% before using ${workflowLabel}. Current profile readiness: ${readinessScore}%.`
-    )
-    window.location.assign("/dashboard/autofill-profile")
-  }
+      `Complete Profile Evidence to 90% before using ${workflowLabel}. Current profile readiness: ${readinessScore}%.`,
+    );
+    window.location.assign("/dashboard/autofill-profile");
+  };
 
   return (
     <aside className="dashboard-sidebar" aria-label="Workflow navigation">
@@ -218,11 +203,12 @@ export function DashboardWorkflowSidebar() {
       </div>
       <nav className="dashboard-workflow-nav">
         {dashboardWorkflowNavItems.map((item, index) => {
-          const isActive = isActiveWorkflowNavItem(pathname, item)
+          const isActive = isActiveWorkflowNavItem(pathname, item);
           const isProtocolLocked =
             isLocked &&
             item.href !== "/dashboard" &&
-            item.href !== "/dashboard/autofill-profile"
+            item.href !== "/dashboard/autofill-profile" &&
+            item.href !== "/dashboard/international";
 
           return (
             <a
@@ -237,8 +223,8 @@ export function DashboardWorkflowSidebar() {
               key={item.href}
               onClick={(event) => {
                 if (isProtocolLocked) {
-                  event.preventDefault()
-                  alertProfileLock(item.label)
+                  event.preventDefault();
+                  alertProfileLock(item.label);
                 }
               }}
               title={
@@ -253,23 +239,23 @@ export function DashboardWorkflowSidebar() {
               </span>
               <small>{item.description}</small>
             </a>
-          )
+          );
         })}
       </nav>
     </aside>
-  )
+  );
 }
 
 export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
-  const shellRef = useRef<HTMLDivElement>(null)
-  const planLabel = plan === "pro" ? "Pro" : "Free"
-  const menuId = "user-account-menu"
+  const [isOpen, setIsOpen] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const planLabel = plan === "pro" ? "Pro" : "Free";
+  const menuId = "user-account-menu";
 
   useEffect(() => {
     if (!isOpen) {
-      return
+      return;
     }
 
     const closeOnOutsideInteraction = (event: MouseEvent | TouchEvent) => {
@@ -277,110 +263,110 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
         event.target instanceof Node &&
         !shellRef.current?.contains(event.target)
       ) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", closeOnOutsideInteraction)
-    document.addEventListener("touchstart", closeOnOutsideInteraction)
+    document.addEventListener("mousedown", closeOnOutsideInteraction);
+    document.addEventListener("touchstart", closeOnOutsideInteraction);
 
     return () => {
-      document.removeEventListener("mousedown", closeOnOutsideInteraction)
-      document.removeEventListener("touchstart", closeOnOutsideInteraction)
-    }
-  }, [isOpen])
+      document.removeEventListener("mousedown", closeOnOutsideInteraction);
+      document.removeEventListener("touchstart", closeOnOutsideInteraction);
+    };
+  }, [isOpen]);
 
   const openBillingPortal = async () => {
     try {
-      setStatus(null)
+      setStatus(null);
 
       if (plan !== "pro") {
         const response = await fetch("/api/stripe/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            returnUrl: `${window.location.origin}/dashboard`
-          })
-        })
+            returnUrl: `${window.location.origin}/dashboard`,
+          }),
+        });
         const payload = (await response.json()) as {
-          data: { url: string } | null
-          error: string | null
-        }
+          data: { url: string } | null;
+          error: string | null;
+        };
 
         if (!response.ok || !payload.data) {
-          setStatus(payload.error ?? "Checkout is not available yet.")
-          return
+          setStatus(payload.error ?? "Checkout is not available yet.");
+          return;
         }
 
-        window.location.href = payload.data.url
-        return
+        window.location.href = payload.data.url;
+        return;
       }
 
       const response = await fetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnUrl: window.location.href })
-      })
+        body: JSON.stringify({ returnUrl: window.location.href }),
+      });
       const payload = (await response.json()) as {
-        data: { url: string } | null
-        error: string | null
-      }
+        data: { url: string } | null;
+        error: string | null;
+      };
 
       if (!response.ok || !payload.data) {
-        setStatus(payload.error ?? "Billing portal is not available yet.")
-        return
+        setStatus(payload.error ?? "Billing portal is not available yet.");
+        return;
       }
 
-      window.location.href = payload.data.url
+      window.location.href = payload.data.url;
     } catch (error: unknown) {
       setStatus(
-        error instanceof Error ? error.message : "Billing portal failed."
-      )
+        error instanceof Error ? error.message : "Billing portal failed.",
+      );
     }
-  }
+  };
 
   const signOut = async () => {
     try {
-      setStatus(null)
-      const response = await fetch("/auth/signout", { method: "POST" })
+      setStatus(null);
+      const response = await fetch("/auth/signout", { method: "POST" });
 
       if (!response.ok) {
-        const supabase = createBrowserClient()
-        const { error } = await supabase.auth.signOut()
+        const supabase = createBrowserClient();
+        const { error } = await supabase.auth.signOut();
 
         if (error) {
-          setStatus(error.message)
-          return
+          setStatus(error.message);
+          return;
         }
       } else {
-        const supabase = createBrowserClient()
-        await supabase.auth.signOut({ scope: "local" })
+        const supabase = createBrowserClient();
+        await supabase.auth.signOut({ scope: "local" });
       }
 
-      window.location.replace("/login?loggedOut=1")
+      window.location.replace("/login?loggedOut=1");
     } catch (error: unknown) {
       try {
-        const supabase = createBrowserClient()
-        const { error: signOutError } = await supabase.auth.signOut()
+        const supabase = createBrowserClient();
+        const { error: signOutError } = await supabase.auth.signOut();
 
         if (signOutError) {
-          setStatus(signOutError.message)
-          return
+          setStatus(signOutError.message);
+          return;
         }
 
-        window.location.replace("/login?loggedOut=1")
-        return
+        window.location.replace("/login?loggedOut=1");
+        return;
       } catch (fallbackError: unknown) {
         setStatus(
           fallbackError instanceof Error
             ? fallbackError.message
             : error instanceof Error
               ? error.message
-              : "Sign out failed."
-        )
+              : "Sign out failed.",
+        );
       }
     }
-  }
+  };
 
   return (
     <div
@@ -388,7 +374,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
       ref={shellRef}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
-          setIsOpen(false)
+          setIsOpen(false);
         }
       }}
     >
@@ -400,7 +386,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
         type="button"
         onKeyDown={(event) => {
           if (event.key === "Escape") {
-            setIsOpen(false)
+            setIsOpen(false);
           }
         }}
         onClick={() => setIsOpen((current) => !current)}
@@ -417,6 +403,23 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
       </button>
       {isOpen ? (
         <div className="user-nav-menu" id={menuId} role="menu">
+          <a
+            className="secondary-button"
+            href="/dashboard/extension"
+            role="menuitem"
+          >
+            Extension
+          </a>
+          <a
+            className="secondary-button"
+            href="/dashboard/settings"
+            role="menuitem"
+          >
+            Settings
+          </a>
+          <a className="secondary-button" href="/pricing" role="menuitem">
+            Plans
+          </a>{" "}
           {isAdmin ? (
             <a className="secondary-button" href="/admin" role="menuitem">
               Admin panel
@@ -446,5 +449,5 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
         </div>
       ) : null}
     </div>
-  )
+  );
 }

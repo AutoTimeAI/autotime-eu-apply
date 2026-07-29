@@ -26,7 +26,7 @@ private beta with limited early users and feedback-led improvement.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Build/web build | Complete | Passed after rerun outside Windows EPERM sandbox file-lock. |
-| Browser E2E | Complete, 9/9 passed | Full Playwright browser suite passed with 0 failures. |
+| Browser E2E | Complete, 10/10 passed | Full Playwright browser suite passed with 0 failures, including extension-synced LinkedIn tracked-job reflection. |
 | Core beta flow | Complete | Job import -> EU fit -> application kit -> waitlist / feedback is browser verified. |
 | Sentry config/privacy tests | Complete for beta | Error-only replay and privacy redaction are configured and tested. |
 | Product-level Sentry observability | Partial/basic to moderate | Config, breadcrumbs and test routes exist; live dashboard spot-check remains pending. |
@@ -43,7 +43,7 @@ Private Beta v1 — Founder-led early-user ready with browser E2E and production
 ## Completed Areas
 
 - Core flow: Completed and browser E2E verified.
-- Browser E2E: Passed 9 of 9 tests.
+- Browser E2E: Passed 10 of 10 tests.
 - Sentry config/privacy tests: Complete for beta.
 - Privacy/security checks: Complete for internal readiness.
 - Compliance/disclaimer review: Complete for private beta positioning.
@@ -56,7 +56,9 @@ Private Beta v1 — Founder-led early-user ready with browser E2E and production
 - Sentry dashboard live spot-check is pending manual evidence from an actual
   production issue/event.
 - `/api/sentry-test` is currently re-protected in production; live check on
-  2026-05-24 returned HTTP 404.
+  2026-05-24 returned HTTP 404. The latest production deployment for
+  `d72df0bbd69fa85e081a83caf1e2d2407133a206` is `READY`, and a follow-up live
+  check still returned HTTP 404.
 - Outcome usefulness/trust validation is pending real-user feedback.
 - Public launch readiness is not complete.
 

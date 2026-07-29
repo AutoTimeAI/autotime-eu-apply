@@ -9,10 +9,10 @@ private beta. Passing internal technical checks is not enough for public launch.
 | --- | --- | --- | --- |
 | Build passes | Complete | Previous `pnpm build` passed after Windows EPERM rerun | Required |
 | Web build passes | Complete | Previous `pnpm build:web` passed after Windows EPERM rerun | Required |
-| Browser E2E passes | Complete | `pnpm test:e2e` passed 9/9 | Required |
+| Browser E2E passes | Complete | `pnpm test:e2e` passed 10/10, including extension-synced LinkedIn tracked-job reflection | Required |
 | Sentry privacy tests pass | Complete | `pnpm test:web:sentry-privacy` passed | Required |
 | Production smoke passes | Complete | `pnpm smoke:web` passed on 2026-05-24 | Required |
-| Sentry live dashboard spot-check passes | Pending Manual Evidence | Sentry dashboard/insights are accessible, but live production event verification remains pending until an actual AutoTime EU Apply issue is opened and checked for environment, breadcrumbs, replay, stack trace, and sensitive data. `/api/sentry-test` is currently re-protected with live HTTP 404 evidence. | Blocks public launch |
+| Sentry live dashboard spot-check passes | Pending Manual Evidence | Sentry dashboard/insights are accessible, but live production event verification remains pending until an actual AutoTime EU Apply issue is opened and checked for environment, breadcrumbs, replay, stack trace, and sensitive data. `/api/sentry-test` is currently re-protected with live HTTP 404 evidence after the latest production deployment reached `READY`. | Blocks public launch |
 | UAT completed with 3-5 users | Pending | No real UAT log/signoff yet | Blocks public launch |
 | Outcome usefulness/trust validated | Pending | No real-user outcome summary yet | Blocks public launch |
 | Compliance disclaimers verified | Complete for beta | Existing app copy/docs | Required |

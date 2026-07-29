@@ -11,7 +11,7 @@ Pass, Fail, Blocked.
 | Test ID | Product Area | Scenario | Input | Expected Behaviour | Expected Outcome | Automated or Manual | Tool | Priority | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | OQ-EUFIT-001 | EU fit judgement quality | High-fit UK/EU tech role | Fake UK/EU tech role with matching skills, realistic location, and clear work-right fit | EU fit check identifies strong matching evidence and low blockers | Output recommends applying or prioritising, with evidence-based caveats | Automated + Manual | Playwright for flow; future unit for scoring; UAT for usefulness | P0 | Partially Covered | Browser E2E uses a high-fit UK/EU tech role and confirms output appears; judgement quality remains pending UAT/manual review. |
-| OQ-EUFIT-002 | EU fit judgement quality | Low-fit non-UK/EU role | Fake non-UK/EU role outside target market | EU fit check flags location/market mismatch | Output does not present the role as a strong EU fit | Planned automated + Manual | Future unit/regression test | P0 | Planned | Good deterministic fit-model test candidate; not part of current 9/9 browser suite. |
+| OQ-EUFIT-002 | EU fit judgement quality | Low-fit non-UK/EU role | Fake non-UK/EU role outside target market | EU fit check flags location/market mismatch | Output does not present the role as a strong EU fit | Planned automated + Manual | Future unit/regression test | P0 | Planned | Good deterministic fit-model test candidate; not part of current 10/10 browser suite. |
 | OQ-EUFIT-003 | EU fit judgement quality | Unclear sponsorship role | Fake role with vague sponsorship/work-authorisation wording | EU fit marks uncertainty and asks user to verify | Output avoids assuming sponsorship is available | Planned automated + Manual | Future unit + manual compliance review | P0 | Pending UAT | Manual judgement needed for wording quality and trust. |
 | OQ-EUFIT-004 | EU fit judgement quality | Seniority mismatch role | Fake senior/principal role for a mid-level profile, or junior role for senior profile | EU fit flags seniority mismatch | Output recommends stretch/skip/improve positioning instead of overclaiming fit | Planned automated | Future unit/regression test | P0 | Planned | Use fake candidate profile only. |
 | OQ-EUFIT-005 | EU fit judgement quality | Fintech-aligned role | Fake fintech analyst/software role matching fintech evidence | EU fit detects fintech alignment | Output highlights fintech positioning without inventing claims | Planned automated + Manual | Future unit + manual output review | P1 | Pending UAT | Manual review checks usefulness of positioning. |
@@ -39,7 +39,7 @@ Pass, Fail, Blocked.
 
 ## Automation Notes
 
-- Playwright is configured and the core browser journey passes 9/9.
+- Playwright is configured and the browser journey passes 10/10.
 - Existing unit-style tests are Node-based `.mjs` scripts; Vitest is not
   currently configured.
 - Outcome-quality judgement is intentionally split: deterministic flow and

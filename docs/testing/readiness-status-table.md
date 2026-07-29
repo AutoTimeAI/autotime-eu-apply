@@ -23,7 +23,7 @@ validation are completed.
 | Area | Status | Evidence | Notes |
 | --- | --- | --- | --- |
 | Build/web build | Complete | `pnpm build`, `pnpm build:web` passed after rerun outside Windows EPERM sandbox file-lock | EPERM was generated-file lock behaviour, not an app failure. |
-| Browser E2E | Complete, 9/9 passed | `pnpm test:e2e` | Real Playwright browser suite passed with 9 passed, 0 failed, 0 skipped. |
+| Browser E2E | Complete, 10/10 passed | `pnpm test:e2e` | Real Playwright browser suite passed with 10 passed, 0 failed, 0 skipped. |
 | Core beta flow | Complete | Playwright happy path | Job import -> EU fit -> application kit -> waitlist / feedback is browser verified. |
 | Sentry config/privacy tests | Complete for beta | Sentry config inspection and `pnpm test:web:sentry-privacy` | Error-only replay and redaction are configured. |
 | Product-level Sentry observability | Partial/basic to moderate | Sentry config, breadcrumbs and test routes exist | Dashboard live spot-check and alert verification are still pending. |

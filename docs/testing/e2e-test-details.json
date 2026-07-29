@@ -3,11 +3,11 @@
   "stage": "Private Beta v1",
   "flow": "Job import -> EU fit check -> Save EU fit result -> application kit -> waitlist / feedback",
   "latestRun": {
-    "timestamp": "2026-05-23 23:23:44 +01:00",
+    "timestamp": "2026-05-24",
     "command": "pnpm test:e2e",
     "status": "passed",
-    "total": 9,
-    "passed": 9,
+    "total": 10,
+    "passed": 10,
     "failed": 0,
     "skipped": 0,
     "browser": "Chromium",
@@ -149,6 +149,20 @@
       "latestStatus": "Passed",
       "productionSafe": true,
       "notes": "Protects test-only monitoring route behaviour."
+    },
+    {
+      "testId": "E2E-010",
+      "suite": "Extension LinkedIn sync",
+      "file": "tests/e2e/08-extension-linkedin-sync.spec.ts",
+      "testName": "extension-synced LinkedIn job reflects in dashboard within seconds",
+      "productArea": "Extension to dashboard",
+      "routeOrTarget": "/dashboard/applications",
+      "automationTool": "Playwright Chromium",
+      "testData": "Controlled extension-style LinkedIn tracked job",
+      "expectedResult": "Tracked job title, company, source, canonical URL and parsed location notes appear within 5 seconds and survive refresh.",
+      "latestStatus": "Passed",
+      "productionSafe": true,
+      "notes": "Uses fake LinkedIn-style job data only."
     }
   ]
 }

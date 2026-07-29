@@ -28,7 +28,7 @@ secrets during QA.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Build/web build | Complete | Passed after rerun outside Windows EPERM sandbox file-lock. |
-| Browser E2E | Complete, 9/9 passed | Full Playwright browser suite passed with 0 failures. |
+| Browser E2E | Complete, 10/10 passed | Full Playwright browser suite passed with 0 failures, including extension-synced LinkedIn tracked-job reflection. |
 | Core beta flow | Complete | Job import -> EU fit -> application kit -> waitlist / feedback is browser verified. |
 | Sentry config/privacy tests | Complete for beta | Error-only replay and privacy redaction are configured and tested. |
 | Product-level Sentry observability | Partial/basic to moderate | Config, breadcrumbs and test routes exist; live dashboard spot-check remains pending. |
@@ -41,7 +41,7 @@ secrets during QA.
 ## Completed Internal Gates
 
 - [x] Core flow is browser E2E verified.
-- [x] Browser E2E passed 9/9.
+- [x] Browser E2E passed 10/10.
 - [x] Build/web build passed after rerun outside Windows EPERM file-lock.
 - [x] Sentry client/server/edge config exists in `apps/web`.
 - [x] Session Replay remains error-only.

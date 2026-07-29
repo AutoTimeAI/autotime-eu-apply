@@ -147,6 +147,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mobility_profiles: {
+        Row: {
+          user_id: string
+          profile: Json
+          schema_version: number
+          consent_version: number
+          consent_granted_at: string
+          sync_enabled: boolean
+          migrated_from_legacy_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          profile: Json
+          schema_version?: number
+          consent_version: number
+          consent_granted_at: string
+          sync_enabled?: boolean
+          migrated_from_legacy_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          profile?: Json
+          schema_version?: number
+          consent_version?: number
+          consent_granted_at?: string
+          sync_enabled?: boolean
+          migrated_from_legacy_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_accounts: {
         Row: {
           user_id: string

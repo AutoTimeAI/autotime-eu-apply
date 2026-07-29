@@ -31,7 +31,9 @@ for environment, breadcrumbs, replay, stack trace, and sensitive data.
 
 The production `/api/sentry-test` route is currently protected again. A live
 check on 2026-05-24 returned HTTP 404, which is the expected safe state after a
-controlled test window.
+controlled test window. The latest production deployment for commit
+`d72df0bbd69fa85e081a83caf1e2d2407133a206` is `READY`, and a follow-up live
+check again returned HTTP 404 for `/api/sentry-test`.
 
 Detailed evidence checklist:
 `docs/testing/sentry-live-dashboard-verification.md`.

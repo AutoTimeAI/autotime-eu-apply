@@ -36,19 +36,22 @@ The full browser suite ran locally against a Playwright-owned Next.js dev server
 
 Job import -> EU fit check -> Save EU fit result -> application kit -> waitlist / feedback.
 
+It also verifies a controlled extension-synced LinkedIn tracked job appearing in
+the dashboard tracker within seconds and surviving refresh.
+
 ## Commands Executed
 
 | Command | Result | Notes |
 | --- | --- | --- |
 | `pnpm build` | Passed with escalation | Root build runs the extension build. The sandbox attempt failed with Windows `EPERM` on generated output, then passed outside the sandbox. |
 | `pnpm build:web` | Passed with escalation | Next.js production build, TypeScript, and static page generation completed. The sandbox attempt failed with Windows `EPERM` on `.next`, then passed outside the sandbox. |
-| `pnpm test:e2e` | Passed | 9 passed, 0 failed, 0 skipped on the latest rerun. |
-| `pnpm smoke:web` | Failed | Live URL fetch returned `fetch failed`, including after network-enabled rerun. This is separate from local browser E2E. |
+| `pnpm test:e2e` | Passed | 10 passed, 0 failed, 0 skipped on the latest rerun. |
+| `pnpm smoke:web` | Passed | Live production URL returned expected Private Beta v1 HTML. This is separate from local browser E2E. |
 
 ## Result Summary
 
-- Total browser E2E tests: 9
-- Passed: 9
+- Total browser E2E tests: 10
+- Passed: 10
 - Failed: 0
 - Skipped: 0
 - Playwright report: `playwright-report/index.html`
@@ -67,6 +70,8 @@ Job import -> EU fit check -> Save EU fit result -> application kit -> waitlist 
 - Waitlist and feedback actions are present and safe.
 - Full private beta flow completes without visible crash.
 - `/sentry-test` route behavior is checked for local/prod target mode.
+- Extension-synced LinkedIn tracked job appears in Tracked Jobs within seconds
+  and remains visible after refresh.
 
 ## Persistence Fix Verified
 
@@ -89,4 +94,6 @@ Passed.
 
 Private Beta v1 — Founder-led early-user ready with browser E2E and production smoke verified. Full beta validation pending until Sentry live dashboard verification and founder-led UAT are completed.
 
-Production smoke is not marked as passed. The live URL fetch still needs deployment/network verification before a public launch gate.
+Production smoke is marked as passed for the Private Beta v1 smoke gate. Public
+launch still requires Sentry live dashboard evidence, UAT evidence, and broader
+public-launch validation.

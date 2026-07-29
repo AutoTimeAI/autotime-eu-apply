@@ -31,7 +31,7 @@ v1 homepage and Node was run with system CA trust.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Build/web build | Complete | Passed after rerun outside Windows EPERM sandbox file-lock. |
-| Browser E2E | Complete, 9/9 passed | Full Playwright browser suite passed with 0 failures. |
+| Browser E2E | Complete, 10/10 passed | Full Playwright browser suite passed with 0 failures, including extension-synced LinkedIn tracked-job reflection. |
 | Core beta flow | Complete | Job import -> EU fit -> application kit -> waitlist / feedback is browser verified. |
 | Sentry config/privacy tests | Complete for beta | Error-only replay and privacy redaction are configured and tested. |
 | Product-level Sentry observability | Partial/basic to moderate | Config, breadcrumbs and test routes exist; live dashboard spot-check remains pending. |
@@ -45,7 +45,7 @@ v1 homepage and Node was run with system CA trust.
 
 | Flaw | Status | Evidence | Notes |
 | --- | --- | --- | --- |
-| Playwright seed helper wiped tracked jobs after navigation | Fixed | `tests/e2e/helpers.ts`, `pnpm test:e2e` 9/9 | Helper now seeds local dashboard state only when the storage key is missing. |
+| Playwright seed helper wiped tracked jobs after navigation | Fixed | `tests/e2e/helpers.ts`, `pnpm test:e2e` 10/10 | Helper now seeds local dashboard state only when the storage key is missing. |
 | Local/E2E `/api/sync/profile` fetch noise | Fixed | `apps/web/components/ProfileProtocolLock.tsx`, latest E2E output | Synced profile read is skipped when cloud sync is local-only or not configured. |
 | React warning: updating `DashboardTopNav` while rendering `HomePage` | Fixed | `apps/web/components/DashboardExperience.tsx`, latest E2E output | Profile readiness event is dispatched in a microtask after local state is saved. |
 | Windows EPERM generated-file lock during build in sandbox | Non-blocking | `pnpm build`, `pnpm build:web` | Sandbox runs fail when unlinking generated `.output`/`.next` files; reruns outside sandbox pass. |
@@ -116,7 +116,7 @@ Playwright verifies the core Private Beta v1 browser journey:
 - Full happy path completes without visible crash.
 - `/sentry-test` route protection is checked.
 
-Latest result: `pnpm test:e2e` passed with 9 passed, 0 failed, 0 skipped.
+Latest result: `pnpm test:e2e` passed with 10 passed, 0 failed, 0 skipped.
 
 ## UAT Readiness Assessment
 

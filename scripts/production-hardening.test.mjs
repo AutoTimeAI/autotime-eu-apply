@@ -159,13 +159,13 @@ test("profile evidence sync is production cloud-first with local cache", () => {
   )
   assert.match(
     dashboard,
-    /if \(productionSyncPreferences\.profileAccountSyncEnabled\) \{\s*void loadDashboardSnapshot\(\{ silent: true \}\)\s*void loadProfileSnapshot\(\{ silent: true \}\)\s*\}/
+    /if \(cloudSyncReadiness\.configured\) \{[\s\S]*?void loadDashboardSnapshot\(\{ force: true, silent: true \}\)\s*void loadProfileSnapshot\(\{ silent: true \}\)\s*\}/
   )
   assert.match(dashboard, /scheduleProfileSync\(nextState\.profile\)/)
   assert.match(dashboard, /scheduleDashboardSync\(state,\s*\{/)
   assert.match(
     cloudSync,
-    /process\.env\.NEXT_PUBLIC_AUTOTIME_ENV === "production" \? "true" : undefined/
+    /process\.env\.NEXT_PUBLIC_AUTOTIME_ENV === "production" \|\|\s*process\.env\.NODE_ENV === "production"/
   )
 })
 
@@ -174,18 +174,19 @@ test("Proof Library stays a standalone reusable-proof workspace", () => {
   const userNav = read("apps/web/components/UserNav.tsx")
   const publicNav = read("apps/web/components/PublicNav.tsx")
 
-  assert.match(userNav, /label: "Proof Library"/)
-  assert.match(userNav, /description: "Reusable proof"/)
+  assert.match(userNav, /aliases: \["\/dashboard\/profile", "\/dashboard\/cv-tailor"\]/)
+  assert.match(userNav, /label: "Profile"/)
+  assert.match(userNav, /description: "Facts and proof"/)
   assert.match(userNav, /before using \$\{workflowLabel\}/)
   assert.match(userNav, /before using \$\{item\.label\}/)
   assert.match(publicNav, /before using \$\{areaLabel\}/)
   assert.match(dashboard, /eyebrow: "Proof Library"/)
   assert.match(dashboard, /title: "Proof Library"/)
   assert.match(dashboard, /aria-label="Proof Library workspace"/)
-  assert.match(dashboard, /Reusable proof, not another workflow/)
-  assert.match(dashboard, /Proof Library only keeps reusable proof/)
-  assert.match(dashboard, /Does not duplicate/)
-  assert.match(dashboard, /Profile Evidence, Fit Analysis and\s*Application Kit/)
+  assert.match(dashboard, /Reusable reasons and proof/)
+  assert.match(dashboard, /Keep the strongest reasons, evidence and answer/)
+  assert.match(dashboard, /Profile first, job proof second/)
+  assert.match(dashboard, /Application Kit\s*and Interview Prep feed reusable proof back here/)
   assert.match(dashboard, /Proof Library is saved with your profile/)
   assert.match(dashboard, /state\.profile\.baseCvText/)
   assert.match(dashboard, /state\.profile\.experienceHighlights/)
@@ -203,7 +204,7 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   assert.match(dashboard, /title: "Check EU fit before you apply"/)
   assert.match(
     dashboard,
-    /Rules-first fit check for one role against your saved profile evidence/
+    /Check one role against your profile, country context and missing proof/
   )
   assert.match(dashboard, /Check EU fit/)
   assert.match(dashboard, /Strengthen the review/)
@@ -250,7 +251,7 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
 
   assert.match(aiFlow, /requireProfileExecutionReady\(\)/)
   assert.match(aiFlow, /hasJobDraft\(state\.jobAnalysis\)/)
-  assert.match(aiFlow, /fetch\("\/api\/ai\/analyse"/)
+  assert.match(aiFlow, /fetchAiJobAnalysis\(/)
   assert.match(aiFlow, /profile: state\.profile/)
   assert.match(aiFlow, /persist\(next, "AI fit assistant updated the role analysis"\)/)
 
@@ -275,19 +276,19 @@ test("Interview Prep keeps coaching, prep packs and reusable answers separated",
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
 
   assert.match(dashboard, /title: "Interview Prep"/)
-  assert.match(dashboard, /Prepare evidence-led interview answers and role prep packs/)
+  assert.match(dashboard, /Turn saved job proof into interview answers and prep packs/)
   assert.match(dashboard, /aria-label="Interview Prep workflow"/)
   assert.match(dashboard, /Choose the question/)
   assert.match(dashboard, /Add rough notes/)
   assert.match(dashboard, /Review the coach/)
   assert.match(dashboard, /Save reusable wording/)
   assert.match(dashboard, /aria-label="Interview Prep responsibility"/)
-  assert.match(dashboard, /Does not duplicate/)
+  assert.match(dashboard, /Reusable reasons go to Proof Library/)
   assert.match(
     dashboard,
-    /Profile Evidence, Fit Analysis, Proof\s*Library and Application Kit/
+    /The full prep pack stays with the job/
   )
-  assert.match(dashboard, /Save to Proof Library/)
+  assert.match(dashboard, /Interview prep and Proof Library synced/)
   assert.match(dashboard, /Saved prep packs from tracked jobs/)
   assert.match(dashboard, /const tokens = getMeaningfulTokens\(value\)/)
   assert.match(dashboard, /tokens\.some\(\(token\) => \/\(\.\)\\1\{3,\}\//)
@@ -323,7 +324,7 @@ test("Follow-ups and Progress stay ordered and do not duplicate tracker systems"
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
 
   assert.match(dashboard, /title: "Follow-up Queue"/)
-  assert.match(dashboard, /Work the next dated action across tracked jobs/)
+  assert.match(dashboard, /See which tracked job needs action next/)
   assert.match(dashboard, /function hasFollowUpAction\(application: ApplicationRecord\)/)
   assert.match(dashboard, /application\.nextActionDate/)
   assert.match(dashboard, /\["Applied", "Interview", "Offer"\]\.includes\(application\.status\)/)
@@ -333,12 +334,12 @@ test("Follow-ups and Progress stay ordered and do not duplicate tracker systems"
   assert.match(dashboard, /Clear scheduled action/)
 
   assert.match(dashboard, /title: "Progress"/)
-  assert.match(dashboard, /Progress reports what happened; it does not replace Fit Analysis/)
+  assert.match(dashboard, /Review what happened across tracked jobs/)
   assert.match(dashboard, /aria-label="Progress workflow"/)
   assert.match(dashboard, /Track outcomes/)
   assert.match(dashboard, /Run report/)
   assert.match(dashboard, /aria-label="Progress responsibility"/)
-  assert.match(dashboard, /Fit Analysis scores roles, Follow-ups works actions/)
+  assert.match(dashboard, /Use Fit Analysis to score a role, Follow-ups to act/)
   assert.match(dashboard, /onClick=\{runOnlineAnalytics\}/)
 
   const updateStart = dashboard.indexOf("const updateApplication = (")
@@ -377,12 +378,12 @@ test("Public product promise matches the strategic European tech positioning", (
   assert.match(pricingCard, /interview-conversion prep/)
 
   assert.match(dashboard, /aria-label="Strategic quality system"/)
-  assert.match(dashboard, /Strategic European tech application system/)
+  assert.match(dashboard, /Your application workflow/)
   assert.match(dashboard, /strategicQualitySignals/)
-  assert.match(dashboard, /Strategic targeting/)
+  assert.match(dashboard, /Target roles/)
   assert.match(dashboard, /Country-aware fit/)
-  assert.match(dashboard, /Evidence discipline/)
-  assert.match(dashboard, /Interview conversion/)
+  assert.match(dashboard, /Profile proof/)
+  assert.match(dashboard, /Interview prep/)
 
   assert.match(og, /STRATEGIC TECH APPLY/)
   assert.match(og, /Better applications/)

@@ -115,6 +115,9 @@ Covered event areas:
   `SENTRY_TEST_API_ENABLED=true`.
 - Current production route re-protection evidence: live check on 2026-05-24
   returned HTTP 404 for `/api/sentry-test`.
+- Latest deployment re-check: production deployment for
+  `d72df0bbd69fa85e081a83caf1e2d2407133a206` is `READY`, and
+  `/api/sentry-test` still returns HTTP 404.
 
 ## Risks And Next Actions
 

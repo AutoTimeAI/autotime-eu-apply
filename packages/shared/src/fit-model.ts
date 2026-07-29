@@ -943,6 +943,11 @@ export function evaluateAutoTimeFitScore({
   }
 }
 
+/**
+ * @deprecated Country, work-right, sponsorship and relocation conclusions are
+ * legacy advisory output. Use assessInternationalJob plus
+ * orchestrateJobDecision for an authoritative combined decision.
+ */
 export function evaluateCountryFit({
   profile,
   job,

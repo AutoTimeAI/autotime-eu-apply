@@ -4,15 +4,15 @@
   "coverageStatement": "This export consolidates verified automated tests, configured/static checks, planned outcome-quality checks, and manual QA checks. Only rows with outcome Pass and status Passed/Verified should be treated as completed test evidence.",
   "latestVerifiedBrowserRun": {
     "command": "pnpm test:e2e",
-    "timestamp": "2026-05-23 23:23:44 +01:00",
-    "total": 9,
-    "passed": 9,
+    "timestamp": "2026-05-24",
+    "total": 10,
+    "passed": 10,
     "failed": 0,
     "skipped": 0
   },
   "summary": {
-    "totalRows": 36,
-    "passedOrVerified": 17,
+    "totalRows": 37,
+    "passedOrVerified": 18,
     "partiallyCovered": 4,
     "plannedOrNotRun": 9,
     "manualRequiredOrPending": 6
@@ -32,7 +32,7 @@
       "status": "Passed",
       "productionSafe": true,
       "evidence": "docs/testing/e2e-run-verification-report.md",
-      "notes": "Part of 9/9 passing browser suite."
+      "notes": "Part of 10/10 passing browser suite."
     },
     {
       "testId": "E2E-002",
@@ -163,6 +163,22 @@
       "notes": "Protects test-only monitoring page."
     },
     {
+      "testId": "E2E-010",
+      "testType": "Browser E2E",
+      "testCategory": "Extension LinkedIn sync",
+      "testScenario": "Extension-synced LinkedIn job reflects in dashboard within seconds",
+      "priority": "P0",
+      "toolOrMethod": "Playwright Chromium",
+      "testData": "Controlled extension-style LinkedIn tracked job",
+      "expected": "Tracked job title, company, source, canonical URL and parsed location notes appear within 5 seconds and survive refresh.",
+      "actual": "Verified in latest Playwright run.",
+      "outcome": "Pass",
+      "status": "Passed",
+      "productionSafe": true,
+      "evidence": "tests/e2e/08-extension-linkedin-sync.spec.ts",
+      "notes": "Uses fake LinkedIn-style job data only."
+    },
+    {
       "testId": "BUILD-001",
       "testType": "Build",
       "testCategory": "Extension build",
@@ -202,8 +218,8 @@
       "priority": "P0",
       "toolOrMethod": "pnpm test:e2e",
       "testData": "Fake data only",
-      "expected": "9 browser tests pass.",
-      "actual": "9 passed, 0 failed, 0 skipped.",
+      "expected": "10 browser tests pass.",
+      "actual": "10 passed, 0 failed, 0 skipped.",
       "outcome": "Pass",
       "status": "Passed",
       "productionSafe": true,

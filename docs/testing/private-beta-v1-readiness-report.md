@@ -28,7 +28,7 @@ application kit, and waitlist / feedback.
 | Area | Status | Notes |
 | --- | --- | --- |
 | Build/web build | Complete | Passed after rerun outside Windows EPERM sandbox file-lock. |
-| Browser E2E | Complete, 9/9 passed | Full Playwright browser suite passed with 0 failures. |
+| Browser E2E | Complete, 10/10 passed | Full Playwright browser suite passed with 0 failures, including extension-synced LinkedIn tracked-job reflection. |
 | Core beta flow | Complete | Job import -> EU fit -> application kit -> waitlist / feedback is browser verified. |
 | Sentry config/privacy tests | Complete for beta | Error-only replay and privacy redaction are configured and tested. |
 | Product-level Sentry observability | Partial/basic to moderate | Config, breadcrumbs and test routes exist; live dashboard spot-check remains pending. |

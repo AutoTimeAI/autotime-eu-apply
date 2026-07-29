@@ -21,8 +21,11 @@ Status: Pending Manual Evidence.
 
 The production `/api/sentry-test` route is currently protected again. A live
 fetch through the Vercel project returned HTTP 404 with `{"error":"Not found"}`
-on 2026-05-24. No production Sentry issue/event evidence has been added to this
-repo yet, so the Sentry live dashboard gate cannot be marked passed.
+on 2026-05-24. The latest production deployment for commit
+`d72df0bbd69fa85e081a83caf1e2d2407133a206` is `READY`, and a follow-up live
+fetch on 2026-05-24 again returned HTTP 404 for `/api/sentry-test`. No
+production Sentry issue/event evidence has been added to this repo yet, so the
+Sentry live dashboard gate cannot be marked passed.
 
 ## Repo Setup Inspected
 
@@ -41,7 +44,7 @@ repo yet, so the Sentry live dashboard gate cannot be marked passed.
 | Route | Production status | Notes |
 | --- | --- | --- |
 | `/sentry-test` | Protected / disabled | The page calls `notFound()` when the resolved Sentry environment is production. |
-| `/api/sentry-test` | Protected by default and currently re-protected | Returns 404 in production unless `SENTRY_TEST_API_ENABLED=true` is explicitly set. Live check on 2026-05-24 returned HTTP 404. |
+| `/api/sentry-test` | Protected by default and currently re-protected | Returns 404 in production unless `SENTRY_TEST_API_ENABLED=true` is explicitly set. Live checks on 2026-05-24 returned HTTP 404 after the latest deployment was `READY`. |
 
 ## Live Verification Status Table
 
@@ -57,7 +60,7 @@ repo yet, so the Sentry live dashboard gate cannot be marked passed.
 | Stack trace/source map readable | Pending Manual Evidence | Source maps are configured, but stack readability must be checked in a live issue. |
 | No sensitive data visible | Pending Manual Evidence | Redaction tests pass, but live dashboard spot-check is still required. |
 | `/sentry-test` protected from public abuse | Passed | Code disables this page in production with `notFound()`. |
-| `/api/sentry-test` protected from public abuse | Passed | Code returns 404 in production unless `SENTRY_TEST_API_ENABLED=true`; live check on 2026-05-24 returned HTTP 404. |
+| `/api/sentry-test` protected from public abuse | Passed | Code returns 404 in production unless `SENTRY_TEST_API_ENABLED=true`; live checks on 2026-05-24 returned HTTP 404 after the latest deployment was `READY`. |
 
 ## Controlled Production Verification Runbook
 
@@ -140,3 +143,5 @@ Status remains `Pending Manual Evidence` if:
 
 Pending Manual Evidence. Sentry is configured for beta runtime monitoring, but
 live production dashboard verification is not complete yet.
+
+Sentry live dashboard verification: Pending Manual Evidence.
