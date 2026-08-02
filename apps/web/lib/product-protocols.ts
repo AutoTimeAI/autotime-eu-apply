@@ -2,10 +2,10 @@ export const PROFILE_EXECUTION_THRESHOLD = 90
 
 export const productSecurityProtocols = {
   profileGate: {
-    name: "Profile-first execution",
+    name: "Feature-specific readiness",
     thresholdPercent: PROFILE_EXECUTION_THRESHOLD,
     constraint:
-      "Dashboard execution tools stay locked until the candidate profile is at least 90% complete.",
+      "Overall profile readiness is guidance only. Each capability checks the exact evidence and confirmation it requires.",
     appliesTo: [
       "job_analysis",
       "application_tracking",
@@ -15,7 +15,7 @@ export const productSecurityProtocols = {
       "ai_generation"
     ],
     fallback:
-      "Route the user back to profile completion with the current score and missing items."
+      "Keep the selected context open, explain required and recommended information separately, and offer the smallest next action."
   },
   userControl: {
     name: "No auto-submit",
@@ -53,5 +53,5 @@ export const productSecurityProtocols = {
 } as const
 
 export function getProfileExecutionLockMessage(readinessScore: number) {
-  return `Complete at least ${PROFILE_EXECUTION_THRESHOLD}% of your profile before using dashboard tools. Current profile: ${readinessScore}%.`
+  return `Profile evidence coverage is ${readinessScore}%. This is guidance only; the selected action checks its own required information.`
 }

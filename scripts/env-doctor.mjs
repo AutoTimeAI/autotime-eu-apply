@@ -32,7 +32,7 @@ const requiredServer = [
   "RESEND_API_KEY"
 ]
 
-const adminRequired = ["AUTOTIME_ADMIN_EMAILS"]
+const adminRequired = []
 const optional = ["NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"]
 const allKeys = [...requiredPublic, ...requiredServer, ...adminRequired, ...optional]
 

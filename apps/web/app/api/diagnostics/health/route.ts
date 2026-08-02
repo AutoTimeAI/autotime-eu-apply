@@ -94,7 +94,7 @@ export async function GET() {
     user = sessionUser
   }
 
-  if (!isAdminUser(user)) {
+  if (!(await isAdminUser(user))) {
     return NextResponse.json(
       {
         data: null,

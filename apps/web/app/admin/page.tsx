@@ -1,40 +1,30 @@
-import { redirect } from "next/navigation"
-import { AdminRealtimeConsole } from "./AdminRealtimeConsole"
-import { isAdminUser } from "../../lib/admin-access"
-import { getAdminOverview } from "../../lib/admin-monitoring"
-import { createServerClient } from "../../lib/supabase/server"
-import { getTestAuthUser } from "../../lib/test-auth"
+import { AdminRealtimeConsole } from "./AdminRealtimeConsole";
+import { redirect } from "next/navigation";
+import {
+  AdminAuthorizationError,
+  requireAdminPrincipal,
+} from "../../lib/admin-authorization";
+import { getAdminOverview } from "../../lib/admin-monitoring";
 
-export const dynamic = "force-dynamic"
-
-async function getAdminUser() {
-  const testUser = getTestAuthUser()
-
-  if (testUser) {
-    return testUser
-  }
-
-  const supabase = await createServerClient()
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    redirect("/login?redirectTo=/admin")
-  }
-
-  return user
-}
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const user = await getAdminUser()
-
-  if (!isAdminUser(user)) {
-    redirect("/dashboard")
+  let principal;
+  try {
+    principal = await requireAdminPrincipal("overview:read");
+  } catch (error) {
+    if (error instanceof AdminAuthorizationError)
+      redirect(
+        error.status === 401 ? "/admin/login" : "/admin/login?adminDenied=1",
+      );
+    throw error;
   }
-
   return (
-    <AdminRealtimeConsole initialOverview={await getAdminOverview()} />
-  )
+    <AdminRealtimeConsole
+      initialOverview={await getAdminOverview(
+        principal.membership.role === "owner" ||
+          principal.membership.role === "admin",
+      )}
+    />
+  );
 }

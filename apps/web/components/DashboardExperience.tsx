@@ -47,13 +47,18 @@ import {
   prepareProfileSyncAction
 } from "../lib/cloud-sync"
 import {
-  getProfileExecutionLockMessage,
   PROFILE_EXECUTION_THRESHOLD
 } from "../lib/product-protocols"
+import {
+  evaluateCapabilityReadiness,
+  type CapabilityReadinessInput,
+  type ProductCapability
+} from "../lib/capability-readiness"
 import { getStatusTone } from "../lib/status-tone"
 import { trackWaitlistSubmitted } from "../lib/sentry-breadcrumbs"
 import { AccountIdentityLinker } from "./AccountIdentityLinker"
 import { profileProtocolReadinessEvent } from "./ProfileProtocolLock"
+import { CapabilityReadinessNotice } from "./product-ui"
 import { useDashboardPlan } from "./UserNav"
 
 type DashboardTab = "profile" | "jobs" | "applications" | "interview"
@@ -3809,11 +3814,8 @@ export default function HomePage({
   const showApplicationList =
     activeFocus !== "insights" && !showFollowUpQueue && !selectedApplication
   const showInterviewPrepPacks = activeFocus === "interview-prep"
-  const isProfileGateRequired =
-    !profileReadyForExecution && !isOverview && currentTab !== "profile"
-  const isDashboardProtocolLocked =
-    !profileReadyForExecution &&
-    activeFocus !== "autofill-profile"
+  const isProfileGateRequired = false
+  const isDashboardProtocolLocked = false
   const canSaveCheckedJob = hasJobDraft(state.jobAnalysis)
   const decisionTone =
     decisionBrief.contentGate === "ready"
@@ -4548,7 +4550,7 @@ export default function HomePage({
   }
 
   const runOnlineAnalytics = async () => {
-    if (!requireProfileExecutionReady()) {
+    if (!requireCapability("view_insights")) {
       return
     }
 
@@ -5410,7 +5412,13 @@ export default function HomePage({
   }
 
   const regenerateKitDraft = async () => {
-    if (!requireProfileExecutionReady()) {
+    const evidenceUseConfirmed = confirmApplicationEvidenceUse()
+    if (
+      !evidenceUseConfirmed ||
+      !requireCapability("prepare_application", {
+        application: { evidenceUseConfirmed }
+      })
+    ) {
       return
     }
 
@@ -5493,7 +5501,17 @@ export default function HomePage({
   }
 
   const saveApplicationKitSnapshot = () => {
-    if (!requireProfileExecutionReady()) {
+    const evidenceUseConfirmed = confirmApplicationEvidenceUse()
+    if (
+      !evidenceUseConfirmed ||
+      !requireCapability("prepare_application", {
+        application: {
+          evidenceUseConfirmed,
+          explicitReview: true,
+          generatedAnswerAvailable: Boolean(kitDraft)
+        }
+      })
+    ) {
       return
     }
 
@@ -5554,7 +5572,7 @@ export default function HomePage({
       return
     }
 
-    if (!requireProfileExecutionReady()) {
+    if (!requireCapability("analyse_job")) {
       return
     }
 
@@ -5714,7 +5732,7 @@ export default function HomePage({
   }
 
   const runAiJobAnalysis = async () => {
-    if (!requireProfileExecutionReady()) {
+    if (!requireCapability("analyse_job")) {
       return
     }
 
@@ -5766,7 +5784,11 @@ export default function HomePage({
     id: string,
     changes: Partial<ApplicationRecord>
   ) => {
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("manage_tracking", {
+        job: { selected: state.applications.some((item) => item.id === id) }
+      })
+    ) {
       return
     }
 
@@ -5843,7 +5865,11 @@ export default function HomePage({
       return
     }
 
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("manage_tracking", {
+        job: { selected: state.applications.some((item) => item.id === id) }
+      })
+    ) {
       return
     }
 
@@ -5926,7 +5952,15 @@ export default function HomePage({
     pack: CompanionDashboardState["interviewPrepPacks"][number],
     message: string
   ) => {
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("prepare_interview", {
+        job: {
+          selected: state.applications.some(
+            (item) => item.id === pack.applicationId
+          )
+        }
+      })
+    ) {
       return
     }
 
@@ -5959,7 +5993,15 @@ export default function HomePage({
   }
 
   const generateInterviewPrep = async (application: ApplicationRecord) => {
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("prepare_interview", {
+        job: {
+          selected: state.applications.some(
+            (item) => item.id === application.id
+          )
+        }
+      })
+    ) {
       return
     }
 
@@ -6231,14 +6273,121 @@ export default function HomePage({
     }
   }
 
-  const requireProfileExecutionReady = () => {
-    if (profileReadyForExecution) {
+  const getCapabilityInput = (
+    overrides: Partial<CapabilityReadinessInput> = {}
+  ): CapabilityReadinessInput => {
+    const hasCareerEvidence = Boolean(
+      state.profile.baseCvText.trim() ||
+        state.profile.experienceHighlights.trim() ||
+        state.profile.projectSummaries.trim()
+    )
+    const hasConfirmedSupportingEvidence = Boolean(
+      hasCareerEvidence ||
+        (state.evidenceRecords ?? []).some(
+          (record) => record.status === "found"
+        )
+    )
+    const base: CapabilityReadinessInput = {
+      authenticated: Boolean(userId),
+      evidence: {
+        cv: Boolean(state.profile.baseCvText.trim()),
+        education: Boolean(state.profile.projectSummaries.trim()),
+        experience: Boolean(state.profile.experienceHighlights.trim()),
+        projects: Boolean(state.profile.projectSummaries.trim()),
+        confirmedSkills: Boolean(state.jobAnalysis.skills?.length),
+        supportingEvidenceConfirmed: hasConfirmedSupportingEvidence
+      },
+      preferences: {
+        basicWorkPreferences: Boolean(
+          state.profile.targetRoles.trim() ||
+            state.profile.relocationWillingness
+        ),
+        careerLane: Boolean(state.profile.targetRoles.trim()),
+        salaryPreference: Boolean(state.profile.salaryExpectation.trim()),
+        targetCountry: Boolean(state.profile.targetCountries.trim()),
+        vacancyCountry: Boolean(state.jobAnalysis.location.trim()),
+        workAuthorisationStructured: Boolean(
+          state.profile.workRightDetails.trim()
+        )
+      },
+      job: {
+        analysed: Boolean(state.jobAnalysis.fitScore),
+        description: Boolean(state.jobAnalysis.jobDescription.trim()),
+        selected: Boolean(activeKitApplication)
+      },
+      application: {
+        generatedAnswerAvailable: Boolean(kitDraft),
+        evidenceUseConfirmed: false,
+        explicitReview: false
+      }
+    }
+    return {
+      ...base,
+      ...overrides,
+      evidence: { ...base.evidence, ...overrides.evidence },
+      preferences: { ...base.preferences, ...overrides.preferences },
+      job: { ...base.job, ...overrides.job },
+      application: { ...base.application, ...overrides.application },
+      autofill: { ...base.autofill, ...overrides.autofill }
+    }
+  }
+
+  const requireCapability = (
+    capability: ProductCapability,
+    overrides: Partial<CapabilityReadinessInput> = {}
+  ) => {
+    const readiness = evaluateCapabilityReadiness(
+      capability,
+      getCapabilityInput(overrides),
+      window.location.pathname
+    )
+    if (readiness.state !== "needs_information") {
       return true
     }
-
-    setStatus(getProfileExecutionLockMessage(readinessScore))
+    setStatus(
+      `${readiness.explanation} ${readiness.requiredMissing
+        .map((item) => item.label)
+        .join(", ")}.`
+    )
     return false
   }
+
+  const confirmApplicationEvidenceUse = () => {
+    const evidenceReady = getCapabilityInput().evidence
+      ?.supportingEvidenceConfirmed
+    if (!evidenceReady) {
+      setStatus(
+        "Add and confirm supporting evidence before preparing application material."
+      )
+      return false
+    }
+    return window.confirm(
+      "Confirm that you reviewed the selected job and the saved evidence that AutoTime will use. Continue?"
+    )
+  }
+  const contextualCapability =
+    currentTab === "jobs"
+      ? "analyse_job"
+      : currentTab === "applications" ||
+          activeFocus === "application-answers" ||
+          activeFocus === "cv-tailor"
+        ? "prepare_application"
+        : currentTab === "interview"
+          ? "prepare_interview"
+          : null
+  const contextualReadiness = contextualCapability
+    ? evaluateCapabilityReadiness(
+        contextualCapability,
+        getCapabilityInput(),
+        `/dashboard/${
+          contextualCapability === "analyse_job"
+            ? "jobs"
+            : contextualCapability === "prepare_interview"
+              ? "interview"
+              : "applications"
+        }`
+      )
+    : null
 
   const activeInterviewQuestion =
     customInterviewQuestion.trim() || interviewQuestion
@@ -6327,7 +6476,11 @@ export default function HomePage({
               : "Ready"
 
   const generateInterviewBuddyAnswers = async () => {
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("prepare_interview", {
+        job: { selected: Boolean(selectedApplication || activeKitApplication) }
+      })
+    ) {
       return
     }
 
@@ -6456,7 +6609,11 @@ export default function HomePage({
   }
 
   const generateLocalInterviewBuddyAnswers = () => {
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("prepare_interview", {
+        job: { selected: Boolean(selectedApplication || activeKitApplication) }
+      })
+    ) {
       return
     }
 
@@ -6499,7 +6656,11 @@ export default function HomePage({
   }
 
   const generateTechnicalInterviewDrills = async () => {
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("prepare_interview", {
+        job: { selected: Boolean(selectedApplication || activeKitApplication) }
+      })
+    ) {
       return
     }
 
@@ -6576,7 +6737,11 @@ export default function HomePage({
   }
 
   const saveFinalInterviewAnswer = () => {
-    if (!requireProfileExecutionReady()) {
+    if (
+      !requireCapability("prepare_interview", {
+        job: { selected: Boolean(selectedApplication || activeKitApplication) }
+      })
+    ) {
       return
     }
 
@@ -6757,8 +6922,18 @@ export default function HomePage({
       ) : null}
 
       {status && (
-        <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
+        <p
+          aria-live="polite"
+          className={`status-banner ${getStatusTone(status)}`}
+          role="status"
+        >
+          {status}
+        </p>
       )}
+
+      {contextualReadiness ? (
+        <CapabilityReadinessNotice readiness={contextualReadiness} />
+      ) : null}
 
       <div className="command-workspace">
         <div

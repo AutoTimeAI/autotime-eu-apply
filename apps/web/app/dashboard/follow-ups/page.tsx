@@ -1,5 +1,5 @@
-import DashboardExperience from "../../../components/DashboardExperience"
+import { redirect } from "next/navigation";
 
 export default function DashboardFollowUpsPage() {
-  return <DashboardExperience focus="follow-ups" view="applications" />
+  redirect("/dashboard/applications");
 }

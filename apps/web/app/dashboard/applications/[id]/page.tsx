@@ -1,17 +1,11 @@
-import DashboardExperience from "../../../../components/DashboardExperience"
+import JobApplicationWorkspace from "../../../../components/JobApplicationWorkspace";
 
 export default async function DashboardApplicationDetailPage({
-  params
+  params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = await params
+  const { id } = await params;
 
-  return (
-    <DashboardExperience
-      applicationId={id}
-      focus="application-tracker"
-      view="applications"
-    />
-  )
+  return <JobApplicationWorkspace view={{ kind: "application", id }} />;
 }

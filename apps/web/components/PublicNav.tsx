@@ -1,10 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import type { MouseEvent } from "react"
 import { UserNav } from "./UserNav"
 import type { SubscriptionPlan } from "../lib/supabase/types"
-import { useProfileProtocolReadiness } from "./ProfileProtocolLock"
 
 type PublicNavProps = {
   currentPath?: string
@@ -46,15 +44,6 @@ function isActiveSignedInNavItem(
 }
 
 export function PublicNav({ currentPath, user }: PublicNavProps) {
-  const { isLocked, readinessScore } = useProfileProtocolReadiness(user?.id)
-
-  const alertProfileLock = (areaLabel: string) => {
-    window.alert(
-      `Complete Profile Evidence to 90% before using ${areaLabel}. Current profile readiness: ${readinessScore}%.`
-    )
-    window.location.assign("/dashboard/autofill-profile")
-  }
-
   return (
     <nav className="product-nav" aria-label="Primary">
       <Link className="dashboard-brand" href={user ? "/dashboard" : "/"}>
@@ -78,33 +67,13 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
           <>
             {signedInNavItems.map((item) => {
               const isActive = isActiveSignedInNavItem(currentPath, item)
-              const isProtocolLocked =
-                isLocked &&
-                item.href !== "/dashboard" &&
-                item.href !== "/dashboard/autofill-profile"
 
               return (
                 <Link
                   aria-current={isActive ? "page" : undefined}
-                  aria-disabled={isProtocolLocked}
-                  className={`${isActive ? "active" : ""}${
-                    isProtocolLocked ? " protocol-locked-link" : ""
-                  }`.trim()}
-                  href={
-                    isProtocolLocked ? "/dashboard/autofill-profile" : item.href
-                  }
+                  className={isActive ? "active" : undefined}
+                  href={item.href}
                   key={item.href}
-                  onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-                    if (isProtocolLocked) {
-                      event.preventDefault()
-                      alertProfileLock(item.label)
-                    }
-                  }}
-                  title={
-                    isProtocolLocked
-                      ? `Complete Profile Evidence to 90% before using ${item.label}.`
-                      : undefined
-                  }
                 >
                   {item.label}
                 </Link>

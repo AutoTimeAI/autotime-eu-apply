@@ -177,9 +177,9 @@ test("Proof Library stays a standalone reusable-proof workspace", () => {
   assert.match(userNav, /aliases: \["\/dashboard\/profile", "\/dashboard\/cv-tailor"\]/)
   assert.match(userNav, /label: "Profile"/)
   assert.match(userNav, /description: "Facts and proof"/)
-  assert.match(userNav, /before using \$\{workflowLabel\}/)
-  assert.match(userNav, /before using \$\{item\.label\}/)
-  assert.match(publicNav, /before using \$\{areaLabel\}/)
+  assert.doesNotMatch(userNav, /protocol-locked-link|90% before using/)
+  assert.match(userNav, /href=\{item\.href\}/)
+  assert.doesNotMatch(publicNav, /protocol-locked-link|90% before using/)
   assert.match(dashboard, /eyebrow: "Proof Library"/)
   assert.match(dashboard, /title: "Proof Library"/)
   assert.match(dashboard, /aria-label="Proof Library workspace"/)
@@ -249,13 +249,13 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   assert.match(createApplicationFlow, /fitDecision: fitEvaluation\.decision/)
   assert.match(createApplicationFlow, /contentGate: fitEvaluation\.contentGate/)
 
-  assert.match(aiFlow, /requireProfileExecutionReady\(\)/)
+  assert.match(aiFlow, /requireCapability\("analyse_job"\)/)
   assert.match(aiFlow, /hasJobDraft\(state\.jobAnalysis\)/)
   assert.match(aiFlow, /fetchAiJobAnalysis\(/)
   assert.match(aiFlow, /profile: state\.profile/)
   assert.match(aiFlow, /persist\(next, "AI fit assistant updated the role analysis"\)/)
 
-  assert.match(saveFlow, /requireProfileExecutionReady\(\)/)
+  assert.match(saveFlow, /requireCapability\("analyse_job"\)/)
   assert.match(saveFlow, /hasJobDraft\(state\.jobAnalysis\)/)
   assert.match(saveFlow, /createApplication\(/)
   assert.match(saveFlow, /autoTimeFitReview/)
@@ -311,7 +311,7 @@ test("Interview Prep keeps coaching, prep packs and reusable answers separated",
   assert.match(prepFlow, /fetch\("\/api\/ai\/interview"/)
   assert.match(prepFlow, /saveInterviewPrepPack\(/)
 
-  assert.match(saveAnswerFlow, /requireProfileExecutionReady\(\)/)
+  assert.match(saveAnswerFlow, /requireCapability\("prepare_interview"/)
   assert.match(
     saveAnswerFlow,
     /\[finalAnswerStorageKey\]: interviewBuddyOutputs\.strongFinalAnswer/
@@ -419,16 +419,17 @@ test("Client fallbacks surface and record runtime and action failures", () => {
   assert.match(extensionConnect, /extension\.connect\.unhandled/)
 })
 
-test("Profile lock keeps recovery actions clickable", () => {
+test("feature readiness supersedes the universal profile lock", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
+  const readiness = read("apps/web/lib/capability-readiness.ts")
 
   assert.doesNotMatch(
     dashboard,
-    /<div\s+aria-disabled={isDashboardProtocolLocked}\s+className={\s+isDashboardProtocolLocked\s+\?\s+"dashboard-section-lock locked"/
+    /requireProfileExecutionReady/
   )
   assert.match(
-    dashboard,
-    /<div\s+aria-disabled={isDashboardProtocolLocked}\s+className="dashboard-section-lock-content"/
+    readiness,
+    /"prepare_application"[\s\S]*"evidence_confirmation"/
   )
 })
 

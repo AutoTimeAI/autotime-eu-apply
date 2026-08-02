@@ -57,7 +57,7 @@ export default async function DiagnosticsPage() {
     user = sessionUser
   }
 
-  if (!isAdminUser(user)) {
+  if (!(await isAdminUser(user))) {
     redirect("/dashboard")
   }
 

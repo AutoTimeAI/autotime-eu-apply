@@ -1,3 +1,4 @@
+import "server-only"
 import type { DiagnosticPayload } from "./diagnostics"
 import { createAdminClient } from "./supabase/admin"
 import type { Json } from "./supabase/types"

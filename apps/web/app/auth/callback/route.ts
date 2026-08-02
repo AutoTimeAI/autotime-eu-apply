@@ -163,7 +163,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const redirectPath = getSafeRedirectPath(request)
 
-    if (isAdminRedirect(redirectPath) && !isAdminUser(user)) {
+    if (isAdminRedirect(redirectPath) && !(await isAdminUser(user))) {
       await supabase.auth.signOut()
 
       return getAdminDeniedRedirect(request)

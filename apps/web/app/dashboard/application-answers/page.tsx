@@ -1,5 +1,5 @@
-import DashboardExperience from "../../../components/DashboardExperience"
+import { redirect } from "next/navigation";
 
 export default function DashboardApplicationAnswersPage() {
-  return <DashboardExperience focus="application-answers" view="profile" />
+  redirect("/dashboard/applications");
 }

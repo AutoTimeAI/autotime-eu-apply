@@ -6,10 +6,12 @@ sync layer and admin console. They are product rules, not suggestions.
 ## Execution Order
 
 1. The user lands in the dashboard.
-2. The dashboard evaluates profile completion.
-3. If the profile is below 90%, only profile completion and overview guidance are available.
-4. Once the profile reaches 90%, job checks, tracker actions, analytics and interview prep unlock.
-5. Every execution action still validates the profile gate before running.
+2. The dashboard offers one deterministic next action using user-owned state.
+3. The selected capability evaluates its exact required and recommended inputs.
+4. Recommended gaps allow a clearly labelled limited result.
+5. Required gaps keep the selected context open and offer the smallest action.
+6. Consequential application actions require supporting evidence and explicit
+   confirmation regardless of overall profile coverage.
 
 Code source of truth: `apps/web/lib/product-protocols.ts`.
 
@@ -39,8 +41,8 @@ extension, admin or AI.
 
 The dashboard must stay simple for end users:
 
-- Profile first.
-- Then job fit and saved roles.
+- Add one credible career starting point.
+- Then choose Role Pathways or analyse a real vacancy.
 - Then applications and next actions.
 - Then interview prep and advanced AI.
 
