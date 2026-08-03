@@ -2,19 +2,23 @@ import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
+import {
   diagnosticJson,
-  getValidationIssueMessage
+  getValidationIssueMessage,
 } from "../../../../lib/diagnostics"
 import {
   assertCanUseAi,
   FeatureGateError,
-  trackAiCall
+  trackAiCall,
 } from "../../../../lib/feature-gate"
 import {
   assertAiRouteRateLimit,
   RateLimitError,
   reviewProfileContextWithOpenAI,
-  type ProfileContextAIResult
+  type ProfileContextAIResult,
 } from "../../../../lib/openai-server"
 
 type ApiResponse<T> = {
@@ -39,18 +43,18 @@ const requestSchema = z.object({
       "climate-energy",
       "gov-public",
       "ecommerce-marketplace",
-      "devtools-cloud"
+      "devtools-cloud",
     ]),
     candidatePosition: z.enum(["foreign-candidate", "native-candidate"]),
     urgency: z.enum(["urgent", "active", "exploring"]),
     targetCountry: z.string().trim().min(2),
-    experienceLevel: z.string().trim().min(2)
+    experienceLevel: z.string().trim().min(2),
   }),
-  resumeText: z.string().trim().min(40)
+  resumeText: z.string().trim().min(40),
 })
 
 function jsonResponse(
-  body: ApiResponse<ProfileContextRouteData>
+  body: ApiResponse<ProfileContextRouteData>,
 ): NextResponse<ApiResponse<ProfileContextRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -60,7 +64,7 @@ function getUpgradeUrl(request: NextRequest): string {
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<ProfileContextRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -72,7 +76,7 @@ export async function POST(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -88,15 +92,24 @@ export async function POST(
       model: result.model,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
-      costUsd: result.costUsd
+      costUsd: result.costUsd,
     })
 
     return jsonResponse({
       data: { suggestion: result.value },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.profile-context.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof FeatureGateError) {
       return diagnosticJson({
         area: "ai",
@@ -104,7 +117,7 @@ export async function POST(
         data: { upgradeUrl: getUpgradeUrl(request) },
         error: error.message,
         request,
-        status: 402
+        status: 402,
       })
     }
 
@@ -115,7 +128,7 @@ export async function POST(
         data: null,
         error: error.message,
         request,
-        status: 429
+        status: 429,
       })
     }
 
@@ -128,10 +141,10 @@ export async function POST(
           fallback:
             "CV review needs candidate context and at least 40 characters of CV text.",
           issues: error.issues,
-          prefix: "CV review needs valid input for"
+          prefix: "CV review needs valid input for",
         }),
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -145,7 +158,7 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

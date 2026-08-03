@@ -2,10 +2,17 @@ import { type NextRequest, NextResponse } from "next/server"
 import type Stripe from "stripe"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { sendUpgradeConfirmed } from "../../../../lib/email"
-import { getServerEnv } from "../../../../lib/env"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
+import {
+  getStripeWebhookEnv,
+  getSupabaseServiceRoleEnv,
+} from "../../../../lib/env.server"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import type { SubscriptionStatus } from "../../../../lib/supabase/types"
-import { stripe } from "../../../../lib/stripe"
+import { getWebhookStripeClient } from "../../../../lib/stripe"
 
 type ApiResponse<T> = {
   data: T | null
@@ -18,7 +25,7 @@ type WebhookRouteData = {
 }
 
 function jsonResponse(
-  body: ApiResponse<WebhookRouteData>
+  body: ApiResponse<WebhookRouteData>,
 ): NextResponse<ApiResponse<WebhookRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -39,7 +46,9 @@ function isStripeInvoice(value: unknown): value is Stripe.Invoice {
   return isRecord(value) && value.object === "invoice"
 }
 
-function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
+function mapStripeStatus(
+  status: Stripe.Subscription.Status,
+): SubscriptionStatus {
   switch (status) {
     case "active":
     case "trialing":
@@ -54,7 +63,9 @@ function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus
   }
 }
 
-function getCustomerId(customer: Stripe.Subscription["customer"]): string | null {
+function getCustomerId(
+  customer: Stripe.Subscription["customer"],
+): string | null {
   return typeof customer === "string" ? customer : customer.id
 }
 
@@ -71,7 +82,7 @@ function getCurrentPeriodEnd(subscription: Stripe.Subscription): string | null {
 }
 
 async function upsertSubscriptionFromStripe(
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription,
 ): Promise<{ periodEnd: Date | null; userId: string | null }> {
   try {
     const supabase = createAdminClient()
@@ -91,9 +102,9 @@ async function upsertSubscriptionFromStripe(
         stripe_subscription_id: subscription.id,
         plan: "pro",
         status: mapStripeStatus(subscription.status),
-        current_period_end: currentPeriodEnd
+        current_period_end: currentPeriodEnd,
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     )
 
     if (error) {
@@ -102,7 +113,7 @@ async function upsertSubscriptionFromStripe(
 
     return {
       periodEnd: currentPeriodEnd ? new Date(currentPeriodEnd) : null,
-      userId
+      userId,
     }
   } catch (error: unknown) {
     const message =
@@ -116,7 +127,7 @@ async function upsertSubscriptionFromStripe(
 
 async function sendUpgradeEmailForUser(
   userId: string,
-  periodEnd: Date
+  periodEnd: Date,
 ): Promise<void> {
   try {
     const supabase = createAdminClient()
@@ -133,7 +144,7 @@ async function sendUpgradeEmailForUser(
 }
 
 async function markSubscriptionCancelled(
-  subscription: Stripe.Subscription
+  subscription: Stripe.Subscription,
 ): Promise<void> {
   try {
     const supabase = createAdminClient()
@@ -142,7 +153,7 @@ async function markSubscriptionCancelled(
       .update({
         plan: "free",
         status: "cancelled",
-        current_period_end: getCurrentPeriodEnd(subscription)
+        current_period_end: getCurrentPeriodEnd(subscription),
       })
       .eq("stripe_subscription_id", subscription.id)
 
@@ -157,7 +168,9 @@ async function markSubscriptionCancelled(
   }
 }
 
-async function markInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+async function markInvoicePaymentFailed(
+  invoice: Stripe.Invoice,
+): Promise<void> {
   try {
     const parent = invoice.parent
     const subscriptionId =
@@ -218,7 +231,10 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       return
     }
 
-    if (event.type === "invoice.payment_failed" && isStripeInvoice(eventObject)) {
+    if (
+      event.type === "invoice.payment_failed" &&
+      isStripeInvoice(eventObject)
+    ) {
       await markInvoicePaymentFailed(eventObject)
     }
   } catch (error: unknown) {
@@ -230,7 +246,7 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<WebhookRouteData>>> {
   try {
     const signature = request.headers.get("stripe-signature")
@@ -242,15 +258,16 @@ export async function POST(
         data: null,
         error: "Missing Stripe signature",
         request,
-        status: 400
+        status: 400,
       })
     }
 
     const payload = await request.text()
-    const event = stripe.webhooks.constructEvent(
+    getSupabaseServiceRoleEnv()
+    const event = getWebhookStripeClient().webhooks.constructEvent(
       payload,
       signature,
-      getServerEnv().STRIPE_WEBHOOK_SECRET
+      getStripeWebhookEnv().webhookSecret,
     )
 
     await handleStripeEvent(event)
@@ -258,20 +275,28 @@ export async function POST(
     return jsonResponse({
       data: { received: true },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Stripe webhook failed"
+    if (isConfigurationUnavailableError(error)) {
+      return diagnosticJson({
+        area: "stripe",
+        code: "stripe.webhook.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
+    }
 
     return diagnosticJson({
       area: "stripe",
       code: "stripe.webhook.failed",
       data: null,
-      error: message,
+      error: "Invalid webhook request",
       log: true,
       request,
-      status: 400
+      status: 400,
     })
   }
 }

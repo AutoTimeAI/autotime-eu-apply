@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useState } from "react"
-import { publicEnv } from "../../../lib/env"
+import { getCanonicalAppUrl } from "../../../lib/env"
 import { createBrowserClient } from "../../../lib/supabase/client"
 
 function getErrorMessage(error: unknown): string {
@@ -16,20 +16,17 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
       setStatus(null)
 
       const supabase = createBrowserClient()
-      const callbackUrl = new URL(
-        "/auth/callback",
-        publicEnv.NEXT_PUBLIC_APP_URL
-      )
+      const callbackUrl = new URL("/auth/callback", getCanonicalAppUrl())
       callbackUrl.searchParams.set("redirectTo", "/admin")
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           queryParams: {
-            prompt: "consent select_account"
+            prompt: "consent select_account",
           },
-          redirectTo: callbackUrl.toString()
-        }
+          redirectTo: callbackUrl.toString(),
+        },
       })
 
       if (error) {
@@ -74,16 +71,11 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
           <div>
             <span className="admin-live-pill">Protected</span>
             <h2>AutoTime account</h2>
-            <p>
-              Continue with the same Google account you use for AutoTime.
-            </p>
+            <p>Continue with the same Google account you use for AutoTime.</p>
           </div>
 
           <div className="admin-login-actions">
-            <button
-              type="button"
-              onClick={handleSignIn}
-            >
+            <button type="button" onClick={handleSignIn}>
               Continue with Google
             </button>
           </div>
@@ -92,7 +84,11 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
             <div className="admin-alert-panel warning">
               <strong>Admin access check</strong>
               <p>{status}</p>
-              <button className="secondary-button" type="button" onClick={signOut}>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={signOut}
+              >
                 Reset admin session
               </button>
             </div>
@@ -104,7 +100,7 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
 }
 
 export function AdminLoginContent({
-  initialStatus
+  initialStatus,
 }: {
   initialStatus: string | null
 }) {

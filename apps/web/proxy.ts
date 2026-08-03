@@ -2,27 +2,18 @@ import { createServerClient } from "@supabase/ssr"
 import type { CookieOptions } from "@supabase/ssr"
 import { type NextRequest, NextResponse } from "next/server"
 import { createDiagnostic, logDiagnostic } from "./lib/diagnostics"
-import { publicEnv } from "./lib/env"
+import { getSupabasePublicEnv } from "./lib/env"
+import {
+  configurationUnavailableMessage,
+} from "./lib/configuration-error"
 import type { Database } from "./lib/supabase/types"
 import { getTestAuthUser } from "./lib/test-auth"
-
-const protectedRoutePrefixes = [
-  "/admin",
-  "/dashboard",
-  "/diagnostics",
-  "/api/admin",
-  "/api/ai",
-  "/api/diagnostics",
-  "/api/stripe"
-]
-const publicRoutePrefixes = [
-  "/",
-  "/pricing",
-  "/privacy",
-  "/terms",
-  "/auth",
-  "/login"
-]
+import {
+  getUnauthenticatedRedirect,
+  getProtectedProxyFailure,
+  isProtectedPath,
+  isPublicPath,
+} from "./lib/proxy-policy"
 
 type CookieToSet = {
   name: string
@@ -30,30 +21,10 @@ type CookieToSet = {
   options: CookieOptions
 }
 
-function isProtectedPath(pathname: string): boolean {
-  if (pathname === "/api/stripe/webhook") {
-    return false
-  }
-
-  if (pathname === "/admin/login") {
-    return false
-  }
-
-  return protectedRoutePrefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  )
-}
-
-function isPublicPath(pathname: string): boolean {
-  return publicRoutePrefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  )
-}
-
 function applyAuthCookies({
   cookiesToSet,
   headersToSet,
-  response
+  response,
 }: {
   cookiesToSet: CookieToSet[]
   headersToSet: Record<string, string>
@@ -74,6 +45,16 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   try {
     const pathname = request.nextUrl.pathname
 
+    if (
+      isPublicPath(pathname) ||
+      (!isProtectedPath(pathname) &&
+        !request.cookies
+          .getAll()
+          .some((cookie) => cookie.name.startsWith("sb-")))
+    ) {
+      return NextResponse.next({ request })
+    }
+
     if (isProtectedPath(pathname) && getTestAuthUser()) {
       return NextResponse.next({ request })
     }
@@ -82,40 +63,35 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const headersToSet: Record<string, string> = {}
     let response = NextResponse.next({ request })
 
-    const supabase = createServerClient<Database>(
-      publicEnv.NEXT_PUBLIC_SUPABASE_URL,
-      publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll(nextCookiesToSet, nextHeadersToSet) {
-            nextCookiesToSet.forEach(({ name, value, options }) => {
-              request.cookies.set(name, value)
-              cookiesToSet.push({ name, value, options })
-            })
+    const env = getSupabasePublicEnv()
+    const supabase = createServerClient<Database>(env.url, env.anonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(nextCookiesToSet, nextHeadersToSet) {
+          nextCookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+            cookiesToSet.push({ name, value, options })
+          })
 
-            Object.assign(headersToSet, nextHeadersToSet)
-            response = applyAuthCookies({
-              cookiesToSet,
-              headersToSet,
-              response: NextResponse.next({ request })
-            })
-          }
-        }
-      }
-    )
+          Object.assign(headersToSet, nextHeadersToSet)
+          response = applyAuthCookies({
+            cookiesToSet,
+            headersToSet,
+            response: NextResponse.next({ request }),
+          })
+        },
+      },
+    })
 
     const {
-      data: { user }
+      data: { user },
     } = await supabase.auth.getUser()
     if (isProtectedPath(pathname) && !user) {
-      const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login"
-      const loginUrl = new URL(loginPath, request.url)
-      loginUrl.searchParams.set(
-        "redirectTo",
-        `${pathname}${request.nextUrl.search}`
+      const loginUrl = new URL(
+        getUnauthenticatedRedirect(pathname, request.nextUrl.search),
+        request.url,
       )
 
       logDiagnostic(
@@ -124,14 +100,14 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
           code: "auth.proxy.protected-redirect",
           message: "Protected route requested without a session",
           request,
-          status: 307
-        })
+          status: 307,
+        }),
       )
 
       return applyAuthCookies({
         cookiesToSet,
         headersToSet,
-        response: NextResponse.redirect(loginUrl)
+        response: NextResponse.redirect(loginUrl),
       })
     }
 
@@ -144,19 +120,22 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     const pathname = request.nextUrl.pathname
 
     if (isProtectedPath(pathname)) {
+      const configurationFailure = getProtectedProxyFailure(error)
+      if (configurationFailure)
+        return new NextResponse(configurationFailure.body, {
+          status: configurationFailure.status,
+        })
       logDiagnostic(
         createDiagnostic({
           area: "auth",
           code: "auth.proxy.failed",
           message: error instanceof Error ? error.message : "Proxy failed",
           request,
-          status: 307
-        })
+          status: 503,
+        }),
       )
 
-      const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login"
-
-      return NextResponse.redirect(new URL(loginPath, request.url))
+      return new NextResponse(configurationUnavailableMessage, { status: 503 })
     }
 
     if (error instanceof Error) {
@@ -169,6 +148,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|monitoring|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
-  ]
+    "/((?!_next/static|_next/image|favicon.ico|monitoring|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 }

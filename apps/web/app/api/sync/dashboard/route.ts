@@ -12,9 +12,13 @@ import {
   type EvidenceRecord,
   type InterviewPrepPack,
   type OutcomeRecord,
-  type ReusableAnswers
+  type ReusableAnswers,
 } from "shared"
 import { getRequestUser } from "../../../../lib/api-auth"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { trackJobImportStarted } from "../../../../lib/sentry-breadcrumbs"
 import { createAdminClient } from "../../../../lib/supabase/admin"
@@ -47,7 +51,8 @@ type DashboardReadData = {
   >
 }
 
-type SourceSurface = Database["public"]["Tables"]["sync_events"]["Insert"]["source_surface"]
+type SourceSurface =
+  Database["public"]["Tables"]["sync_events"]["Insert"]["source_surface"]
 
 const dashboardWorkflowSchema = companionDashboardStateSchema
   .pick({
@@ -55,10 +60,10 @@ const dashboardWorkflowSchema = companionDashboardStateSchema
     applications: true,
     evidenceRecords: true,
     outcomeRecords: true,
-    interviewPrepPacks: true
+    interviewPrepPacks: true,
   })
   .partial({
-    reusableAnswers: true
+    reusableAnswers: true,
   })
 
 const emptyReusableAnswers: ReusableAnswers = {
@@ -69,7 +74,7 @@ const emptyReusableAnswers: ReusableAnswers = {
   salaryExpectationAnswer: "",
   motivationAnswer: "",
   strengthsAnswer: "",
-  availabilityAnswer: ""
+  availabilityAnswer: "",
 }
 
 function emptyDashboard(): DashboardReadData["dashboard"] {
@@ -78,16 +83,18 @@ function emptyDashboard(): DashboardReadData["dashboard"] {
     applications: [],
     evidenceRecords: [],
     outcomeRecords: [],
-    interviewPrepPacks: []
+    interviewPrepPacks: [],
   }
 }
 
-const dashboardDeleteSchema = z.object({
-  applicationId: z.string().trim().min(1).optional(),
-  url: z.string().trim().min(1).optional()
-}).refine((value) => value.applicationId || value.url, {
-  message: "applicationId or url is required"
-})
+const dashboardDeleteSchema = z
+  .object({
+    applicationId: z.string().trim().min(1).optional(),
+    url: z.string().trim().min(1).optional(),
+  })
+  .refine((value) => value.applicationId || value.url, {
+    message: "applicationId or url is required",
+  })
 
 type DashboardWorkflowPayload = z.infer<typeof dashboardWorkflowSchema>
 
@@ -112,23 +119,21 @@ function normalizeLegacyDashboardPayload(value: unknown): unknown {
             ? {
                 ...item,
                 status: normalizeLegacyApplicationStatus(
-                  (item as Record<string, unknown>).status
-                )
+                  (item as Record<string, unknown>).status,
+                ),
               }
-            : item
+            : item,
         )
       : items
 
   return {
     ...record,
     applications: normalizeItems(record.applications),
-    outcomeRecords: normalizeItems(record.outcomeRecords)
+    outcomeRecords: normalizeItems(record.outcomeRecords),
   }
 }
 
-function jsonResponse<T>(
-  body: ApiResponse<T>
-): NextResponse<ApiResponse<T>> {
+function jsonResponse<T>(body: ApiResponse<T>): NextResponse<ApiResponse<T>> {
   return NextResponse.json(body, { status: body.status })
 }
 
@@ -157,7 +162,7 @@ function normalizeApplicationUrlKey(url: string) {
 function mapReusableAnswersToRow(
   userId: string,
   answers: ReusableAnswers,
-  sourceSurface: SourceSurface
+  sourceSurface: SourceSurface,
 ): Database["public"]["Tables"]["reusable_answers"]["Insert"] {
   return {
     user_id: userId,
@@ -170,7 +175,7 @@ function mapReusableAnswersToRow(
     strengths_answer: answers.strengthsAnswer,
     availability_answer: answers.availabilityAnswer,
     source_surface: sourceSurface,
-    schema_version: 1
+    schema_version: 1,
   }
 }
 
@@ -178,7 +183,7 @@ function mapApplicationToRow(
   userId: string,
   application: ApplicationRecord,
   sourceSurface: SourceSurface,
-  idOverride?: string
+  idOverride?: string,
 ): Database["public"]["Tables"]["applications"]["Insert"] {
   return {
     id: idOverride ?? application.id,
@@ -202,20 +207,20 @@ function mapApplicationToRow(
     source_surface: sourceSurface,
     schema_version: 1,
     created_at: application.createdAt,
-    updated_at: application.updatedAt ?? new Date().toISOString()
+    updated_at: application.updatedAt ?? new Date().toISOString(),
   }
 }
 
 function mapEvidenceToRow(
   userId: string,
   record: EvidenceRecord,
-  applicationIdMap: Map<string, string> = new Map()
+  applicationIdMap: Map<string, string> = new Map(),
 ): Database["public"]["Tables"]["evidence_records"]["Insert"] {
   return {
     id: record.id,
     user_id: userId,
     application_id: record.applicationId
-      ? applicationIdMap.get(record.applicationId) ?? record.applicationId
+      ? (applicationIdMap.get(record.applicationId) ?? record.applicationId)
       : null,
     job_url: emptyToNull(record.jobUrl),
     check_key: record.checkKey,
@@ -229,14 +234,14 @@ function mapEvidenceToRow(
     explanation: record.explanation,
     limit_text: record.limit,
     schema_version: 1,
-    created_at: record.createdAt
+    created_at: record.createdAt,
   }
 }
 
 function mapOutcomeToRow(
   userId: string,
   record: OutcomeRecord,
-  applicationIdMap: Map<string, string> = new Map()
+  applicationIdMap: Map<string, string> = new Map(),
 ): Database["public"]["Tables"]["outcome_records"]["Insert"] {
   return {
     id: record.id,
@@ -258,7 +263,7 @@ function mapOutcomeToRow(
     notes: emptyToNull(record.notes),
     schema_version: 1,
     created_at: record.createdAt,
-    updated_at: record.updatedAt
+    updated_at: record.updatedAt,
   }
 }
 
@@ -266,12 +271,13 @@ function mapPrepPackToRow(
   userId: string,
   pack: InterviewPrepPack,
   sourceSurface: SourceSurface,
-  applicationIdMap: Map<string, string> = new Map()
+  applicationIdMap: Map<string, string> = new Map(),
 ): Database["public"]["Tables"]["interview_prep_packs"]["Insert"] {
   return {
     id: pack.id,
     user_id: userId,
-    application_id: applicationIdMap.get(pack.applicationId) ?? pack.applicationId,
+    application_id:
+      applicationIdMap.get(pack.applicationId) ?? pack.applicationId,
     role_summary: pack.roleSummary,
     positioning_statement: pack.positioningStatement,
     fit_and_gap_recap: pack.fitAndGapRecap,
@@ -284,7 +290,7 @@ function mapPrepPackToRow(
     source_surface: sourceSurface,
     schema_version: 1,
     created_at: pack.createdAt,
-    updated_at: pack.updatedAt
+    updated_at: pack.updatedAt,
   }
 }
 
@@ -299,7 +305,7 @@ function mapSyncEvents({
   payload,
   sourceSurface,
   userId,
-  includeReusableAnswers = true
+  includeReusableAnswers = true,
 }: {
   applicationIdMap?: Map<string, string>
   payload: DashboardWorkflowPayload
@@ -316,8 +322,8 @@ function mapSyncEvents({
             entity_type: "reusable_answers",
             message: "Reusable answers synced to dashboard.",
             source_surface: sourceSurface,
-            user_id: userId
-          }
+            user_id: userId,
+          },
         ]
       : []
 
@@ -328,7 +334,7 @@ function mapSyncEvents({
       entity_type: "application",
       message: "Application synced to dashboard.",
       source_surface: sourceSurface,
-      user_id: userId
+      user_id: userId,
     })
   }
 
@@ -339,7 +345,7 @@ function mapSyncEvents({
       entity_type: "evidence_record",
       message: "Evidence record synced to dashboard.",
       source_surface: sourceSurface,
-      user_id: userId
+      user_id: userId,
     })
   }
 
@@ -350,7 +356,7 @@ function mapSyncEvents({
       entity_type: "outcome_record",
       message: "Outcome record synced to dashboard.",
       source_surface: sourceSurface,
-      user_id: userId
+      user_id: userId,
     })
   }
 
@@ -361,7 +367,7 @@ function mapSyncEvents({
       entity_type: "interview_prep_pack",
       message: "Interview prep pack synced to dashboard.",
       source_surface: sourceSurface,
-      user_id: userId
+      user_id: userId,
     })
   }
 
@@ -369,7 +375,7 @@ function mapSyncEvents({
 }
 
 function rowToReusableAnswers(
-  row: Database["public"]["Tables"]["reusable_answers"]["Row"] | null
+  row: Database["public"]["Tables"]["reusable_answers"]["Row"] | null,
 ): ReusableAnswers {
   return reusableAnswersSchema.parse({
     sponsorshipAnswer: row?.sponsorship_answer ?? "",
@@ -379,12 +385,12 @@ function rowToReusableAnswers(
     salaryExpectationAnswer: row?.salary_expectation_answer ?? "",
     motivationAnswer: row?.motivation_answer ?? "",
     strengthsAnswer: row?.strengths_answer ?? "",
-    availabilityAnswer: row?.availability_answer ?? ""
+    availabilityAnswer: row?.availability_answer ?? "",
   })
 }
 
 function rowToApplication(
-  row: Database["public"]["Tables"]["applications"]["Row"]
+  row: Database["public"]["Tables"]["applications"]["Row"],
 ): ApplicationRecord {
   return applicationRecordSchema.parse({
     id: row.id,
@@ -403,12 +409,12 @@ function rowToApplication(
     fitScore: row.fit_score ?? undefined,
     fitDecision: row.fit_decision ?? undefined,
     contentGate: row.content_gate ?? undefined,
-    contentSnapshot: row.content_snapshot ?? undefined
+    contentSnapshot: row.content_snapshot ?? undefined,
   })
 }
 
 function rowToEvidence(
-  row: Database["public"]["Tables"]["evidence_records"]["Row"]
+  row: Database["public"]["Tables"]["evidence_records"]["Row"],
 ): EvidenceRecord {
   return evidenceRecordSchema.parse({
     id: row.id,
@@ -424,12 +430,12 @@ function rowToEvidence(
     riskFlag: row.risk_flag ?? undefined,
     explanation: row.explanation,
     limit: row.limit_text,
-    createdAt: row.created_at
+    createdAt: row.created_at,
   })
 }
 
 function rowToOutcome(
-  row: Database["public"]["Tables"]["outcome_records"]["Row"]
+  row: Database["public"]["Tables"]["outcome_records"]["Row"],
 ): OutcomeRecord {
   return outcomeRecordSchema.parse({
     id: row.id,
@@ -448,12 +454,12 @@ function rowToOutcome(
     closedAt: row.closed_at ?? undefined,
     notes: row.notes ?? undefined,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   })
 }
 
 function rowToPrepPack(
-  row: Database["public"]["Tables"]["interview_prep_packs"]["Row"]
+  row: Database["public"]["Tables"]["interview_prep_packs"]["Row"],
 ): InterviewPrepPack {
   return interviewPrepPackSchema.parse({
     id: row.id,
@@ -468,7 +474,7 @@ function rowToPrepPack(
     questionsToAskEmployer: row.questions_to_ask_employer,
     finalPrepChecklist: row.final_prep_checklist,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   })
 }
 
@@ -483,7 +489,7 @@ async function requireAuthenticatedUser(request: NextRequest) {
 }
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<DashboardReadData>>> {
   try {
     const auth = await requireAuthenticatedUser(request)
@@ -495,18 +501,18 @@ export async function GET(
         data: null,
         error: auth.error,
         request,
-        status: auth.status
+        status: auth.status,
       })
     }
 
     if (isTestAuthUserId(auth.user.id)) {
       console.warn(
-        "autotime_test_auth_bypass: GET /api/sync/dashboard short-circuited by AUTOTIME_TEST_AUTH_ENABLED - returning an empty dashboard without reading the database. If this is unexpected, check the AUTOTIME_TEST_AUTH_ENABLED environment variable for this deployment."
+        "autotime_test_auth_bypass: GET /api/sync/dashboard short-circuited by AUTOTIME_TEST_AUTH_ENABLED - returning an empty dashboard without reading the database. If this is unexpected, check the AUTOTIME_TEST_AUTH_ENABLED environment variable for this deployment.",
       )
       return jsonResponse({
         data: { dashboard: emptyDashboard() },
         error: null,
-        status: 200
+        status: 200,
       })
     }
 
@@ -516,7 +522,7 @@ export async function GET(
       applicationsResult,
       evidenceResult,
       outcomesResult,
-      prepPacksResult
+      prepPacksResult,
     ] = await Promise.all([
       supabase
         .from("reusable_answers")
@@ -542,7 +548,7 @@ export async function GET(
         .from("interview_prep_packs")
         .select("*")
         .eq("user_id", auth.user.id)
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: false }),
     ])
 
     const firstError = [
@@ -550,7 +556,7 @@ export async function GET(
       applicationsResult.error,
       evidenceResult.error,
       outcomesResult.error,
-      prepPacksResult.error
+      prepPacksResult.error,
     ].find(Boolean)
 
     if (firstError) {
@@ -561,7 +567,7 @@ export async function GET(
         error: firstError.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
@@ -572,13 +578,22 @@ export async function GET(
           applications: (applicationsResult.data ?? []).map(rowToApplication),
           evidenceRecords: (evidenceResult.data ?? []).map(rowToEvidence),
           outcomeRecords: (outcomesResult.data ?? []).map(rowToOutcome),
-          interviewPrepPacks: (prepPacksResult.data ?? []).map(rowToPrepPack)
-        }
+          interviewPrepPacks: (prepPacksResult.data ?? []).map(rowToPrepPack),
+        },
       },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     const message =
       error instanceof Error ? error.message : "Dashboard sync read failed"
 
@@ -589,13 +604,13 @@ export async function GET(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<DashboardSyncData>>> {
   try {
     const auth = await requireAuthenticatedUser(request)
@@ -607,17 +622,18 @@ export async function POST(
         data: null,
         error: auth.error,
         request,
-        status: auth.status
+        status: auth.status,
       })
     }
 
     const rawBody = (await request.json()) as Record<string, unknown>
     const payload = dashboardWorkflowSchema.parse(
-      normalizeLegacyDashboardPayload(rawBody)
+      normalizeLegacyDashboardPayload(rawBody),
     )
     const resurrectUrlKeys = Array.isArray(rawBody.resurrectUrlKeys)
       ? rawBody.resurrectUrlKeys.filter(
-          (value): value is string => typeof value === "string" && value.trim().length > 0
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0,
         )
       : []
     const sourceSurface = getSourceSurface(request)
@@ -625,17 +641,17 @@ export async function POST(
       applicationCount: payload.applications.length,
       route: "/api/sync/dashboard",
       sourceSurface,
-      status: "started"
+      status: "started",
     })
 
     if (isTestAuthUserId(auth.user.id)) {
       console.warn(
-        "autotime_test_auth_bypass: POST /api/sync/dashboard short-circuited by AUTOTIME_TEST_AUTH_ENABLED - reporting synced without writing to the database. If this is unexpected, check the AUTOTIME_TEST_AUTH_ENABLED environment variable for this deployment."
+        "autotime_test_auth_bypass: POST /api/sync/dashboard short-circuited by AUTOTIME_TEST_AUTH_ENABLED - reporting synced without writing to the database. If this is unexpected, check the AUTOTIME_TEST_AUTH_ENABLED environment variable for this deployment.",
       )
       return jsonResponse({
         data: { deletedApplicationIds: [], synced: true },
         error: null,
-        status: 200
+        status: 200,
       })
     }
 
@@ -656,13 +672,13 @@ export async function POST(
           error: resurrectError.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
 
     const applicationUrlKeys = payload.applications.map((application) =>
-      normalizeApplicationUrlKey(application.url || application.id)
+      normalizeApplicationUrlKey(application.url || application.id),
     )
     const tombstoneResult = applicationUrlKeys.length
       ? await supabase
@@ -680,25 +696,25 @@ export async function POST(
         error: tombstoneResult.error.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
     const deletedUrlKeys = new Set(
-      (tombstoneResult.data ?? []).map((row) => row.url_key)
+      (tombstoneResult.data ?? []).map((row) => row.url_key),
     )
     const deletedApplicationIds = payload.applications
       .filter((application) =>
         deletedUrlKeys.has(
-          normalizeApplicationUrlKey(application.url || application.id)
-        )
+          normalizeApplicationUrlKey(application.url || application.id),
+        ),
       )
       .map((application) => application.id)
     const activeApplications = payload.applications.filter(
       (application) =>
         !deletedUrlKeys.has(
-          normalizeApplicationUrlKey(application.url || application.id)
-        )
+          normalizeApplicationUrlKey(application.url || application.id),
+        ),
     )
     const applicationIdMap = new Map<string, string>()
 
@@ -710,8 +726,8 @@ export async function POST(
         .in(
           "url_key",
           activeApplications.map((application) =>
-            normalizeApplicationUrlKey(application.url || application.id)
-          )
+            normalizeApplicationUrlKey(application.url || application.id),
+          ),
         )
 
       if (error) {
@@ -722,17 +738,17 @@ export async function POST(
           error: error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
 
       const existingByUrlKey = new Map(
-        (data ?? []).map((row) => [row.url_key, row.id])
+        (data ?? []).map((row) => [row.url_key, row.id]),
       )
 
       for (const application of activeApplications) {
         const existingId = existingByUrlKey.get(
-          normalizeApplicationUrlKey(application.url || application.id)
+          normalizeApplicationUrlKey(application.url || application.id),
         )
 
         if (existingId) {
@@ -748,9 +764,9 @@ export async function POST(
           mapReusableAnswersToRow(
             auth.user.id,
             payload.reusableAnswers,
-            sourceSurface
+            sourceSurface,
           ),
-          { onConflict: "user_id" }
+          { onConflict: "user_id" },
         )
 
       if (reusableAnswersResult.error) {
@@ -761,25 +777,23 @@ export async function POST(
           error: reusableAnswersResult.error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
 
     if (activeApplications.length) {
-      const { error } = await supabase
-        .from("applications")
-        .upsert(
-          activeApplications.map((item) =>
-            mapApplicationToRow(
-              auth.user.id,
-              item,
-              sourceSurface,
-              applicationIdMap.get(item.id)
-            )
+      const { error } = await supabase.from("applications").upsert(
+        activeApplications.map((item) =>
+          mapApplicationToRow(
+            auth.user.id,
+            item,
+            sourceSurface,
+            applicationIdMap.get(item.id),
           ),
-          { onConflict: "user_id,url_key" }
-        )
+        ),
+        { onConflict: "user_id,url_key" },
+      )
 
       if (error) {
         return diagnosticJson({
@@ -789,33 +803,32 @@ export async function POST(
           error: error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
 
     const activeApplicationIds = new Set(
-      activeApplications.map((application) => application.id)
+      activeApplications.map((application) => application.id),
     )
     const activeEvidenceRecords = (payload.evidenceRecords ?? []).filter(
-      (record) => !record.applicationId || activeApplicationIds.has(record.applicationId)
+      (record) =>
+        !record.applicationId || activeApplicationIds.has(record.applicationId),
     )
-    const activeOutcomeRecords = (payload.outcomeRecords ?? []).filter((record) =>
-      activeApplicationIds.has(record.applicationId)
+    const activeOutcomeRecords = (payload.outcomeRecords ?? []).filter(
+      (record) => activeApplicationIds.has(record.applicationId),
     )
     const activeInterviewPrepPacks = payload.interviewPrepPacks.filter((pack) =>
-      activeApplicationIds.has(pack.applicationId)
+      activeApplicationIds.has(pack.applicationId),
     )
 
     if (activeEvidenceRecords.length) {
-      const { error } = await supabase
-        .from("evidence_records")
-        .upsert(
-          activeEvidenceRecords.map((item) =>
-            mapEvidenceToRow(auth.user.id, item, applicationIdMap)
-          ),
-          { onConflict: "id" }
-        )
+      const { error } = await supabase.from("evidence_records").upsert(
+        activeEvidenceRecords.map((item) =>
+          mapEvidenceToRow(auth.user.id, item, applicationIdMap),
+        ),
+        { onConflict: "id" },
+      )
 
       if (error) {
         return diagnosticJson({
@@ -825,20 +838,18 @@ export async function POST(
           error: error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
 
     if (activeOutcomeRecords.length) {
-      const { error } = await supabase
-        .from("outcome_records")
-        .upsert(
-          activeOutcomeRecords.map((item) =>
-            mapOutcomeToRow(auth.user.id, item, applicationIdMap)
-          ),
-          { onConflict: "user_id,application_id" }
-        )
+      const { error } = await supabase.from("outcome_records").upsert(
+        activeOutcomeRecords.map((item) =>
+          mapOutcomeToRow(auth.user.id, item, applicationIdMap),
+        ),
+        { onConflict: "user_id,application_id" },
+      )
 
       if (error) {
         return diagnosticJson({
@@ -848,25 +859,18 @@ export async function POST(
           error: error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
 
     if (activeInterviewPrepPacks.length) {
-      const { error } = await supabase
-        .from("interview_prep_packs")
-        .upsert(
-          activeInterviewPrepPacks.map((item) =>
-            mapPrepPackToRow(
-              auth.user.id,
-              item,
-              sourceSurface,
-              applicationIdMap
-            )
-          ),
-          { onConflict: "user_id,application_id" }
-        )
+      const { error } = await supabase.from("interview_prep_packs").upsert(
+        activeInterviewPrepPacks.map((item) =>
+          mapPrepPackToRow(auth.user.id, item, sourceSurface, applicationIdMap),
+        ),
+        { onConflict: "user_id,application_id" },
+      )
 
       if (error) {
         return diagnosticJson({
@@ -876,7 +880,7 @@ export async function POST(
           error: error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
@@ -888,11 +892,11 @@ export async function POST(
         applications: activeApplications,
         evidenceRecords: activeEvidenceRecords,
         outcomeRecords: activeOutcomeRecords,
-        interviewPrepPacks: activeInterviewPrepPacks
+        interviewPrepPacks: activeInterviewPrepPacks,
       },
       sourceSurface,
       userId: auth.user.id,
-      includeReusableAnswers: Boolean(payload.reusableAnswers)
+      includeReusableAnswers: Boolean(payload.reusableAnswers),
     })
 
     if (syncEvents.length) {
@@ -906,7 +910,7 @@ export async function POST(
           error: error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
@@ -926,7 +930,7 @@ export async function POST(
           error: error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
@@ -934,9 +938,18 @@ export async function POST(
     return jsonResponse({
       data: { deletedApplicationIds, synced: true },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "sync",
@@ -944,7 +957,7 @@ export async function POST(
         data: null,
         error: "Invalid dashboard sync body",
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -958,13 +971,13 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }
 
 export async function DELETE(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<DashboardDeleteData>>> {
   try {
     const auth = await requireAuthenticatedUser(request)
@@ -976,7 +989,7 @@ export async function DELETE(
         data: null,
         error: auth.error,
         request,
-        status: auth.status
+        status: auth.status,
       })
     }
 
@@ -986,7 +999,7 @@ export async function DELETE(
       return jsonResponse({
         data: { deleted: true },
         error: null,
-        status: 200
+        status: 200,
       })
     }
 
@@ -1009,7 +1022,7 @@ export async function DELETE(
         error: readError.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
@@ -1027,9 +1040,9 @@ export async function DELETE(
           application_id: targetIds[0] ?? body.applicationId ?? null,
           url_key: urlKey,
           source_surface: sourceSurface,
-          reason: "user_deleted"
+          reason: "user_deleted",
         },
-        { onConflict: "user_id,url_key" }
+        { onConflict: "user_id,url_key" },
       )
 
     if (tombstoneResult.error) {
@@ -1040,7 +1053,7 @@ export async function DELETE(
         error: tombstoneResult.error.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
@@ -1060,9 +1073,13 @@ export async function DELETE(
           .from("evidence_records")
           .delete()
           .eq("user_id", auth.user.id)
-          .in("application_id", targetIds)
+          .in("application_id", targetIds),
       ])
-      const childError = [prepResult.error, outcomeResult.error, evidenceResult.error].find(Boolean)
+      const childError = [
+        prepResult.error,
+        outcomeResult.error,
+        evidenceResult.error,
+      ].find(Boolean)
 
       if (childError) {
         return diagnosticJson({
@@ -1072,7 +1089,7 @@ export async function DELETE(
           error: childError.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
 
@@ -1090,7 +1107,7 @@ export async function DELETE(
           error: deleteResult.error.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
     }
@@ -1101,15 +1118,24 @@ export async function DELETE(
       entity_type: "application",
       message: "Application deleted from dashboard.",
       source_surface: sourceSurface,
-      user_id: auth.user.id
+      user_id: auth.user.id,
     })
 
     return jsonResponse({
       data: { deleted: true },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.dashboard.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "sync",
@@ -1117,7 +1143,7 @@ export async function DELETE(
         data: null,
         error: "Invalid dashboard delete body",
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -1131,7 +1157,7 @@ export async function DELETE(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

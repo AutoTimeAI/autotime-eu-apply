@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import posthog from "posthog-js"
 import { canUseAnalytics, identifyAnalyticsUser } from "../lib/analytics"
-import { publicEnv } from "../lib/env"
+import { getAnalyticsEnv } from "../lib/env"
 import { createBrowserClient } from "../lib/supabase/client"
 import { analyticsConsentStorageKey } from "./AnalyticsConsent"
 
@@ -20,11 +20,13 @@ export default function PostHogProvider() {
       }
 
       if (!hasInitialisedPostHog) {
-        posthog.init(publicEnv.NEXT_PUBLIC_POSTHOG_KEY, {
-          api_host: publicEnv.NEXT_PUBLIC_POSTHOG_HOST,
+        const analytics = getAnalyticsEnv()
+        if (!analytics) return
+        posthog.init(analytics.key, {
+          api_host: analytics.host,
           capture_pageview: true,
           defaults: "2025-05-24",
-          persistence: "localStorage+cookie"
+          persistence: "localStorage+cookie",
         })
         hasInitialisedPostHog = true
       }
@@ -32,7 +34,7 @@ export default function PostHogProvider() {
       try {
         const supabase = createBrowserClient()
         const {
-          data: { user }
+          data: { user },
         } = await supabase.auth.getUser()
 
         if (user) {
@@ -46,13 +48,13 @@ export default function PostHogProvider() {
     void initialisePostHog()
     window.addEventListener(
       "autotime-analytics-consent-changed",
-      initialisePostHog
+      initialisePostHog,
     )
 
     return () => {
       window.removeEventListener(
         "autotime-analytics-consent-changed",
-        initialisePostHog
+        initialisePostHog,
       )
     }
   }, [])

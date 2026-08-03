@@ -4,6 +4,10 @@ import { useState } from "react";
 import { z } from "zod";
 import { reportClientIssue } from "../lib/client-diagnostics";
 import type { SubscriptionPlan } from "../lib/supabase/types";
+import {
+  billingUnavailableMessage,
+  getBillingControlState,
+} from "../lib/pricing-configuration";
 
 type BillingInterval = "month" | "year";
 type PricingCardAction = "checkout" | "link" | "portal";
@@ -19,6 +23,7 @@ type PricingCardProps = {
   billingInterval: BillingInterval;
   ctaLabel: string;
   description: string;
+  disabledMessage?: string;
   features: PricingCardFeature[];
   highlighted?: boolean;
   href?: string;
@@ -29,10 +34,11 @@ type PricingCardProps = {
 
 type PricingCardsProps = {
   accountPlan?: SubscriptionPlan | null;
-  annualPriceId: string;
+  annualPriceId?: string;
+  billingAvailable?: boolean;
   freeFeatures: PricingCardFeature[];
   isSignedIn?: boolean;
-  monthlyPriceId: string;
+  monthlyPriceId?: string;
   proFeatures: PricingCardFeature[];
 };
 
@@ -96,6 +102,7 @@ function PricingCard({
   billingInterval,
   ctaLabel,
   description,
+  disabledMessage,
   features,
   highlighted = false,
   href,
@@ -188,7 +195,11 @@ function PricingCard({
           </li>
         ))}
       </ul>
-      {action === "link" ? (
+      {disabledMessage ? (
+        <button disabled type="button">
+          Billing unavailable
+        </button>
+      ) : action === "link" ? (
         <a className="secondary-link" href={href ?? "/login"}>
           {ctaLabel}
         </a>
@@ -202,6 +213,7 @@ function PricingCard({
         </a>
       )}
       {error && <p className="pricing-error">{error}</p>}
+      {disabledMessage && <p className="pricing-error">{disabledMessage}</p>}
     </article>
   );
 }
@@ -209,6 +221,7 @@ function PricingCard({
 export function PricingCards({
   accountPlan = null,
   annualPriceId,
+  billingAvailable = true,
   freeFeatures,
   isSignedIn = false,
   monthlyPriceId,
@@ -218,6 +231,7 @@ export function PricingCards({
     useState<BillingInterval>("month");
   const proPrice = billingInterval === "year" ? "GBP 79/year" : "GBP 9/month";
   const isPro = accountPlan === "pro";
+  const billingControl = getBillingControlState(billingAvailable);
 
   return (
     <>
@@ -255,6 +269,9 @@ export function PricingCards({
           billingInterval={billingInterval}
           ctaLabel={isPro ? "Manage plan" : "Start Pro"}
           description="Unlimited AI, full workflow sync, application writing and interview-conversion prep."
+          disabledMessage={
+            billingControl.disabled ? billingUnavailableMessage : undefined
+          }
           features={proFeatures}
           highlighted
           monthlyPriceId={monthlyPriceId}

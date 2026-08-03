@@ -3,6 +3,10 @@ import { getUserPlan } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import type { SubscriptionPlan } from "../../../../lib/supabase/types"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 
 type ApiResponse<T> = {
   data: T | null
@@ -16,18 +20,20 @@ type AccountMeData = {
   provider: string
 }
 
-function getAuthProvider(user: { app_metadata?: { provider?: string } }): string {
+function getAuthProvider(user: {
+  app_metadata?: { provider?: string }
+}): string {
   return user.app_metadata?.provider ?? "email"
 }
 
 function jsonResponse(
-  body: ApiResponse<AccountMeData>
+  body: ApiResponse<AccountMeData>,
 ): NextResponse<ApiResponse<AccountMeData>> {
   return NextResponse.json(body, { status: body.status })
 }
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AccountMeData>>> {
   try {
     const { user } = await getRequestUser(request)
@@ -39,7 +45,7 @@ export async function GET(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -49,12 +55,21 @@ export async function GET(
       data: {
         email: user.email,
         plan,
-        provider: getAuthProvider(user)
+        provider: getAuthProvider(user),
       },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "account",
+        code: "account.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     const message =
       error instanceof Error ? error.message : "Unable to read account"
 
@@ -65,7 +80,7 @@ export async function GET(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

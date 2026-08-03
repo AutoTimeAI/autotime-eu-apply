@@ -41,6 +41,7 @@
     "test:web:cloud-sync": "node --experimental-strip-types apps/web/tests/cloud-sync.test.mjs",
     "test:web:interview": "node --experimental-strip-types apps/web/tests/interview-prep.test.mjs",
     "test:web:sentry-privacy": "node --experimental-strip-types apps/web/tests/sentry-privacy.test.mjs",
+    "test:web:environment-boundaries": "node --conditions=react-server --experimental-strip-types apps/web/tests/environment-boundaries.test.mjs",
     "test:v2:ai-live": "node --experimental-strip-types scripts/v2-live-ai-interview-check.mjs",
     "test:v2:ats-live": "node --experimental-strip-types scripts/v2-live-ats-validation.mjs",
     "test:mvp": "node scripts/mvp-automation-toolkit.mjs",

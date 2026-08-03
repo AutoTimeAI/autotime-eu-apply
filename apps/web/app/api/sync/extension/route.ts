@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getRequestUser } from "../../../../lib/api-auth"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 
@@ -15,11 +19,11 @@ type ApiResponse<T> = {
 }
 
 const extensionConnectSchema = z.object({
-  extensionId: z.string().trim().min(1).max(256)
+  extensionId: z.string().trim().min(1).max(256),
 })
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<ExtensionConnectData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -31,7 +35,7 @@ export async function POST(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -43,9 +47,9 @@ export async function POST(
         extension_id: body.extensionId,
         browser_label: "Chrome extension",
         last_connected_at: new Date().toISOString(),
-        revoked_at: null
+        revoked_at: null,
       },
-      { onConflict: "user_id,extension_id" }
+      { onConflict: "user_id,extension_id" },
     )
 
     if (error) {
@@ -56,16 +60,25 @@ export async function POST(
         error: error.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
     return NextResponse.json({
       data: { connected: true },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.extension.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "sync",
@@ -73,7 +86,7 @@ export async function POST(
         data: null,
         error: "Invalid request body",
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -85,7 +98,7 @@ export async function POST(
         error instanceof Error ? error.message : "Extension connection failed",
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

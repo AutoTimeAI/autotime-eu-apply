@@ -2,6 +2,7 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "./supabase/admin";
 import { createServerClient } from "./supabase/server";
+import { isConfigurationUnavailableError } from "./configuration-error";
 import { getTestAuthUser, isTestAuthUserId } from "./test-auth";
 import {
   authorizeAdminPrincipal,
@@ -57,6 +58,7 @@ export async function getAdminMembership(
       return null;
     return { role: data.role, status: data.status, userId: data.user_id };
   } catch (error) {
+    if (isConfigurationUnavailableError(error)) throw error;
     throw new Error("Admin membership lookup failed.", { cause: error });
   }
 }
