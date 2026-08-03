@@ -4,6 +4,7 @@ import "./phase-1-home-states.css";
 import "./phase-1-system-states.css";
 import "./phase-1-touch-targets.css";
 import "./phase-1-shell-correction.css";
+import "./phase-2-jobs.css";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { isAdminUser } from "../../lib/admin-access";
