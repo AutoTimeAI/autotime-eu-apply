@@ -1,7 +1,13 @@
+import "./phase-1-foundations.css";
+import "./phase-1-brand.css";
+import "./phase-1-home-states.css";
+import "./phase-1-system-states.css";
+import "./phase-1-touch-targets.css";
+import "./phase-1-shell-correction.css";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { isAdminUser } from "../../lib/admin-access";
-import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate";
+import { getUserPlan } from "../../lib/feature-gate";
 import { createServerClient } from "../../lib/supabase/server";
 import { getTestAuthUser } from "../../lib/test-auth";
 import {
@@ -9,7 +15,6 @@ import {
   DashboardWorkflowSidebar,
   UserNav,
 } from "../../components/UserNav";
-import { UpgradeBanner } from "../../components/UpgradeBanner";
 
 export default async function DashboardLayout({
   children,
@@ -35,8 +40,6 @@ export default async function DashboardLayout({
     }
 
     const plan = await getUserPlan(user.id);
-    const remainingCalls =
-      plan === "free" ? await getRemainingAiCalls(user.id) : 0;
     const email = user.email ?? "account";
 
     return (
@@ -47,12 +50,12 @@ export default async function DashboardLayout({
           </a>
           <header className="dashboard-topbar">
             <a className="dashboard-brand" href="/dashboard">
-              <img
-                alt=""
+              <span
                 aria-hidden="true"
-                className="brand-mark"
-                src="/brand/autotime-mark.png"
-              />
+                className="brand-mark phase-one-brand-mark"
+              >
+                AT
+              </span>
               <span className="brand-text">
                 <span className="brand-title-line">
                   <span className="brand-name">AutoTime AI</span>
@@ -62,11 +65,12 @@ export default async function DashboardLayout({
                 </span>
               </span>
             </a>
-            <UserNav email={email} isAdmin={await isAdminUser(user)} plan={plan} />
+            <UserNav
+              email={email}
+              isAdmin={await isAdminUser(user)}
+              plan={plan}
+            />
           </header>
-          {plan === "free" ? (
-            <UpgradeBanner remainingCalls={remainingCalls} />
-          ) : null}
           <div className="dashboard-body">
             <DashboardWorkflowSidebar />
             <div className="dashboard-main-region" id="dashboard-content">
