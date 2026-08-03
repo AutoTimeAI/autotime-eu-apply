@@ -96,6 +96,11 @@ function formatDate(value?: string) {
     : "Not available";
 }
 
+function formatFactLabel(value: string) {
+  return value
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
 export default function JobApplicationWorkspace({ view }: { view: View }) {
   const { userId } = useDashboardPlan();
   const router = useRouter();
@@ -118,7 +123,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
   if (!ready)
     return (
       <main className="workflow-page">
-        <p role="status">Loading your private workflow…</p>
+        <p role="status">Loading your private workflow...</p>
       </main>
     );
   if (view.kind === "jobs")
@@ -215,18 +220,17 @@ function JobsList({
     ),
   ];
   return (
-    <main className="workflow-page">
+    <main className="workflow-page phase-two-jobs phase-two-jobs-list">
       <ProductPageHeader
         eyebrow="Jobs"
         title="Choose opportunities worth your time"
         description="Capture one real vacancy, check the evidence and decide before preparing an application."
         action={
-          <button
-            className="button-primary"
-            onClick={() => setAdding((value) => !value)}
-          >
-            Add a job
-          </button>
+          state.jobs.length && !adding ? (
+            <button className="button-primary" onClick={() => setAdding(true)}>
+              Add a job
+            </button>
+          ) : undefined
         }
       />
       {adding ? (
@@ -245,7 +249,10 @@ function JobsList({
       </p>
       {state.jobs.length ? (
         <>
-          <section className="workflow-filters" aria-label="Filter jobs">
+          <section
+            className="workflow-filters phase-two-job-filters"
+            aria-label="Filter jobs"
+          >
             <label>
               Search
               <input
@@ -281,18 +288,24 @@ function JobsList({
               </select>
             </label>
           </section>
-          <section className="workflow-list" aria-label="Saved jobs">
+          <section
+            className="workflow-list phase-two-job-list"
+            aria-label="Saved jobs"
+          >
             {visible.map((job) => {
               const analysis = currentAnalysis(job);
               return (
-                <article className="workflow-list-row" key={job.id}>
+                <article
+                  className="workflow-list-row phase-two-job-row"
+                  key={job.id}
+                >
                   <div>
-                    <p className="eyebrow">
-                      {job.source} · {formatDate(job.capturedAt)}
+                    <p className="product-eyebrow">
+                      {job.source} - {formatDate(job.capturedAt)}
                     </p>
                     <h2>{job.title.value || "Untitled role"}</h2>
                     <p>
-                      {job.employer.value || "Employer unknown"} ·{" "}
+                      {job.employer.value || "Employer unknown"} -{" "}
                       {job.facts.location.value ||
                         job.facts.country.value ||
                         "Location unknown"}
@@ -491,14 +504,14 @@ function JobDetail({
     window.location.assign(`/dashboard/applications/${application.id}`);
   };
   return (
-    <main className="workflow-page">
-      <a href="/dashboard/jobs" className="text-link">
-        ← Jobs
+    <main className="workflow-page phase-two-jobs phase-two-job-detail">
+      <a href="/dashboard/jobs" className="text-link phase-two-job-back">
+        {"\u2190"} Jobs
       </a>
       <ProductPageHeader
         eyebrow={job.source}
         title={job.title.value || "Untitled role"}
-        description={`${job.employer.value || "Employer unknown"} · ${job.facts.location.value || job.facts.country.value || "Location unknown"}`}
+        description={`${job.employer.value || "Employer unknown"} - ${job.facts.location.value || job.facts.country.value || "Location unknown"}`}
         action={
           <button
             className="button-primary"
@@ -525,7 +538,9 @@ function JobDetail({
           </button>
         ))}
       </nav>
-      <p aria-live="polite">{status}</p>
+      <p className="phase-two-job-status" aria-live="polite">
+        {status}
+      </p>
       {tab === "overview" ? (
         <JobOverview job={job} updateJob={updateJob} />
       ) : tab === "analysis" ? (
@@ -579,12 +594,15 @@ function JobOverview({
     });
   return (
     <>
-      <section className="workflow-fact-grid">
+      <section
+        className="workflow-fact-grid phase-two-fact-grid"
+        aria-label="Extracted job facts"
+      >
         {facts.map(([key, fact]) => (
           <article key={key}>
-            <span>{key.replace(/([A-Z])/g, " $1")}</span>
+            <span>{formatFactLabel(key)}</span>
             <input
-              aria-label={`Confirm ${key.replace(/([A-Z])/g, " $1")}`}
+              aria-label={`Confirm ${formatFactLabel(key)}`}
               value={fact.value}
               onChange={(event) =>
                 updateFact(key as keyof JobRecord["facts"], event.target.value)
@@ -593,16 +611,16 @@ function JobOverview({
             />
             <small>
               {fact.state}
-              {fact.sourceText ? ` · “${fact.sourceText.slice(0, 120)}”` : ""}
+              {fact.sourceText ? ` - "${fact.sourceText.slice(0, 120)}"` : ""}
             </small>
           </article>
         ))}
       </section>
-      <details className="workflow-source">
+      <details className="workflow-source phase-two-job-source">
         <summary>Captured job description</summary>
         <pre>{job.description}</pre>
       </details>
-      <section className="workflow-section">
+      <section className="workflow-section phase-two-career-lane">
         <h2>Career lane</h2>
         <label>
           Optional context
@@ -641,17 +659,35 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
       />
     );
   return (
-    <div className="workflow-analysis">
-      <section className="workflow-recommendation">
-        <ProductStatusBadge status={decisionStatus(result.decision)}>
-          {result.decision}
-        </ProductStatusBadge>
-        <h2>{result.reason}</h2>
-        <p>
-          {result.confidence} confidence · {result.coverage}% evidence coverage
-          · Version {result.version}
-        </p>
-        <dl>
+    <div className="workflow-analysis phase-two-analysis">
+      <section
+        className="workflow-recommendation phase-two-decision"
+        aria-labelledby="job-decision-heading"
+      >
+        <div
+          className="phase-two-decision-score"
+          aria-label={`${result.capability.filter((item) => item.state !== "missing").length} of ${result.capability.length} requirements have supporting evidence`}
+        >
+          <strong>
+            {
+              result.capability.filter((item) => item.state !== "missing")
+                .length
+            }
+            <small>/{result.capability.length}</small>
+          </strong>
+          <span>requirements</span>
+        </div>
+        <div className="phase-two-decision-copy">
+          <p className="product-eyebrow">Recommendation</p>
+          <ProductStatusBadge status={decisionStatus(result.decision)}>
+            {result.decision}
+          </ProductStatusBadge>
+          <h2 id="job-decision-heading">{result.reason}</h2>
+          <p>
+            {result.confidence} confidence - analysis version {result.version}
+          </p>
+        </div>
+        <dl className="phase-two-decision-facts">
           <div>
             <dt>Strongest evidence</dt>
             <dd>{result.positiveEvidence}</dd>
@@ -666,47 +702,91 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
           </div>
         </dl>
       </section>
-      <section className="workflow-section">
-        <h2>Requirement evidence</h2>
-        {result.capability.map((item) => (
-          <details className="evidence-row" key={item.requirement}>
-            <summary>
-              <ProductStatusBadge status={evidenceStatus(item.state)}>
-                {item.state}
-              </ProductStatusBadge>
-              <strong>{item.requirement}</strong>
-            </summary>
-            <div className="evidence-row-details">
-              <p>
-                {item.evidence.join("; ") ||
-                  "No confirmed supporting evidence."}
-              </p>
-              <small>Vacancy source: “{item.sourceText}”</small>
+      <div className="phase-two-analysis-columns">
+        <section className="workflow-section phase-two-evidence-section">
+          <header className="phase-two-section-heading">
+            <div>
+              <p className="product-eyebrow">Evidence found</p>
+              <h2>Why it fits</h2>
             </div>
-          </details>
-        ))}
-      </section>
-      <section className="workflow-section">
-        <h2>Country and mobility</h2>
-        <p>Governed mobility facts remain separate from capability scoring.</p>
-        <p>
-          <strong>Vacancy wording:</strong>{" "}
-          {job.facts.sponsorship.value || "Unknown"}
-        </p>
-        <p>Sponsor-register presence ≠ vacancy sponsorship.</p>
-      </section>
-      <section className="workflow-section">
-        <h2>Material unknowns</h2>
-        {result.unknowns.length ? (
-          <ul>
-            {result.unknowns.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>No material unknown recorded.</p>
-        )}
-      </section>
+            <span>{result.capability.length} requirements</span>
+          </header>
+          {result.capability.map((item) => (
+            <details
+              className="evidence-row phase-two-evidence-row"
+              key={item.requirement}
+            >
+              <summary>
+                <span
+                  className={`phase-two-state-icon ${evidenceStatus(item.state)}`}
+                  aria-hidden="true"
+                >
+                  {item.state === "confirmed"
+                    ? "\u2713"
+                    : item.state === "conflicting"
+                      ? "\u00d7"
+                      : "!"}
+                </span>
+                <strong>{item.requirement}</strong>
+                <ProductStatusBadge status={evidenceStatus(item.state)}>
+                  {item.state}
+                </ProductStatusBadge>
+              </summary>
+              <div className="evidence-row-details">
+                <p>
+                  {item.evidence.join("; ") ||
+                    "No confirmed supporting evidence."}
+                </p>
+                <small>Vacancy source: &quot;{item.sourceText}&quot;</small>
+              </div>
+            </details>
+          ))}
+        </section>
+        <aside
+          className="phase-two-unknowns"
+          aria-labelledby="unknowns-heading"
+        >
+          <header>
+            <p className="product-eyebrow">Before applying</p>
+            <h2 id="unknowns-heading">Resolve the unknowns</h2>
+            <p>Confirm details the vacancy or your evidence leaves open.</p>
+          </header>
+          {result.unknowns.length ? (
+            <ul>
+              {result.unknowns.map((item) => (
+                <li key={item}>
+                  <span aria-hidden="true">!</span>
+                  <div>
+                    <strong>{item}</strong>
+                    <p>
+                      {item === "Vacancy-specific sponsorship wording"
+                        ? "Ask whether this role supports visa sponsorship."
+                        : `Confirm ${item.toLowerCase()} before investing more time.`}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="phase-two-no-unknowns">
+              <span aria-hidden="true">{"\u2713"}</span> No material unknown
+              recorded.
+            </p>
+          )}
+          <section className="phase-two-mobility-note">
+            <h3>Country and mobility</h3>
+            <p>
+              <strong>Vacancy wording:</strong>{" "}
+              {job.facts.sponsorship.value || "Unknown"}
+            </p>
+            <p>Mobility facts stay separate from capability scoring.</p>
+            <nav aria-label="Related checks">
+              <a href="/dashboard/international">View country facts</a>
+              <a href="/dashboard/autofill-profile">Review profile evidence</a>
+            </nav>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -799,7 +879,7 @@ function ApplicationsList({
                   <p className="eyebrow">{application.status}</p>
                   <h2>{job?.title.value || "Application"}</h2>
                   <p>
-                    {job?.employer.value || "Employer unknown"} · Follow-up{" "}
+                    {job?.employer.value || "Employer unknown"} Â· Follow-up{" "}
                     {formatDate(application.followUpDate)}
                   </p>
                 </div>
@@ -879,12 +959,12 @@ function ApplicationDetail({
   return (
     <main className="workflow-page">
       <a href="/dashboard/applications" className="text-link">
-        ← Applications
+        â† Applications
       </a>
       <ProductPageHeader
         eyebrow={application.status}
         title={job.title.value || "Application workspace"}
-        description={`${job.employer.value || "Employer unknown"} · Evidence-backed preparation only`}
+        description={`${job.employer.value || "Employer unknown"} Â· Evidence-backed preparation only`}
       />
       <p role="status">{status}</p>
       {interviews.length ? (
@@ -896,7 +976,7 @@ function ApplicationDetail({
                 <a href={`/dashboard/interviews/${interview.id}`}>
                   {interview.stage.replaceAll("_", " ")}
                 </a>{" "}
-                Â· {interview.status} Â·{" "}
+                Ã‚Â· {interview.status} Ã‚Â·{" "}
                 {interview.scheduledAt
                   ? formatDate(interview.scheduledAt)
                   : "Date not set"}
