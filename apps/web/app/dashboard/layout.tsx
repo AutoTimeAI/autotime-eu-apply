@@ -16,24 +16,24 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  try {
-    const testUser = getTestAuthUser();
-    let user = testUser;
+  const testUser = getTestAuthUser();
+  let user = testUser;
 
-    if (!user) {
-      const supabase = await createServerClient();
-      const {
-        data: { user: sessionUser },
-        error,
-      } = await supabase.auth.getUser();
+  if (!user) {
+    const supabase = await createServerClient();
+    const {
+      data: { user: sessionUser },
+      error,
+    } = await supabase.auth.getUser();
 
-      if (error || !sessionUser) {
-        redirect("/login");
-      }
-
-      user = sessionUser;
+    if (error || !sessionUser) {
+      redirect("/login");
     }
 
+    user = sessionUser;
+  }
+
+  try {
     const plan = await getUserPlan(user.id);
     const remainingCalls =
       plan === "free" ? await getRemainingAiCalls(user.id) : 0;
@@ -77,10 +77,10 @@ export default async function DashboardLayout({
       </DashboardPlanProvider>
     );
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      redirect("/login");
-    }
-
-    redirect("/login");
+    console.error("dashboard_layout_render_failed", {
+      userId: user.id,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
 }
