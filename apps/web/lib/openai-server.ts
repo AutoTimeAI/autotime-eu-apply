@@ -1,10 +1,10 @@
 import OpenAI from "openai"
 import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
-import { getServerEnv } from "./env"
+import { getOpenAIEnv } from "./env.server"
 import {
   assertInterviewPrepReady,
-  createLocalInterviewPrepPack
+  createLocalInterviewPrepPack,
 } from "./interview-prep"
 import { createAdminClient } from "./supabase/admin"
 import { AUTOTIME_FIT_SCORE_DISCLAIMER } from "shared"
@@ -14,7 +14,7 @@ import type {
   CandidateProfile,
   InterviewPrepPack,
   JobAnalysisDraft,
-  ReusableAnswers
+  ReusableAnswers,
 } from "shared"
 
 export type AIJobAnalysisResult = Pick<
@@ -114,7 +114,7 @@ const modelPricesPerMillionTokens: Record<
   string,
   { input: number; output: number }
 > = {
-  "gpt-4.1-mini": { input: 0.4, output: 1.6 }
+  "gpt-4.1-mini": { input: 0.4, output: 1.6 },
 }
 const rateLimitWindowMs = 60_000
 const rateLimitWindowSeconds = rateLimitWindowMs / 1000
@@ -130,7 +130,7 @@ const applicationContentSchema = z.object({
   profileSummary: z.string().optional(),
   motivationAnswer: z.string().optional(),
   strengthsAnswer: z.string().optional(),
-  availabilityAnswer: z.string().optional()
+  availabilityAnswer: z.string().optional(),
 })
 
 const autoTimeScoreBreakdownItemSchema = z.object({
@@ -138,7 +138,7 @@ const autoTimeScoreBreakdownItemSchema = z.object({
   label: z.string().optional(),
   maxPoints: z.number().optional(),
   points: z.number().optional(),
-  rationale: z.string().optional()
+  rationale: z.string().optional(),
 })
 
 const aiJobAnalysisSchema = z.object({
@@ -163,7 +163,7 @@ const aiJobAnalysisSchema = z.object({
   skills: stringListSchema,
   seniority: z.string().optional(),
   summary: z.string().optional(),
-  gaps: stringListSchema
+  gaps: stringListSchema,
 })
 
 const interviewPrepPackPartialSchema = z.object({
@@ -175,7 +175,7 @@ const interviewPrepPackPartialSchema = z.object({
   projectTalkingPoints: stringListSchema,
   skillsToRevise: stringListSchema,
   questionsToAskEmployer: stringListSchema,
-  finalPrepChecklist: stringListSchema
+  finalPrepChecklist: stringListSchema,
 })
 
 const interviewAnswerCoachSchema = z.object({
@@ -187,7 +187,7 @@ const interviewAnswerCoachSchema = z.object({
   lightFunnyAnswer: z.string().optional(),
   strongFinalAnswer: z.string().optional(),
   followUpDrills: stringListSchema,
-  boundaryNote: z.string().optional()
+  boundaryNote: z.string().optional(),
 })
 
 const technicalInterviewDrillSchema = z.object({
@@ -199,11 +199,11 @@ const technicalInterviewDrillSchema = z.object({
   timebox: z.string().optional(),
   expectedSignals: stringListSchema,
   followUps: stringListSchema,
-  prepHint: z.string().optional()
+  prepHint: z.string().optional(),
 })
 
 const technicalInterviewDrillsSchema = z.object({
-  drills: z.array(technicalInterviewDrillSchema).optional()
+  drills: z.array(technicalInterviewDrillSchema).optional(),
 })
 
 const profileContextSchema = z.object({
@@ -218,7 +218,7 @@ const profileContextSchema = z.object({
       "climate-energy",
       "gov-public",
       "ecommerce-marketplace",
-      "devtools-cloud"
+      "devtools-cloud",
     ])
     .optional(),
   candidatePosition: z
@@ -230,7 +230,7 @@ const profileContextSchema = z.object({
   targetRoles: stringListSchema,
   workRightPrompt: z.string().optional(),
   confidence: z.enum(["Low", "Medium", "High"]).optional(),
-  reasons: stringListSchema
+  reasons: stringListSchema,
 })
 
 let openAIClient: OpenAI | null = null
@@ -241,20 +241,20 @@ function getOpenAIClient(): OpenAI {
   }
 
   openAIClient = new OpenAI({
-    apiKey: getServerEnv().OPENAI_API_KEY
+    apiKey: getOpenAIEnv().apiKey,
   })
 
   return openAIClient
 }
 
 export async function assertAiRouteRateLimit(
-  rateLimitKey: string
+  rateLimitKey: string,
 ): Promise<void> {
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc("increment_ai_rate_limit", {
     p_rate_limit_key: rateLimitKey,
     p_window_seconds: rateLimitWindowSeconds,
-    p_max_requests: rateLimitMaxRequests
+    p_max_requests: rateLimitMaxRequests,
   })
 
   if (error) {
@@ -318,7 +318,7 @@ function getFitLabel(score: number): AIJobAnalysisResult["fitLabel"] {
 }
 
 function normaliseScoreBreakdown(
-  value: z.infer<typeof autoTimeScoreBreakdownItemSchema>[] | undefined
+  value: z.infer<typeof autoTimeScoreBreakdownItemSchema>[] | undefined,
 ): NonNullable<AIJobAnalysisResult["scoreBreakdown"]> {
   return (value ?? [])
     .map((item) => ({
@@ -327,25 +327,25 @@ function normaliseScoreBreakdown(
       maxPoints:
         typeof item.maxPoints === "number" ? Math.max(0, item.maxPoints) : 0,
       points: typeof item.points === "number" ? Math.max(0, item.points) : 0,
-      rationale: toStringValue(item.rationale)
+      rationale: toStringValue(item.rationale),
     }))
     .filter((item) => item.label && item.maxPoints > 0)
 }
 
 function normaliseApplicationContent(
-  value: z.infer<typeof applicationContentSchema>
+  value: z.infer<typeof applicationContentSchema>,
 ): ApplicationContentDraft {
   return {
     coverLetter: toStringValue(value.coverLetter),
     profileSummary: toStringValue(value.profileSummary),
     motivationAnswer: toStringValue(value.motivationAnswer),
     strengthsAnswer: toStringValue(value.strengthsAnswer),
-    availabilityAnswer: toStringValue(value.availabilityAnswer)
+    availabilityAnswer: toStringValue(value.availabilityAnswer),
   }
 }
 
 function normaliseJobAnalysis(
-  value: z.infer<typeof aiJobAnalysisSchema>
+  value: z.infer<typeof aiJobAnalysisSchema>,
 ): AIJobAnalysisResult {
   const fitScore =
     typeof value.fitScore === "number"
@@ -370,13 +370,13 @@ function normaliseJobAnalysis(
     skills: toStringArray(value.skills),
     seniority: toStringValue(value.seniority),
     summary: toStringValue(value.summary),
-    gaps: toStringArray(value.gaps)
+    gaps: toStringArray(value.gaps),
   }
 }
 
 function normaliseInterviewPrepPack({
   fallback,
-  value
+  value,
 }: {
   fallback: InterviewPrepPack
   value: z.infer<typeof interviewPrepPackPartialSchema>
@@ -388,8 +388,10 @@ function normaliseInterviewPrepPack({
     applicationId: fallback.applicationId,
     roleSummary: toStringValue(value.roleSummary) || fallback.roleSummary,
     positioningStatement:
-      toStringValue(value.positioningStatement) || fallback.positioningStatement,
-    fitAndGapRecap: toStringValue(value.fitAndGapRecap) || fallback.fitAndGapRecap,
+      toStringValue(value.positioningStatement) ||
+      fallback.positioningStatement,
+    fitAndGapRecap:
+      toStringValue(value.fitAndGapRecap) || fallback.fitAndGapRecap,
     likelyQuestions: toStringArray(value.likelyQuestions),
     starAnswerPrompts: toStringArray(value.starAnswerPrompts),
     projectTalkingPoints: toStringArray(value.projectTalkingPoints),
@@ -397,12 +399,12 @@ function normaliseInterviewPrepPack({
     questionsToAskEmployer: toStringArray(value.questionsToAskEmployer),
     finalPrepChecklist: toStringArray(value.finalPrepChecklist),
     createdAt: fallback.createdAt,
-    updatedAt: now
+    updatedAt: now,
   }
 }
 
 function normaliseInterviewAnswerCoach(
-  value: z.infer<typeof interviewAnswerCoachSchema>
+  value: z.infer<typeof interviewAnswerCoachSchema>,
 ): InterviewAnswerCoachResult {
   const evidenceScore =
     typeof value.evidenceScore === "number"
@@ -420,12 +422,12 @@ function normaliseInterviewAnswerCoach(
     followUpDrills: toStringArray(value.followUpDrills),
     boundaryNote:
       toStringValue(value.boundaryNote) ||
-      "Use this as interview preparation only. Keep every claim truthful and verifiable."
+      "Use this as interview preparation only. Keep every claim truthful and verifiable.",
   }
 }
 
 function normaliseTechnicalInterviewDrills(
-  value: z.infer<typeof technicalInterviewDrillsSchema>
+  value: z.infer<typeof technicalInterviewDrillsSchema>,
 ): TechnicalInterviewDrill[] {
   return (value.drills ?? [])
     .map((drill) => ({
@@ -434,7 +436,7 @@ function normaliseTechnicalInterviewDrills(
         : [
             "Anchor the answer in saved evidence.",
             "Name the trade-off.",
-            "State what you would verify before making stronger claims."
+            "State what you would verify before making stronger claims.",
           ],
       evidenceHook:
         toStringValue(drill.evidenceHook) ||
@@ -442,21 +444,21 @@ function normaliseTechnicalInterviewDrills(
       euContext: toStringArray(drill.euContext).length
         ? toStringArray(drill.euContext)
         : [
-            "Frame the answer for UK/EU teams: privacy, security, documentation, rollout control and work-right accuracy where relevant."
+            "Frame the answer for UK/EU teams: privacy, security, documentation, rollout control and work-right accuracy where relevant.",
           ],
       question: toStringValue(drill.question),
       riskChecks: toStringArray(drill.riskChecks).length
         ? toStringArray(drill.riskChecks)
         : [
             "Do not invent scale, tools, employers or outcomes.",
-            "Separate known evidence from assumptions."
+            "Separate known evidence from assumptions.",
           ],
       timebox: toStringValue(drill.timebox) || "4 minutes",
       expectedSignals: toStringArray(drill.expectedSignals),
       followUps: toStringArray(drill.followUps),
       prepHint:
         toStringValue(drill.prepHint) ||
-        "Answer with saved evidence, clear trade-offs and explicit limits."
+        "Answer with saved evidence, clear trade-offs and explicit limits.",
     }))
     .filter((drill) => drill.question && drill.followUps.length > 0)
     .slice(0, 4)
@@ -464,7 +466,7 @@ function normaliseTechnicalInterviewDrills(
 
 function normaliseProfileContext({
   currentContext,
-  value
+  value,
 }: {
   currentContext: Pick<
     ProfileContextAIResult,
@@ -494,13 +496,13 @@ function normaliseProfileContext({
         ? "Confirm visa/work-right status, sponsorship need, relocation timing and eligible countries before applying."
         : "Confirm local work-right status, notice period, salary expectations and availability before applying."),
     confidence: value.confidence ?? "Medium",
-    reasons: toStringArray(value.reasons)
+    reasons: toStringArray(value.reasons),
   }
 }
 
 function estimateCostUsd({
   completionTokens,
-  promptTokens
+  promptTokens,
 }: {
   completionTokens: number
   promptTokens: number
@@ -516,7 +518,7 @@ function estimateCostUsd({
 async function createJsonResponse<T>({
   input,
   instructions,
-  schema
+  schema,
 }: {
   input: unknown
   instructions: string
@@ -528,17 +530,17 @@ async function createJsonResponse<T>({
         attributes: {
           "ai.model": model,
           "ai.provider": "openai",
-          "ai.request.max_output_tokens": maxOutputTokens
+          "ai.request.max_output_tokens": maxOutputTokens,
         },
         name: "OpenAI Responses JSON generation",
-        op: "ai.generate"
+        op: "ai.generate",
       },
       async (span) => {
         const response = await getOpenAIClient().responses.create({
           model,
           instructions,
           input: JSON.stringify(input),
-          max_output_tokens: maxOutputTokens
+          max_output_tokens: maxOutputTokens,
         })
         const promptTokens = response.usage?.input_tokens ?? 0
         const completionTokens = response.usage?.output_tokens ?? 0
@@ -554,9 +556,9 @@ async function createJsonResponse<T>({
           model,
           promptTokens,
           completionTokens,
-          costUsd
+          costUsd,
         }
-      }
+      },
     )
   } catch (error: unknown) {
     const message =
@@ -568,7 +570,7 @@ async function createJsonResponse<T>({
 
 export async function analyseJobWithOpenAI({
   jobAnalysis,
-  profile
+  profile,
 }: {
   jobAnalysis: JobAnalysisDraft
   profile: CandidateProfile | null
@@ -581,22 +583,22 @@ export async function analyseJobWithOpenAI({
       "Return only valid JSON with fitScore number 0-100, fitLabel one of Strong fit, Good fit, Stretch fit, Low fit, confidenceLevel Low/Medium/High, scoreBreakdown array, matchedSignals string array, missingSignals string array, riskAreas string array, suggestedCvPositioning string, suggestedNextAction string, shortSummary string, disclaimer string, recommendation one of High Priority, Worth Applying, Stretch, Skip, positioningAngle string, scoreFactors string array, skills string array, seniority string, summary string, gaps string array.",
       "List fields can be string arrays or readable newline/comma-separated strings.",
       `The disclaimer must be exactly: ${AUTOTIME_FIT_SCORE_DISCLAIMER}`,
-      "Be conservative. Do not infer facts not present in the profile or job text."
+      "Be conservative. Do not infer facts not present in the profile or job text.",
     ].join(" "),
     input: { draft: jobAnalysis, profile },
-    schema: aiJobAnalysisSchema
+    schema: aiJobAnalysisSchema,
   })
 
   return {
     ...result,
-    value: normaliseJobAnalysis(result.value)
+    value: normaliseJobAnalysis(result.value),
   }
 }
 
 export async function generateContentWithOpenAI({
   job,
   profile,
-  reusableAnswers
+  reusableAnswers,
 }: {
   job: JobAnalysisDraft
   profile: CandidateProfile
@@ -609,15 +611,15 @@ export async function generateContentWithOpenAI({
       "Do not invent employers, credentials, degrees, work rights, salary, or relocation facts.",
       "Every claim must be supported by the candidate profile, reusable answers, or job text.",
       "If evidence is thin, write conservatively and avoid strong claims.",
-      "Use the candidate profile and job analysis. Keep outputs editable and specific."
+      "Use the candidate profile and job analysis. Keep outputs editable and specific.",
     ].join(" "),
     input: { profile, job, reusableAnswers },
-    schema: applicationContentSchema
+    schema: applicationContentSchema,
   })
 
   return {
     ...result,
-    value: normaliseApplicationContent(result.value)
+    value: normaliseApplicationContent(result.value),
   }
 }
 
@@ -625,7 +627,7 @@ export async function generateInterviewPrepWithOpenAI({
   application,
   job,
   profile,
-  reusableAnswers
+  reusableAnswers,
 }: {
   application: ApplicationRecord
   job: JobAnalysisDraft
@@ -645,18 +647,18 @@ export async function generateInterviewPrepWithOpenAI({
       "Do not invent experience, employers, degrees, certifications, work rights, salary, relocation facts, or outcomes.",
       "If a claim has no supplied evidence, state that evidence is missing instead of writing the claim.",
       "STAR prompts must ask the user to supply truthful examples; do not fabricate complete stories.",
-      "No immigration or legal advice. For work-right questions, keep it general and tell the user to check official sources or a qualified adviser."
+      "No immigration or legal advice. For work-right questions, keep it general and tell the user to check official sources or a qualified adviser.",
     ].join(" "),
     input: { profile, reusableAnswers, job, application },
-    schema: interviewPrepPackPartialSchema
+    schema: interviewPrepPackPartialSchema,
   })
 
   return {
     ...result,
     value: normaliseInterviewPrepPack({
       fallback: fallbackPack,
-      value: result.value
-    })
+      value: result.value,
+    }),
   }
 }
 
@@ -665,7 +667,7 @@ export async function generateInterviewAnswerWithOpenAI({
   job,
   profile,
   question,
-  reusableAnswers
+  reusableAnswers,
 }: {
   draft: string
   job: JobAnalysisDraft
@@ -684,15 +686,15 @@ export async function generateInterviewAnswerWithOpenAI({
       "Do not invent achievements, employers, qualifications, salary, work rights, sponsorship status, relocation facts or outcomes.",
       "If evidence is missing, say what is missing instead of filling the gap.",
       "For visa, sponsorship, work-right or immigration questions, give career-prep wording only and include a boundary note to verify official sources or qualified advice.",
-      "Make the answers specific, mature and interview-ready, but still sound like the candidate."
+      "Make the answers specific, mature and interview-ready, but still sound like the candidate.",
     ].join(" "),
     input: { draft, job, profile, question, reusableAnswers },
-    schema: interviewAnswerCoachSchema
+    schema: interviewAnswerCoachSchema,
   })
 
   return {
     ...result,
-    value: normaliseInterviewAnswerCoach(result.value)
+    value: normaliseInterviewAnswerCoach(result.value),
   }
 }
 
@@ -700,7 +702,7 @@ export async function generateTechnicalInterviewDrillsWithOpenAI({
   difficulty,
   focus,
   job,
-  profile
+  profile,
 }: {
   difficulty: TechnicalInterviewDifficulty
   focus: TechnicalInterviewFocus
@@ -718,21 +720,21 @@ export async function generateTechnicalInterviewDrillsWithOpenAI({
       "Use only the supplied job and candidate profile. Do not invent employers, certifications, exact tools, production incidents or achievements.",
       "If evidence is thin, make the question evidence-seeking and tell the user what proof to prepare.",
       "Questions must be challenging but answerable verbally without coding tools.",
-      "No immigration, legal or hiring advice."
+      "No immigration, legal or hiring advice.",
     ].join(" "),
     input: { difficulty, focus, job, profile },
-    schema: technicalInterviewDrillsSchema
+    schema: technicalInterviewDrillsSchema,
   })
 
   return {
     ...result,
-    value: normaliseTechnicalInterviewDrills(result.value)
+    value: normaliseTechnicalInterviewDrills(result.value),
   }
 }
 
 export async function reviewProfileContextWithOpenAI({
   currentContext,
-  resumeText
+  resumeText,
 }: {
   currentContext: Pick<
     ProfileContextAIResult,
@@ -754,17 +756,17 @@ export async function reviewProfileContextWithOpenAI({
       "Suggest target roles and profile context only from CV evidence and the current context.",
       "Do not invent work rights, visa status, sponsorship status, relocation facts, degrees, employers, dates, salary, or outcomes.",
       "For workRightPrompt, ask the user to confirm exact verified facts. Do not state that they have work rights unless the CV explicitly says it.",
-      "Keep reasons short and explain which CV signals drove the suggestion."
+      "Keep reasons short and explain which CV signals drove the suggestion.",
     ].join(" "),
     input: { currentContext, resumeText },
-    schema: profileContextSchema
+    schema: profileContextSchema,
   })
 
   return {
     ...result,
     value: normaliseProfileContext({
       currentContext,
-      value: result.value
-    })
+      value: result.value,
+    }),
   }
 }

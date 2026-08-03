@@ -3,23 +3,27 @@ import { z } from "zod"
 import {
   candidateProfileSchema,
   jobAnalysisDraftSchema,
-  reusableAnswersSchema
+  reusableAnswersSchema,
 } from "shared"
 import {
   assertAiRouteRateLimit,
   generateInterviewAnswerWithOpenAI,
   RateLimitError,
-  type InterviewAnswerCoachResult
+  type InterviewAnswerCoachResult,
 } from "../../../../lib/openai-server"
 import {
   assertCanUseAi,
   FeatureGateError,
-  trackAiCall
+  trackAiCall,
 } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
+import {
   diagnosticJson,
-  getValidationIssueMessage
+  getValidationIssueMessage,
 } from "../../../../lib/diagnostics"
 
 type ApiResponse<T> = {
@@ -37,11 +41,11 @@ const requestSchema = z.object({
   job: jobAnalysisDraftSchema,
   profile: candidateProfileSchema,
   question: z.string().trim().min(12),
-  reusableAnswers: reusableAnswersSchema
+  reusableAnswers: reusableAnswersSchema,
 })
 
 function jsonResponse(
-  body: ApiResponse<InterviewAnswerRouteData>
+  body: ApiResponse<InterviewAnswerRouteData>,
 ): NextResponse<ApiResponse<InterviewAnswerRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -51,7 +55,7 @@ function getUpgradeUrl(request: NextRequest): string {
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<InterviewAnswerRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -63,7 +67,7 @@ export async function POST(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -79,15 +83,24 @@ export async function POST(
       model: result.model,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
-      costUsd: result.costUsd
+      costUsd: result.costUsd,
     })
 
     return jsonResponse({
       data: { coach: result.value },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.interview-answer.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof FeatureGateError) {
       return diagnosticJson({
         area: "ai",
@@ -95,7 +108,7 @@ export async function POST(
         data: { upgradeUrl: getUpgradeUrl(request) },
         error: error.message,
         request,
-        status: 402
+        status: 402,
       })
     }
 
@@ -106,7 +119,7 @@ export async function POST(
         data: null,
         error: error.message,
         request,
-        status: 429
+        status: 429,
       })
     }
 
@@ -119,10 +132,10 @@ export async function POST(
           fallback:
             "Interview answer coaching needs a valid draft, question, job record, profile and reusable answers.",
           issues: error.issues,
-          prefix: "Interview answer coaching needs valid input for"
+          prefix: "Interview answer coaching needs valid input for",
         }),
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -136,7 +149,7 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

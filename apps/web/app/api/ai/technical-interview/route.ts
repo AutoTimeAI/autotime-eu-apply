@@ -5,17 +5,21 @@ import {
   assertAiRouteRateLimit,
   generateTechnicalInterviewDrillsWithOpenAI,
   RateLimitError,
-  type TechnicalInterviewDrill
+  type TechnicalInterviewDrill,
 } from "../../../../lib/openai-server"
 import {
   assertCanUseAi,
   FeatureGateError,
-  trackAiCall
+  trackAiCall,
 } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
+import {
   diagnosticJson,
-  getValidationIssueMessage
+  getValidationIssueMessage,
 } from "../../../../lib/diagnostics"
 
 type ApiResponse<T> = {
@@ -32,11 +36,11 @@ const requestSchema = z.object({
   difficulty: z.enum(["standard", "advanced", "senior"]),
   focus: z.enum(["systems", "debugging", "api", "data", "delivery"]),
   job: jobAnalysisDraftSchema,
-  profile: candidateProfileSchema
+  profile: candidateProfileSchema,
 })
 
 function jsonResponse(
-  body: ApiResponse<TechnicalInterviewRouteData>
+  body: ApiResponse<TechnicalInterviewRouteData>,
 ): NextResponse<ApiResponse<TechnicalInterviewRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -46,7 +50,7 @@ function getUpgradeUrl(request: NextRequest): string {
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<TechnicalInterviewRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -58,7 +62,7 @@ export async function POST(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -74,15 +78,24 @@ export async function POST(
       model: result.model,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
-      costUsd: result.costUsd
+      costUsd: result.costUsd,
     })
 
     return jsonResponse({
       data: { drills: result.value },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.technical-interview.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof FeatureGateError) {
       return diagnosticJson({
         area: "ai",
@@ -90,7 +103,7 @@ export async function POST(
         data: { upgradeUrl: getUpgradeUrl(request) },
         error: error.message,
         request,
-        status: 402
+        status: 402,
       })
     }
 
@@ -101,7 +114,7 @@ export async function POST(
         data: null,
         error: error.message,
         request,
-        status: 429
+        status: 429,
       })
     }
 
@@ -114,10 +127,10 @@ export async function POST(
           fallback:
             "Technical interview drills need valid focus, difficulty, job and profile inputs.",
           issues: error.issues,
-          prefix: "Technical interview drills need valid input for"
+          prefix: "Technical interview drills need valid input for",
         }),
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -133,7 +146,7 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

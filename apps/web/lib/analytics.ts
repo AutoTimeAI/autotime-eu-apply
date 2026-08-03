@@ -1,7 +1,7 @@
 "use client"
 
 import posthog from "posthog-js"
-import { publicEnv } from "./env"
+import { getAnalyticsEnv } from "./env"
 
 type JobAnalysedProps = {
   fitScore: number
@@ -43,7 +43,7 @@ type AnalyticsEventMap = {
 }
 
 export function canUseAnalytics(): boolean {
-  return publicEnv.NEXT_PUBLIC_POSTHOG_KEY.trim().length > 0
+  return getAnalyticsEnv() !== null
 }
 
 export function identifyAnalyticsUser(userId: string): void {
@@ -56,7 +56,7 @@ export function identifyAnalyticsUser(userId: string): void {
 
 function captureEvent<EventName extends keyof AnalyticsEventMap>(
   eventName: EventName,
-  props: AnalyticsEventMap[EventName]
+  props: AnalyticsEventMap[EventName],
 ): void {
   if (!canUseAnalytics()) {
     return
@@ -82,7 +82,7 @@ export function trackUpgradeClicked(props: UpgradeClickedProps): void {
 }
 
 export function trackSubscriptionStarted(
-  props: SubscriptionStartedProps
+  props: SubscriptionStartedProps,
 ): void {
   captureEvent("subscription_started", props)
 }

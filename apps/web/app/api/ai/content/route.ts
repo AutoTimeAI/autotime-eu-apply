@@ -5,22 +5,26 @@ import {
   evaluateCountryFit,
   jobAnalysisDraftSchema,
   reusableAnswersSchema,
-  type ApplicationContentDraft
+  type ApplicationContentDraft,
 } from "shared"
 import {
   assertAiRouteRateLimit,
   generateContentWithOpenAI,
-  RateLimitError
+  RateLimitError,
 } from "../../../../lib/openai-server"
 import {
   assertCanUseAi,
   FeatureGateError,
-  trackAiCall
+  trackAiCall,
 } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
+import {
   diagnosticJson,
-  getValidationIssueMessage
+  getValidationIssueMessage,
 } from "../../../../lib/diagnostics"
 import { trackApplicationKitGenerated } from "../../../../lib/sentry-breadcrumbs"
 
@@ -41,14 +45,14 @@ const requestSchema = z.object({
   context: z
     .object({
       candidatePosition: z.enum(["foreign-candidate", "native-candidate"]),
-      targetCountry: z.string().trim().min(1)
+      targetCountry: z.string().trim().min(1),
     })
-    .optional()
+    .optional(),
 })
 
 function getFirstTargetCountry(
   profileTargetCountries: string,
-  jobLocation: string
+  jobLocation: string,
 ) {
   return (
     profileTargetCountries
@@ -65,7 +69,7 @@ function getContentGuardrailIssues(body: z.infer<typeof requestSchema>) {
     !body.profile.baseCvText.trim() && "CV text",
     !body.profile.targetRoles.trim() && "target roles",
     !body.profile.workRightDetails.trim() && "work-right details",
-    !body.job.jobDescription.trim() && "job description"
+    !body.job.jobDescription.trim() && "job description",
   ].filter(Boolean) as string[]
   const evaluation = evaluateCountryFit({
     profile: body.profile,
@@ -78,20 +82,20 @@ function getContentGuardrailIssues(body: z.infer<typeof requestSchema>) {
           : "native-candidate"),
       targetCountry:
         body.context?.targetCountry ??
-        getFirstTargetCountry(body.profile.targetCountries, body.job.location)
-    }
+        getFirstTargetCountry(body.profile.targetCountries, body.job.location),
+    },
   })
 
   return [
     ...missing.map((item) => `Missing required evidence: ${item}.`),
     ...evaluation.blockers,
     evaluation.contentGate === "blocked" &&
-      "Content generation is blocked by the country/work-right decision gate."
+      "Content generation is blocked by the country/work-right decision gate.",
   ].filter(Boolean) as string[]
 }
 
 function jsonResponse(
-  body: ApiResponse<ContentRouteData>
+  body: ApiResponse<ContentRouteData>,
 ): NextResponse<ApiResponse<ContentRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -101,7 +105,7 @@ function getUpgradeUrl(request: NextRequest): string {
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<ContentRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -113,7 +117,7 @@ export async function POST(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -131,13 +135,13 @@ export async function POST(
         data: null,
         error: `Content generation blocked: ${guardrailIssues.join(" ")}`,
         request,
-        status: 422
+        status: 422,
       })
     }
 
     trackApplicationKitGenerated({
       route: "/api/ai/content",
-      status: "started"
+      status: "started",
     })
     const result = await generateContentWithOpenAI(body)
 
@@ -146,15 +150,24 @@ export async function POST(
       model: result.model,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
-      costUsd: result.costUsd
+      costUsd: result.costUsd,
     })
 
     return jsonResponse({
       data: { content: result.value },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.content.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof FeatureGateError) {
       return diagnosticJson({
         area: "ai",
@@ -162,7 +175,7 @@ export async function POST(
         data: { upgradeUrl: getUpgradeUrl(request) },
         error: error.message,
         request,
-        status: 402
+        status: 402,
       })
     }
 
@@ -173,7 +186,7 @@ export async function POST(
         data: null,
         error: error.message,
         request,
-        status: 429
+        status: 429,
       })
     }
 
@@ -186,10 +199,10 @@ export async function POST(
           fallback:
             "Content generation needs a valid profile, job record and reusable answers.",
           issues: error.issues,
-          prefix: "Content generation needs valid input for"
+          prefix: "Content generation needs valid input for",
         }),
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -203,7 +216,7 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

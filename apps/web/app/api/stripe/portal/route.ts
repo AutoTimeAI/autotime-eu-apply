@@ -1,10 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { diagnosticJson } from "../../../../lib/diagnostics"
-import { publicEnv } from "../../../../lib/env"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createServerClient } from "../../../../lib/supabase/server"
-import { stripe } from "../../../../lib/stripe"
+import {
+  InvalidReturnUrlError,
+  resolveReturnUrl,
+} from "../../../../lib/return-url"
+import { getPortalStripeClient } from "../../../../lib/stripe"
 import { getTestAuthUser } from "../../../../lib/test-auth"
 
 type ApiResponse<T> = {
@@ -18,11 +25,11 @@ type PortalRouteData = {
 }
 
 const requestSchema = z.object({
-  returnUrl: z.string().url().optional()
+  returnUrl: z.string().min(1).optional(),
 })
 
 function jsonResponse(
-  body: ApiResponse<PortalRouteData>
+  body: ApiResponse<PortalRouteData>,
 ): NextResponse<ApiResponse<PortalRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -43,16 +50,14 @@ async function getStripeCustomerId(userId: string): Promise<string | null> {
     return data?.stripe_customer_id ?? null
   } catch (error: unknown) {
     const message =
-      error instanceof Error
-        ? error.message
-        : "Unable to read Stripe customer"
+      error instanceof Error ? error.message : "Unable to read Stripe customer"
 
     throw new Error(message)
   }
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<PortalRouteData>>> {
   try {
     const testUser = getTestAuthUser()
@@ -62,7 +67,7 @@ export async function POST(
       const supabase = await createServerClient()
       const {
         data: { user: sessionUser },
-        error: userError
+        error: userError,
       } = await supabase.auth.getUser()
 
       if (userError || !sessionUser) {
@@ -72,7 +77,7 @@ export async function POST(
           data: null,
           error: "Unauthorised",
           request,
-          status: 401
+          status: 401,
         })
       }
 
@@ -89,21 +94,41 @@ export async function POST(
         data: null,
         error: "No billing customer exists for this account",
         request,
-        status: 400
+        status: 400,
       })
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getPortalStripeClient().billingPortal.sessions.create({
       customer: customerId,
-      return_url: body.returnUrl ?? `${publicEnv.NEXT_PUBLIC_APP_URL}/dashboard`
+      return_url: resolveReturnUrl(body.returnUrl ?? "/dashboard"),
     })
 
     return jsonResponse({
       data: { url: session.url },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error)) {
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.portal.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
+    }
+    if (error instanceof InvalidReturnUrlError) {
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.portal.return-url.invalid",
+        data: null,
+        error: "Invalid return URL",
+        request,
+        status: 400,
+      })
+    }
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "billing",
@@ -111,21 +136,18 @@ export async function POST(
         data: null,
         error: "Invalid request body",
         request,
-        status: 400
+        status: 400,
       })
     }
-
-    const message =
-      error instanceof Error ? error.message : "Billing portal failed"
 
     return diagnosticJson({
       area: "billing",
       code: "billing.portal.failed",
       data: null,
-      error: message,
+      error: "Billing portal failed",
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

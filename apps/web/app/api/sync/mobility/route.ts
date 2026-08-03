@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error";
+import {
   deleteMobilityProfile,
   disableMobilitySync,
   MobilityConflictError,
@@ -20,13 +24,21 @@ function unavailable() {
 }
 
 async function authenticatedUserId(request: Request) {
-  const { user } = await getRequestUser(request);
-  return user?.id ?? null;
+  try {
+    const { user } = await getRequestUser(request);
+    return user?.id ?? null;
+  } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return "configuration-unavailable" as const;
+    throw error;
+  }
 }
 
 export async function GET(request: Request) {
   if (!mobilityServerSyncEnabled) return unavailable();
   const userId = await authenticatedUserId(request);
+  if (userId === "configuration-unavailable")
+    return json(null, configurationUnavailableMessage, 503);
   if (!userId) return json(null, "Unauthorised", 401);
   try {
     return json(await readMobilityProfile(createAdminClient(), userId), null);
@@ -38,6 +50,8 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   if (!mobilityServerSyncEnabled) return unavailable();
   const userId = await authenticatedUserId(request);
+  if (userId === "configuration-unavailable")
+    return json(null, configurationUnavailableMessage, 503);
   if (!userId) return json(null, "Unauthorised", 401);
   try {
     return json(
@@ -60,6 +74,8 @@ export async function PUT(request: Request) {
 export async function PATCH(request: Request) {
   if (!mobilityServerSyncEnabled) return unavailable();
   const userId = await authenticatedUserId(request);
+  if (userId === "configuration-unavailable")
+    return json(null, configurationUnavailableMessage, 503);
   if (!userId) return json(null, "Unauthorised", 401);
   try {
     z.object({ action: z.literal("disable-sync") })
@@ -76,6 +92,8 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   if (!mobilityServerSyncEnabled) return unavailable();
   const userId = await authenticatedUserId(request);
+  if (userId === "configuration-unavailable")
+    return json(null, configurationUnavailableMessage, 503);
   if (!userId) return json(null, "Unauthorised", 401);
   try {
     await deleteMobilityProfile(createAdminClient(), userId);

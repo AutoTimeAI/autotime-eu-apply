@@ -2,11 +2,17 @@ import { PublicNav } from "../../components/PublicNav";
 import { ProfileProtocolLock } from "../../components/ProfileProtocolLock";
 import { PricingCards } from "../../components/PricingCard";
 import { PricingFaq } from "../../components/PricingFaq";
-import { getServerEnv } from "../../lib/env";
+import {
+  getStripePriceEnv,
+  getStripeSecretEnv,
+  getSupabaseServiceRoleEnv,
+} from "../../lib/env.server";
+import { getCanonicalAppUrl } from "../../lib/env";
 import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate";
 import { createServerClient } from "../../lib/supabase/server";
 import type { SubscriptionPlan } from "../../lib/supabase/types";
 import { getTestAuthUser } from "../../lib/test-auth";
+import { readPricingConfiguration } from "../../lib/pricing-configuration";
 
 export const dynamic = "force-dynamic";
 
@@ -106,8 +112,12 @@ const proFeatures = [
 ];
 
 export default async function PricingPage() {
-  const serverEnv = getServerEnv();
   const account = await getPricingAccount();
+  const prices = readPricingConfiguration(getStripePriceEnv, () => {
+    getStripeSecretEnv();
+    getSupabaseServiceRoleEnv();
+    getCanonicalAppUrl();
+  });
 
   return (
     <main className="pricing-shell">
@@ -128,10 +138,11 @@ export default async function PricingPage() {
 
         <PricingCards
           accountPlan={account?.plan ?? null}
-          annualPriceId={serverEnv.STRIPE_PRO_ANNUAL_PRICE_ID}
+          annualPriceId={prices?.annual}
+          billingAvailable={prices !== null}
           freeFeatures={freeFeatures}
           isSignedIn={Boolean(account)}
-          monthlyPriceId={serverEnv.STRIPE_PRO_MONTHLY_PRICE_ID}
+          monthlyPriceId={prices?.monthly}
           proFeatures={proFeatures}
         />
 
