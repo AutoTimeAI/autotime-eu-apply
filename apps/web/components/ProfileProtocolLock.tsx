@@ -1,7 +1,6 @@
 "use client"
 
 import { type ReactNode, useEffect, useState } from "react"
-import { PROFILE_EXECUTION_THRESHOLD } from "../lib/product-protocols"
 
 const dashboardStorageKey = "autotime-v2-companion-dashboard"
 export const profileProtocolReadinessEvent =
@@ -183,7 +182,7 @@ export function useProfileProtocolReadiness(userId?: string) {
   }, [userId])
 
   return {
-    isLocked: Boolean(userId) && readinessScore < PROFILE_EXECUTION_THRESHOLD,
+    isLocked: false,
     readinessScore
   }
 }
@@ -192,27 +191,6 @@ export function ProfileProtocolLock({
   children,
   userId
 }: ProfileProtocolLockProps) {
-  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId)
-
-  return (
-    <div className={isLocked ? "protocol-page-lock locked" : "protocol-page-lock"}>
-      {isLocked ? (
-        <div className="dashboard-lock-overlay protocol-page-lock-overlay" role="note">
-          <span className="profile-lock-symbol" aria-hidden="true" />
-          <div>
-            <p className="eyebrow">Profile protocol</p>
-            <h2>Locked until profile reaches 90%</h2>
-            <p>
-              Complete Profile Evidence before using this area. Current profile
-              readiness is {readinessScore}%.
-            </p>
-          </div>
-          <a className="secondary-button" href="/dashboard/autofill-profile">
-            Complete profile
-          </a>
-        </div>
-      ) : null}
-      <div className="protocol-page-lock-content">{children}</div>
-    </div>
-  )
+  void userId
+  return <div className="protocol-page-lock">{children}</div>
 }

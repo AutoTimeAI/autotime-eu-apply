@@ -1,26 +1,10 @@
-import type { User } from "@supabase/supabase-js"
-import { getServerEnv } from "./env"
+import "server-only";
+import type { User } from "@supabase/supabase-js";
+import { getAdminMembership, hasAdminPermission } from "./admin-authorization";
+import { isTestAuthUserId } from "./test-auth";
 
-function normaliseEmail(email: string | null | undefined): string {
-  return email?.trim().toLowerCase() ?? ""
-}
-
-function getAdminEmailSet(): Set<string> {
-  return new Set(
-    getServerEnv()
-      .AUTOTIME_ADMIN_EMAILS.split(",")
-      .map((email) => normaliseEmail(email))
-      .filter(Boolean)
-  )
-}
-
-export function isAdminUser(user: User | null): boolean {
-  const email = normaliseEmail(user?.email)
-  const adminEmails = getAdminEmailSet()
-
-  if (!email) {
-    return false
-  }
-
-  return adminEmails.size === 1 && adminEmails.has(email)
+/** @deprecated Prefer a permission-specific authorization check. */
+export async function isAdminUser(user: User | null): Promise<boolean> {
+  if (!user || isTestAuthUserId(user.id)) return false;
+  return hasAdminPermission(await getAdminMembership(user.id), "overview:read");
 }

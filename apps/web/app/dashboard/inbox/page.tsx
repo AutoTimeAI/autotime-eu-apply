@@ -1,5 +1,5 @@
-import DashboardExperience from "../../../components/DashboardExperience"
+import { redirect } from "next/navigation";
 
 export default function DashboardInboxPage() {
-  return <DashboardExperience focus="job-inbox" view="applications" />
+  redirect("/dashboard/jobs");
 }

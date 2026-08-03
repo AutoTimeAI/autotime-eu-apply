@@ -1,5 +1,5 @@
-import DashboardExperience from "../../components/DashboardExperience"
+import HomeExperience from "../../components/HomeExperience";
 
 export default function DashboardPage() {
-  return <DashboardExperience />
+  return <HomeExperience />;
 }

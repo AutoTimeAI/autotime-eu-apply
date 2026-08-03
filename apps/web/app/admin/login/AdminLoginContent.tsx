@@ -65,17 +65,17 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
           <p className="eyebrow">Internal admin</p>
           <h1>AutoTime control room access</h1>
           <p>
-            Admin sign-in is separated from the user workspace. Access is
-            restricted to admin access only.
+            Use your existing AutoTime account. Admin permission is checked
+            independently on the server.
           </p>
         </div>
 
         <div className="admin-login-card">
           <div>
             <span className="admin-live-pill">Protected</span>
-            <h2>Admin credentials</h2>
+            <h2>AutoTime account</h2>
             <p>
-              Continue with Google for admin access.
+              Continue with the same Google account you use for AutoTime.
             </p>
           </div>
 

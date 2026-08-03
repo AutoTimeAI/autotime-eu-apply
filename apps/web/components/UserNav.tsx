@@ -12,7 +12,6 @@ import { usePathname } from "next/navigation";
 import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
 import type { SubscriptionPlan } from "../lib/supabase/types";
-import { useProfileProtocolReadiness } from "./ProfileProtocolLock";
 
 type DashboardPlanContextValue = {
   plan: SubscriptionPlan;
@@ -29,6 +28,14 @@ type DashboardNavItem = {
   aliases?: string[];
   description?: string;
   href: string;
+  icon:
+    | "home"
+    | "direction"
+    | "jobs"
+    | "applications"
+    | "interviews"
+    | "countries"
+    | "profile";
   label: string;
 };
 
@@ -68,59 +75,113 @@ function getInitial(email: string): string {
   return email.trim().charAt(0).toUpperCase() || "A";
 }
 
-const dashboardTopNavItems: DashboardNavItem[] = [
-  { href: "/dashboard", label: "Home" },
-];
-
 const dashboardWorkflowNavItems: DashboardNavItem[] = [
-  { href: "/dashboard", label: "Overview", description: "Start here" },
   {
-    aliases: ["/dashboard/match-score"],
+    href: "/dashboard",
+    icon: "home",
+    label: "Home",
+    description: "Your next action",
+  },
+  {
+    href: "/dashboard/role-pathways",
+    icon: "direction",
+    label: "Career Direction",
+    description: "Pathways and career lanes",
+  },
+  {
+    aliases: ["/dashboard/match-score", "/dashboard/inbox"],
     href: "/dashboard/jobs",
+    icon: "jobs",
     label: "Jobs",
-    description: "Analyse and tailor",
+    description: "Capture and analyse",
   },
   {
     aliases: [
-      "/dashboard/inbox",
       "/dashboard/application-answers",
       "/dashboard/documents",
-      "/dashboard/interview",
       "/dashboard/follow-ups",
+      "/dashboard/insights",
     ],
     href: "/dashboard/applications",
+    icon: "applications",
     label: "Applications",
-    description: "Track and progress",
+    description: "Prepare and track",
+  },
+  {
+    aliases: ["/dashboard/interview"],
+    href: "/dashboard/interviews",
+    icon: "interviews",
+    label: "Interviews",
+    description: "Prepare with evidence",
   },
   {
     href: "/dashboard/international",
-    label: "International",
-    description: "Mobility evidence",
+    icon: "countries",
+    label: "Countries",
+    description: "Country and mobility facts",
   },
   {
     aliases: ["/dashboard/profile", "/dashboard/cv-tailor"],
     href: "/dashboard/autofill-profile",
+    icon: "profile",
     label: "Profile",
     description: "Facts and proof",
   },
-  {
-    href: "/dashboard/insights",
-    label: "Insights",
-    description: "Outcomes and progress",
-  },
 ];
+
+function NavIcon({ name }: { name: DashboardNavItem["icon"] }) {
+  const paths: Record<DashboardNavItem["icon"], ReactNode> = {
+    home: <path d="M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5M9 21v-7h6v7" />,
+    direction: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2Z" />
+      </>
+    ),
+    jobs: (
+      <>
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M8 7V5h8v2M3 12h18M10 12v2h4v-2" />
+      </>
+    ),
+    applications: (
+      <>
+        <path d="M7 3h10v4h3v14H4V7h3V3Z" />
+        <path d="M8 3v5h8V3M8 13h8M8 17h6" />
+      </>
+    ),
+    interviews: (
+      <>
+        <path d="M4 5h16v11H8l-4 4V5Z" />
+        <path d="M8 9h8M8 12h5" />
+      </>
+    ),
+    countries: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9S14.5 18.5 12 21M12 3C9.5 5.5 8.5 8.5 8.5 12S9.5 18.5 12 21" />
+      </>
+    ),
+    profile: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+      </>
+    ),
+  };
+  return (
+    <svg
+      aria-hidden="true"
+      className="workflow-nav-icon"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      {paths[name]}
+    </svg>
+  );
+}
 function isPathInSection(pathname: string, sectionPath: string) {
   return pathname === sectionPath || pathname.startsWith(`${sectionPath}/`);
-}
-
-function isActiveTopNavItem(pathname: string, item: DashboardNavItem) {
-  const sectionPaths = [item.href, ...(item.aliases ?? [])];
-
-  return sectionPaths.some((sectionPath) =>
-    sectionPath === "/dashboard"
-      ? pathname === sectionPath
-      : isPathInSection(pathname, sectionPath),
-  );
 }
 
 function isActiveWorkflowNavItem(pathname: string, item: DashboardNavItem) {
@@ -133,108 +194,28 @@ function isActiveWorkflowNavItem(pathname: string, item: DashboardNavItem) {
   );
 }
 
-export function DashboardTopNav() {
-  const pathname = usePathname();
-  const { userId } = useDashboardPlan();
-  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId);
-
-  const alertProfileLock = (areaLabel: string) => {
-    window.alert(
-      `Complete Profile Evidence to 90% before using ${areaLabel}. Current profile readiness: ${readinessScore}%.`,
-    );
-    window.location.assign("/dashboard/autofill-profile");
-  };
-
-  return (
-    <nav className="dashboard-topnav" aria-label="Global dashboard navigation">
-      {dashboardTopNavItems.map((item) => {
-        const isActive = isActiveTopNavItem(pathname, item);
-        const isProtocolLocked =
-          isLocked &&
-          item.href !== "/dashboard" &&
-          item.href !== "/dashboard/autofill-profile";
-
-        return (
-          <a
-            aria-current={isActive ? "page" : undefined}
-            aria-disabled={isProtocolLocked}
-            className={`${isActive ? "active" : ""}${
-              isProtocolLocked ? " protocol-locked-link" : ""
-            }`.trim()}
-            href={isProtocolLocked ? "/dashboard/autofill-profile" : item.href}
-            key={item.href}
-            onClick={(event) => {
-              if (isProtocolLocked) {
-                event.preventDefault();
-                alertProfileLock(item.label);
-              }
-            }}
-            title={
-              isProtocolLocked
-                ? `Complete Profile Evidence to 90% before using ${item.label}.`
-                : undefined
-            }
-          >
-            {item.label}
-          </a>
-        );
-      })}
-    </nav>
-  );
-}
-
 export function DashboardWorkflowSidebar() {
   const pathname = usePathname();
-  const { userId } = useDashboardPlan();
-  const { isLocked, readinessScore } = useProfileProtocolReadiness(userId);
-
-  const alertProfileLock = (workflowLabel: string) => {
-    window.alert(
-      `Complete Profile Evidence to 90% before using ${workflowLabel}. Current profile readiness: ${readinessScore}%.`,
-    );
-    window.location.assign("/dashboard/autofill-profile");
-  };
 
   return (
     <aside className="dashboard-sidebar" aria-label="Workflow navigation">
       <div className="dashboard-sidebar-heading">
-        <span>Navigation</span>
-        <strong>Follow the steps</strong>
+        <span>Your workflow</span>
+        <strong>European career search</strong>
       </div>
       <nav className="dashboard-workflow-nav">
-        {dashboardWorkflowNavItems.map((item, index) => {
+        {dashboardWorkflowNavItems.map((item) => {
           const isActive = isActiveWorkflowNavItem(pathname, item);
-          const isProtocolLocked =
-            isLocked &&
-            item.href !== "/dashboard" &&
-            item.href !== "/dashboard/autofill-profile" &&
-            item.href !== "/dashboard/international";
 
           return (
             <a
               aria-current={isActive ? "page" : undefined}
-              aria-disabled={isProtocolLocked}
-              className={`${isActive ? "active" : ""}${
-                isProtocolLocked ? " protocol-locked-link" : ""
-              }`.trim()}
-              href={
-                isProtocolLocked ? "/dashboard/autofill-profile" : item.href
-              }
+              className={isActive ? "active" : undefined}
+              href={item.href}
               key={item.href}
-              onClick={(event) => {
-                if (isProtocolLocked) {
-                  event.preventDefault();
-                  alertProfileLock(item.label);
-                }
-              }}
-              title={
-                isProtocolLocked
-                  ? `Complete Profile Evidence to 90% before using ${item.label}.`
-                  : undefined
-              }
             >
               <span className="workflow-nav-title">
-                <b>{String(index + 1).padStart(2, "0")}</b>
+                <NavIcon name={item.icon} />
                 <span>{item.label}</span>
               </span>
               <small>{item.description}</small>

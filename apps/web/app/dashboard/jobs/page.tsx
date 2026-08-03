@@ -1,5 +1,5 @@
-import DashboardExperience from "../../../components/DashboardExperience"
+import JobApplicationWorkspace from "../../../components/JobApplicationWorkspace";
 
 export default function DashboardJobsPage() {
-  return <DashboardExperience view="jobs" />
+  return <JobApplicationWorkspace view={{ kind: "jobs" }} />;
 }

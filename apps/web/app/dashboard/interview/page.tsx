@@ -1,5 +1,5 @@
-import DashboardExperience from "../../../components/DashboardExperience"
+import { redirect } from "next/navigation";
 
 export default function DashboardInterviewPage() {
-  return <DashboardExperience view="interview" />
+  redirect("/dashboard/interviews");
 }

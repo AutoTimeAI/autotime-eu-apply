@@ -1,5 +1,5 @@
-import DashboardExperience from "../../../components/DashboardExperience"
+import { redirect } from "next/navigation";
 
 export default function DashboardMatchScorePage() {
-  return <DashboardExperience focus="match-score" view="jobs" />
+  redirect("/dashboard/jobs");
 }

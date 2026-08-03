@@ -1,70 +1,32 @@
-import { NextResponse } from "next/server"
-import { isAdminUser } from "../../../../lib/admin-access"
-import { getAdminOverview } from "../../../../lib/admin-monitoring"
-import { getErrorMessage } from "../../../../lib/diagnostics"
-import { createServerClient } from "../../../../lib/supabase/server"
-import { getTestAuthUser } from "../../../../lib/test-auth"
+import { NextResponse } from "next/server";
+import {
+  hasAdminPermission,
+  requireAdminRequest,
+} from "../../../../lib/admin-authorization";
+import { safeAdminError } from "../../../../lib/admin-safe-response";
+import { getAdminOverview } from "../../../../lib/admin-monitoring";
+import { getErrorMessage } from "../../../../lib/diagnostics";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
-async function getAdminRequestUser() {
-  const testUser = getTestAuthUser()
-
-  if (testUser) {
-    return testUser
-  }
-
-  const supabase = await createServerClient()
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    return null
-  }
-
-  return user
-}
-
-export async function GET() {
-  const user = await getAdminRequestUser()
-
-  if (!user) {
-    return NextResponse.json(
-      { data: null, error: "Unauthorised", status: 401 },
-      { status: 401 }
-    )
-  }
-
-  if (!isAdminUser(user)) {
-    return NextResponse.json(
-      { data: null, error: "Forbidden", status: 403 },
-      { status: 403 }
-    )
-  }
-
+export async function GET(request: Request) {
   try {
+    const principal = await requireAdminRequest(request, "overview:read");
     return NextResponse.json(
       {
-        data: await getAdminOverview(),
+        data: await getAdminOverview(
+          hasAdminPermission(principal.membership, "audit:read"),
+        ),
         error: null,
-        status: 200
+        status: 200,
       },
       {
         headers: {
-          "Cache-Control": "no-store"
-        }
-      }
-    )
-  } catch (error: unknown) {
-    return NextResponse.json(
-      {
-        data: null,
-        error: getErrorMessage(error, "Unable to load admin overview"),
-        status: 500
+          "Cache-Control": "no-store",
+        },
       },
-      { status: 500 }
-    )
+    );
+  } catch (error: unknown) {
+    return safeAdminError(error, "overview_load");
   }
 }
