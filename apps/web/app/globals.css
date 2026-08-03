@@ -368,7 +368,7 @@ button {
   cursor: pointer;
   font-weight: 700;
   padding: 9px 13px;
-  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.18);
+  box-shadow: 0 10px 24px rgba(23, 78, 166, 0.16);
 }
 
 button:hover {

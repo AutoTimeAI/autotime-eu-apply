@@ -1,0 +1,12 @@
+.home-experience .primary-button,
+.home-experience .onboarding-actions > button:first-child {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 15px;
+}
+
+.home-shortcuts a {
+  min-height: 48px;
+}

@@ -1,0 +1,28 @@
+.home-system-state {
+  display: grid;
+  min-height: 238px;
+  align-content: center;
+  justify-items: start;
+  gap: 10px;
+  padding: clamp(22px, 4vw, 32px);
+  border: 1px solid #dce3ec;
+  border-left: 4px solid #174ea6;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.home-system-state h2,
+.home-system-state p {
+  max-width: 720px;
+  margin: 0;
+}
+
+.home-system-state h2 {
+  color: #172033;
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+}
+
+.home-system-state .primary-button {
+  min-height: 44px;
+  margin-top: 8px;
+}

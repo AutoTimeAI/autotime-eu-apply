@@ -1,0 +1,346 @@
+:root {
+  --at-canvas: #f6f8fb;
+  --at-surface: #ffffff;
+  --at-ink: #172033;
+  --at-muted: #5f6b7a;
+  --at-border: #dce3ec;
+  --at-primary: #174ea6;
+  --at-primary-pressed: #123b78;
+  --at-selected: #eaf2ff;
+  --at-info: #5145cd;
+  --at-warning: #a85d00;
+  --at-error: #b42318;
+  --at-radius-sm: 6px;
+  --at-radius-md: 10px;
+  --at-radius-lg: 14px;
+  --at-content: 1120px;
+  --at-reading: 720px;
+}
+
+.dashboard-app-shell {
+  background: var(--at-canvas);
+  color: var(--at-ink);
+  padding-top: 0;
+}
+
+.dashboard-topbar {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--at-border);
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: none;
+  padding: 12px max(20px, calc((100vw - 1280px) / 2));
+}
+
+.dashboard-body {
+  width: min(1280px, calc(100% - 40px));
+  gap: 28px;
+}
+
+.dashboard-sidebar {
+  top: 80px;
+  border: 0;
+  border-right: 1px solid var(--at-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 24px 20px 24px 0;
+}
+
+.dashboard-sidebar-heading span,
+.dashboard-workflow-nav small,
+.user-nav-copy > span {
+  color: var(--at-muted);
+}
+
+.dashboard-sidebar-heading strong,
+.dashboard-workflow-nav a {
+  color: var(--at-ink);
+}
+
+.dashboard-workflow-nav a {
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.dashboard-workflow-nav a:hover {
+  border-color: transparent;
+  background: #f1f4f8;
+  box-shadow: none;
+  transform: none;
+}
+
+.dashboard-workflow-nav a.active,
+.dashboard-workflow-nav a[aria-current="page"] {
+  border-color: transparent;
+  background: var(--at-selected);
+  color: var(--at-primary);
+  box-shadow: none;
+  transform: none;
+}
+
+.dashboard-workflow-nav a.active::before,
+.dashboard-workflow-nav a[aria-current="page"]::before {
+  background: var(--at-primary);
+}
+
+.workflow-nav-icon,
+.dashboard-workflow-nav a.active .workflow-nav-icon,
+.dashboard-workflow-nav a[aria-current="page"] .workflow-nav-icon {
+  border-color: var(--at-border);
+  background: transparent;
+  color: var(--at-primary);
+}
+
+.home-experience {
+  --accent: var(--at-primary);
+  --accent-strong: var(--at-primary-pressed);
+  --status-confirmed-bg: var(--at-selected);
+  --status-confirmed-text: var(--at-primary-pressed);
+  width: min(100%, var(--at-content));
+  gap: 28px;
+  color: var(--at-ink);
+  padding: 28px 0 48px;
+}
+
+.home-experience .product-page-header {
+  padding: 18px 0 4px;
+  border: 0;
+}
+
+.home-experience .product-page-header h1 {
+  color: var(--at-ink);
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  letter-spacing: -0.035em;
+}
+
+.home-experience .product-page-header p,
+.home-experience p {
+  color: var(--at-muted);
+}
+
+.home-experience .product-eyebrow,
+.home-priority-label {
+  margin: 0 0 6px;
+  color: var(--at-info) !important;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.next-best-action-card,
+.onboarding-shell,
+.home-progress {
+  border: 1px solid var(--at-border);
+  border-radius: var(--at-radius-lg);
+  background: var(--at-surface);
+  box-shadow: none;
+}
+
+.next-best-action-card {
+  border-left: 4px solid var(--at-primary);
+  padding: clamp(22px, 4vw, 32px);
+}
+
+.next-best-action-card h2 {
+  color: var(--at-ink);
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+}
+
+.home-experience .primary-button,
+.home-experience .onboarding-actions > button:first-child {
+  border-color: var(--at-primary);
+  background: var(--at-primary);
+  box-shadow: none;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.home-experience .primary-button *,
+.home-experience .onboarding-actions > button:first-child * {
+  text-decoration: none;
+}
+
+.home-experience .text-button {
+  border-color: var(--at-border);
+  background: var(--at-surface);
+  box-shadow: none;
+  color: var(--at-primary);
+}
+
+.home-experience .text-button:hover {
+  border-color: var(--at-primary);
+  background: var(--at-selected);
+  color: var(--at-primary-pressed);
+}
+
+.home-experience .primary-button:hover,
+.home-experience .onboarding-actions > button:first-child:hover {
+  border-color: var(--at-primary-pressed);
+  background: var(--at-primary-pressed);
+}
+
+.home-progress {
+  padding: 22px 24px;
+}
+
+.home-progress-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-progress-heading h2 {
+  margin: 0;
+  color: var(--at-ink);
+  font-size: 1.35rem;
+}
+
+.home-progress a,
+.home-shortcuts a,
+.home-progress-details summary {
+  color: var(--at-primary);
+}
+
+.home-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 20px 0 0;
+  border-top: 1px solid var(--at-border);
+  border-bottom: 1px solid var(--at-border);
+}
+
+.home-facts div {
+  min-width: 0;
+  padding: 17px 16px;
+  border-right: 1px solid var(--at-border);
+}
+
+.home-facts div:first-child {
+  padding-left: 0;
+}
+.home-facts div:last-child {
+  border-right: 0;
+}
+.home-facts dt {
+  color: var(--at-muted);
+  font-size: 0.78rem;
+}
+.home-facts dd {
+  margin: 5px 0 0;
+  color: var(--at-ink);
+  font-weight: 750;
+}
+
+.home-progress-details {
+  padding-top: 14px;
+}
+.home-progress-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.home-progress-details p {
+  margin: 10px 0 0;
+}
+
+.home-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--at-border);
+}
+
+.home-shortcuts a {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 16px 8px;
+  border-bottom: 1px solid var(--at-border);
+  text-decoration: none;
+}
+
+.home-shortcuts a:hover {
+  background: var(--at-selected);
+}
+.home-shortcuts strong {
+  color: var(--at-ink);
+}
+.home-shortcuts span {
+  color: var(--at-muted);
+  font-size: 0.82rem;
+}
+
+.home-experience :focus-visible,
+.dashboard-sidebar :focus-visible,
+.dashboard-topbar :focus-visible {
+  outline: 3px solid var(--at-primary);
+  outline-offset: 3px;
+}
+
+.home-experience button:disabled {
+  border-color: #c6ced9;
+  background: #e5e9ef;
+  color: #56616f;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .dashboard-body {
+    width: min(100% - 28px, 760px);
+    gap: 0;
+  }
+  .dashboard-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--at-border);
+    padding: 12px 0;
+  }
+  .home-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .dashboard-topbar {
+    padding: 10px 14px;
+  }
+  .dashboard-body {
+    width: calc(100% - 28px);
+  }
+  .home-experience {
+    padding-top: 18px;
+    gap: 22px;
+  }
+  .next-best-action-card {
+    grid-template-columns: 1fr;
+  }
+  .next-best-action-card .primary-button {
+    width: 100%;
+    justify-content: center;
+  }
+  .home-progress {
+    padding: 20px;
+  }
+  .home-facts {
+    grid-template-columns: 1fr;
+  }
+  .home-facts div {
+    padding: 13px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--at-border);
+  }
+  .home-facts div:last-child {
+    border-bottom: 0;
+  }
+  .home-shortcuts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-workflow-nav a {
+    transition: none;
+  }
+}

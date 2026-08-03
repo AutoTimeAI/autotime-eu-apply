@@ -196,34 +196,64 @@ function isActiveWorkflowNavItem(pathname: string, item: DashboardNavItem) {
 
 export function DashboardWorkflowSidebar() {
   const pathname = usePathname();
-
+  const primaryMobile = dashboardWorkflowNavItems.filter((item) =>
+    [
+      "/dashboard",
+      "/dashboard/jobs",
+      "/dashboard/applications",
+      "/dashboard/interviews",
+    ].includes(item.href),
+  );
+  const moreMobile = dashboardWorkflowNavItems.filter((item) =>
+    [
+      "/dashboard/role-pathways",
+      "/dashboard/international",
+      "/dashboard/autofill-profile",
+    ].includes(item.href),
+  );
+  const link = (item: DashboardNavItem, compact = false) => {
+    const isActive = isActiveWorkflowNavItem(pathname, item);
+    const visualLabel =
+      compact && item.label === "Applications" ? "Apps" : item.label;
+    return (
+      <a
+        aria-current={isActive ? "page" : undefined}
+        aria-label={compact ? item.label : undefined}
+        className={isActive ? "active" : undefined}
+        href={item.href}
+        key={item.href}
+      >
+        <span className="workflow-nav-title">
+          <NavIcon name={item.icon} />
+          <span>{visualLabel}</span>
+        </span>
+        {compact ? null : <small>{item.description}</small>}
+      </a>
+    );
+  };
   return (
-    <aside className="dashboard-sidebar" aria-label="Workflow navigation">
-      <div className="dashboard-sidebar-heading">
-        <span>Your workflow</span>
-        <strong>European career search</strong>
-      </div>
-      <nav className="dashboard-workflow-nav">
-        {dashboardWorkflowNavItems.map((item) => {
-          const isActive = isActiveWorkflowNavItem(pathname, item);
-
-          return (
-            <a
-              aria-current={isActive ? "page" : undefined}
-              className={isActive ? "active" : undefined}
-              href={item.href}
-              key={item.href}
-            >
-              <span className="workflow-nav-title">
-                <NavIcon name={item.icon} />
-                <span>{item.label}</span>
-              </span>
-              <small>{item.description}</small>
-            </a>
-          );
-        })}
+    <>
+      <aside className="dashboard-sidebar" aria-label="Workflow navigation">
+        <nav className="dashboard-workflow-nav">
+          {dashboardWorkflowNavItems.map((item) => link(item))}
+        </nav>
+      </aside>
+      <nav
+        className="mobile-workflow-nav"
+        aria-label="Mobile workflow navigation"
+      >
+        {primaryMobile.map((item) => link(item, true))}
+        <details className="mobile-more-menu">
+          <summary>
+            <span className="mobile-more-icon" aria-hidden="true">
+              ...
+            </span>
+            <span>More</span>
+          </summary>
+          <div>{moreMobile.map((item) => link(item, true))}</div>
+        </details>
       </nav>
-    </aside>
+    </>
   );
 }
 
