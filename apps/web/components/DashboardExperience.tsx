@@ -50,6 +50,10 @@ import {
   PROFILE_EXECUTION_THRESHOLD
 } from "../lib/product-protocols"
 import {
+  loadMobilityProfile,
+  type MobilityProfileLoadResult
+} from "../lib/international-mobility-storage"
+import {
   evaluateCapabilityReadiness,
   type CapabilityReadinessInput,
   type ProductCapability
@@ -1119,6 +1123,53 @@ function saveState(state: CompanionDashboardState, userId: string) {
   queueMicrotask(() => {
     window.dispatchEvent(new Event(profileProtocolReadinessEvent))
   })
+}
+
+type MobilityCountryPrefill = {
+  patch: Partial<CandidateProfile>
+  applied: { currentCountry: boolean; targetCountries: boolean }
+}
+
+function computeMobilityCountryPrefill(
+  profile: CandidateProfile,
+  userId: string
+): MobilityCountryPrefill | null {
+  if (typeof window === "undefined") return null
+  let mobility: MobilityProfileLoadResult
+  try {
+    mobility = loadMobilityProfile(window.localStorage, userId)
+  } catch {
+    return null
+  }
+  // Only a genuinely saved mobility profile counts as a fact; the unsaved
+  // form default (targetCountries: ["Ireland"]) must never be copied in.
+  if (mobility.source !== "saved") return null
+
+  const mobilityCurrentCountry = mobility.profile.currentCountry.trim()
+  const mobilityTargetCountries = mobility.profile.targetCountries
+    .map((country) => country.trim())
+    .filter(Boolean)
+    .join(", ")
+
+  const applied = {
+    currentCountry:
+      !profile.currentCountry.trim() && mobilityCurrentCountry.length > 0,
+    targetCountries:
+      !profile.targetCountries.trim() && mobilityTargetCountries.length > 0
+  }
+  if (!applied.currentCountry && !applied.targetCountries) return null
+
+  return {
+    patch: {
+      ...(applied.currentCountry
+        ? { currentCountry: mobilityCurrentCountry }
+        : {}),
+      ...(applied.targetCountries
+        ? { targetCountries: mobilityTargetCountries }
+        : {})
+    },
+    applied
+  }
 }
 
 function getBestStoredProfileRecovery(userId: string, minimumReadiness: number) {
@@ -3448,6 +3499,10 @@ export default function HomePage({
 }) {
   const { userId } = useDashboardPlan()
   const [state, setState] = useState<CompanionDashboardState>(defaultState)
+  const [mobilityPrefillNote, setMobilityPrefillNote] = useState<{
+    currentCountry: boolean
+    targetCountries: boolean
+  }>({ currentCountry: false, targetCountries: false })
   const [importJson, setImportJson] = useState("")
   const [status, setStatus] = useState("")
   const [productContext, setProductContext] = useState<ProductContext>(
@@ -4426,9 +4481,26 @@ export default function HomePage({
         }
       : storedState
 
-    setState(initialState)
+    const mobilityPrefill =
+      currentTab === "profile"
+        ? computeMobilityCountryPrefill(initialState.profile, userId)
+        : null
+    const prefilledState = mobilityPrefill
+      ? {
+          ...initialState,
+          profile: { ...initialState.profile, ...mobilityPrefill.patch }
+        }
+      : initialState
+
+    setState(prefilledState)
+    setMobilityPrefillNote(
+      mobilityPrefill?.applied ?? {
+        currentCountry: false,
+        targetCountries: false
+      }
+    )
     if (recovered) {
-      saveState(initialState, userId)
+      saveState(prefilledState, userId)
       setStatus(
         `Recovered a ${recovered.readiness}% profile saved in this browser. Review it, then sync it to this account.`
       )
@@ -4732,6 +4804,9 @@ export default function HomePage({
     setState(nextState)
     saveState(nextState, userId)
     scheduleProfileSync(nextState.profile)
+    if (key === "currentCountry" || key === "targetCountries") {
+      setMobilityPrefillNote((current) => ({ ...current, [key]: false }))
+    }
   }
 
   const setProfileAccountSyncEnabled = (enabled: boolean) => {
@@ -8225,6 +8300,13 @@ export default function HomePage({
                           }
                         />
                       </label>
+                      {mobilityPrefillNote.currentCountry ? (
+                        <p>
+                          Pre-filled from your saved{" "}
+                          <a href="/dashboard/international">Countries</a>{" "}
+                          profile. Edit it if this is not correct.
+                        </p>
+                      ) : null}
                       <label>
                         Current city
                         <input
@@ -8256,6 +8338,13 @@ export default function HomePage({
                           }
                         />
                       </label>
+                      {mobilityPrefillNote.targetCountries ? (
+                        <p>
+                          Pre-filled from your saved{" "}
+                          <a href="/dashboard/international">Countries</a>{" "}
+                          profile. Edit it if this is not correct.
+                        </p>
+                      ) : null}
                       <label>
                         Target roles
                         <input
