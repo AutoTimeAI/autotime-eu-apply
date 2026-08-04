@@ -15,6 +15,7 @@ import {
   loadLaneSelection,
   saveLaneSelection,
 } from "../lib/role-pathways-storage";
+import { loadMobilityProfile } from "../lib/international-mobility-storage";
 
 type GenerateResponse = {
   data: {
@@ -107,6 +108,20 @@ export function RolePathwaysExperience() {
       setSecondary(saved.secondary);
       setExplorer(saved.explorer ?? "");
     }
+    const mobility = loadMobilityProfile(localStorage, userId).profile;
+    const supportedCountries = mobility.targetCountries.filter(
+      (country): country is RolePreferences["countries"][number] =>
+        country === "Ireland" ||
+        country === "Germany" ||
+        country === "Netherlands",
+    );
+    setPreferences((current) => ({
+      ...current,
+      countries: supportedCountries.length
+        ? supportedCountries
+        : current.countries,
+      supportRequired: mobility.sponsorshipRequired,
+    }));
   }, [userId]);
   const generate = async () => {
     setBusy(true);
@@ -360,6 +375,11 @@ export function RolePathwaysExperience() {
               <p className="eyebrow">Stage 2</p>
               <h2>Set European market preferences</h2>
               <p>Preferences affect ordering, never capability.</p>
+              <p>
+                Target countries and support needs are pre-filled from your
+                saved <a href="/dashboard/international">Countries</a>{" "}
+                profile when available.
+              </p>
             </div>
           </div>
           <fieldset>

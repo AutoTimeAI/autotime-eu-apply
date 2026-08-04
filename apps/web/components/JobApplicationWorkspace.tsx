@@ -31,6 +31,8 @@ import {
 } from "../lib/job-workflow-storage";
 import { loadInterviewWorkflow } from "../lib/interview-storage";
 import type { InterviewRecord } from "../lib/interview-workflow";
+import { loadMobilityProfile } from "../lib/international-mobility-storage";
+import type { MobilityProfile } from "shared";
 
 type View =
   | { kind: "jobs" }
@@ -504,9 +506,14 @@ function JobDetail({
     });
   const analyse = () => {
     const evidence = legacyEvidence(userId);
+    const mobilityProfile = loadMobilityProfile(localStorage, userId).profile;
+    const sponsorshipRequired =
+      mobilityProfile.sponsorshipRequired === "unsure"
+        ? evidence.sponsorshipRequired
+        : mobilityProfile.sponsorshipRequired === "yes";
     const result = analyseJob(job, evidence.text, {
       careerLane: job.lane,
-      sponsorshipRequired: evidence.sponsorshipRequired,
+      sponsorshipRequired,
     });
     updateJob({
       ...job,
@@ -675,6 +682,14 @@ function JobOverview({
 }
 
 function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
+  const { userId } = useDashboardPlan();
+  const [mobilitySponsorship, setMobilitySponsorship] =
+    useState<MobilityProfile["sponsorshipRequired"]>("unsure");
+  useEffect(() => {
+    setMobilitySponsorship(
+      loadMobilityProfile(localStorage, userId).profile.sponsorshipRequired,
+    );
+  }, [userId]);
   const result = currentAnalysis(job);
   if (!result)
     return (
@@ -808,6 +823,14 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
             <p>
               <strong>Vacancy wording:</strong>{" "}
               {job.facts.sponsorship.value || "Unknown"}
+            </p>
+            <p>
+              <strong>Your saved mobility profile:</strong>{" "}
+              {mobilitySponsorship === "unsure"
+                ? "Sponsorship need not set"
+                : mobilitySponsorship === "yes"
+                  ? "Sponsorship required"
+                  : "No sponsorship required"}
             </p>
             <p>Mobility facts stay separate from capability scoring.</p>
             <nav aria-label="Related checks">
