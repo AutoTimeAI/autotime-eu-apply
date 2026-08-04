@@ -6820,7 +6820,9 @@ export default function HomePage({
   ) : null
 
   return (
-    <main className="dashboard-shell">
+    <main
+      className={`dashboard-shell${currentTab === "profile" ? " phase-seven-profile" : ""}`}
+    >
       <header className="app-header">
         <div className="header-copy">
           <p className="eyebrow">{focusCopy.eyebrow}</p>
@@ -7295,6 +7297,7 @@ export default function HomePage({
                           onChange={importResumeFile}
                         />
                         <button
+                          className="secondary-button"
                           disabled={!canReviewResumeWithAi || isReviewingCv}
                           type="button"
                           onClick={reviewResumeForContext}
@@ -8109,6 +8112,7 @@ export default function HomePage({
                           </label>
                           <div className="profile-action-row">
                             <button
+                              className="secondary-button"
                               disabled={!cloudSyncReadiness.configured}
                               type="button"
                               onClick={syncProfileToCloud}
