@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ESCO_CACHE_VERSION,
   ROLE_PATHWAYS_SCHEMA_VERSION,
@@ -92,6 +92,13 @@ export function RolePathwaysExperience() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const activeStepRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    activeStepRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, [stage]);
   useEffect(() => {
     setCandidateText(savedCandidateText(userId));
     const saved = loadLaneSelection(localStorage, userId);
@@ -231,7 +238,7 @@ export function RolePathwaysExperience() {
       </button>
     ));
   return (
-    <main className="role-pathways-shell">
+    <main className="role-pathways-shell phase-six-career-direction">
       <header className="role-pathways-hero">
         <div>
           <p className="eyebrow">Europe-first career intelligence</p>
@@ -260,6 +267,7 @@ export function RolePathwaysExperience() {
               stage === index + 1 ? "active" : stage > index + 1 ? "done" : ""
             }
             key={label}
+            ref={stage === index + 1 ? activeStepRef : undefined}
           >
             <button
               disabled={

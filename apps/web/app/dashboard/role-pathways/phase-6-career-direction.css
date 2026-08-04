@@ -1,0 +1,104 @@
+.phase-six-career-direction {
+  --p6-primary: #174ea6;
+  --p6-primary-strong: #123b78;
+  --p6-selected: #eaf2ff;
+  --p6-accent: #5145cd;
+  --p6-ink: #172033;
+  --p6-muted: #5f6b7a;
+  --p6-line: #dce3ec;
+  color: var(--p6-ink);
+}
+.phase-six-career-direction :focus-visible {
+  outline: 3px solid var(--p6-accent);
+  outline-offset: 3px;
+}
+.phase-six-career-direction .eyebrow {
+  color: var(--p6-accent) !important;
+}
+
+/* Hero: flat white shell instead of the dark teal gradient. */
+.phase-six-career-direction .role-pathways-hero {
+  background: #fff;
+  border: 1px solid var(--p6-line);
+  color: var(--p6-ink);
+}
+.phase-six-career-direction .role-pathways-hero h1 {
+  color: var(--p6-ink) !important;
+}
+.phase-six-career-direction .role-pathways-hero p {
+  color: var(--p6-muted);
+}
+.phase-six-career-direction .role-pathways-hero > span {
+  color: var(--p6-muted);
+}
+.phase-six-career-direction .role-pathways-hero strong {
+  color: var(--p6-ink);
+}
+
+/* Stepper: active/done states move from teal to blue. */
+.phase-six-career-direction .pathway-steps .active button {
+  border-color: var(--p6-primary);
+  color: var(--p6-primary-strong);
+}
+.phase-six-career-direction .pathway-steps .done button {
+  background: var(--p6-selected);
+}
+
+/* Pathway cards and score bars. */
+.phase-six-career-direction .pathway-card:hover {
+  border-color: var(--p6-primary);
+}
+.phase-six-career-direction .pathway-card-top b {
+  color: var(--p6-primary);
+}
+.phase-six-career-direction .pathway-score i {
+  background: var(--p6-primary);
+}
+
+/* Bare buttons default to a teal gradient sitewide; redirect to blue. */
+.phase-six-career-direction button:not(.secondary-button):not(
+    .pathway-steps button
+  ):not(.pathway-card) {
+  border-color: var(--p6-primary);
+  background: var(--p6-primary);
+  box-shadow: 0 8px 20px rgba(23, 78, 166, 0.16);
+}
+.phase-six-career-direction button:not(.secondary-button):not(
+    .pathway-steps button
+  ):not(.pathway-card):hover {
+  border-color: var(--p6-primary-strong);
+  background: var(--p6-primary-strong);
+}
+.phase-six-career-direction .secondary-button:hover {
+  border-color: var(--p6-primary);
+  background: var(--p6-selected);
+  color: var(--p6-primary-strong);
+}
+.phase-six-career-direction .pathway-steps button {
+  color: var(--p6-muted);
+}
+
+/* The site base focus ring on form fields is hardcoded teal; redirect it. */
+.phase-six-career-direction input:focus,
+.phase-six-career-direction select:focus,
+.phase-six-career-direction textarea:focus {
+  border-color: var(--p6-primary);
+  box-shadow: 0 0 0 4px rgba(23, 78, 166, 0.11);
+  outline-color: rgba(23, 78, 166, 0.18);
+}
+
+/* .status-banner defaults to green regardless of message type. */
+.phase-six-career-direction .status-banner {
+  border-color: var(--p6-line);
+  border-left-color: var(--p6-primary);
+  background: var(--p6-selected);
+  color: var(--p6-primary-strong);
+}
+
+.phase-six-career-direction .pathway-panel,
+.phase-six-career-direction .evidence-review article,
+.phase-six-career-direction .pathway-card,
+.phase-six-career-direction .pathway-score,
+.phase-six-career-direction .pathway-detail-grid article {
+  border-color: var(--p6-line);
+}
