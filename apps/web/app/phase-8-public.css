@@ -1,0 +1,76 @@
+/*
+ * The public marketing pages (landing "/", "/login") predate the blue design
+ * system applied to every /dashboard/* route this project has been
+ * migrated to. This file brings their accent colour in line without
+ * touching layout/structure — the landing hero deliberately keeps its dark
+ * video background (a normal marketing choice, unlike internal-tool pages),
+ * only its teal accents move to the same blue used everywhere else.
+ *
+ * .landing-shell and .auth-shell are unique wrapper classes (landing page
+ * and login page respectively), so scoping under them is safe even though
+ * some classes here (.primary-link, .secondary-link) are also used by
+ * unrelated pages (pricing, upgrade banners, error pages) left untouched.
+ */
+.landing-shell,
+.auth-shell {
+  --accent: #174ea6;
+  --accent-strong: #123b78;
+}
+
+/* Hero eyebrow is a hardcoded light-teal override for the dark background;
+   redirect it to a light blue that still reads on dark navy. */
+.landing-hero-content .eyebrow {
+  color: #9dc4f5;
+}
+
+/* Bare CTA links: same fix as every other phase's default-button issue,
+   scoped so pricing/upgrade-banner/error-page usages are untouched. */
+.landing-shell .primary-link,
+.auth-shell .primary-link {
+  border-color: #174ea6;
+  background: #174ea6;
+}
+.landing-shell .primary-link:hover,
+.auth-shell .primary-link:hover {
+  border-color: #123b78;
+  background: #123b78;
+}
+.landing-shell .secondary-link:hover,
+.auth-shell .secondary-link:hover {
+  border-color: #174ea6;
+  color: #123b78;
+}
+
+/* EU Fit Engine demo panel: hardcoded teal rgba borders/gradients. */
+.eu-fit-scorecard {
+  border-color: rgba(23, 78, 166, 0.26);
+}
+.eu-fit-scorecard strong {
+  border-color: rgba(23, 78, 166, 0.18);
+  border-top-color: #174ea6;
+}
+.eu-fit-statement {
+  border-color: rgba(23, 78, 166, 0.24);
+  background: linear-gradient(135deg, #ffffff, #eaf2ff);
+}
+
+/* Login page: bare buttons ("Sign in with GitHub", "Continue to
+   dashboard") inherit the sitewide teal-gradient default; redirect them,
+   same as every other phase's default-button fix. */
+.auth-shell button:not(.secondary-button) {
+  border-color: #174ea6;
+  background: #174ea6;
+}
+.auth-shell button:not(.secondary-button):hover {
+  border-color: #123b78;
+  background: #123b78;
+}
+
+/* Login page: account-permission control and identity-link panel. */
+.auth-consent-control {
+  border-color: rgba(23, 78, 166, 0.18);
+  background: #f5f8fc;
+}
+.identity-link-panel {
+  border-color: rgba(23, 78, 166, 0.18);
+}

@@ -5516,7 +5516,7 @@ h4 {
 }
 
 .dashboard-brand .brand-name {
-  color: var(--accent);
+  color: #174ea6;
 }
 
 .brand-tagline {
@@ -5582,9 +5582,9 @@ h4 {
 }
 
 .plan-badge.pro {
-  border-color: #9ed8bd;
-  background: #e5f7ee;
-  color: var(--green);
+  border-color: #a8c8f0;
+  background: #eaf2ff;
+  color: #123b78;
 }
 
 .user-nav-menu {
@@ -7816,6 +7816,16 @@ h4 {
 .consent-banner button {
   min-height: 34px;
   padding: 7px 10px;
+}
+
+.consent-banner button:not(.secondary-button) {
+  border-color: #174ea6;
+  background: #174ea6;
+}
+
+.consent-banner button:not(.secondary-button):hover {
+  border-color: #123b78;
+  background: #123b78;
 }
 
 @media (pointer: coarse) {
