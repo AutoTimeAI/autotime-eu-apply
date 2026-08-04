@@ -146,7 +146,19 @@ test("mobility profile form, sponsor guide and official sources", async ({
   await page.getByRole("button", { name: "My mobility", exact: true }).click();
   await expect(page.getByLabel("Applicant position")).toBeVisible();
   await capture(page, "mobility-form-1440x900.png");
+
+  // Re-navigate at mobile width so the tab tap happens at that viewport
+  // (not a desktop click followed by a resize) — this is what actually
+  // exercises the active-tab-scrolls-into-view behavior on a real phone.
   await page.setViewportSize({ width: 390, height: 844 });
+  await gotoInternational(page);
+  await page.getByRole("button", { name: "My mobility", exact: true }).click();
+  await expect(page.getByLabel("Applicant position")).toBeVisible();
+  const mobilityTab = page.getByRole("button", {
+    name: "My mobility",
+    exact: true,
+  });
+  await expect(mobilityTab).toBeInViewport();
   await capture(page, "mobility-form-390x844.png");
 
   await page.setViewportSize({ width: 1440, height: 900 });
