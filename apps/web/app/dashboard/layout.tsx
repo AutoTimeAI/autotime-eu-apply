@@ -7,6 +7,7 @@ import "./phase-1-shell-correction.css";
 import "./phase-2-jobs.css";
 import "./phase-3-applications.css";
 import "./phase-4-interviews.css";
+import "./phase-7-profile.css";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { isAdminUser } from "../../lib/admin-access";

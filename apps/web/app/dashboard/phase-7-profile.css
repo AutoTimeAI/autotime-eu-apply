@@ -1,0 +1,123 @@
+/*
+ * Profile is served by the legacy DashboardExperience monolith, which is
+ * also live behind /dashboard/insights (view="applications"). The
+ * .phase-seven-profile class is only ever applied when currentTab ===
+ * "profile" (see DashboardExperience.tsx), which is fixed per route, so
+ * every rule below is safely scoped away from insights/jobs/applications.
+ *
+ * Most of this file's teal/green comes from --accent, --accent-strong and
+ * --green being reused throughout the legacy profile-specific classes
+ * (.profile-readiness-badge, .segment-button, .profile-quality-item, etc).
+ * Redefining those three custom properties here cascades the fix to every
+ * var()-based usage; the explicit rules further down handle the ones that
+ * hardcode teal/green as literal hex/rgba instead of referencing the
+ * variable.
+ */
+.phase-seven-profile {
+  --accent: #174ea6;
+  --accent-strong: #123b78;
+  --green: #174ea6;
+  --p7-selected: #eaf2ff;
+  --p7-line: rgba(23, 78, 166, 0.18);
+}
+.phase-seven-profile :focus-visible {
+  outline-color: #5145cd;
+}
+
+/* Hardcoded teal/green literals that var() redefinition can't reach.
+   .app-header and .decision-method-note are shared header chrome rendered
+   on every tab, but only become descendants of .phase-seven-profile when
+   currentTab === "profile", so scoping here is still safe. */
+.phase-seven-profile .app-header {
+  border-color: var(--p7-line);
+  background:
+    linear-gradient(
+      135deg,
+      var(--p7-selected),
+      rgba(255, 255, 255, 0.96) 46%,
+      var(--p7-selected)
+    ),
+    #ffffff;
+}
+.phase-seven-profile .decision-method-note {
+  border-color: var(--p7-line);
+  background: var(--p7-selected);
+  color: var(--accent-strong);
+}
+.phase-seven-profile .profile-readiness-badge {
+  border-color: var(--p7-line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), var(--p7-selected)),
+    #ffffff;
+}
+.phase-seven-profile .profile-purpose-panel {
+  border-color: var(--p7-line);
+  background:
+    linear-gradient(135deg, var(--p7-selected), rgba(255, 255, 255, 0.94)),
+    #ffffff;
+}
+.phase-seven-profile .profile-purpose-steps span {
+  border-color: var(--p7-line);
+}
+.phase-seven-profile .profile-form-section.important {
+  border-color: var(--p7-line);
+  background:
+    linear-gradient(135deg, var(--p7-selected), transparent 38%),
+    rgba(255, 255, 255, 0.96);
+}
+.phase-seven-profile .profile-form-toolbar {
+  border-color: var(--p7-line);
+  background: #f5f8fc;
+}
+.phase-seven-profile .sync-status-pill.ready {
+  border-color: var(--p7-line);
+  background: var(--p7-selected);
+  color: var(--accent-strong);
+}
+.phase-seven-profile .segment-button:hover {
+  background: var(--p7-selected);
+}
+.phase-seven-profile .segment-button.active,
+.phase-seven-profile .segment-button[aria-pressed="true"] {
+  background: var(--p7-selected);
+}
+.phase-seven-profile .cv-review-result-panel {
+  border-color: var(--p7-line);
+  background:
+    linear-gradient(135deg, var(--p7-selected), transparent 42%), #ffffff;
+}
+.phase-seven-profile .ai-claim-boundary {
+  border-color: var(--p7-line);
+  background: var(--p7-selected);
+}
+
+/* Bare buttons default to a teal gradient sitewide; redirect to blue.
+   "Apply to My Profile" is the single filled primary for this scoped
+   page; everything else already carries secondary-button/danger-button. */
+.phase-seven-profile button:not(.secondary-button):not(.danger-button):not(
+    .segment-button
+  ) {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  box-shadow: 0 8px 20px rgba(23, 78, 166, 0.16);
+}
+.phase-seven-profile button:not(.secondary-button):not(.danger-button):not(
+    .segment-button
+  ):hover {
+  border-color: var(--accent-strong) !important;
+  background: var(--accent-strong) !important;
+}
+.phase-seven-profile .secondary-button:hover {
+  border-color: var(--accent);
+  background: var(--p7-selected);
+  color: var(--accent-strong);
+}
+
+/* The site base focus ring on form fields is hardcoded teal; redirect it. */
+.phase-seven-profile input:focus,
+.phase-seven-profile select:focus,
+.phase-seven-profile textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(23, 78, 166, 0.11);
+  outline-color: rgba(23, 78, 166, 0.18);
+}
