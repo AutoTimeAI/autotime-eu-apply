@@ -14,6 +14,10 @@ async function openInternational(page: Page) {
   await expect(
     page.getByRole("heading", { name: "International applications" }),
   ).toBeVisible();
+  // The dev server compiles this route on-demand on first visit; a Fast
+  // Refresh mid-interaction can silently drop the next click. Wait for the
+  // route to settle before interacting.
+  await page.waitForLoadState("networkidle");
 }
 
 async function selectCountry(page: Page, country: string) {
@@ -136,6 +140,10 @@ test("legacy migration remains review-only and account scoped", async ({
   );
 
   await page.goto("/dashboard/international");
+  await expect(
+    page.getByRole("heading", { name: "International applications" }),
+  ).toBeVisible();
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Review my mobility" }).click();
   await expect(
     page.getByText(

@@ -1,0 +1,176 @@
+.phase-five-countries {
+  --p5-primary: #174ea6;
+  --p5-primary-strong: #123b78;
+  --p5-selected: #eaf2ff;
+  --p5-accent: #5145cd;
+  --p5-ink: #172033;
+  --p5-muted: #5f6b7a;
+  --p5-line: #dce3ec;
+  --p5-warning: #a85d00;
+  --p5-error: #b42318;
+  color: var(--p5-ink);
+}
+.phase-five-countries :focus-visible {
+  outline: 3px solid var(--p5-accent);
+  outline-offset: 3px;
+}
+/* The site base style uses a hardcoded teal-green focus ring on form
+   fields; redirect it to the shared blue for this page. */
+.phase-five-countries input:focus,
+.phase-five-countries select:focus,
+.phase-five-countries textarea:focus {
+  border-color: var(--p5-primary);
+  box-shadow: 0 0 0 4px rgba(23, 78, 166, 0.11);
+}
+.phase-five-countries input:focus,
+.phase-five-countries select:focus,
+.phase-five-countries textarea:focus {
+  outline-color: rgba(23, 78, 166, 0.18);
+}
+
+/* Eyebrow labels reuse the site accent token, which is teal-green; every
+   phase migration redirects it to the shared purple to stay green-free. */
+.phase-five-countries .eyebrow {
+  color: var(--p5-accent) !important;
+}
+
+/* Hero: replace the dark teal gradient with the calm, flat page-header
+   treatment used everywhere else. */
+.phase-five-countries .international-hero {
+  background: #fff;
+  border: 1px solid var(--p5-line);
+  border-radius: 10px;
+  color: var(--p5-ink);
+}
+.phase-five-countries .international-hero h1 {
+  color: var(--p5-ink) !important;
+}
+.phase-five-countries .international-hero p {
+  color: var(--p5-muted) !important;
+}
+.phase-five-countries .international-hero button {
+  border-color: var(--p5-primary);
+  background: var(--p5-primary);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(23, 78, 166, 0.16);
+}
+.phase-five-countries .international-hero button:hover {
+  border-color: var(--p5-primary-strong);
+  background: var(--p5-primary-strong);
+}
+
+/* Tabs: shared blue-underline standard. */
+.phase-five-countries .international-tabs {
+  border-bottom-color: var(--p5-line);
+}
+.phase-five-countries .international-tabs button {
+  min-height: 44px;
+  color: var(--p5-muted);
+}
+.phase-five-countries .international-tabs button:hover {
+  background: #f1f5fb;
+  color: var(--p5-ink);
+}
+.phase-five-countries .international-tabs button.active {
+  border-bottom-color: var(--p5-primary);
+  color: var(--p5-primary-strong);
+}
+
+/* Status pill: the "potentially viable" state used a green fill; every
+   other confirmed-style state on the site uses blue. */
+.phase-five-countries .international-status.potentially-viable {
+  background: var(--p5-selected);
+  color: var(--p5-primary-strong);
+}
+
+/* Country choice grid: selection state moves from teal to blue. */
+.phase-five-countries .country-choice-grid button {
+  border-radius: 8px;
+}
+.phase-five-countries .country-choice-grid button:hover,
+.phase-five-countries .country-choice-grid button.selected {
+  border-color: var(--p5-primary);
+  background: var(--p5-selected);
+}
+
+/* Cards: flat borders instead of decorative shadows and coloured top
+   borders, matching the Jobs/Applications/Interviews card treatment. */
+.phase-five-countries .international-evidence-grid article,
+.phase-five-countries .employer-evidence-levels article,
+.phase-five-countries .job-evidence-check,
+.phase-five-countries .international-lead-panel,
+.phase-five-countries .mobility-form fieldset {
+  border: 1px solid var(--p5-line);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.phase-five-countries .employer-evidence-levels span {
+  color: var(--p5-primary);
+}
+
+/* Default bare buttons to the shared secondary treatment. */
+.phase-five-countries button {
+  border: 1px solid var(--p5-primary);
+  background: #fff;
+  color: var(--p5-primary);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  font-weight: 700;
+}
+.phase-five-countries button:hover {
+  background: var(--p5-selected);
+  color: var(--p5-primary-strong);
+}
+.phase-five-countries button:disabled {
+  background: #e5e9ef;
+  border-color: #c7d0dc;
+  color: var(--p5-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Tabs and the country grid keep their own distinct treatment rather than
+   the generic button skin above. Only border-color is touched here so the
+   3px border-bottom width the underline depends on (set in
+   international.css) is never clobbered. */
+.phase-five-countries .international-tabs button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--p5-muted);
+  font-weight: 700;
+}
+.phase-five-countries .international-tabs button.active {
+  color: var(--p5-primary-strong);
+}
+.phase-five-countries .country-choice-grid button {
+  border-color: var(--p5-line);
+  background: #fff;
+  color: var(--p5-ink);
+  font-weight: 700;
+}
+
+/* The header CTA and the mobility profile's submit action are the single
+   filled primary per region; everything else stays secondary. */
+.phase-five-countries .international-hero button,
+.phase-five-countries .mobility-form .mobility-actions button[type="submit"] {
+  border-color: var(--p5-primary) !important;
+  background: var(--p5-primary) !important;
+  color: #fff !important;
+}
+.phase-five-countries .international-hero button:hover,
+.phase-five-countries
+  .mobility-form
+  .mobility-actions
+  button[type="submit"]:hover {
+  border-color: var(--p5-primary-strong) !important;
+  background: var(--p5-primary-strong) !important;
+}
+
+.phase-five-countries .mobility-actions p {
+  color: var(--p5-primary-strong);
+}
+
+.phase-five-countries .primary-link {
+  color: var(--p5-primary);
+}
