@@ -1,0 +1,329 @@
+.phase-four-interviews {
+  --p4-primary: #174ea6;
+  --p4-primary-strong: #123b78;
+  --p4-selected: #eaf2ff;
+  --p4-accent: #5145cd;
+  --p4-canvas: #f6f8fb;
+  --p4-surface: #ffffff;
+  --p4-ink: #172033;
+  --p4-muted: #5f6b7a;
+  --p4-line: #dce3ec;
+  --p4-warning: #a85d00;
+  --p4-error: #b42318;
+  color: var(--p4-ink);
+  max-width: 1120px;
+  padding-block: 40px 80px;
+}
+.phase-four-interviews .product-page-header {
+  margin-bottom: 26px;
+}
+.phase-four-interviews .product-page-header h1 {
+  color: var(--p4-ink);
+}
+.phase-four-interviews .product-page-header > div > p:not(.product-eyebrow) {
+  color: var(--p4-muted);
+  max-width: 62ch;
+}
+.phase-four-interviews .button-primary {
+  border-color: var(--p4-primary) !important;
+  background: var(--p4-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(23, 78, 166, 0.16);
+}
+.phase-four-interviews .button-primary:hover {
+  border-color: var(--p4-primary-strong) !important;
+  background: var(--p4-primary-strong) !important;
+}
+.phase-four-interviews .button-secondary {
+  background: #fff;
+  border: 1px solid var(--p4-primary);
+  color: var(--p4-primary);
+  box-shadow: none;
+}
+.phase-four-interviews .button-secondary:hover {
+  background: var(--p4-selected);
+  color: var(--p4-primary-strong);
+}
+.phase-four-interviews :focus-visible {
+  outline: 3px solid var(--p4-accent);
+  outline-offset: 3px;
+}
+.phase-four-header-actions {
+  margin: 0;
+}
+
+/* Filters card */
+.phase-four-filters {
+  align-items: end;
+  background: #fff;
+  border: 1px solid var(--p4-line);
+  border-radius: 10px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  margin: 0 0 10px;
+  padding: 16px;
+}
+.phase-four-filters label {
+  color: var(--p4-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  min-width: 0;
+}
+
+/* Live status */
+.phase-four-live-status:empty {
+  display: none;
+}
+.phase-four-live-status {
+  border-left: 3px solid var(--p4-primary);
+  color: var(--p4-muted);
+  padding: 8px 12px;
+  margin: 0 0 10px;
+}
+
+/* List rows */
+.phase-four-interview-items {
+  border-top: 1px solid var(--p4-line);
+}
+.phase-four-interview-row {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, auto) auto;
+  padding: 20px 4px;
+}
+.phase-four-interview-row h2 {
+  color: var(--p4-ink);
+  font-size: 1.14rem;
+}
+.phase-four-interview-row .eyebrow {
+  color: var(--p4-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 4px;
+}
+.phase-four-interview-row > div:first-child > p {
+  color: var(--p4-muted);
+  margin: 2px 0;
+}
+.phase-four-interview-row > div:first-child > p:last-child strong {
+  color: var(--p4-ink);
+}
+.phase-four-interview-row .button-secondary {
+  min-width: 148px;
+}
+.phase-four-storage-note {
+  border-top: 1px solid var(--p4-line);
+  color: var(--p4-muted);
+  margin-top: 24px;
+  padding-top: 16px;
+}
+
+/* Detail: back link */
+.phase-four-back-link {
+  align-items: center;
+  display: inline-flex;
+  min-height: 44px;
+  margin-bottom: 18px;
+}
+
+/* Detail: summary strip */
+.phase-four-interviews .interview-summary-strip {
+  background: #fff;
+  border-color: var(--p4-line);
+  color: var(--p4-muted);
+}
+.phase-four-interviews .interview-summary-strip strong {
+  color: var(--p4-warning);
+}
+
+/* Detail: tabs — shared tab standard (blue underline, no pills/fills) */
+.phase-four-tabs {
+  border-bottom-color: var(--p4-line);
+  margin-bottom: 4px;
+}
+.phase-four-tabs button {
+  color: var(--p4-muted);
+  border-bottom-color: transparent;
+}
+.phase-four-tabs button:hover {
+  background: #f1f5fb;
+  color: var(--p4-ink);
+}
+.phase-four-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--p4-primary);
+  color: var(--p4-primary-strong);
+  background: transparent;
+}
+
+/* Detail: overview grid + sections */
+.phase-four-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: 22px;
+  margin-top: 8px;
+}
+.phase-four-section {
+  background: #fff;
+  border: 1px solid var(--p4-line);
+  border-radius: 10px;
+  padding: 22px;
+  margin: 20px 0;
+}
+.phase-four-section h2 {
+  color: var(--p4-ink);
+  font-size: 1.2rem;
+  margin: 0 0 14px;
+}
+.phase-four-section dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.phase-four-section dt {
+  color: var(--p4-muted);
+  font-size: 0.82rem;
+}
+.phase-four-section dd {
+  margin: 2px 0 0;
+  font-weight: 650;
+}
+.phase-four-overview-grid .workflow-actions a {
+  color: var(--p4-primary);
+}
+
+/* Readiness areas */
+.interview-readiness-areas {
+  list-style: none;
+  display: grid;
+  gap: 7px;
+  margin: 10px 0;
+  padding: 0;
+  color: var(--p4-muted);
+  font-size: 0.88rem;
+}
+
+/* Preparation question list */
+.phase-four-interviews .interview-question-list {
+  border-top: 1px solid var(--p4-line);
+  gap: 0;
+}
+.phase-four-interviews .interview-question-list details {
+  border-block-end-color: var(--p4-line);
+  padding-block: 18px;
+}
+.phase-four-interviews .interview-question-list summary {
+  cursor: pointer;
+  font-weight: 650;
+  min-height: 44px;
+}
+.phase-four-interviews .interview-question-list summary:focus-visible {
+  outline-color: var(--p4-accent);
+}
+
+/* Answer editor */
+.phase-four-interviews .interview-answer-editor label {
+  display: grid;
+  gap: 6px;
+  color: var(--p4-ink);
+  font-weight: 650;
+  margin-top: 6px;
+}
+.phase-four-interviews .interview-answer-editor textarea {
+  width: 100%;
+  border: 1px solid var(--p4-line);
+  background: #fff;
+  color: var(--p4-ink);
+  min-height: 88px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+/* Practice */
+.phase-four-interviews .interview-practice fieldset {
+  border: 1px solid var(--p4-line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 16px 0;
+}
+.phase-four-interviews .interview-practice legend {
+  color: var(--p4-muted);
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+.phase-four-interviews button:disabled {
+  background: #e5e9ef !important;
+  border-color: #c7d0dc !important;
+  color: var(--p4-muted) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1100px) {
+  .phase-four-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 820px) {
+  .phase-four-interviews {
+    padding-block: 28px 112px;
+  }
+  .phase-four-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .phase-four-interview-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .phase-four-interview-row .button-secondary {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+@media (max-width: 520px) {
+  .phase-four-interviews {
+    padding-block: 22px 116px;
+  }
+  .phase-four-interviews .product-page-header h1 {
+    font-size: clamp(1.9rem, 9vw, 2.35rem);
+  }
+  .phase-four-filters {
+    grid-template-columns: 1fr;
+  }
+  .phase-four-interview-row {
+    grid-template-columns: 1fr;
+  }
+  .phase-four-section {
+    padding: 18px 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phase-four-interviews * {
+    animation: none !important;
+  }
+}
+
+.phase-four-interviews .product-eyebrow,
+.phase-four-interviews .eyebrow {
+  color: var(--p4-accent) !important;
+}
+.phase-four-interviews .product-empty-state-mark {
+  background: var(--p4-primary) !important;
+}
+.phase-four-interviews .product-status-badge.confirmed {
+  background: var(--p4-selected) !important;
+  color: var(--p4-primary-strong) !important;
+}
+.phase-four-interviews .product-status-badge.consider,
+.phase-four-interviews .product-status-badge.inferred,
+.phase-four-interviews .product-status-badge.missing,
+.phase-four-interviews .product-status-badge.insufficient {
+  background: #fff4e5 !important;
+  color: var(--p4-warning) !important;
+}
+.phase-four-interviews .product-status-badge.conflicting {
+  background: #fff0ee !important;
+  color: var(--p4-error) !important;
+}
