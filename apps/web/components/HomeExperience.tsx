@@ -369,7 +369,8 @@ export default function HomeExperience({
   }, [testMode]);
 
   useEffect(() => {
-    if (testMode || testFixture) return;
+    if (testFixture || (testMode && window.__AUTOTIME_HOME_TEST_FIXTURE__))
+      return;
     const refresh = () => {
       const storedDashboard = readDashboardState(userId);
       const storedOnboarding = loadProgressiveOnboarding(

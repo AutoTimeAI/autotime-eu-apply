@@ -148,9 +148,11 @@ test("Apply journey, application readiness and applied record", async ({
     path: `${screenshotDir}/apply-analysis-1440.png`,
   });
   await page
-    .getByRole("heading", { name: "Requirement evidence" })
+    .getByRole("heading", { name: /Requirement evidence|Why it fits/ })
     .scrollIntoViewIfNeeded();
-  for (const mapping of await page.locator(".evidence-row summary").all()) {
+  for (const mapping of await page
+    .locator(".evidence-row summary, .phase-two-evidence-row summary")
+    .all()) {
     await mapping.click();
   }
   await page.screenshot({
@@ -232,7 +234,9 @@ test("Consider and incomplete-evidence journeys remain contextual", async ({
     page.getByText(/Consider|Insufficient information/, { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Material unknowns" }),
+    page.getByRole("heading", {
+      name: /Material unknowns|Resolve the unknowns/,
+    }),
   ).toBeVisible();
   await page.screenshot({
     fullPage: true,
