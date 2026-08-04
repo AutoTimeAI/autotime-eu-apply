@@ -108,24 +108,54 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("");
   const [interviews, setInterviews] = useState<InterviewRecord[]>([]);
+  const [applicationSystemState, setApplicationSystemState] = useState<
+    "loading" | "unavailable" | null
+  >(null);
   const persist = (next: JobWorkflowState) => {
     setState(next);
     saveJobWorkflow(userId, next);
   };
   useEffect(() => {
+    const fixtureAllowed =
+      process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true" &&
+      userId === "00000000-0000-4000-8000-000000000001";
+    const fixture = fixtureAllowed
+      ? window.localStorage.getItem(
+          "autotime-phase-3-applications-system-state",
+        )
+      : null;
+    if (
+      (view.kind === "applications" || view.kind === "application") &&
+      fixture === "loading"
+    ) {
+      setApplicationSystemState("loading");
+      return;
+    }
+    if (
+      (view.kind === "applications" || view.kind === "application") &&
+      fixture === "unavailable"
+    ) {
+      setApplicationSystemState("unavailable");
+      setReady(true);
+      return;
+    }
     const loaded = loadJobWorkflow(userId);
     setState(loaded);
     setInterviews(loadInterviewWorkflow(userId).interviews);
     saveJobWorkflow(userId, loaded);
     setReady(true);
-  }, [userId]);
+  }, [userId, view.kind]);
 
   if (!ready)
-    return (
+    return view.kind === "applications" || view.kind === "application" ? (
+      <ApplicationsSystemState kind="loading" />
+    ) : (
       <main className="workflow-page">
         <p role="status">Loading your private workflow...</p>
       </main>
     );
+  if (applicationSystemState === "unavailable")
+    return <ApplicationsSystemState kind="unavailable" />;
   if (view.kind === "jobs")
     return (
       <JobsList
@@ -826,6 +856,68 @@ function Activity({
   );
 }
 
+function applicationTone(status: ApplicationWorkspaceStatus): ProductStatus {
+  if (["Ready", "Applied", "Offer"].includes(status)) return "confirmed";
+  if (["Rejected", "Withdrawn"].includes(status)) return "conflicting";
+  return "consider";
+}
+
+function applicationNextAction(
+  application: ApplicationWorkspace,
+  job: JobRecord | undefined,
+) {
+  if (!job) return "Review application";
+  const readiness = getApplicationReadiness(application, job);
+  if (application.status === "Preparing") return "Continue preparation";
+  if (application.status === "Needs review")
+    return readiness.ready ? "Mark ready" : readiness.blockers[0];
+  if (application.status === "Ready") return "Confirm applied";
+  if (application.status === "Applied") return "Review follow-up";
+  if (application.status === "Rejected") return "Review outcome";
+  return "Review application";
+}
+
+function ApplicationsSystemState({
+  kind,
+}: {
+  kind: "loading" | "unavailable";
+}) {
+  return (
+    <main className="workflow-page phase-three-applications">
+      <ProductPageHeader
+        eyebrow="Applications"
+        title="Your application pipeline"
+        description="Track preparation, readiness and submitted applications."
+      />
+      {kind === "loading" ? (
+        <section className="phase-three-system-state" aria-busy="true">
+          <span className="phase-three-loading-mark" aria-hidden="true" />
+          <div>
+            <h2>Loading applications</h2>
+            <p role="status">Loading your private application workspace…</p>
+          </div>
+        </section>
+      ) : (
+        <section className="phase-three-system-state" role="alert">
+          <span className="phase-three-state-icon warning" aria-hidden="true">
+            !
+          </span>
+          <div>
+            <h2>Applications are temporarily unavailable</h2>
+            <p>Your saved work is unchanged. Try loading the pipeline again.</p>
+            <button
+              className="button-primary"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
+          </div>
+        </section>
+      )}
+    </main>
+  );
+}
+
 function ApplicationsList({
   state,
   onOpen,
@@ -834,79 +926,134 @@ function ApplicationsList({
   onOpen: (id: string) => void;
 }) {
   const [filter, setFilter] = useState("all");
+  const stages: Array<"all" | ApplicationWorkspaceStatus> = [
+    "all",
+    "Preparing",
+    "Needs review",
+    "Ready",
+    "Applied",
+    "Interview",
+    "Offer",
+    "Rejected",
+    "Withdrawn",
+  ];
   const visible = state.applications.filter(
     (item) => filter === "all" || item.status === filter,
   );
   return (
-    <main className="workflow-page">
+    <main className="workflow-page phase-three-applications phase-three-pipeline">
       <ProductPageHeader
         eyebrow="Applications"
-        title="Prepare, review and track"
-        description="Every workspace stays tied to one selected job and its confirmed evidence."
+        title="Your application pipeline"
+        description="See what needs attention and move each application forward."
       />
-      <section className="workflow-filters">
-        <label>
-          Status
-          <select
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-          >
-            <option value="all">All statuses</option>
-            {[
-              "Preparing",
-              "Needs review",
-              "Ready",
-              "Applied",
-              "Interview",
-              "Offer",
-              "Rejected",
-              "Withdrawn",
-            ].map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </label>
+      <section
+        className="phase-three-stage-filters"
+        aria-label="Application stage filters"
+      >
+        <span>Stage</span>
+        <div role="group" aria-label="Filter applications by stage">
+          {stages.map((stage) => {
+            const count =
+              stage === "all"
+                ? state.applications.length
+                : state.applications.filter((item) => item.status === stage)
+                    .length;
+            if (stage !== "all" && count === 0) return null;
+            return (
+              <button
+                aria-pressed={filter === stage}
+                key={stage}
+                onClick={() => setFilter(stage)}
+              >
+                {stage === "all" ? "All" : stage} <span>{count}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
       {visible.length ? (
-        <section className="workflow-list">
+        <section
+          className="phase-three-application-list"
+          aria-label="Applications"
+        >
           {visible.map((application) => {
             const job = state.jobs.find(
               (item) => item.id === application.jobId,
             );
+            const readiness = job
+              ? getApplicationReadiness(application, job)
+              : { blockers: ["Job details unavailable"], ready: false };
+            const blocked = application.unsupportedClaims.length > 0;
             return (
-              <article className="workflow-list-row" key={application.id}>
-                <div>
-                  <p className="eyebrow">{application.status}</p>
+              <article
+                className="phase-three-application-row"
+                key={application.id}
+              >
+                <div className="phase-three-application-context">
+                  <p className="product-eyebrow">
+                    {job?.employer.value || "Employer unknown"}
+                  </p>
                   <h2>{job?.title.value || "Application"}</h2>
                   <p>
-                    {job?.employer.value || "Employer unknown"} Â· Follow-up{" "}
-                    {formatDate(application.followUpDate)}
+                    {job?.facts.location.value ||
+                      job?.facts.country.value ||
+                      "Location unknown"}
                   </p>
                 </div>
-                <ProductStatusBadge
-                  status={
-                    application.status === "Ready" ||
-                    application.status === "Applied"
-                      ? "confirmed"
-                      : "consider"
-                  }
-                >
-                  {application.status}
-                </ProductStatusBadge>
-                <button
-                  className="button-secondary"
-                  onClick={() => onOpen(application.id)}
-                >
-                  Review application
-                </button>
+                <div className="phase-three-application-state">
+                  <ProductStatusBadge
+                    status={applicationTone(application.status)}
+                  >
+                    {application.status}
+                  </ProductStatusBadge>
+                  <span
+                    className={
+                      blocked
+                        ? "blocked"
+                        : readiness.ready
+                          ? "ready"
+                          : "unknown"
+                    }
+                  >
+                    <b aria-hidden="true">
+                      {blocked ? "×" : readiness.ready ? "✓" : "!"}
+                    </b>{" "}
+                    {blocked
+                      ? "Unsupported claim"
+                      : readiness.ready
+                        ? "Checks complete"
+                        : `${readiness.blockers.length} check${readiness.blockers.length === 1 ? "" : "s"} open`}
+                  </span>
+                </div>
+                <div className="phase-three-application-activity">
+                  <span>Last activity</span>
+                  <strong>{formatDate(application.updatedAt)}</strong>
+                </div>
+                <div className="phase-three-application-action">
+                  <span>{applicationNextAction(application, job)}</span>
+                  <button
+                    className="button-secondary"
+                    onClick={() => onOpen(application.id)}
+                  >
+                    Open application
+                  </button>
+                </div>
               </article>
             );
           })}
         </section>
+      ) : state.applications.length ? (
+        <section className="phase-three-filter-empty">
+          <h2>No applications at this stage</h2>
+          <button className="button-secondary" onClick={() => setFilter("all")}>
+            Show all applications
+          </button>
+        </section>
       ) : (
         <ProductEmptyState
           title="No applications yet"
-          description="Open an Apply job and choose Prepare application. AutoTime does not create speculative applications."
+          description="Choose an analysed job when you are ready to prepare an application."
           action={
             <a className="button-primary" href="/dashboard/jobs">
               Review jobs
@@ -936,6 +1083,7 @@ function ApplicationDetail({
   status: string;
 }) {
   const readiness = getApplicationReadiness(application, job);
+  const analysis = currentAnalysis(job);
   const update = (changes: Partial<ApplicationWorkspace>) =>
     onChange({
       ...state,
@@ -956,227 +1104,319 @@ function ApplicationDetail({
       );
     }
   };
+  const confirmApplied = () =>
+    window.confirm(
+      "Confirm that you submitted this application outside AutoTime.",
+    ) && setStatus("Applied", true);
+  const primaryAction =
+    application.status === "Preparing" ? (
+      <button
+        className="button-primary"
+        onClick={() => setStatus("Needs review")}
+      >
+        Start final review
+      </button>
+    ) : application.status === "Needs review" ? (
+      <button
+        className="button-primary"
+        disabled={!readiness.ready}
+        onClick={() => setStatus("Ready")}
+      >
+        Mark ready
+      </button>
+    ) : application.status === "Ready" ? (
+      <button className="button-primary" onClick={confirmApplied}>
+        Mark as applied
+      </button>
+    ) : application.status === "Applied" ? (
+      <a
+        className="button-primary"
+        href={`/dashboard/interviews?applicationId=${application.id}`}
+      >
+        Add interview
+      </a>
+    ) : null;
   return (
-    <main className="workflow-page">
-      <a href="/dashboard/applications" className="text-link">
-        â† Applications
+    <main className="workflow-page phase-three-applications phase-three-application-detail">
+      <a
+        href="/dashboard/applications"
+        className="text-link phase-three-back-link"
+      >
+        ← Applications
       </a>
       <ProductPageHeader
-        eyebrow={application.status}
+        eyebrow={job.employer.value || "Employer unknown"}
         title={job.title.value || "Application workspace"}
-        description={`${job.employer.value || "Employer unknown"} Â· Evidence-backed preparation only`}
+        description={
+          job.facts.location.value ||
+          job.facts.country.value ||
+          "Location unknown"
+        }
+        action={primaryAction}
       />
-      <p role="status">{status}</p>
-      {interviews.length ? (
-        <section className="workflow-section">
-          <h2>Linked interviews</h2>
-          <ul>
-            {interviews.map((interview) => (
-              <li key={interview.id}>
-                <a href={`/dashboard/interviews/${interview.id}`}>
-                  {interview.stage.replaceAll("_", " ")}
-                </a>{" "}
-                Ã‚Â· {interview.status} Ã‚Â·{" "}
-                {interview.scheduledAt
-                  ? formatDate(interview.scheduledAt)
-                  : "Date not set"}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      <ApplicationChecklist
-        checklist={application.checklist}
-        onChange={(checklist) => update({ checklist })}
-      />
-      <section className="workflow-section">
-        <h2>Evidence and CV</h2>
-        <label>
-          <input
-            type="checkbox"
-            checked={application.evidenceConfirmed}
-            onChange={(event) =>
-              update({ evidenceConfirmed: event.target.checked })
-            }
-          />{" "}
-          I confirmed the selected evidence supports the application.
-        </label>
-        <label>
-          Selected CV/profile version
-          <input
-            value={application.selectedCvVersion}
-            onChange={(event) =>
-              update({ selectedCvVersion: event.target.value })
-            }
-          />
-        </label>
-        <p>
-          Recommendations may reorder confirmed evidence, but must never invent
-          employment, technologies, years, qualifications, metrics or
-          immigration claims.
-        </p>
-        <label>
-          Unsupported-claim review
-          <textarea
-            value={application.unsupportedClaims.join("\n")}
-            onChange={(event) =>
-              update({
-                unsupportedClaims: event.target.value
-                  .split("\n")
-                  .map((item) => item.trim())
-                  .filter(Boolean),
-              })
-            }
-            placeholder="Add each unsupported claim on a new line; any entry blocks Ready."
-          />
-        </label>
-      </section>
-      <section className="workflow-section">
-        <h2>Screening answers</h2>
-        <p>
-          Right-to-work, sponsorship, salary, legal, health and demographic
-          questions require direct user input and explicit review.
-        </p>
-        <label>
-          <input
-            type="checkbox"
-            checked={application.consequentialAnswersReviewed}
-            onChange={(event) =>
-              update({ consequentialAnswersReviewed: event.target.checked })
-            }
-          />{" "}
-          I reviewed every consequential answer directly.
-        </label>
-      </section>
-      <section className="workflow-section">
-        <h2>Optional cover letter</h2>
-        <label>
-          <input
-            type="checkbox"
-            checked={application.coverLetterRequested}
-            onChange={(event) =>
-              update({
-                coverLetterRequested: event.target.checked,
-                coverLetter: event.target.checked
-                  ? (application.coverLetter ?? "")
-                  : undefined,
-              })
-            }
-          />{" "}
-          Prepare a cover letter for this job
-        </label>
-        {application.coverLetterRequested ? (
-          <textarea
-            value={application.coverLetter ?? ""}
-            onChange={(event) => update({ coverLetter: event.target.value })}
-            placeholder="Draft only from confirmed role facts and evidence."
-          />
-        ) : null}
-      </section>
-      <section className="workflow-section">
-        <h2>Readiness</h2>
+      <section
+        className="phase-three-readiness-summary"
+        aria-labelledby="application-readiness-heading"
+      >
+        <div>
+          <ProductStatusBadge status={applicationTone(application.status)}>
+            {application.status}
+          </ProductStatusBadge>
+          <h2 id="application-readiness-heading">
+            {readiness.ready
+              ? "Required checks are complete"
+              : `${readiness.blockers.length} readiness check${readiness.blockers.length === 1 ? "" : "s"} open`}
+          </h2>
+          <p>{applicationNextAction(application, job)}</p>
+        </div>
         {readiness.ready ? (
-          <p className="notice-success">
-            Required facts, evidence and consequential reviews are complete.
-          </p>
+          <span className="phase-three-readiness-state ready">
+            <b aria-hidden="true">✓</b> Ready for the next step
+          </span>
         ) : (
           <ul>
             {readiness.blockers.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>
+                <b aria-hidden="true">!</b> {item}
+              </li>
             ))}
           </ul>
         )}
-        <div className="workflow-actions">
-          {application.status === "Preparing" ? (
-            <button
-              className="button-primary"
-              onClick={() => setStatus("Needs review")}
-            >
-              Start final review
-            </button>
-          ) : null}
-          {application.status === "Needs review" ? (
-            <button
-              className="button-primary"
-              disabled={!readiness.ready}
-              onClick={() => setStatus("Ready")}
-            >
-              Mark ready
-            </button>
-          ) : null}
-          {application.status === "Ready" ? (
-            <button
-              className="button-primary"
-              onClick={() =>
-                window.confirm(
-                  "Confirm that you submitted this application outside AutoTime.",
-                ) && setStatus("Applied", true)
+      </section>
+      {status ? (
+        <p className="phase-three-live-status" role="status">
+          {status}
+        </p>
+      ) : null}
+
+      <div className="phase-three-detail-grid">
+        <div className="phase-three-detail-main">
+          <ApplicationChecklist
+            checklist={application.checklist}
+            onChange={(checklist) => update({ checklist })}
+          />
+
+          <section className="phase-three-section phase-three-evidence-review">
+            <header>
+              <p className="product-eyebrow">Evidence and claims</p>
+              <h2>Review application evidence</h2>
+            </header>
+            <label className="phase-three-check-control">
+              <input
+                type="checkbox"
+                checked={application.evidenceConfirmed}
+                onChange={(event) =>
+                  update({ evidenceConfirmed: event.target.checked })
+                }
+              />
+              <span>
+                <strong>
+                  I confirmed the selected evidence supports the application.
+                </strong>
+                <small>
+                  I checked that selected evidence supports this application.
+                </small>
+              </span>
+            </label>
+            <label>
+              Selected CV/profile version
+              <input
+                value={application.selectedCvVersion}
+                onChange={(event) =>
+                  update({ selectedCvVersion: event.target.value })
+                }
+              />
+            </label>
+            <label
+              className={
+                application.unsupportedClaims.length
+                  ? "phase-three-unsupported"
+                  : ""
               }
             >
-              Mark as applied
-            </button>
-          ) : null}
-        </div>
-      </section>
-      {application.status === "Applied" ? (
-        <section className="workflow-section">
-          <h2>Submission record</h2>
-          <p>
-            Applied {formatDate(application.appliedAt)}. AutoTime did not submit
-            externally.
-          </p>
-          <a
-            className="button-primary"
-            href={`/dashboard/interviews?applicationId=${application.id}`}
-          >
-            Add interview
-          </a>
-          <div className="workflow-form-grid">
-            <label>
-              Channel
-              <input
-                value={application.applicationChannel ?? ""}
-                onChange={(event) =>
-                  update({ applicationChannel: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Reference number
-              <input
-                value={application.referenceNumber ?? ""}
-                onChange={(event) =>
-                  update({ referenceNumber: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Follow-up date
-              <input
-                type="date"
-                value={application.followUpDate ?? ""}
-                onChange={(event) =>
-                  update({ followUpDate: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Submitted document versions
-              <input
-                value={application.documentVersions.join(", ")}
+              Unsupported claims
+              <textarea
+                aria-label="Unsupported-claim review"
+                value={application.unsupportedClaims.join("\n")}
                 onChange={(event) =>
                   update({
-                    documentVersions: event.target.value
-                      .split(",")
+                    unsupportedClaims: event.target.value
+                      .split("\n")
                       .map((item) => item.trim())
                       .filter(Boolean),
                   })
                 }
+                placeholder="Add one unsupported claim per line."
               />
+              <small>
+                {application.unsupportedClaims.length
+                  ? "Blocked: remove or correct every unsupported claim."
+                  : "No unsupported claims recorded."}
+              </small>
             </label>
-          </div>
-        </section>
-      ) : null}
+            {analysis?.capability.length ? (
+              <details className="phase-three-disclosure">
+                <summary>View evidence mappings</summary>
+                <div>
+                  {analysis.capability.map((item) => (
+                    <article key={item.requirement}>
+                      <strong>{item.requirement}</strong>
+                      <span>{item.state}</span>
+                      <p>
+                        {item.evidence.join("; ") ||
+                          "No confirmed supporting evidence."}
+                      </p>
+                      <small>Vacancy source: “{item.sourceText}”</small>
+                    </article>
+                  ))}
+                </div>
+              </details>
+            ) : null}
+          </section>
+
+          <section className="phase-three-section">
+            <header>
+              <p className="product-eyebrow">Required review</p>
+              <h2>Screening answers</h2>
+            </header>
+            <label className="phase-three-check-control">
+              <input
+                type="checkbox"
+                checked={application.consequentialAnswersReviewed}
+                onChange={(event) =>
+                  update({ consequentialAnswersReviewed: event.target.checked })
+                }
+              />
+              <span>
+                <strong>I reviewed every consequential answer directly.</strong>
+                <small>
+                  I directly checked work-right, sponsorship, salary, legal,
+                  health and demographic answers.
+                </small>
+              </span>
+            </label>
+          </section>
+
+          <details className="phase-three-disclosure phase-three-supporting">
+            <summary>Optional cover letter</summary>
+            <div>
+              <label className="phase-three-check-control">
+                <input
+                  type="checkbox"
+                  checked={application.coverLetterRequested}
+                  onChange={(event) =>
+                    update({
+                      coverLetterRequested: event.target.checked,
+                      coverLetter: event.target.checked
+                        ? (application.coverLetter ?? "")
+                        : undefined,
+                    })
+                  }
+                />
+                <span>
+                  <strong>Prepare a cover letter</strong>
+                  <small>Use confirmed role facts and evidence only.</small>
+                </span>
+              </label>
+              {application.coverLetterRequested ? (
+                <textarea
+                  value={application.coverLetter ?? ""}
+                  onChange={(event) =>
+                    update({ coverLetter: event.target.value })
+                  }
+                  placeholder="Draft only from confirmed role facts and evidence."
+                />
+              ) : null}
+            </div>
+          </details>
+        </div>
+
+        <aside className="phase-three-detail-aside">
+          {application.status === "Applied" ? (
+            <section className="phase-three-section phase-three-submission-record">
+              <p className="product-eyebrow">Applied</p>
+              <h2>Submission record</h2>
+              <p>
+                Applied {formatDate(application.appliedAt)}. Recorded by you.
+                AutoTime did not submit externally.
+              </p>
+              <div className="phase-three-record-fields">
+                <label>
+                  Channel
+                  <input
+                    value={application.applicationChannel ?? ""}
+                    onChange={(event) =>
+                      update({ applicationChannel: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Reference number
+                  <input
+                    value={application.referenceNumber ?? ""}
+                    onChange={(event) =>
+                      update({ referenceNumber: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Follow-up date
+                  <input
+                    type="date"
+                    value={application.followUpDate ?? ""}
+                    onChange={(event) =>
+                      update({ followUpDate: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Submitted document versions
+                  <input
+                    value={application.documentVersions.join(", ")}
+                    onChange={(event) =>
+                      update({
+                        documentVersions: event.target.value
+                          .split(",")
+                          .map((item) => item.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            </section>
+          ) : null}
+          {interviews.length ? (
+            <section className="phase-three-section">
+              <p className="product-eyebrow">Next stage</p>
+              <h2>Linked interviews</h2>
+              <ul className="phase-three-linked-list">
+                {interviews.map((interview) => (
+                  <li key={interview.id}>
+                    <a href={`/dashboard/interviews/${interview.id}`}>
+                      {interview.stage.replaceAll("_", " ")}
+                    </a>
+                    <span>
+                      {interview.status} ·{" "}
+                      {interview.scheduledAt
+                        ? formatDate(interview.scheduledAt)
+                        : "Date not set"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <details className="phase-three-disclosure phase-three-supporting">
+            <summary>Safety guidance</summary>
+            <p>
+              AI suggestions are drafts. Confirm evidence, claims and
+              consequential answers yourself.
+            </p>
+          </details>
+          <Activity job={job} application={application} />
+        </aside>
+      </div>
     </main>
   );
 }
