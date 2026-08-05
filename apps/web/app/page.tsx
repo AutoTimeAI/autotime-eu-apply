@@ -278,12 +278,11 @@ export default async function HomePage() {
           <p className="eyebrow">
             Private Beta v1 - founder-led early access
           </p>
-          <h1 id="landing-title">AutoTime AI</h1>
+          <h1 id="landing-title">EU Apply</h1>
           <p>
             A quality-first workspace for targeting stronger European tech
             roles, checking country-aware fit, proving your experience and
-            improving applications with guided beta feedback. This is not the
-            final public SaaS launch.
+            improving applications with guided beta feedback.
           </p>
           <div className="landing-actions">
             <Link
@@ -313,8 +312,8 @@ export default async function HomePage() {
             Follow the application logic top to bottom
           </h2>
           <p>
-            AutoTime keeps the process ordered: decide whether the role is worth
-            effort, gather proof, write from that proof, then prepare to
+            EU Apply keeps the process ordered: decide whether the role is
+            worth effort, gather proof, write from that proof, then prepare to
             convert.
           </p>
         </div>
@@ -544,9 +543,9 @@ export default async function HomePage() {
             making decisions.
           </p>
           <p>
-            No job, visa, sponsorship, or interview guarantees. AutoTime EU
-            Apply helps users make better application decisions, strengthen
-            positioning, and prepare more effectively.
+            No job, visa, sponsorship, or interview guarantees. EU Apply helps
+            users make better application decisions, strengthen positioning,
+            and prepare more effectively.
           </p>
         </div>
       </section>
@@ -558,7 +557,7 @@ export default async function HomePage() {
             Start with one target country, one role family and real evidence.
           </h2>
           <p>
-            The best version of AutoTime is narrow on purpose: fewer roles,
+            The best version of EU Apply is narrow on purpose: fewer roles,
             clearer fit and stronger proof before every application.
           </p>
         </div>
@@ -566,6 +565,14 @@ export default async function HomePage() {
           {account ? "Continue workflow" : "Build my evidence"}
         </Link>
       </section>
+
+      <footer className="landing-footer">
+        <p>&copy; {new Date().getFullYear()} AutoTime AI Ltd. EU Apply is a product of AutoTime AI Ltd.</p>
+        <nav aria-label="Footer">
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+        </nav>
+      </footer>
     </main>
   );
 }

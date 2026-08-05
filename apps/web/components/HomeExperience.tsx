@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   companionDashboardStateSchema,
   type CompanionDashboardState,
@@ -28,6 +29,10 @@ import {
   getProfileReadinessFromParts,
   profileProtocolReadinessEvent,
 } from "./ProfileProtocolLock";
+import {
+  hasCompletedOnboarding,
+  markOnboardingComplete,
+} from "./OnboardingWizard";
 import {
   ProductPageHeader,
   ProductSectionHeader,
@@ -328,6 +333,7 @@ function OnboardingStep({
 }
 
 export default function HomeExperience() {
+  const router = useRouter();
   const { userId } = useDashboardPlan();
   const [dashboardState, setDashboardState] =
     useState<CompanionDashboardState | null>(null);
@@ -345,6 +351,21 @@ export default function HomeExperience() {
   useEffect(() => {
     const refresh = () => {
       const storedDashboard = readDashboardState(userId);
+
+      if (!hasCompletedOnboarding(userId)) {
+        const coreReadiness = getProfileReadinessFromParts(
+          storedDashboard?.profile,
+          storedDashboard?.reusableAnswers,
+        );
+
+        if (coreReadiness >= 90) {
+          markOnboardingComplete(userId);
+        } else {
+          router.replace("/dashboard/onboarding");
+          return;
+        }
+      }
+
       const storedOnboarding = loadProgressiveOnboarding(
         window.localStorage,
         userId,
@@ -386,7 +407,7 @@ export default function HomeExperience() {
       );
       window.removeEventListener("storage", refresh);
     };
-  }, [userId]);
+  }, [router, userId]);
 
   const context = useMemo(
     () =>

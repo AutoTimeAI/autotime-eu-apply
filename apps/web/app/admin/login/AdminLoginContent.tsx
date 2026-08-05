@@ -63,9 +63,9 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
       <section className="admin-login-panel">
         <div className="admin-login-copy">
           <p className="eyebrow">Internal admin</p>
-          <h1>AutoTime control room access</h1>
+          <h1>EU Apply control room access</h1>
           <p>
-            Use your existing AutoTime account. Admin permission is checked
+            Use your existing EU Apply account. Admin permission is checked
             independently on the server.
           </p>
         </div>
@@ -73,9 +73,9 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
         <div className="admin-login-card">
           <div>
             <span className="admin-live-pill">Protected</span>
-            <h2>AutoTime account</h2>
+            <h2>EU Apply account</h2>
             <p>
-              Continue with the same Google account you use for AutoTime.
+              Continue with the same Google account you use for EU Apply.
             </p>
           </div>
 
