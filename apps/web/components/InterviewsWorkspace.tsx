@@ -266,25 +266,34 @@ function InterviewList({
     }
   };
   return (
-    <main className="workflow-page">
+    <main className="workflow-page phase-four-interviews phase-four-interview-list">
       <ProductPageHeader
         eyebrow="Interviews"
         title="Prepare from the application evidence"
         description="Record an interview, prepare truthful job-specific answers, practise weak areas and capture the outcome."
+        action={
+          <div className="workflow-actions phase-four-header-actions">
+            {grouped.length && !adding ? (
+              <button
+                className="button-primary"
+                onClick={() => setAdding(true)}
+              >
+                Add interview
+              </button>
+            ) : null}
+            <a className="button-secondary" href="/dashboard/applications">
+              Applications
+            </a>
+          </div>
+        }
       />
-      <div className="workflow-actions">
-        <button
-          className="button-primary"
-          onClick={() => setAdding((value) => !value)}
-        >
-          Add interview
-        </button>
-        <a className="button-secondary" href="/dashboard/applications">
-          Applications
-        </a>
-      </div>
-      <p role="status">{status}</p>
-      <section className="workflow-filters" aria-label="Interview filters">
+      <p className="phase-four-live-status" role="status">
+        {status}
+      </p>
+      <section
+        className="workflow-filters phase-four-filters"
+        aria-label="Interview filters"
+      >
         <label>
           Timing
           <select
@@ -354,7 +363,10 @@ function InterviewList({
         </label>
       </section>
       {adding ? (
-        <section className="workflow-section" aria-labelledby="add-interview">
+        <section
+          className="workflow-section phase-four-section"
+          aria-labelledby="add-interview"
+        >
           <h2 id="add-interview">Add interview</h2>
           <p>
             Choose an Applied or Interview application. Leave the date blank to
@@ -468,14 +480,20 @@ function InterviewList({
         </section>
       ) : null}
       {grouped.length ? (
-        <section className="workflow-list" aria-label="Interview records">
+        <section
+          className="workflow-list phase-four-interview-items"
+          aria-label="Interview records"
+        >
           {grouped.map((interview) => {
             const job = workflow.jobs.find(
               (item) => item.id === interview.jobId,
             );
             const readiness = getInterviewReadiness(interview);
             return (
-              <article className="workflow-list-row" key={interview.id}>
+              <article
+                className="workflow-list-row phase-four-interview-row"
+                key={interview.id}
+              >
                 <div>
                   <p className="eyebrow">{stageLabel(interview.stage)}</p>
                   <h2>{job?.title.value || "Interview"}</h2>
@@ -530,7 +548,7 @@ function InterviewList({
           }
         />
       )}
-      <p className="workflow-storage-note">
+      <p className="workflow-storage-note phase-four-storage-note">
         Development storage: interview records are isolated to this signed-in
         user in this browser and are not durable cross-device production
         records.
@@ -588,8 +606,8 @@ function InterviewDetail({
       </main>
     );
   return (
-    <main className="workflow-page">
-      <a className="text-link" href="/dashboard/interviews">
+    <main className="workflow-page phase-four-interviews phase-four-interview-detail">
+      <a className="text-link phase-four-back-link" href="/dashboard/interviews">
         ← Interviews
       </a>
       <ProductPageHeader
@@ -617,7 +635,7 @@ function InterviewDetail({
       <div
         role="tablist"
         aria-label="Interview workspace"
-        className="workflow-tabs"
+        className="workflow-tabs phase-four-tabs"
       >
         {tabs.map((item, index) => (
           <button
@@ -682,8 +700,8 @@ function InterviewOverview({
   onStatus,
 }: any) {
   return (
-    <div className="workflow-detail-grid">
-      <section className="workflow-section">
+    <div className="workflow-detail-grid phase-four-overview-grid">
+      <section className="workflow-section phase-four-section">
         <h2>Interview facts</h2>
         <dl>
           <dt>Stage</dt>
@@ -703,7 +721,7 @@ function InterviewOverview({
           <a href="/dashboard/autofill-profile">Proof Library</a>
         </div>
       </section>
-      <section className="workflow-section">
+      <section className="workflow-section phase-four-section">
         <h2>Preparation readiness</h2>
         <p>{readiness.label}</p>
         {readiness.blockers.length ? (
@@ -796,7 +814,7 @@ function InterviewPreparation({
 }) {
   return (
     <div>
-      <section className="workflow-section">
+      <section className="workflow-section phase-four-section">
         <h2>High-priority preparation</h2>
         <p>
           Questions are selected deterministically from the interview stage, job
@@ -969,7 +987,7 @@ function AnswerEditor({
           Save draft
         </button>
         <button
-          className="button-primary"
+          className="button-secondary"
           disabled={!answer.trim() || Boolean(unsupported.trim())}
           onClick={() =>
             onSave(
@@ -1034,7 +1052,7 @@ function InterviewPractice({
       updatedAt: new Date().toISOString(),
     });
   return (
-    <section className="workflow-section interview-practice">
+    <section className="workflow-section interview-practice phase-four-section">
       <p className="eyebrow">
         Question {index + 1} of {interview.questions.length}
       </p>
@@ -1096,7 +1114,7 @@ function InterviewOutcomePanel({
   const [interpretation, setInterpretation] = useState("");
   const [notes, setNotes] = useState("");
   return (
-    <section className="workflow-section">
+    <section className="workflow-section phase-four-section">
       <h2>Record outcome and next action</h2>
       {interview.status !== "completed" ? (
         <p>

@@ -1,6 +1,11 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { AdminAuthorizationError } from "./admin-authorization";
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "./configuration-error";
+import { getAdminPublicStatus } from "./admin-error-policy";
 
 export function createSafeDiagnostic(category: string) {
   const diagnosticId = crypto.randomUUID();
@@ -12,6 +17,12 @@ export function createSafeDiagnostic(category: string) {
   return diagnosticId;
 }
 export function safeAdminError(error: unknown, category: string, status = 500) {
+  const publicStatus = getAdminPublicStatus(error, status);
+  if (publicStatus === 503 && isConfigurationUnavailableError(error))
+    return NextResponse.json(
+      { data: null, error: configurationUnavailableMessage, status: 503 },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
   if (error instanceof AdminAuthorizationError)
     return NextResponse.json(
       {
@@ -24,7 +35,6 @@ export function safeAdminError(error: unknown, category: string, status = 500) {
         headers: { "Cache-Control": "private, no-store" },
       },
     );
-  const publicStatus = status;
   const diagnosticId = createSafeDiagnostic(category);
   return NextResponse.json(
     {

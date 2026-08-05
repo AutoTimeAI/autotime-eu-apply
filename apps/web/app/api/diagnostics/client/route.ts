@@ -2,9 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
+import {
   createDiagnostic,
   diagnosticJson,
-  logDiagnostic
+  logDiagnostic,
 } from "../../../../lib/diagnostics"
 
 const clientDiagnosticSchema = z.object({
@@ -18,25 +22,29 @@ const clientDiagnosticSchema = z.object({
     "extension",
     "stripe",
     "supabase",
-    "sync"
+    "sync",
   ]),
   code: z.string().trim().min(1).max(120),
   message: z.string().trim().min(1).max(500),
   metadata: z
     .record(
       z.string(),
-      z.union([z.string(), z.number(), z.boolean(), z.null()])
+      z.union([z.string(), z.number(), z.boolean(), z.null()]),
     )
-    .optional()
+    .optional(),
 })
 
 type ClientDiagnosticData = {
   logged: true
 }
 
-export async function POST(
-  request: NextRequest
-): Promise<NextResponse<{ data: ClientDiagnosticData | null; error: string | null; status: number }>> {
+export async function POST(request: NextRequest): Promise<
+  NextResponse<{
+    data: ClientDiagnosticData | null
+    error: string | null
+    status: number
+  }>
+> {
   try {
     const payload = clientDiagnosticSchema.parse(await request.json())
     const { user } = await getRequestUser(request)
@@ -45,22 +53,31 @@ export async function POST(
       code: payload.code,
       message: payload.message,
       request,
-      status: 500
+      status: 500,
     })
 
     logDiagnostic(diagnostic, {
       ...(payload.metadata ?? {}),
       authenticated: Boolean(user),
       clientReported: true,
-      userId: user?.id ?? null
+      userId: user?.id ?? null,
     })
 
     return NextResponse.json({
       data: { logged: true },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "auth",
+        code: "diagnostics.client.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "dashboard",
@@ -68,7 +85,7 @@ export async function POST(
         data: null,
         error: "Invalid client diagnostic body",
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -82,7 +99,7 @@ export async function POST(
           : "Client diagnostic logging failed",
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

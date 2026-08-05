@@ -164,8 +164,9 @@ async function seed(page: Page, withInterview = false, completed = false) {
           },
         ],
       };
-      (window as typeof window & { __phase3InterviewFixture?: unknown })
-        .__phase3InterviewFixture = interview;
+      (
+        window as typeof window & { __phase3InterviewFixture?: unknown }
+      ).__phase3InterviewFixture = interview;
       localStorage.setItem(
         "autotime-phase-3c-interviews-v1:" + userId,
         JSON.stringify({
@@ -287,7 +288,11 @@ test("complete evidence review requires explicit final review before Ready", asy
   await secondQuestion.getByRole("button", { name: "Confirm answer" }).click();
 
   await page.getByRole("tab", { name: "Overview" }).click();
-  await expect(page.getByRole("tabpanel", { name: "Overview" }).getByText("Good coverage", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("tabpanel", { name: "Overview" })
+      .getByText("Good coverage", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Complete final review" }).click();
   await page.getByRole("button", { name: "Mark ready" }).click();
   await expect(page.getByRole("status")).toContainText("marked ready");
@@ -340,7 +345,7 @@ test("Home and application detail surface the linked interview", async ({
   await seed(page, true);
   await page.goto("/dashboard");
   await expect(
-    page.getByRole("heading", { name: "Prepare for your interview" }),
+    page.getByRole("heading", { name: /Prepare for your .* interview/ }),
   ).toBeVisible();
   await page.screenshot({
     path: shots + "/home-interview-priority-1440.png",
@@ -364,20 +369,23 @@ test("Home updates when an imminent interview is created in the active session",
   await expect(
     page.getByRole("heading", { name: "Choose your career starting point" }),
   ).toBeVisible();
-  await page.evaluate(({ userId }) => {
-    const fixture = (
-      window as typeof window & { __phase3InterviewFixture?: unknown }
-    ).__phase3InterviewFixture;
-    localStorage.setItem(
-      "autotime-phase-3c-interviews-v1:" + userId,
-      JSON.stringify({ interviews: [fixture], schemaVersion: 1 }),
-    );
-    window.dispatchEvent(
-      new CustomEvent("autotime-interview-workflow-changed"),
-    );
-  }, { userId });
+  await page.evaluate(
+    ({ userId }) => {
+      const fixture = (
+        window as typeof window & { __phase3InterviewFixture?: unknown }
+      ).__phase3InterviewFixture;
+      localStorage.setItem(
+        "autotime-phase-3c-interviews-v1:" + userId,
+        JSON.stringify({ interviews: [fixture], schemaVersion: 1 }),
+      );
+      window.dispatchEvent(
+        new CustomEvent("autotime-interview-workflow-changed"),
+      );
+    },
+    { userId },
+  );
   await expect(
-    page.getByRole("heading", { name: "Prepare for your interview" }),
+    page.getByRole("heading", { name: /Prepare for your .* interview/ }),
   ).toBeVisible();
 });
 
@@ -401,7 +409,7 @@ test("recorded rejection keeps employer reason and interpretation separate", asy
   });
   await page.goto("/dashboard/applications");
   const rejectedApplication = page
-    .locator("article.workflow-list-row")
+    .locator("article.workflow-list-row, article.phase-three-application-row")
     .filter({ has: page.getByRole("heading", { name: "Cloud Engineer" }) });
   await expect(rejectedApplication).toBeVisible();
   await expect(

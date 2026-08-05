@@ -9,6 +9,10 @@ import {
 } from "shared";
 import { getRequestUser } from "../../../../lib/api-auth";
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error";
+import {
   createRoleIntelligenceProvider,
   RoleIntelligenceUnavailableError,
 } from "../../../../lib/role-intelligence";
@@ -22,13 +26,13 @@ const requestSchema = z
   })
   .strict();
 export async function POST(request: Request) {
-  const { user } = await getRequestUser(request);
-  if (!user?.id.trim())
-    return NextResponse.json(
-      { data: null, error: "Unauthorised" },
-      { status: 401 },
-    );
   try {
+    const { user } = await getRequestUser(request);
+    if (!user?.id.trim())
+      return NextResponse.json(
+        { data: null, error: "Unauthorised" },
+        { status: 401 },
+      );
     const input = requestSchema.parse(await request.json());
     const provider = createRoleIntelligenceProvider();
     const extracted = await provider.extractCandidateEvidence({
@@ -57,6 +61,11 @@ export async function POST(request: Request) {
       error: null,
     });
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return NextResponse.json(
+        { data: null, error: configurationUnavailableMessage },
+        { status: 503 },
+      );
     if (error instanceof z.ZodError)
       return NextResponse.json(
         { data: null, error: "Role Pathways input is invalid." },

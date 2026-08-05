@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { InternationalSection } from "./model";
 
 const sections: Array<[InternationalSection, string]> = [
@@ -15,6 +16,13 @@ export function InternationalSectionNavigation({
   section: InternationalSection;
   onChange: (section: InternationalSection) => void;
 }) {
+  const activeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, [section]);
   return (
     <nav aria-label="International sections" className="international-tabs">
       {sections.map(([id, label]) => (
@@ -23,6 +31,7 @@ export function InternationalSectionNavigation({
           className={section === id ? "active" : ""}
           key={id}
           onClick={() => onChange(id)}
+          ref={section === id ? activeRef : undefined}
           type="button"
         >
           {label}

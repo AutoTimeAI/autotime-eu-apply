@@ -1,0 +1,17 @@
+{
+  "absolutePath": "C:\\Development\\Autotime-EU-Apply\\.codex-temp\\design-worktree\\screenshots\\phase-1-home\\corrected-final-apps-v3\\active-application-corrected-390x844.png",
+  "modificationTimestamp": "2026-08-03T21:29:38.203Z",
+  "sha256": "99f0bc6247d8dfeb2084d85fbcb98d8af34a22fdb04659c90c115ee39deb7aed",
+  "worktree": "C:\\Development\\Autotime-EU-Apply\\.codex-temp\\design-worktree",
+  "branch": "design/product-experience-reset",
+  "statusSummary": "M apps/web/app/dashboard/layout.tsx\n M apps/web/app/dashboard/page.tsx\n M apps/web/app/globals.css\n M apps/web/components/HomeExperience.tsx\n M apps/web/components/UserNav.tsx\n M apps/web/next-env.d.ts\n M apps/web/next.config.ts\n?? apps/web/app/dashboard/phase-1-brand.css\n?? apps/web/app/dashboard/phase-1-foundations.css\n?? apps/web/app/dashboard/phase-1-home-states.css\n?? apps/web/app/dashboard/phase-1-shell-correction.css\n?? apps/web/app/dashboard/phase-1-system-states.css\n?? apps/web/app/dashboard/phase-1-touch-targets.css\n?? apps/web/app/design-lab/\n?? apps/web/components/design-lab/\n?? docs/phase-1-home-migration-report.md\n?? docs/phase-1-home-screenshot-manifest.md\n?? docs/product-density-feature-discoverability-audit.md\n?? docs/product-experience-reset.md\n?? playwright.design.config.ts\n?? screenshots/browser-health-check.png\n?? screenshots/design-reset/\n?? screenshots/phase-1-home/\n?? tests/e2e/17-design-lab-visual.spec.ts\n?? tests/e2e/18-design-lab-palette.spec.ts\n?? tests/e2e/19-design-lab-green-free.spec.ts\n?? tests/e2e/20-design-lab-density.spec.ts\n?? tests/e2e/21-design-lab-interactions.spec.ts\n?? tests/e2e/22-phase-1-home-visual.spec.ts\n?? tests/e2e/23-phase-1-home-states.spec.ts\n?? tests/e2e/24-phase-1-corrected-evidence.spec.ts",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "fixture": "active-application",
+  "headerHeight": 63,
+  "greenFamilyScan": "pass",
+  "primaryCtaObstruction": "pass",
+  "developmentOverlay": "absent"
+}

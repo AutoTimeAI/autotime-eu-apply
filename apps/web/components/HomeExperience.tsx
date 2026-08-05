@@ -42,6 +42,25 @@ import { useDashboardPlan } from "./UserNav";
 
 const dashboardStorageKey = "autotime-v2-companion-dashboard";
 
+type HomeViewState = "ready" | "loading" | "unavailable";
+
+export type HomeTestFixture = {
+  activeApplicationCount?: number;
+  context: HomeNextActionContext;
+  profileScore?: number;
+  savedJobCount?: number;
+  showOnboarding?: boolean;
+  taskDetail?: string;
+  taskTitle?: string;
+  viewState?: HomeViewState;
+};
+
+declare global {
+  interface Window {
+    __AUTOTIME_HOME_TEST_FIXTURE__?: HomeTestFixture;
+  }
+}
+
 function readDashboardState(userId: string): CompanionDashboardState | null {
   try {
     const parsed = companionDashboardStateSchema.safeParse(
@@ -332,9 +351,14 @@ function OnboardingStep({
   );
 }
 
-export default function HomeExperience() {
+export default function HomeExperience({
+  testMode = false,
+}: {
+  testMode?: boolean;
+}) {
   const router = useRouter();
   const { userId } = useDashboardPlan();
+  const [testFixture, setTestFixture] = useState<HomeTestFixture>();
   const [dashboardState, setDashboardState] =
     useState<CompanionDashboardState | null>(null);
   const [onboarding, setOnboarding] = useState(() =>
@@ -349,6 +373,14 @@ export default function HomeExperience() {
   const statusRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
+    if (testMode) {
+      setTestFixture(window.__AUTOTIME_HOME_TEST_FIXTURE__);
+    }
+  }, [testMode]);
+
+  useEffect(() => {
+    if (testFixture || (testMode && window.__AUTOTIME_HOME_TEST_FIXTURE__))
+      return;
     const refresh = () => {
       const storedDashboard = readDashboardState(userId);
 
@@ -407,25 +439,95 @@ export default function HomeExperience() {
       );
       window.removeEventListener("storage", refresh);
     };
-  }, [router, userId]);
+  }, [router, testFixture, userId]);
 
-  const context = useMemo(
+  const liveContext = useMemo(
     () =>
       getContext(dashboardState, Boolean(lane), jobWorkflow, interviewWorkflow),
     [dashboardState, lane, jobWorkflow, interviewWorkflow],
   );
+  const context = testFixture?.context ?? liveContext;
   const nextAction = getHomeNextAction(context);
-  const profileScore = dashboardState
-    ? getProfileReadinessFromParts(
-        dashboardState.profile,
-        dashboardState.reusableAnswers,
-      )
-    : 0;
+  const profileScore =
+    testFixture?.profileScore ??
+    (dashboardState
+      ? getProfileReadinessFromParts(
+          dashboardState.profile,
+          dashboardState.reusableAnswers,
+        )
+      : 0);
   const confirmedAreas = [
     context.hasCareerEvidence ? "Career evidence" : null,
     context.hasCareerLane ? "Career direction" : null,
     context.hasTargetCountry ? "Target countries" : null,
   ].filter(Boolean) as string[];
+  const savedJobCount =
+    testFixture?.savedJobCount ??
+    Math.max(
+      dashboardState?.applications.length ?? 0,
+      jobWorkflow?.jobs.length ?? 0,
+    );
+  const activeApplicationCount =
+    testFixture?.activeApplicationCount ??
+    Math.max(
+      dashboardState?.applications.filter((application) =>
+        ["Applied", "Interview", "Offer"].includes(application.status),
+      ).length ?? 0,
+      jobWorkflow?.applications.length ?? 0,
+    );
+
+  const relevantInterview = interviewWorkflow?.interviews
+    .filter((interview) =>
+      nextAction.id === "prepare_interview"
+        ? interview.status !== "cancelled" &&
+          (interview.status !== "completed" || interview.outcome === "awaiting")
+        : false,
+    )
+    .slice()
+    .sort((left, right) =>
+      (left.scheduledAt ?? "9999").localeCompare(right.scheduledAt ?? "9999"),
+    )[0];
+  const relevantInterviewJob = jobWorkflow?.jobs.find(
+    (job) => job.id === relevantInterview?.jobId,
+  );
+  const relevantApplication = jobWorkflow?.applications.find(
+    (application) => application.status === "Needs review",
+  );
+  const relevantApplicationJob = jobWorkflow?.jobs.find(
+    (job) => job.id === relevantApplication?.jobId,
+  );
+  const contextualInterviewTitle = relevantInterviewJob?.employer.value
+    ? `Prepare for your ${relevantInterviewJob.employer.value} interview`
+    : relevantInterviewJob?.title.value
+      ? `Prepare for your ${relevantInterviewJob.title.value} interview`
+      : undefined;
+  const contextualInterviewDetail = relevantInterview?.scheduledAt
+    ? `Interview ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(relevantInterview.scheduledAt))}.`
+    : relevantInterview?.status === "completed"
+      ? "Record the outcome while the conversation is fresh."
+      : undefined;
+  const contextualApplicationTitle = relevantApplicationJob?.title.value
+    ? `Review your ${relevantApplicationJob.title.value} application`
+    : undefined;
+  const displayAction = {
+    ...nextAction,
+    title:
+      testFixture?.taskTitle ??
+      (nextAction.id === "prepare_interview"
+        ? contextualInterviewTitle
+        : nextAction.id === "review_application"
+          ? contextualApplicationTitle
+          : undefined) ??
+      nextAction.title,
+    description:
+      testFixture?.taskDetail ??
+      (nextAction.id === "prepare_interview"
+        ? contextualInterviewDetail
+        : relevantApplication?.status === "Needs review"
+          ? "Review the remaining evidence and answers before applying."
+          : undefined) ??
+      nextAction.description,
+  };
 
   const persist = (next: ProgressiveOnboardingState) => {
     const saved = saveProgressiveOnboarding(window.localStorage, userId, next);
@@ -446,12 +548,60 @@ export default function HomeExperience() {
     );
   };
 
+  if (
+    testFixture?.viewState === "loading" ||
+    testFixture?.viewState === "unavailable"
+  ) {
+    const unavailable = testFixture.viewState === "unavailable";
+    return (
+      <div className="home-experience" data-next-action={nextAction.id}>
+        <ProductPageHeader
+          description="Focus on the task that needs attention now."
+          eyebrow="Home"
+          title="Your search"
+        />
+        <section
+          className="home-system-state"
+          aria-busy={!unavailable}
+          aria-live="polite"
+        >
+          <p className="home-priority-label">
+            {unavailable ? "Temporarily unavailable" : "Loading"}
+          </p>
+          <h2>
+            {unavailable
+              ? "Your search data is temporarily unavailable"
+              : "Loading your next action"}
+          </h2>
+          <p>
+            {unavailable
+              ? "Your saved work has not been changed. You can retry now or continue to another part of your search."
+              : "Your saved work and priorities are being checked."}
+          </p>
+          {unavailable ? (
+            <button
+              className="primary-button"
+              onClick={() => window.location.reload()}
+              type="button"
+            >
+              Try again
+            </button>
+          ) : (
+            <button className="primary-button" disabled type="button">
+              Loading your next action
+            </button>
+          )}
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className="home-experience">
+    <div className="home-experience" data-next-action={nextAction.id}>
       <ProductPageHeader
-        description="Move from confirmed evidence to better-targeted European applications."
+        description="Focus on the task that needs attention now."
         eyebrow="Home"
-        title="Your next best action"
+        title="Your search"
       />
 
       {status ? (
@@ -465,7 +615,8 @@ export default function HomeExperience() {
         </p>
       ) : null}
 
-      {showOnboarding && onboarding.currentStep !== "complete" ? (
+      {(testFixture?.showOnboarding ?? showOnboarding) &&
+      onboarding.currentStep !== "complete" ? (
         <div className="onboarding-shell">
           <OnboardingStep
             onChange={persist}
@@ -486,89 +637,45 @@ export default function HomeExperience() {
           aria-labelledby="next-action"
         >
           <div>
-            <ProductStatusBadge
-              status={context.hasCareerEvidence ? "confirmed" : "missing"}
-            >
-              {context.hasCareerEvidence
-                ? "Enough information to start"
-                : "Getting started"}
-            </ProductStatusBadge>
-            <h2 id="next-action">{nextAction.title}</h2>
-            <p>{nextAction.description}</p>
+            <p className="home-priority-label">Next action</p>
+            <h2 id="next-action">{displayAction.title}</h2>
+            <p>{displayAction.description}</p>
           </div>
           <a className="primary-button" href={nextAction.href}>
             {nextAction.label}
           </a>
-          {!context.hasCareerEvidence ? (
-            <a className="secondary-button" href="/dashboard/jobs">
-              Analyse a real job instead
-            </a>
-          ) : null}
         </section>
       )}
 
-      <section className="home-support-grid">
-        <article className="progressive-profile-summary">
-          <ProductSectionHeader
-            description="A guidance indicator, not an access threshold or outcome promise."
-            title="Evidence readiness"
-          />
-          <strong>{getProfileGuidanceLevel(profileScore)}</strong>
-          <div
-            aria-label={`Profile guidance: ${profileScore} percent`}
-            className="profile-guidance-meter"
-          >
-            <span style={{ width: `${profileScore}%` }} />
+      <section className="home-progress" aria-labelledby="search-progress">
+        <div className="home-progress-heading">
+          <div>
+            <h2 id="search-progress">Current search</h2>
           </div>
-          {confirmedAreas.length ? (
-            <p>Confirmed areas: {confirmedAreas.join(", ")}.</p>
-          ) : (
-            <p>No career evidence has been confirmed yet.</p>
-          )}
+          <a href="/dashboard/applications">View applications</a>
+        </div>
+        <dl className="home-facts">
+          <div>
+            <dt>Evidence</dt>
+            <dd>{getProfileGuidanceLevel(profileScore)}</dd>
+          </div>
+          <div>
+            <dt>Saved jobs</dt>
+            <dd>{savedJobCount}</dd>
+          </div>
+          <div>
+            <dt>Active applications</dt>
+            <dd>{activeApplicationCount}</dd>
+          </div>
+        </dl>
+        <details className="home-progress-details">
+          <summary>What shapes these recommendations?</summary>
           <p>
-            Add evidence progressively when a pathway, vacancy or application
-            needs it. Completion does not guarantee an employment outcome.
+            {confirmedAreas.length
+              ? `Confirmed: ${confirmedAreas.join(", ")}.`
+              : "No career evidence has been confirmed yet."}
           </p>
-          <a href="/dashboard/autofill-profile">
-            Review evidence and preferences
-          </a>
-        </article>
-
-        {context.hasCareerLane && lane ? (
-          <article className="home-context-panel">
-            <ProductSectionHeader title="Current career lane" />
-            <strong>{lane.primary}</strong>
-            <p>Selected from your saved Role Pathways result.</p>
-            <a href="/dashboard/role-pathways">Review career direction</a>
-          </article>
-        ) : null}
-
-        {context.hasTargetCountry && dashboardState ? (
-          <article className="home-context-panel">
-            <ProductSectionHeader title="Target-country context" />
-            <strong>{dashboardState.profile.targetCountries}</strong>
-            <p>Mobility conclusions remain governed by structured facts.</p>
-            <a href="/dashboard/international">Review country information</a>
-          </article>
-        ) : null}
-
-        {(dashboardState?.applications.length ?? 0) > 0 ? (
-          <article className="home-context-panel">
-            <ProductSectionHeader title="Application progress" />
-            <strong>{dashboardState?.applications.length} tracked jobs</strong>
-            <p>
-              {
-                dashboardState?.applications.filter((application) =>
-                  ["Applied", "Interview", "Offer"].includes(
-                    application.status,
-                  ),
-                ).length
-              }{" "}
-              have moved beyond preparation.
-            </p>
-            <a href="/dashboard/applications">View applications</a>
-          </article>
-        ) : null}
+        </details>
       </section>
     </div>
   );

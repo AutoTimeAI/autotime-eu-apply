@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { candidateProfileSchema } from "shared"
 import { getRequestUser } from "../../../../lib/api-auth"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { readSyncedProfile, syncProfile } from "../../../../lib/cloud-sync"
@@ -25,19 +29,19 @@ type ProfileDeleteRouteData = {
 }
 
 function jsonResponse(
-  body: ApiResponse<ProfileSyncRouteData>
+  body: ApiResponse<ProfileSyncRouteData>,
 ): NextResponse<ApiResponse<ProfileSyncRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
 
 function readJsonResponse(
-  body: ApiResponse<ProfileReadRouteData>
+  body: ApiResponse<ProfileReadRouteData>,
 ): NextResponse<ApiResponse<ProfileReadRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
 
 function deleteJsonResponse(
-  body: ApiResponse<ProfileDeleteRouteData>
+  body: ApiResponse<ProfileDeleteRouteData>,
 ): NextResponse<ApiResponse<ProfileDeleteRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -49,7 +53,7 @@ function getSourceSurface(request: NextRequest): "web" | "extension" {
 }
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<ProfileReadRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -61,7 +65,7 @@ export async function GET(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -75,16 +79,25 @@ export async function GET(
         error: result.error,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
     return readJsonResponse({
       data: { profile: result.profile },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     const message =
       error instanceof Error ? error.message : "Synced profile read failed"
 
@@ -95,13 +108,13 @@ export async function GET(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<ProfileSyncRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -113,7 +126,7 @@ export async function POST(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -122,7 +135,7 @@ export async function POST(
       createAdminClient(),
       user.id,
       profile,
-      getSourceSurface(request)
+      getSourceSurface(request),
     )
 
     if (!result.success) {
@@ -133,16 +146,25 @@ export async function POST(
         error: result.error,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
     return jsonResponse({
       data: { synced: true },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "sync",
@@ -150,7 +172,7 @@ export async function POST(
         data: null,
         error: "Invalid request body",
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -164,13 +186,13 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }
 
 export async function DELETE(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<ProfileDeleteRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -182,7 +204,7 @@ export async function DELETE(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -201,7 +223,7 @@ export async function DELETE(
         error: readError.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
@@ -219,7 +241,7 @@ export async function DELETE(
           error: deleteError.message,
           log: true,
           request,
-          status: 500
+          status: 500,
         })
       }
 
@@ -230,16 +252,25 @@ export async function DELETE(
         source_surface: getSourceSurface(request),
         action: "deleted",
         message: "Profile deleted from dashboard account",
-        schema_version: 1
+        schema_version: 1,
       })
     }
 
     return deleteJsonResponse({
       data: { deleted: true },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.profile.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     const message =
       error instanceof Error ? error.message : "Profile delete failed"
 
@@ -250,7 +281,7 @@ export async function DELETE(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

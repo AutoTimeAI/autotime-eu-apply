@@ -1,8 +1,10 @@
 import { createClient } from "@supabase/supabase-js"
 import { type NextRequest, NextResponse } from "next/server"
-import { z } from "zod"
 import { diagnosticJson } from "../../../../lib/diagnostics"
-import { publicEnv } from "../../../../lib/env"
+import { runSessionRefresh } from "../../../../lib/sync-refresh-core"
+import {
+  getConfigurationFailure,
+} from "../../../../lib/configuration-error"
 
 type ApiResponse<T> = {
   data: T | null
@@ -16,12 +18,8 @@ type RefreshSessionData = {
   expiresAt: number
 }
 
-const refreshRequestSchema = z.object({
-  refreshToken: z.string().trim().min(1)
-})
-
 function jsonResponse(
-  body: ApiResponse<RefreshSessionData>
+  body: ApiResponse<RefreshSessionData>,
 ): NextResponse<ApiResponse<RefreshSessionData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -38,61 +36,62 @@ function jsonResponse(
  * uses, so the extension can keep its session alive in the background.
  */
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<RefreshSessionData>>> {
   try {
-    const body = refreshRequestSchema.safeParse(await request.json())
+    const result = await runSessionRefresh(await request.json(), (url, anonKey) =>
+      createClient(url, anonKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }),
+    )
 
-    if (!body.success) {
+    if (result.kind === "invalid") {
       return diagnosticJson({
         area: "sync",
         code: "sync.refresh.request.invalid",
         data: null,
         error: "A refresh token is required.",
         request,
-        status: 400
+        status: 400,
       })
     }
 
-    const supabase = createClient(
-      publicEnv.NEXT_PUBLIC_SUPABASE_URL,
-      publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
-
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: body.data.refreshToken
-    })
-
-    if (error || !data.session) {
+    if (result.kind === "unauthorised") {
       return diagnosticJson({
         area: "sync",
         code: "sync.refresh.session.failed",
         data: null,
-        error: error?.message ?? "Could not refresh session. Sign in again.",
+        error: result.message,
         log: true,
         request,
-        status: 401
+        status: 401,
       })
     }
 
     return jsonResponse({
       data: {
-        authToken: data.session.access_token,
-        refreshToken: data.session.refresh_token,
-        expiresAt:
-          (data.session.expires_at ??
-            Math.floor(Date.now() / 1000) + data.session.expires_in) * 1000
+        authToken: result.authToken,
+        refreshToken: result.refreshToken,
+        expiresAt: result.expiresAt,
       },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    const configurationFailure = getConfigurationFailure(error)
+    if (configurationFailure) {
+      return diagnosticJson({
+        area: "sync",
+        code: "sync.refresh.unavailable",
+        data: null,
+        error: configurationFailure.error,
+        request,
+        status: configurationFailure.status,
+      })
+    }
     const message =
       error instanceof Error ? error.message : "Session refresh failed"
 
@@ -103,7 +102,7 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

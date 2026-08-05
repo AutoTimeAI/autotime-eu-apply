@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ESCO_CACHE_VERSION,
   ROLE_PATHWAYS_SCHEMA_VERSION,
@@ -15,6 +15,7 @@ import {
   loadLaneSelection,
   saveLaneSelection,
 } from "../lib/role-pathways-storage";
+import { loadMobilityProfile } from "../lib/international-mobility-storage";
 
 type GenerateResponse = {
   data: {
@@ -92,6 +93,13 @@ export function RolePathwaysExperience() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const activeStepRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    activeStepRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, [stage]);
   useEffect(() => {
     setCandidateText(savedCandidateText(userId));
     const saved = loadLaneSelection(localStorage, userId);
@@ -100,6 +108,20 @@ export function RolePathwaysExperience() {
       setSecondary(saved.secondary);
       setExplorer(saved.explorer ?? "");
     }
+    const mobility = loadMobilityProfile(localStorage, userId).profile;
+    const supportedCountries = mobility.targetCountries.filter(
+      (country): country is RolePreferences["countries"][number] =>
+        country === "Ireland" ||
+        country === "Germany" ||
+        country === "Netherlands",
+    );
+    setPreferences((current) => ({
+      ...current,
+      countries: supportedCountries.length
+        ? supportedCountries
+        : current.countries,
+      supportRequired: mobility.sponsorshipRequired,
+    }));
   }, [userId]);
   const generate = async () => {
     setBusy(true);
@@ -231,7 +253,7 @@ export function RolePathwaysExperience() {
       </button>
     ));
   return (
-    <main className="role-pathways-shell">
+    <main className="role-pathways-shell phase-six-career-direction">
       <header className="role-pathways-hero">
         <div>
           <p className="eyebrow">Europe-first career intelligence</p>
@@ -260,6 +282,7 @@ export function RolePathwaysExperience() {
               stage === index + 1 ? "active" : stage > index + 1 ? "done" : ""
             }
             key={label}
+            ref={stage === index + 1 ? activeStepRef : undefined}
           >
             <button
               disabled={
@@ -352,6 +375,11 @@ export function RolePathwaysExperience() {
               <p className="eyebrow">Stage 2</p>
               <h2>Set European market preferences</h2>
               <p>Preferences affect ordering, never capability.</p>
+              <p>
+                Target countries and support needs are pre-filled from your
+                saved <a href="/dashboard/international">Countries</a>{" "}
+                profile when available.
+              </p>
             </div>
           </div>
           <fieldset>

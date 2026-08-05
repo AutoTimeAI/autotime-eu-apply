@@ -1,10 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { diagnosticJson } from "../../../../lib/diagnostics"
-import { publicEnv } from "../../../../lib/env"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createServerClient } from "../../../../lib/supabase/server"
-import { isConfiguredStripePrice, PLANS, stripe } from "../../../../lib/stripe"
+import {
+  InvalidReturnUrlError,
+  resolveReturnUrl,
+} from "../../../../lib/return-url"
+import {
+  getPlans,
+  getStripeClient,
+  isConfiguredStripePrice,
+} from "../../../../lib/stripe"
 import { getTestAuthUser } from "../../../../lib/test-auth"
 
 type ApiResponse<T> = {
@@ -19,18 +30,19 @@ type CheckoutRouteData = {
 
 const requestSchema = z.object({
   priceId: z.string().min(1).optional(),
-  returnUrl: z.string().url()
+  returnUrl: z.string().min(1),
+  cancelUrl: z.string().min(1).optional(),
 })
 
 function jsonResponse(
-  body: ApiResponse<CheckoutRouteData>
+  body: ApiResponse<CheckoutRouteData>,
 ): NextResponse<ApiResponse<CheckoutRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
 
 async function getOrCreateStripeCustomer({
   email,
-  userId
+  userId,
 }: {
   email: string | null
   userId: string
@@ -51,11 +63,11 @@ async function getOrCreateStripeCustomer({
       return data.stripe_customer_id
     }
 
-    const customer = await stripe.customers.create({
+    const customer = await getStripeClient().customers.create({
       email: email ?? undefined,
       metadata: {
-        user_id: userId
-      }
+        user_id: userId,
+      },
     })
 
     const { error: upsertError } = await supabase.from("subscriptions").upsert(
@@ -63,9 +75,9 @@ async function getOrCreateStripeCustomer({
         user_id: userId,
         stripe_customer_id: customer.id,
         plan: "free",
-        status: "active"
+        status: "active",
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     )
 
     if (upsertError) {
@@ -84,7 +96,7 @@ async function getOrCreateStripeCustomer({
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<CheckoutRouteData>>> {
   try {
     const testUser = getTestAuthUser()
@@ -94,7 +106,7 @@ export async function POST(
       const supabase = await createServerClient()
       const {
         data: { user: sessionUser },
-        error: userError
+        error: userError,
       } = await supabase.auth.getUser()
 
       if (userError || !sessionUser) {
@@ -104,7 +116,7 @@ export async function POST(
           data: null,
           error: "Unauthorised",
           request,
-          status: 401
+          status: 401,
         })
       }
 
@@ -113,7 +125,8 @@ export async function POST(
 
     const body = requestSchema.parse(await request.json())
 
-    const priceId = body.priceId ?? PLANS.pro_monthly.priceId
+    const plans = getPlans()
+    const priceId = body.priceId ?? plans.pro_monthly.priceId
 
     if (!isConfiguredStripePrice(priceId)) {
       return diagnosticJson({
@@ -122,34 +135,34 @@ export async function POST(
         data: null,
         error: "Selected plan is not available",
         request,
-        status: 400
+        status: 400,
       })
     }
 
     const customerId = await getOrCreateStripeCustomer({
       email: user.email ?? null,
-      userId: user.id
+      userId: user.id,
     })
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripeClient().checkout.sessions.create({
       mode: "subscription",
       customer: customerId,
       client_reference_id: user.id,
       line_items: [
         {
           price: priceId,
-          quantity: 1
-        }
+          quantity: 1,
+        },
       ],
       metadata: {
-        user_id: user.id
+        user_id: user.id,
       },
       subscription_data: {
         metadata: {
-          user_id: user.id
-        }
+          user_id: user.id,
+        },
       },
-      success_url: body.returnUrl,
-      cancel_url: `${publicEnv.NEXT_PUBLIC_APP_URL}/pricing`
+      success_url: resolveReturnUrl(body.returnUrl),
+      cancel_url: resolveReturnUrl(body.cancelUrl ?? "/pricing"),
     })
 
     if (!session.url) {
@@ -160,16 +173,36 @@ export async function POST(
         error: "Stripe checkout session did not return a URL",
         log: true,
         request,
-        status: 502
+        status: 502,
       })
     }
 
     return jsonResponse({
       data: { url: session.url },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error)) {
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.checkout.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
+    }
+    if (error instanceof InvalidReturnUrlError) {
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.checkout.return-url.invalid",
+        data: null,
+        error: "Invalid return URL",
+        request,
+        status: 400,
+      })
+    }
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "billing",
@@ -177,21 +210,18 @@ export async function POST(
         data: null,
         error: "Invalid request body",
         request,
-        status: 400
+        status: 400,
       })
     }
-
-    const message =
-      error instanceof Error ? error.message : "Checkout session failed"
 
     return diagnosticJson({
       area: "billing",
       code: "billing.checkout.failed",
       data: null,
-      error: message,
+      error: "Checkout session failed",
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getRequestUser } from "../../../../lib/api-auth"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import type { AccountAiTone } from "../../../../lib/supabase/types"
@@ -20,7 +24,7 @@ type ApiResponse<T> = {
 const defaultSettings: AccountSettingsData = {
   aiTone: "coaching",
   defaultRegion: "United Kingdom",
-  notificationsEnabled: false
+  notificationsEnabled: false,
 }
 
 const missingSettingsStorageMessage =
@@ -29,11 +33,11 @@ const missingSettingsStorageMessage =
 const settingsSchema = z.object({
   aiTone: z.enum(["concise", "coaching", "detailed"]).optional(),
   defaultRegion: z.string().trim().min(1).max(120).optional(),
-  notificationsEnabled: z.boolean().optional()
+  notificationsEnabled: z.boolean().optional(),
 })
 
 function jsonResponse(
-  body: ApiResponse<AccountSettingsData>
+  body: ApiResponse<AccountSettingsData>,
 ): NextResponse<ApiResponse<AccountSettingsData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -46,25 +50,28 @@ function mapSettingsRow(row: {
   return {
     aiTone: row.ai_tone,
     defaultRegion: row.default_region,
-    notificationsEnabled: row.notifications_enabled
+    notificationsEnabled: row.notifications_enabled,
   }
 }
 
-function isMissingAccountSettingsTable(error: { code?: string; message?: string }) {
+function isMissingAccountSettingsTable(error: {
+  code?: string
+  message?: string
+}) {
   const message = error.message?.toLowerCase() ?? ""
 
   return (
     error.code === "PGRST200" ||
     error.code === "PGRST205" ||
-    message.includes("account_settings") &&
+    (message.includes("account_settings") &&
       (message.includes("schema cache") ||
         message.includes("does not exist") ||
-        message.includes("could not find the table"))
+        message.includes("could not find the table")))
   )
 }
 
 export async function GET(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AccountSettingsData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -76,7 +83,7 @@ export async function GET(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -92,7 +99,7 @@ export async function GET(
         return jsonResponse({
           data: defaultSettings,
           error: missingSettingsStorageMessage,
-          status: 200
+          status: 200,
         })
       }
 
@@ -103,16 +110,25 @@ export async function GET(
         error: error.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
     return jsonResponse({
       data: data ? mapSettingsRow(data) : defaultSettings,
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "account",
+        code: "account.settings.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     return diagnosticJson({
       area: "account",
       code: "account.settings.read.unexpected",
@@ -121,13 +137,13 @@ export async function GET(
         error instanceof Error ? error.message : "Account settings read failed",
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }
 
 export async function PATCH(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AccountSettingsData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -139,7 +155,7 @@ export async function PATCH(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -158,11 +174,10 @@ export async function PATCH(
             aiTone: body.aiTone ?? defaultSettings.aiTone,
             defaultRegion: body.defaultRegion ?? defaultSettings.defaultRegion,
             notificationsEnabled:
-              body.notificationsEnabled ??
-              defaultSettings.notificationsEnabled
+              body.notificationsEnabled ?? defaultSettings.notificationsEnabled,
           },
           error: missingSettingsStorageMessage,
-          status: 202
+          status: 202,
         })
       }
 
@@ -173,7 +188,7 @@ export async function PATCH(
         error: readError.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
@@ -187,7 +202,7 @@ export async function PATCH(
         body.notificationsEnabled ??
         existing?.notifications_enabled ??
         defaultSettings.notificationsEnabled,
-      user_id: user.id
+      user_id: user.id,
     }
     const { data, error } = await supabase
       .from("account_settings")
@@ -200,7 +215,7 @@ export async function PATCH(
         return jsonResponse({
           data: mapSettingsRow(nextSettings),
           error: missingSettingsStorageMessage,
-          status: 202
+          status: 202,
         })
       }
 
@@ -211,16 +226,25 @@ export async function PATCH(
         error: error.message,
         log: true,
         request,
-        status: 500
+        status: 500,
       })
     }
 
     return jsonResponse({
       data: mapSettingsRow(data),
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "account",
+        code: "account.settings.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof z.ZodError) {
       return diagnosticJson({
         area: "account",
@@ -228,7 +252,7 @@ export async function PATCH(
         data: null,
         error: "Invalid account settings body",
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -237,10 +261,12 @@ export async function PATCH(
       code: "account.settings.write.unexpected",
       data: null,
       error:
-        error instanceof Error ? error.message : "Account settings write failed",
+        error instanceof Error
+          ? error.message
+          : "Account settings write failed",
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

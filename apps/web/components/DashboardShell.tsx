@@ -7,7 +7,6 @@ import {
   DashboardWorkflowSidebar,
   UserNav,
 } from "./UserNav";
-import { UpgradeBanner } from "./UpgradeBanner";
 import { InactivityLogout } from "./InactivityLogout";
 import type { SubscriptionPlan } from "../lib/supabase/types";
 
@@ -18,14 +17,12 @@ export function DashboardShell({
   email,
   isAdmin,
   plan,
-  remainingCalls,
   userId,
 }: {
   children: ReactNode;
   email: string;
   isAdmin: boolean;
   plan: SubscriptionPlan;
-  remainingCalls: number;
   userId: string;
 }) {
   const pathname = usePathname();
@@ -49,12 +46,9 @@ export function DashboardShell({
         </a>
         <header className="dashboard-topbar">
           <a className="dashboard-brand" href="/dashboard">
-            <img
-              alt=""
-              aria-hidden="true"
-              className="brand-mark"
-              src="/brand/autotime-mark.png"
-            />
+            <span aria-hidden="true" className="brand-mark phase-one-brand-mark">
+              EU
+            </span>
             <span className="brand-text">
               <span className="brand-title-line">
                 <span className="brand-name">EU Apply</span>
@@ -66,9 +60,6 @@ export function DashboardShell({
           </a>
           <UserNav email={email} isAdmin={isAdmin} plan={plan} />
         </header>
-        {plan === "free" ? (
-          <UpgradeBanner remainingCalls={remainingCalls} />
-        ) : null}
         <div className="dashboard-body">
           <DashboardWorkflowSidebar />
           <div className="dashboard-main-region" id="dashboard-content">

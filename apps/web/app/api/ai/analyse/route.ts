@@ -1,24 +1,25 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import {
-  candidateProfileSchema,
-  jobAnalysisDraftSchema
-} from "shared"
+import { candidateProfileSchema, jobAnalysisDraftSchema } from "shared"
 import {
   assertAiRouteRateLimit,
   analyseJobWithOpenAI,
   RateLimitError,
-  type AIJobAnalysisResult
+  type AIJobAnalysisResult,
 } from "../../../../lib/openai-server"
 import {
   assertCanUseAi,
   FeatureGateError,
-  trackAiCall
+  trackAiCall,
 } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
+import {
   diagnosticJson,
-  getValidationIssueMessage
+  getValidationIssueMessage,
 } from "../../../../lib/diagnostics"
 import { trackEUFitChecked } from "../../../../lib/sentry-breadcrumbs"
 
@@ -28,17 +29,15 @@ type ApiResponse<T> = {
   status: number
 }
 
-type AnalyseRouteData =
-  | { result: AIJobAnalysisResult }
-  | { upgradeUrl: string }
+type AnalyseRouteData = { result: AIJobAnalysisResult } | { upgradeUrl: string }
 
 const requestSchema = z.object({
   jobAnalysis: jobAnalysisDraftSchema,
-  profile: candidateProfileSchema.nullable()
+  profile: candidateProfileSchema.nullable(),
 })
 
 function jsonResponse(
-  body: ApiResponse<AnalyseRouteData>
+  body: ApiResponse<AnalyseRouteData>,
 ): NextResponse<ApiResponse<AnalyseRouteData>> {
   return NextResponse.json(body, { status: body.status })
 }
@@ -48,7 +47,7 @@ function getUpgradeUrl(request: NextRequest): string {
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AnalyseRouteData>>> {
   try {
     const { user, error: userError } = await getRequestUser(request)
@@ -60,7 +59,7 @@ export async function POST(
         data: null,
         error: "Unauthorised",
         request,
-        status: 401
+        status: 401,
       })
     }
 
@@ -70,7 +69,7 @@ export async function POST(
     await assertCanUseAi(user.id)
     trackEUFitChecked({
       route: "/api/ai/analyse",
-      status: "started"
+      status: "started",
     })
 
     const result = await analyseJobWithOpenAI(body)
@@ -80,15 +79,24 @@ export async function POST(
       model: result.model,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
-      costUsd: result.costUsd
+      costUsd: result.costUsd,
     })
 
     return jsonResponse({
       data: { result: result.value },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.analyse.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
     if (error instanceof FeatureGateError) {
       return diagnosticJson({
         area: "ai",
@@ -96,7 +104,7 @@ export async function POST(
         data: { upgradeUrl: getUpgradeUrl(request) },
         error: error.message,
         request,
-        status: 402
+        status: 402,
       })
     }
 
@@ -107,7 +115,7 @@ export async function POST(
         data: null,
         error: error.message,
         request,
-        status: 429
+        status: 429,
       })
     }
 
@@ -120,10 +128,10 @@ export async function POST(
           fallback:
             "Job analysis needs a valid job record and candidate profile context.",
           issues: error.issues,
-          prefix: "Job analysis needs valid input for"
+          prefix: "Job analysis needs valid input for",
         }),
         request,
-        status: 400
+        status: 400,
       })
     }
 
@@ -137,7 +145,7 @@ export async function POST(
       error: message,
       log: true,
       request,
-      status: 500
+      status: 500,
     })
   }
 }

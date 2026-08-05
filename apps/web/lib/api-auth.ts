@@ -1,14 +1,13 @@
 import { createClient } from "@supabase/supabase-js"
 import type { User } from "@supabase/supabase-js"
-import { publicEnv } from "./env"
+import type { AuthResult } from "./auth-result"
 import { createServerClient } from "./supabase/server"
 import type { Database } from "./supabase/types"
 import { getTestAuthUser } from "./test-auth"
-
-type AuthResult = {
-  error: string | null
-  user: User | null
-}
+import {
+  getBearerUser as readBearerUser,
+  getCookieUser as readCookieUser,
+} from "./request-auth"
 
 function getBearerToken(request: Request): string | null {
   const header = request.headers.get("authorization")
@@ -21,49 +20,28 @@ function getBearerToken(request: Request): string | null {
   return token || null
 }
 
-async function getCookieUser(): Promise<AuthResult> {
-  try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-      error
-    } = await supabase.auth.getUser()
+type AuthClient = Pick<ReturnType<typeof createClient<Database>>, "auth">
 
-    if (error || !user) {
-      return { error: "Unauthorised", user: null }
-    }
-
-    return { error: null, user }
-  } catch (error: unknown) {
-    return { error: "Unauthorised", user: null }
-  }
+export async function getCookieUser(
+  clientFactory: typeof createServerClient = createServerClient,
+): Promise<AuthResult> {
+  return readCookieUser(clientFactory)
 }
 
-async function getBearerUser(token: string): Promise<AuthResult> {
-  try {
-    const supabase = createClient<Database>(
-      publicEnv.NEXT_PUBLIC_SUPABASE_URL,
-      publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
+export async function getBearerUser(
+  token: string,
+  clientFactory?: (url: string, anonKey: string) => AuthClient,
+): Promise<AuthResult> {
+  return readBearerUser(token, (url, anonKey) =>
+    clientFactory
+      ? clientFactory(url, anonKey)
+      : createClient<Database>(url, anonKey, {
         auth: {
           autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
-    const {
-      data: { user },
-      error
-    } = await supabase.auth.getUser(token)
-
-    if (error || !user) {
-      return { error: "Unauthorised", user: null }
-    }
-
-    return { error: null, user }
-  } catch (error: unknown) {
-    return { error: "Unauthorised", user: null }
-  }
+          persistSession: false,
+        },
+      }),
+  )
 }
 
 export async function getRequestUser(request: Request): Promise<AuthResult> {

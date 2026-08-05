@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getRequestUser } from "../../../../lib/api-auth"
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../../../../lib/configuration-error"
 import { diagnosticJson } from "../../../../lib/diagnostics"
 import { extractDocxText } from "../../../../lib/docx-cv"
 
@@ -16,9 +20,24 @@ function jsonResponse(body: ApiResponse): NextResponse<ApiResponse> {
 }
 
 export async function POST(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<NextResponse<ApiResponse>> {
-  const { user, error: authError } = await getRequestUser(request)
+  let user
+  let authError
+  try {
+    ;({ user, error: authError } = await getRequestUser(request))
+  } catch (error: unknown) {
+    if (isConfigurationUnavailableError(error))
+      return diagnosticJson({
+        area: "auth",
+        code: "profile.import.unavailable",
+        data: null,
+        error: configurationUnavailableMessage,
+        request,
+        status: 503,
+      })
+    throw error
+  }
 
   if (authError || !user) {
     return diagnosticJson({
@@ -27,7 +46,7 @@ export async function POST(
       data: null,
       error: "Unauthorised",
       request,
-      status: 401
+      status: 401,
     })
   }
 
@@ -38,7 +57,7 @@ export async function POST(
     return jsonResponse({
       data: null,
       error: "CV file is required.",
-      status: 400
+      status: 400,
     })
   }
 
@@ -46,7 +65,7 @@ export async function POST(
     return jsonResponse({
       data: null,
       error: "Only DOCX Word files use this importer.",
-      status: 400
+      status: 400,
     })
   }
 
@@ -54,7 +73,7 @@ export async function POST(
     return jsonResponse({
       data: null,
       error: "CV file is too large. Please import a DOCX under 5 MB.",
-      status: 413
+      status: 413,
     })
   }
 
@@ -64,7 +83,7 @@ export async function POST(
     return jsonResponse({
       data: { text },
       error: null,
-      status: 200
+      status: 200,
     })
   } catch (error: unknown) {
     return jsonResponse({
@@ -73,7 +92,7 @@ export async function POST(
         error instanceof Error
           ? error.message
           : "Could not read this DOCX file.",
-      status: 422
+      status: 422,
     })
   }
 }

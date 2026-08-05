@@ -1,0 +1,16 @@
+.home-experience .onboarding-choice-grid label:has(input:checked),
+.home-experience .onboarding-direction-grid button.selected {
+  border-color: #174ea6;
+  background: #eaf2ff;
+}
+
+.home-experience .profile-guidance-meter span {
+  background: #174ea6;
+}
+
+.home-experience .status-banner.info,
+.home-experience .status-banner.success {
+  border-color: #174ea6;
+  background: #eaf2ff;
+  color: #123b78;
+}
