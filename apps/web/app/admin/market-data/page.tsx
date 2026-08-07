@@ -1,12 +1,44 @@
-import { AdminSection } from "../../../components/AdminSection"
-import { requireAdminPrincipal } from "../../../lib/admin-authorization"
 import { ESCO_CACHE_VERSION, ROLE_PATHWAYS_SCHEMA_VERSION } from "shared"
+import {
+  hasAdminPermission,
+  requireAdminPrincipal,
+} from "../../../lib/admin-authorization"
+import { getLatestAdminMarketRefreshRequest } from "../../../lib/admin-market-data"
+import { AdminMarketRefreshStatus } from "./AdminMarketRefreshStatus"
+
 export default async function Page() {
-  await requireAdminPrincipal("market_data:read")
-  return <AdminSection title="Market Data" description="Governed provider and version visibility. No unauthorised job-platform scraping." items={[
-    { label: "Live market provider", value: "Not instrumented" },
-    { label: "ESCO version", value: ESCO_CACHE_VERSION },
-    { label: "Schema version", value: String(ROLE_PATHWAYS_SCHEMA_VERSION) },
-    { label: "Next refresh", value: "Not scheduled" }
-  ]} />
+  const principal = await requireAdminPrincipal("market_data:read")
+  const canRefresh = hasAdminPermission(principal.membership, "market_data:refresh")
+  const latestRequest = await getLatestAdminMarketRefreshRequest()
+
+  return (
+    <main className="operations-admin-page">
+      <header className="operations-admin-page-header">
+        <div>
+          <p className="eyebrow">Operations</p>
+          <h1>Market Data</h1>
+          <p>
+            Governed provider and version visibility. No unauthorised
+            job-platform scraping.
+          </p>
+        </div>
+      </header>
+      <section aria-label="Catalogue versions" className="operations-admin-grid">
+        <article>
+          <span>Live market provider</span>
+          <strong>Not instrumented</strong>
+          <p>No live provider is integrated; ESCO data is a versioned fixture.</p>
+        </article>
+        <article>
+          <span>ESCO version</span>
+          <strong>{ESCO_CACHE_VERSION}</strong>
+        </article>
+        <article>
+          <span>Schema version</span>
+          <strong>{ROLE_PATHWAYS_SCHEMA_VERSION}</strong>
+        </article>
+      </section>
+      <AdminMarketRefreshStatus canRefresh={canRefresh} initialRequest={latestRequest} />
+    </main>
+  )
 }

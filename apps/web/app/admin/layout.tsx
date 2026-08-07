@@ -32,14 +32,14 @@ export default async function AdminLayout({
       <div className="operations-admin-shell">
         <header className="operations-admin-header">
           <div>
-            <p className="eyebrow">AutoTime Operations Admin</p>
+            <p className="eyebrow">EU Apply Operations Admin</p>
             <strong>Private beta operations</strong>
           </div>
           <div className="operations-admin-identity">
             <span>{environment}</span>
             <span>{principal.membership.role}</span>
             <span>{principal.user.email ?? principal.user.id}</span>
-            <a href="/dashboard">Return to AutoTime</a>
+            <a href="/dashboard">Return to EU Apply</a>
           </div>
         </header>
         <nav aria-label="Admin sections" className="operations-admin-nav">

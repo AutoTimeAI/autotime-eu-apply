@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   companionDashboardStateSchema,
   type CompanionDashboardState,
@@ -28,7 +29,15 @@ import {
   getProfileReadinessFromParts,
   profileProtocolReadinessEvent,
 } from "./ProfileProtocolLock";
-import { ProductPageHeader } from "./product-ui";
+import {
+  hasCompletedOnboarding,
+  markOnboardingComplete,
+} from "./OnboardingWizard";
+import {
+  ProductPageHeader,
+  ProductSectionHeader,
+  ProductStatusBadge,
+} from "./product-ui";
 import { useDashboardPlan } from "./UserNav";
 
 const dashboardStorageKey = "autotime-v2-companion-dashboard";
@@ -347,6 +356,7 @@ export default function HomeExperience({
 }: {
   testMode?: boolean;
 }) {
+  const router = useRouter();
   const { userId } = useDashboardPlan();
   const [testFixture, setTestFixture] = useState<HomeTestFixture>();
   const [dashboardState, setDashboardState] =
@@ -373,6 +383,21 @@ export default function HomeExperience({
       return;
     const refresh = () => {
       const storedDashboard = readDashboardState(userId);
+
+      if (!hasCompletedOnboarding(userId)) {
+        const coreReadiness = getProfileReadinessFromParts(
+          storedDashboard?.profile,
+          storedDashboard?.reusableAnswers,
+        );
+
+        if (coreReadiness >= 90) {
+          markOnboardingComplete(userId);
+        } else {
+          router.replace("/dashboard/onboarding");
+          return;
+        }
+      }
+
       const storedOnboarding = loadProgressiveOnboarding(
         window.localStorage,
         userId,
@@ -414,7 +439,7 @@ export default function HomeExperience({
       );
       window.removeEventListener("storage", refresh);
     };
-  }, [testFixture, userId]);
+  }, [router, testFixture, userId]);
 
   const liveContext = useMemo(
     () =>

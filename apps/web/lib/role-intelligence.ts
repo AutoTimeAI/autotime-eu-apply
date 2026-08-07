@@ -91,6 +91,28 @@ const skillSignals: Record<string, string[]> = {
   "product-strategy": ["product strategy", "roadmap"],
   delivery: ["delivery", "scrum"],
 };
+function snippetAround(
+  safe: string,
+  lower: string,
+  term: string,
+  radius = 120,
+): string {
+  const matchStart = lower.indexOf(term);
+  const matchEnd = matchStart + term.length;
+  let start = Math.max(0, matchStart - radius);
+  let end = Math.min(safe.length, matchEnd + radius);
+
+  if (start > 0) {
+    const boundary = safe.indexOf(" ", start);
+    if (boundary !== -1 && boundary < matchStart) start = boundary + 1;
+  }
+  if (end < safe.length) {
+    const boundary = safe.lastIndexOf(" ", end);
+    if (boundary !== -1 && boundary > matchEnd) end = boundary;
+  }
+
+  return safe.slice(start, end).trim();
+}
 function redact(text: string) {
   return text
     .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, "[email]")
@@ -110,12 +132,11 @@ function mockExtract(text: string) {
     ([competencyId, terms]) => {
       const term = terms.find((signal) => lower.includes(signal));
       if (!term) return [];
-      const start = Math.max(0, lower.indexOf(term) - 80);
       return [
         {
           competencyId,
           label: competencyId.replaceAll("-", " "),
-          supportingText: safe.slice(start, start + 240).trim(),
+          supportingText: snippetAround(safe, lower, term),
           source: portfolio ? ("project" as const) : ("cv" as const),
           strength: professional
             ? ("professional" as const)

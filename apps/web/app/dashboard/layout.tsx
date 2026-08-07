@@ -14,11 +14,7 @@ import { isAdminUser } from "../../lib/admin-access";
 import { getUserPlan } from "../../lib/feature-gate";
 import { createServerClient } from "../../lib/supabase/server";
 import { getTestAuthUser } from "../../lib/test-auth";
-import {
-  DashboardPlanProvider,
-  DashboardWorkflowSidebar,
-  UserNav,
-} from "../../components/UserNav";
+import { DashboardShell } from "../../components/DashboardShell";
 
 export default async function DashboardLayout({
   children,
@@ -45,44 +41,12 @@ export default async function DashboardLayout({
   try {
     const plan = await getUserPlan(user.id);
     const email = user.email ?? "account";
+    const isAdmin = await isAdminUser(user);
 
     return (
-      <DashboardPlanProvider plan={plan} userId={user.id}>
-        <div className="dashboard-app-shell">
-          <a className="skip-link" href="#dashboard-content">
-            Skip to main content
-          </a>
-          <header className="dashboard-topbar">
-            <a className="dashboard-brand" href="/dashboard">
-              <span
-                aria-hidden="true"
-                className="brand-mark phase-one-brand-mark"
-              >
-                AT
-              </span>
-              <span className="brand-text">
-                <span className="brand-title-line">
-                  <span className="brand-name">AutoTime AI</span>
-                </span>
-                <span className="brand-tagline">
-                  Better applications, not more noise.
-                </span>
-              </span>
-            </a>
-            <UserNav
-              email={email}
-              isAdmin={await isAdminUser(user)}
-              plan={plan}
-            />
-          </header>
-          <div className="dashboard-body">
-            <DashboardWorkflowSidebar />
-            <div className="dashboard-main-region" id="dashboard-content">
-              {children}
-            </div>
-          </div>
-        </div>
-      </DashboardPlanProvider>
+      <DashboardShell email={email} isAdmin={isAdmin} plan={plan} userId={user.id}>
+        {children}
+      </DashboardShell>
     );
   } catch (error: unknown) {
     console.error("dashboard_layout_render_failed", {

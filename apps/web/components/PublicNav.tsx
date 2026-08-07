@@ -55,7 +55,7 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
         />
         <span className="brand-text">
           <span className="brand-title-line">
-            <span className="brand-name">AutoTime AI</span>
+            <span className="brand-name">EU Apply</span>
           </span>
           <span className="brand-tagline">
             Better applications, not more noise.

@@ -1,0 +1,215 @@
+/*
+ * The Operations Admin console (/admin/*) predates the blue design system
+ * migration applied to landing/login in phase-8-public.css. Two problems:
+ * (1) the parts that do have CSS (admin-login-*, admin-console-hero) still
+ * use the old hardcoded teal-navy gradients, and (2) the outer shell
+ * rendered by app/admin/layout.tsx (.operations-admin-shell/-header/-nav/
+ * -content/-identity) and the six AdminSection-based pages (users/
+ * feedback/ai-operations/market-data/feature-flags/audit-log, via
+ * components/AdminSection.tsx and app/admin/AdminRealtimeConsole.tsx:
+ * .operations-admin-page/-page-header/-grid) never had any rules at all,
+ * so they rendered as bare unstyled markup. This file fixes both, scoped
+ * under .operations-admin-shell / .admin-login-shell so nothing outside
+ * admin is touched.
+ */
+.operations-admin-shell,
+.admin-login-shell {
+  --accent: #174ea6;
+  --accent-strong: #123b78;
+}
+
+/* Bare buttons (e.g. "Continue with Google", "Reset admin session" is
+   already .secondary-button and unaffected) inherit the sitewide default
+   button's hardcoded teal gradient top-stop, which the --accent override
+   above can't reach; redirect them the same way phase-8 does for .auth-shell. */
+.operations-admin-shell button:not(.secondary-button):not(.danger-button),
+.admin-login-shell button:not(.secondary-button) {
+  border-color: #174ea6;
+  background: #174ea6;
+}
+.operations-admin-shell button:not(.secondary-button):not(.danger-button):hover,
+.admin-login-shell button:not(.secondary-button):hover {
+  border-color: #123b78;
+  background: #123b78;
+}
+
+/* ---- Shell / top bar (app/admin/layout.tsx) ---- */
+
+.operations-admin-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: var(--surface-muted);
+}
+
+.operations-admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #0d1728, #123b78);
+  color: #eef4ff;
+  padding: 16px clamp(16px, 4vw, 40px);
+}
+
+.operations-admin-header .eyebrow {
+  color: #9dc4f5;
+}
+
+.operations-admin-header strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1.15rem;
+}
+
+.operations-admin-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.operations-admin-identity span {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(238, 244, 255, 0.86);
+  font-weight: 700;
+  padding: 4px 10px;
+  text-transform: capitalize;
+}
+
+.operations-admin-identity a {
+  color: #9dc4f5;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.operations-admin-identity a:hover {
+  text-decoration: underline;
+}
+
+.operations-admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  background: #ffffff;
+  padding: 0 clamp(16px, 4vw, 40px);
+}
+
+.operations-admin-nav a {
+  display: inline-flex;
+  align-items: center;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 12px 14px;
+  text-decoration: none;
+}
+
+.operations-admin-nav a:hover {
+  border-bottom-color: var(--border-strong);
+  color: var(--accent-strong);
+}
+
+.operations-admin-content {
+  flex: 1;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+
+/* ---- AdminSection pages ---- */
+
+.operations-admin-page {
+  display: grid;
+  gap: 18px;
+}
+
+.operations-admin-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px;
+}
+
+.operations-admin-page-header p:not(.eyebrow) {
+  max-width: 640px;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.operations-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.operations-admin-grid article {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 14px;
+}
+
+.operations-admin-grid article span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.operations-admin-grid article strong {
+  color: var(--ink);
+  font-size: 1.5rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.operations-admin-grid article p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.operations-admin-grid article small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+/* ---- Existing admin-console and admin-login hardcoded teal literals, moved to blue ---- */
+
+.admin-console-hero {
+  background:
+    linear-gradient(135deg, rgba(18, 59, 120, 0.96), rgba(13, 23, 40, 0.98)),
+    #0d1728;
+}
+
+.admin-console-hero .eyebrow {
+  color: #9dc4f5;
+}
+
+.admin-login-shell {
+  background:
+    linear-gradient(135deg, rgba(13, 23, 40, 0.98), rgba(18, 59, 120, 0.92)),
+    #0d1728;
+}
+
+.admin-login-copy .eyebrow {
+  color: #9dc4f5;
+}
