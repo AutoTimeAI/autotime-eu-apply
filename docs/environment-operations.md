@@ -16,7 +16,8 @@ The doctor redacts values and fails on missing or placeholder-like values.
 1. Local development should use a dedicated Supabase development project.
 2. Production secrets live in Vercel Production environment variables, not in committed files.
 3. `AUTOTIME_TEST_AUTH_ENABLED` must never be true in production.
-4. Admin access is controlled by `AUTOTIME_ADMIN_EMAILS` and must be set privately.
+4. Admin access is not an env var: it's granted per-account via a row in
+   the `admin_memberships` table. See `docs/admin-owner-bootstrap.md`.
 5. Run `pnpm env:doctor:local` before local DB smoke tests.
 6. Run `pnpm env:doctor` inside the deployed/runtime environment before trusting production checks.
 
@@ -34,4 +35,3 @@ The doctor redacts values and fails on missing or placeholder-like values.
 - `OPENAI_API_KEY`
 - `RESEND_API_KEY`
 - `NEXT_PUBLIC_APP_URL`
-- `AUTOTIME_ADMIN_EMAILS`

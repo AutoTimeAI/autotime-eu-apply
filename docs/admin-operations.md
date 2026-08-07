@@ -2,12 +2,19 @@
 
 ## Status
 
-This is a minimal private-beta operations foundation. The SQL migration is review-only and has not been applied. No owner account has been bootstrapped, no deployment was performed, and no external service was called.
+The `admin_operations_foundation` migration has been reviewed and applied
+to the `autotime-eu-apply` (dev) Supabase project, and an owner has been
+bootstrapped there via the controlled procedure in
+`admin-owner-bootstrap.md`. Every admin page (Overview, Users, Feedback,
+AI Operations, Market Data, Feature Flags, Audit Log) is wired to real
+data as of 2026-08-07.
 
-**Do not apply — database execution pending.**
-
-
-Until the migration is separately reviewed and applied and an exact Supabase user UUID is manually bootstrapped, membership lookup fails closed and nobody receives admin access.
+**Production status is unconfirmed** — this has only been verified
+against the dev project. Applying the migration and bootstrapping an
+owner in production are separate, deliberate actions (see the
+"Controlled preview checklist" below) that have not been performed or
+recorded here. Until they are, membership lookup fails closed in
+production and nobody receives admin access there.
 
 ## Authorization model
 
@@ -81,8 +88,7 @@ No automated deletion is enabled by this foundation.
 
 ## Remaining gaps
 
-- Apply and review the migration in a controlled environment before the UI can be used.
-- Bootstrap the first owner manually using `admin-owner-bootstrap.md`.
+- Apply the migration and bootstrap an owner in production (done for dev only — see Status above).
 - Add a durable worker for approved market refresh requests.
 - Add retention policy, pagination and operator UI controls for feedback/audit records.
 - Add end-to-end tests with seeded active, suspended and non-admin identities after schema approval.
