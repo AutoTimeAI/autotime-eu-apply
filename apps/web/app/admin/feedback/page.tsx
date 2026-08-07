@@ -1,9 +1,25 @@
-import { AdminSection } from "../../../components/AdminSection"
 import { requireAdminPrincipal } from "../../../lib/admin-authorization"
+import { getAdminFeedbackOverview } from "../../../lib/admin-feedback"
+import { AdminFeedbackTable } from "./AdminFeedbackTable"
+
 export default async function Page() {
   await requireAdminPrincipal("feedback:read")
-  return <AdminSection title="Feedback" description="Structured private-beta feedback without automatic user messaging." items={[
-    { label: "Unresolved feedback", value: "Available after migration" },
-    { label: "Email automation", value: "Disabled" }
-  ]} />
+  const feedback = await getAdminFeedbackOverview()
+
+  return (
+    <main className="operations-admin-page">
+      <header className="operations-admin-page-header">
+        <div>
+          <p className="eyebrow">Operations</p>
+          <h1>Feedback</h1>
+          <p>
+            Structured private-beta feedback, sourced live from the
+            beta_feedback table. No automatic user messaging is triggered by
+            viewing or updating status here.
+          </p>
+        </div>
+      </header>
+      <AdminFeedbackTable initialFeedback={feedback} />
+    </main>
+  )
 }

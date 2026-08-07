@@ -1,9 +1,44 @@
-import { AdminSection } from "../../../components/AdminSection"
-import { requireAdminPrincipal } from "../../../lib/admin-authorization"
+import {
+  hasAdminPermission,
+  requireAdminPrincipal,
+} from "../../../lib/admin-authorization"
+import { getAdminFeatureFlagsOverview } from "../../../lib/admin-feature-flags"
+import { AdminFeatureFlagsGrid } from "./AdminFeatureFlagsGrid"
+
 export default async function Page() {
-  await requireAdminPrincipal("feature_flags:read")
-  return <AdminSection title="Feature Flags" description="Typed, environment-aware flags. No secrets or arbitrary JSON values." items={[
-    { label: "Durable values", value: "Available after migration" },
-    { label: "Production mutation", value: "Explicit permission required" }
-  ]} />
+  const principal = await requireAdminPrincipal("feature_flags:read")
+  const canWrite = hasAdminPermission(principal.membership, "feature_flags:write")
+  const { defaults, overrides } = await getAdminFeatureFlagsOverview()
+
+  return (
+    <main className="operations-admin-page">
+      <header className="operations-admin-page-header">
+        <div>
+          <p className="eyebrow">Operations</p>
+          <h1>Feature Flags</h1>
+          <p>
+            Typed, environment-aware flags. No secrets or arbitrary JSON
+            values.
+          </p>
+        </div>
+      </header>
+      <section aria-label="Mutation policy" className="operations-admin-grid">
+        <article>
+          <span>Durable values</span>
+          <strong>Live in admin_feature_flags</strong>
+        </article>
+        <article>
+          <span>Production mutation</span>
+          <strong>
+            {canWrite ? "You hold this permission" : "Explicit permission required"}
+          </strong>
+        </article>
+      </section>
+      <AdminFeatureFlagsGrid
+        canWrite={canWrite}
+        defaults={defaults}
+        initialOverrides={overrides}
+      />
+    </main>
+  )
 }

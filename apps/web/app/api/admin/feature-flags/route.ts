@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import {
-  AdminAuthorizationError,
   isSameOriginMutation,
   requireAdminRequest,
 } from "../../../../lib/admin-authorization";
 import {
-  adminFeatureFlagKeys,
+  getAdminFeatureFlagsOverview,
   isAdminFeatureFlagKey,
-  safeAdminFeatureFlagDefaults,
 } from "../../../../lib/admin-feature-flags";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { safeAdminError } from "../../../../lib/admin-safe-response";
@@ -15,16 +13,9 @@ import { safeAdminError } from "../../../../lib/admin-safe-response";
 export async function GET(request: Request) {
   try {
     await requireAdminRequest(request, "feature_flags:read");
-    const { data, error } = await createAdminClient()
-      .from("admin_feature_flags")
-      .select("key, enabled, environment, version, updated_at");
-    if (error) throw new Error();
+    const data = await getAdminFeatureFlagsOverview();
     return NextResponse.json(
-      {
-        data: { defaults: safeAdminFeatureFlagDefaults, overrides: data ?? [] },
-        error: null,
-        status: 200,
-      },
+      { data, error: null, status: 200 },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
