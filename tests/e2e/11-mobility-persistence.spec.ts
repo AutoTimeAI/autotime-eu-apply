@@ -34,7 +34,7 @@ async function seedLocal(page: Page, value = profile) {
 }
 
 async function openMobility(page: Page) {
-  await page.goto("/dashboard/international");
+  await page.goto("/dashboard/international", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "My mobility", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Mobility data storage" }),

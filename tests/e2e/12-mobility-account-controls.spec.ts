@@ -28,7 +28,7 @@ test("new user, account-profile deletion and logout retention are explicit", asy
       return json(route, { data: { deleted: true }, error: null });
     return json(route, { data: null, error: null });
   });
-  await page.goto("/dashboard/international");
+  await page.goto("/dashboard/international", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "My mobility", exact: true }).click();
   await expect(
     page.getByText("No mobility profile has been saved yet."),
@@ -93,7 +93,7 @@ test("active-user browser deletion does not remove another account key", async (
   await page.route("**/api/sync/mobility", (route) =>
     json(route, { data: record, error: null }),
   );
-  await page.goto("/dashboard/international");
+  await page.goto("/dashboard/international", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "My mobility", exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Remove from this browser" }).click();

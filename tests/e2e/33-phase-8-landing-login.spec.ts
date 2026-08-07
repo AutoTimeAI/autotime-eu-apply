@@ -50,7 +50,7 @@ test("landing page hero and CTAs are green-free and use the shared blue", async 
   await disableDevelopmentToolbar(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "AutoTime AI" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "EU Apply" })).toBeVisible();
   await page.waitForLoadState("networkidle");
   await page.mouse.move(0, 0);
   await capture(page, "landing-hero-1440x900.png");
@@ -105,7 +105,7 @@ test("shared brand name and PRO badge use blue everywhere, not the sitewide teal
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  await expect(page.getByText("AutoTime AI").first()).toHaveCSS(
+  await expect(page.locator(".brand-name").first()).toHaveCSS(
     "color",
     "rgb(23, 78, 166)",
   );
