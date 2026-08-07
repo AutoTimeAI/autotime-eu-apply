@@ -35,8 +35,8 @@
   --content-width: 1280px;
   --reading-width: 760px;
   --focus-ring: 0 0 0 4px rgba(15, 118, 110, 0.16);
-  --status-confirmed-bg: #edf8f2;
-  --status-confirmed-text: #17623f;
+  --status-confirmed-bg: #eaf2ff;
+  --status-confirmed-text: #123b78;
   --status-inferred-bg: #eef4ff;
   --status-inferred-text: #315fba;
   --status-missing-bg: #fff7e8;

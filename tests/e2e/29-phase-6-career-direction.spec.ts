@@ -91,14 +91,7 @@ async function capture(page: Page, path: string) {
 
 test.beforeAll(async () => mkdir(output, { recursive: true }));
 
-// The .confirm-switch checkboxes render with --status-confirmed-text /
-// --status-confirmed-bg (rgb(23,98,63) / rgb(237,248,242)), a genuine
-// semantic "confirmed" status color defined in the original :root block
-// (alongside --status-inferred-*, --status-conflicting-* etc.), not part
-// of the teal-accent bug fixed elsewhere in this pass. Whether a
-// confirmed-evidence checkbox should read as green is a product design
-// call, not something to decide here.
-test.skip("full pathway flow is green-free with a single primary per stage", async ({
+test("full pathway flow is green-free with a single primary per stage", async ({
   page,
 }) => {
   await disableDevelopmentToolbar(page);
