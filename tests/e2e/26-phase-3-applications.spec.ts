@@ -292,10 +292,7 @@ async function capture(page: Page, path: string) {
 
 test.beforeAll(async () => mkdir(output, { recursive: true }));
 
-// Blocked on a pre-existing globals.css bug: a duplicate :root block
-// ("2026 visual system refresh") silently overrides the blue design
-// tokens with teal app-wide via CSS cascade order. Tracked separately.
-test.skip("pipeline states and stage filters are operational", async ({ page }) => {
+test("pipeline states and stage filters are operational", async ({ page }) => {
   await disableDevelopmentToolbar(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await seed(page, []);

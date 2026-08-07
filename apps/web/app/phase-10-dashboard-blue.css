@@ -1,0 +1,60 @@
+/*
+ * phase-8-public.css's own comment claims the blue design system was
+ * "applied to every /dashboard/* route this project has been migrated
+ * to" — but the "2026 visual system refresh" block in globals.css (a
+ * real, deliberate glassmorphism pass: gradients, blur, shadows on
+ * buttons, the dashboard topbar/sidebar, and workflow cards) is still on
+ * the pre-rebrand teal palette, via a second unscoped :root that
+ * redefines --accent/--accent-strong (and --ink/--text/--border/
+ * --shadow*) to teal, plus several literal teal rgba()/hex values that
+ * don't read from those variables at all. That block is real, load-
+ * bearing styling — not dead code — so this overrides it in place
+ * (scoped to .dashboard-app-shell, the wrapper every chrome-enabled
+ * dashboard page renders, per components/DashboardShell.tsx) rather
+ * than deleting anything.
+ */
+.dashboard-app-shell {
+  --ink: #0d1728;
+  --text: #263244;
+  --border: #d8e0eb;
+  --border-strong: #aebccc;
+  --accent: #174ea6;
+  --accent-strong: #123b78;
+  --accent-strong-rgb: 18, 59, 120;
+  --shadow-rgb: 13, 23, 40;
+  --shadow: 0 24px 70px rgba(13, 23, 40, 0.1);
+  --shadow-tight: 0 12px 36px rgba(13, 23, 40, 0.08);
+  --shadow-soft: 0 32px 100px rgba(13, 23, 40, 0.14);
+  --focus-ring: 0 0 0 4px rgba(23, 78, 166, 0.18);
+}
+
+.dashboard-app-shell button:not(.secondary-button),
+.dashboard-app-shell .primary-link {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 12px 30px rgba(var(--accent-strong-rgb), 0.22);
+}
+
+.dashboard-app-shell button:not(.secondary-button):hover,
+.dashboard-app-shell .primary-link:hover {
+  box-shadow: 0 16px 36px rgba(var(--accent-strong-rgb), 0.28);
+}
+
+.dashboard-app-shell .secondary-link,
+.dashboard-app-shell .secondary-button {
+  box-shadow: 0 8px 24px rgba(var(--shadow-rgb), 0.06);
+}
+
+.dashboard-app-shell .dashboard-topbar {
+  box-shadow: 0 14px 44px rgba(var(--shadow-rgb), 0.08);
+}
+
+.dashboard-app-shell .dashboard-sidebar {
+  box-shadow: 0 18px 54px rgba(var(--shadow-rgb), 0.08);
+}
+
+.dashboard-app-shell .workflow-editor,
+.dashboard-app-shell .workflow-section,
+.dashboard-app-shell .workflow-recommendation,
+.dashboard-app-shell .workflow-checklist {
+  box-shadow: 0 18px 54px rgba(var(--shadow-rgb), 0.08);
+}

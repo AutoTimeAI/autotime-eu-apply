@@ -91,9 +91,13 @@ async function capture(page: Page, path: string) {
 
 test.beforeAll(async () => mkdir(output, { recursive: true }));
 
-// Blocked on a pre-existing globals.css bug: a duplicate :root block
-// ("2026 visual system refresh") silently overrides the blue design
-// tokens with teal app-wide via CSS cascade order. Tracked separately.
+// The .confirm-switch checkboxes render with --status-confirmed-text /
+// --status-confirmed-bg (rgb(23,98,63) / rgb(237,248,242)), a genuine
+// semantic "confirmed" status color defined in the original :root block
+// (alongside --status-inferred-*, --status-conflicting-* etc.), not part
+// of the teal-accent bug fixed elsewhere in this pass. Whether a
+// confirmed-evidence checkbox should read as green is a product design
+// call, not something to decide here.
 test.skip("full pathway flow is green-free with a single primary per stage", async ({
   page,
 }) => {
@@ -172,8 +176,7 @@ test("stepper active state uses shared blue, not the site teal default", async (
   await expect(extractButton).toHaveCSS("background-color", "rgb(23, 78, 166)");
 });
 
-// Blocked on the same globals.css :root bug noted above.
-test.skip("active step scrolls into view on mobile when advancing stages", async ({
+test("active step scrolls into view on mobile when advancing stages", async ({
   page,
 }) => {
   await disableDevelopmentToolbar(page);
@@ -208,8 +211,7 @@ test.skip("active step scrolls into view on mobile when advancing stages", async
   await capture(page, "stage3-pathways-mobile-tap-390x844.png");
 });
 
-// Blocked on the same globals.css :root bug noted above.
-test.skip("detail is responsive at required intermediate viewports", async ({
+test("detail is responsive at required intermediate viewports", async ({
   page,
 }) => {
   await disableDevelopmentToolbar(page);

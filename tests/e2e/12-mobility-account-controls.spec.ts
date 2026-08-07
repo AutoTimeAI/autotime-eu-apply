@@ -42,7 +42,7 @@ test("new user, account-profile deletion and logout retention are explicit", asy
   await page.route("**/api/sync/profile", (route) =>
     json(route, { data: { deleted: true }, error: null }),
   );
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/settings", { waitUntil: "networkidle" });
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Delete account profile" }).click();
   await expect(

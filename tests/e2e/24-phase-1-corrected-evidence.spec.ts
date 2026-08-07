@@ -301,10 +301,7 @@ async function assertCorrectedDom(page: Page, desktop: boolean) {
 test.beforeAll(async () => mkdir(outputDirectory, { recursive: true }));
 
 for (const capture of captures) {
-  // Blocked on a pre-existing globals.css bug: a duplicate :root block
-  // ("2026 visual system refresh") silently overrides the blue design
-  // tokens with teal app-wide via CSS cascade order. Tracked separately.
-  test.skip(`${capture.state} ${capture.viewport.width}x${capture.viewport.height}`, async ({
+  test(`${capture.state} ${capture.viewport.width}x${capture.viewport.height}`, async ({
     page,
   }) => {
     await page.addInitScript((fixture) => {
