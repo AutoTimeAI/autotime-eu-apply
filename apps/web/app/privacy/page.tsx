@@ -67,17 +67,23 @@ export default function PrivacyPage() {
         <p>
           You have rights of access, deletion and portability under GDPR
           Articles 15-20, together with rights to correct inaccurate data,
-          restrict processing and object where applicable.
+          restrict processing and object where applicable. You can exercise
+          access and deletion yourself at any time from Settings &gt; Your
+          data rights: &quot;Export my data&quot; downloads everything stored
+          about your account, and &quot;Delete my account&quot; permanently
+          removes your sign-in account and all associated data. For
+          corrections, restriction or objection requests, contact
+          support@autotime.ai.
         </p>
       </section>
 
       <section className="legal-section">
         <h2>Retention</h2>
         <p>
-          Account data is retained while your account is active. Deleted account
-          data is removed from production systems within 30 days of account
-          deletion unless we must retain limited records for legal, tax or fraud
-          prevention reasons.
+          Account data is retained while your account is active. Using
+          &quot;Delete my account&quot; in Settings removes your account and
+          all associated data immediately and permanently, except limited
+          records we must retain for legal, tax or fraud prevention reasons.
         </p>
       </section>
     </main>

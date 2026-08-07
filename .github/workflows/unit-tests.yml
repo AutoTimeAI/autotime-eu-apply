@@ -92,3 +92,30 @@ jobs:
           STRIPE_PRO_MONTHLY_PRICE_ID: price_offline_ci_monthly
           STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
           RESEND_API_KEY: re_offline_ci
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: pnpm test:e2e
+        env:
+          NEXT_PUBLIC_AUTOTIME_ENV: preview
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: offline-ci-anon-key
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_offline_ci
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          SUPABASE_SERVICE_ROLE_KEY: offline-ci-service-role-key
+          OPENAI_API_KEY: offline-ci-openai-key
+          STRIPE_SECRET_KEY: sk_test_offline_ci
+          STRIPE_WEBHOOK_SECRET: whsec_offline_ci
+          STRIPE_PRO_MONTHLY_PRICE_ID: price_offline_ci_monthly
+          STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
+          RESEND_API_KEY: re_offline_ci
+
+      - name: Upload e2e report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

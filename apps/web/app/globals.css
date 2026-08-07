@@ -35,8 +35,8 @@
   --content-width: 1280px;
   --reading-width: 760px;
   --focus-ring: 0 0 0 4px rgba(15, 118, 110, 0.16);
-  --status-confirmed-bg: #edf8f2;
-  --status-confirmed-text: #17623f;
+  --status-confirmed-bg: #eaf2ff;
+  --status-confirmed-text: #123b78;
   --status-inferred-bg: #eef4ff;
   --status-inferred-text: #315fba;
   --status-missing-bg: #fff7e8;
@@ -8554,11 +8554,15 @@ h4 {
   --surface-muted: #e8f0ee;
   --surface-mint: #e8f8f3;
   --surface-blue: #edf4ff;
-  --ink: #071c1b;
-  --text: #183230;
-  --muted: #637876;
-  --border: rgba(17, 65, 61, 0.13);
-  --border-strong: rgba(17, 65, 61, 0.24);
+  /* --ink, --text, --border and --border-strong are deliberately not
+     redefined here: this block used to shadow the neutral values from
+     the first :root above with near-duplicate teal-tinted ones (e.g.
+     --text: #183230 vs the original #263244), which is what let teal
+     leak into computed styles like the <body> text color that no
+     surface-scoped override (.dashboard-app-shell etc.) can reach,
+     since a child selector can't change what an ancestor element
+     resolves. See phase-10-dashboard-blue.css for the accent/shadow
+     side of this fix. */
   --accent: #087f71;
   --accent-strong: #05665c;
   --shadow: 0 24px 70px rgba(8, 42, 39, 0.1);

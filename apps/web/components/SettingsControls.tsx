@@ -43,6 +43,8 @@ export function SettingsControls({
   const [isBillingPending, setIsBillingPending] = useState(false);
   const [isDeletePending, setIsDeletePending] = useState(false);
   const [isPreferencesPending, setIsPreferencesPending] = useState(false);
+  const [isExportPending, setIsExportPending] = useState(false);
+  const [isAccountDeletePending, setIsAccountDeletePending] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -266,6 +268,65 @@ export function SettingsControls({
       setIsDeletePending(false);
     }
   };
+
+  const exportAccountData = async () => {
+    try {
+      setIsExportPending(true);
+      setStatus(null);
+      const response = await fetch("/api/account/export");
+
+      if (!response.ok) {
+        const payload = (await response.json()) as { error: string | null };
+        setStatus(payload.error ?? "Account data export failed.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "eu-apply-account-export.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus("Account data exported.");
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error ? error.message : "Account data export failed.",
+      );
+    } finally {
+      setIsExportPending(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (
+      !window.confirm(
+        "Permanently delete your sign-in account and all associated data? This cannot be undone and you will be signed out immediately.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsAccountDeletePending(true);
+      setStatus(null);
+      const response = await fetch("/api/account", { method: "DELETE" });
+      const payload = (await response.json()) as { error: string | null };
+
+      if (!response.ok || payload.error) {
+        setStatus(payload.error ?? "Account deletion failed.");
+        return;
+      }
+
+      window.location.replace("/login?accountDeleted=1");
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof Error ? error.message : "Account deletion failed.",
+      );
+    } finally {
+      setIsAccountDeletePending(false);
+    }
+  };
   return (
     <section className="settings-control-grid" aria-label="Settings controls">
       <article className="settings-control-panel">
@@ -322,6 +383,35 @@ export function SettingsControls({
             onClick={deleteAccountProfile}
           >
             Delete account profile
+          </button>
+        </div>
+      </article>
+
+      <article className="settings-control-panel" id="gdpr-controls">
+        <div className="section-heading">
+          <p className="eyebrow">Your data rights</p>
+          <h2>Export or delete your account</h2>
+          <p>
+            Export everything stored about you server-side, or permanently
+            delete your sign-in account and all associated data.
+          </p>
+        </div>
+        <div className="profile-action-row">
+          <button
+            className="secondary-button"
+            disabled={isExportPending}
+            type="button"
+            onClick={() => void exportAccountData()}
+          >
+            {isExportPending ? "Exporting…" : "Export my data"}
+          </button>
+          <button
+            className="danger-button"
+            disabled={isAccountDeletePending}
+            type="button"
+            onClick={() => void deleteAccount()}
+          >
+            {isAccountDeletePending ? "Deleting…" : "Delete my account"}
           </button>
         </div>
       </article>

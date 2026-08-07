@@ -1,11 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
+import { seedReadyDashboardProfile } from "./helpers";
 const userId = "00000000-0000-4000-8000-000000000001";
 const shots = "screenshots/phase-3c";
 const jobId = "33333333-3333-4333-8333-333333333333";
 const applicationId = "44444444-4444-4444-8444-444444444444";
 
 async function seed(page: Page, withInterview = false, completed = false) {
+  // Without a seeded profile, /dashboard redirects straight to the
+  // first-time "Profile Evidence" 6-step wizard (readiness < 90%),
+  // pre-empting the in-page career-direction prompt these tests exercise.
+  await seedReadyDashboardProfile(page);
   await page.addInitScript(
     ({ userId, jobId, applicationId, withInterview, completed }) => {
       if (sessionStorage.getItem("phase-3c-fixture-seeded")) return;
@@ -365,6 +370,22 @@ test("Home updates when an imminent interview is created in the active session",
   page,
 }) => {
   await seed(page, false);
+  // This test needs the career-direction prompt to appear naturally (no
+  // career evidence yet) and then react live once an interview lands, so
+  // it can't use the shared helper's fully-complete profile as-is: strip
+  // the evidence fields seedReadyDashboardProfile fills in, keeping only
+  // the onboarding-complete flag that bypasses the first-time wizard.
+  await page.addInitScript(({ userId }) => {
+    const key = `autotime-v2-companion-dashboard:${userId}`;
+    const stored = JSON.parse(window.localStorage.getItem(key) ?? "{}");
+    stored.profile = {
+      ...stored.profile,
+      baseCvText: "",
+      experienceHighlights: "",
+      projectSummaries: "",
+    };
+    window.localStorage.setItem(key, JSON.stringify(stored));
+  }, { userId });
   await page.goto("/dashboard");
   await expect(
     page.getByRole("heading", { name: "Choose your career starting point" }),

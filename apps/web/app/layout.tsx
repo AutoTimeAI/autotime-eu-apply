@@ -1,6 +1,7 @@
 import "./globals.css"
 import "./phase-8-public.css"
 import "./phase-9-admin.css"
+import "./phase-10-dashboard-blue.css"
 import type { Metadata } from "next"
 import { Suspense, type ReactNode } from "react"
 import AnalyticsConsent from "../components/AnalyticsConsent"
