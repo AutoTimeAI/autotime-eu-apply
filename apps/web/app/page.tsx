@@ -282,7 +282,8 @@ export default async function HomePage() {
           <p>
             A quality-first workspace for targeting stronger European tech
             roles, checking country-aware fit, proving your experience and
-            improving applications with guided beta feedback.
+            improving applications with guided beta feedback. This is not the
+            final public SaaS launch.
           </p>
           <div className="landing-actions">
             <Link
