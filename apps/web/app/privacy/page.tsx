@@ -29,9 +29,10 @@ export default function PrivacyPage() {
       <section className="legal-section">
         <h2>Data controller</h2>
         <p>
-          The data controller is AUTOTIME AI LTD, London, UK. ICO registration
+          The data controller is AutoTime AI Ltd (&quot;AutoTime&quot;,
+          &quot;we&quot;, &quot;us&quot;), London, UK. ICO registration
           reference will be added after registration is complete. Contact:
-          support@autotime.ai.
+          hello@autotimeai.com.
         </p>
       </section>
 
@@ -73,7 +74,7 @@ export default function PrivacyPage() {
           about your account, and &quot;Delete my account&quot; permanently
           removes your sign-in account and all associated data. For
           corrections, restriction or objection requests, contact
-          support@autotime.ai.
+          hello@autotimeai.com.
         </p>
       </section>
 

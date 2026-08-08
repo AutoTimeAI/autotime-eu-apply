@@ -7694,7 +7694,7 @@ export default function HomePage({
                         </p>
                         <a
                           className="secondary-button"
-                          href="mailto:support@autotime.ai?subject=Join%20AutoTime%20EU%20Apply%20waitlist"
+                          href="mailto:hello@autotimeai.com?subject=Join%20AutoTime%20EU%20Apply%20waitlist"
                           onClick={() =>
                             trackWaitlistSubmitted({
                               route: "/dashboard",
@@ -7714,7 +7714,7 @@ export default function HomePage({
                         </p>
                         <a
                           className="secondary-button"
-                          href="mailto:support@autotime.ai?subject=AutoTime%20EU%20Apply%20MVP%20feedback"
+                          href="mailto:hello@autotimeai.com?subject=AutoTime%20EU%20Apply%20MVP%20feedback"
                         >
                           Leave feedback
                         </a>

@@ -22,10 +22,11 @@ export default function TermsPage() {
       <section className="legal-section">
         <h2>Service</h2>
         <p>
-          AutoTime EU Apply helps candidates organise UK/EU job applications,
-          assess job fit, prepare application content and track outcomes. It is
-          not a recruiter, immigration adviser, legal adviser or guarantee of
-          employment.
+          AutoTime AI Ltd (&quot;AutoTime&quot;, &quot;we&quot;, &quot;us&quot;)
+          operates EU Apply, which helps candidates organise UK/EU job
+          applications, assess job fit, prepare application content and track
+          outcomes. It is not a recruiter, immigration adviser, legal adviser
+          or guarantee of employment.
         </p>
       </section>
 
