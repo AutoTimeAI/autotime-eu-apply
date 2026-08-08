@@ -7,7 +7,7 @@ production deployment.
 
 ## Reporting a Vulnerability
 
-Please report suspected vulnerabilities to support@autotime.ai.
+Please report suspected vulnerabilities to hello@autotimeai.com.
 
 Include:
 

@@ -43,4 +43,4 @@ authorisation decisions.
 ## Deletion
 
 Users can remove local extension data from extension settings and may request
-account data deletion by contacting support@autotime.ai.
+account data deletion by contacting hello@autotimeai.com.

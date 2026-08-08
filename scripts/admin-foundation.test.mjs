@@ -93,8 +93,8 @@ for (const invalid of ["{", JSON.stringify({ event: "unknown", transitionId: "10
 assert.equal(parseWorkflowOperationalEventBody(valid, "text/plain", valid.length), null);
 assert.equal(parseWorkflowOperationalEventBody("x".repeat(workflowEventBodyLimit + 1), "application/json", null), null);
 
-const [adminSql, eventSql, usersApi, overviewApi, eventApi, eventClient] = await Promise.all([
-  read("supabase/migrations/20260801190000_admin_operations_foundation.sql"), read("supabase/migrations/20260801191000_workflow_operational_events.sql"), read("apps/web/app/api/admin/users/route.ts"), read("apps/web/app/api/admin/overview/route.ts"), read("apps/web/app/api/operations/workflow-events/route.ts"), read("apps/web/lib/workflow-operational-events.ts"),
+const [adminSql, eventSql, usersLib, overviewApi, eventApi, eventClient] = await Promise.all([
+  read("supabase/migrations/20260801190000_admin_operations_foundation.sql"), read("supabase/migrations/20260801191000_workflow_operational_events.sql"), read("apps/web/lib/admin-users.ts"), read("apps/web/app/api/admin/overview/route.ts"), read("apps/web/app/api/operations/workflow-events/route.ts"), read("apps/web/lib/workflow-operational-events.ts"),
 ]);
 for (const sql of [adminSql, eventSql]) {
   assert.match(sql, /begin;[\s\S]*commit;/i);
@@ -105,7 +105,7 @@ for (const sql of [adminSql, eventSql]) {
 for (const fn of ["admin_change_beta_access", "admin_update_feature_flag", "admin_request_market_refresh"]) assert.match(adminSql, new RegExp(`create function public\\.${fn}`));
 assert.match(eventSql, /unique \(user_id, event, transition_id\)/);
 assert.match(eventSql, /pg_advisory_xact_lock/);
-assert.match(usersApi, /beta\.error/);
+assert.match(usersLib, /beta\.error/);
 assert.match(overviewApi, /audit:read/);
 assert.match(eventApi, /record_workflow_operational_event/);
 assert.match(eventClient, /NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY/);
