@@ -146,6 +146,7 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  transition: border-color 180ms ease, background-color 180ms ease;
   color: var(--text);
   padding: 10px 14px;
   font: inherit;
