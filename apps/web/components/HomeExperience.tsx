@@ -189,10 +189,14 @@ function OnboardingStep({
   state,
   onChange,
   onComplete,
+  hasCvEvidence,
+  onNeedsCvEvidence,
 }: {
   state: ProgressiveOnboardingState;
   onChange: (next: ProgressiveOnboardingState) => void;
   onComplete: (next: ProgressiveOnboardingState) => void;
+  hasCvEvidence: boolean;
+  onNeedsCvEvidence: () => void;
 }) {
   if (state.currentStep === "career") {
     return (
@@ -241,10 +245,18 @@ function OnboardingStep({
         <div className="onboarding-actions">
           <button
             disabled={!state.evidencePath}
-            onClick={() => onChange({ ...state, currentStep: "target" })}
+            onClick={() => {
+              if (state.evidencePath === "cv" && !hasCvEvidence) {
+                onNeedsCvEvidence();
+                return;
+              }
+              onChange({ ...state, currentStep: "target" });
+            }}
             type="button"
           >
-            Continue
+            {state.evidencePath === "cv" && !hasCvEvidence
+              ? "Add your CV"
+              : "Continue"}
           </button>
           <a className="secondary-button" href="/dashboard/autofill-profile">
             Add evidence in Profile
@@ -619,8 +631,14 @@ export default function HomeExperience({
       onboarding.currentStep !== "complete" ? (
         <div className="onboarding-shell">
           <OnboardingStep
+            hasCvEvidence={Boolean(
+              dashboardState?.profile.baseCvText.trim(),
+            )}
             onChange={persist}
             onComplete={finishOnboarding}
+            onNeedsCvEvidence={() =>
+              router.push("/dashboard/autofill-profile")
+            }
             state={onboarding}
           />
           <button
