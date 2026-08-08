@@ -6295,6 +6295,73 @@ export default function HomePage({
     await loadProfileSnapshot()
   }
 
+  const resetProfile = async () => {
+    if (
+      !window.confirm(
+        "Reset your profile? This clears your personal details, work rights, target roles, CV text and reusable answers so you can fill it in from scratch. Applications, interviews and saved jobs are not affected."
+      )
+    ) {
+      return
+    }
+
+    if (profileSyncTimeoutRef.current) {
+      clearTimeout(profileSyncTimeoutRef.current)
+      profileSyncTimeoutRef.current = null
+    }
+
+    const nextState = {
+      ...state,
+      profile: emptyProfile,
+      reusableAnswers: emptyReusableAnswers
+    }
+    setState(nextState)
+    saveState(nextState, userId)
+    setProductContext(defaultProductContext)
+    saveProductContext(defaultProductContext, userId)
+    setContextSuggestion(null)
+    setContextSuggestionSource(null)
+    setContextSuggestionNote("")
+
+    if (cloudSyncReadiness.configured) {
+      try {
+        const response = await fetch("/api/sync/profile", {
+          method: "DELETE",
+          headers: {
+            "x-autotime-source": "web"
+          }
+        })
+        const body = (await response.json()) as {
+          error: string | null
+        }
+
+        if (!response.ok || body.error) {
+          logDashboardActionFailure(
+            "reset profile sync delete response",
+            body.error ?? "Could not clear the synced profile",
+            {
+              httpStatus: response.status,
+              route: "/api/sync/profile"
+            }
+          )
+          setStatus(
+            "Profile reset on this device. Could not clear the saved copy on your account - try again from Settings."
+          )
+          return
+        }
+      } catch (error: unknown) {
+        logDashboardActionFailure("reset profile sync delete fetch", error, {
+          route: "/api/sync/profile"
+        })
+        setStatus(
+          "Profile reset on this device. Could not clear the saved copy on your account - try again from Settings."
+        )
+        return
+      }
+    }
+
+    setStatus("Profile reset. Fill it in again whenever you're ready.")
+  }
+
   const deleteProfileForAccount = async () => {
     if (!window.confirm("Delete the synced profile for this account?")) {
       return
@@ -8132,6 +8199,14 @@ export default function HomePage({
                         <span>CV proof</span>
                         <span>Reusable answers</span>
                       </div>
+                      <button
+                        className="danger-button"
+                        style={{ justifySelf: "start" }}
+                        type="button"
+                        onClick={resetProfile}
+                      >
+                        Reset profile
+                      </button>
                     </section>
                     <div className="profile-form-toolbar">
                       <div>

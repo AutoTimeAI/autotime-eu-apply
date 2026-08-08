@@ -439,6 +439,7 @@ button:disabled {
 }
 
 .danger-button {
+  border-radius: var(--radius-md);
   border-color: #e1b8bd;
   background: #fff1f2;
   color: var(--red);
