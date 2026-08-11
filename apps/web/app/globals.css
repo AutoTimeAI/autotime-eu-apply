@@ -2249,21 +2249,23 @@ h4 {
   min-height: 116px;
   border-radius: var(--radius-md);
   border-color: var(--border);
-  background: var(--surface-raised);
+  background: var(--surface-raised) !important;
+  box-shadow: none !important;
+  transition: border-color 180ms ease, background-color 180ms ease;
   color: var(--text);
   text-align: left;
 }
 
 .segment-button:hover {
   border-color: var(--accent);
-  background: #edf7f5;
+  background: #edf7f5 !important;
   color: var(--text);
 }
 
 .segment-button.active,
 .segment-button[aria-pressed="true"] {
   border-color: var(--accent);
-  background: #e8f5f3;
+  background: #e8f5f3 !important;
   color: var(--accent-strong);
 }
 
@@ -9454,4 +9456,9 @@ textarea:focus {
   .evidence-review article {
     flex-direction: column;
   }
+}
+@media print {
+  body * { visibility: hidden !important; }
+  [data-ats-safe-cv], [data-ats-safe-cv] * { visibility: visible !important; }
+  [data-ats-safe-cv] { position: absolute; inset: 0; width: 100%; max-width: none !important; padding: 12mm !important; }
 }

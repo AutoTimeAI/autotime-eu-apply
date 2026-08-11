@@ -6,6 +6,7 @@ import {
   getProfile,
   getReusableAnswers,
   saveApplication,
+  saveJobReference,
   type AccountSession,
   type ApplicationRecord
 } from "../lib/storage"
@@ -13,6 +14,7 @@ import {
   extractJobPostingFromJsonLd,
   formatJobPageNotes,
   getJobPlatform,
+  getJobCaptureMode,
   getLinkedInCanonicalJobUrl,
   inferJobPageDetails,
   isLinkedInUrl,
@@ -1104,6 +1106,19 @@ function cleanLinkedInLocation(value = "") {
 
 function detectJobPage(): JobPageResponse {
   const platform = getJobPlatform(window.location.href)
+  const captureMode = getJobCaptureMode(window.location.href)
+  if (captureMode !== "selector-extraction") {
+    return {
+      roleTitle: "", company: "", location: "", jobDescription: "",
+      url: window.location.href, source: window.location.hostname, platform,
+      pageTitle: document.title,
+      message: captureMode === "api-reference"
+        ? "Already available through the aggregated feed. Track saves a lightweight reference; no page scraping is performed."
+        : platform === "LinkedIn"
+          ? "LinkedIn is manual copy/paste only. AutoTime never scrapes or automates LinkedIn."
+          : "Automated extraction is disabled for this board. Use the aggregated feed or paste vacancy text manually."
+    }
+  }
   const jsonLdPosting = getJsonLdJobPosting()
   const jsonLdDetails = extractJobPostingFromJsonLd(jsonLdPosting)
   const isLinkedInPage = platform === "LinkedIn"
@@ -1399,6 +1414,7 @@ function getWidgetMarkup({
   const description = descriptionText
     ? `${getWordCount(descriptionText)} words parsed`
     : "Not parsed yet"
+  const captureMode = details ? getJobCaptureMode(details.url) : "selector-extraction"
   const shouldShowDeepInsightList = hasParsedDescription || isProCustomer
   const normalizedStatus = status.toLowerCase()
   const statusHelp = /^tracking/i.test(status)
@@ -1897,14 +1913,16 @@ function getWidgetMarkup({
           }
         </div>
         <div class="header-actions" aria-label="Widget actions">
-          <button class="header-action-button" data-autotime-track-job type="button">TRACK JOB</button>
+          <button class="header-action-button" data-autotime-track-job type="button">${captureMode === "api-reference" ? "SAVE REFERENCE" : "TRACK JOB"}</button>
           <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard data-autotime-dashboard-url="${escapeHtml(dashboardUrl)}" type="button">${isDashboardConnected ? "Dashboard" : "Connect"}</button>
         </div>
       </div>
       ${
         status
           ? `<div class="status-alert" role="alert" aria-live="assertive">${escapeHtml(status)}<small>${escapeHtml(statusHelp)}</small></div>`
-          : ""
+          : details?.message
+            ? `<div class="status-alert" role="status">${escapeHtml(details.message)}</div>`
+            : ""
       }
       <div class="grid">
         <div class="panel">
@@ -1966,6 +1984,16 @@ async function saveDetectedJob(details: JobPageResponse | null) {
       status: "warning"
     })
     return "Open a visible job page, then try again."
+  }
+
+  if (getJobCaptureMode(details.url) === "api-reference") {
+    await saveJobReference({ url: details.url, platform: details.platform, capturedAt: new Date().toISOString() })
+    void logDiagnosticEvent({ area: "widget", event: "track-job-api-reference-saved", message: "API-covered job saved as a lightweight reference without DOM extraction.", status: "success", details: { platform: details.platform, url: details.url } })
+    return "Already in your aggregated feed — reference saved without scraping. Open Jobs in the dashboard to track the full listing."
+  }
+
+  if (getJobCaptureMode(details.url) === "manual-only") {
+    return details.platform === "LinkedIn" ? "LinkedIn is manual copy/paste only. AutoTime did not read or save page content." : "Automated extraction is disabled for this board. Use the aggregated feed or manual paste."
   }
 
   const applications = await getApplications()

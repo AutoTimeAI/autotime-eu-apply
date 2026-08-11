@@ -793,6 +793,7 @@ export function RolePathwaysExperience() {
         </p>
       ) : null}
       <footer className="pathway-notice">
+        <a className="button-secondary" href="/dashboard/role-pathways/questionnaire">Open ESCO skills questionnaire</a>
         Role Pathways does not make legal, immigration or hiring-probability
         decisions. Occupation taxonomy and market evidence refresh separately
         and never on page load.

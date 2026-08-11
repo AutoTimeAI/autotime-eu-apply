@@ -1,3 +1,5 @@
+import { detectATS } from "./ats-detector.ts";
+
 export type EvidenceState = "confirmed" | "partial" | "missing" | "conflicting";
 export type JobDecision =
   | "Apply"
@@ -44,6 +46,7 @@ export type JobAnalysisResult = {
 };
 
 export type JobRecord = {
+  atsPlatform?: string;
   analysisHistory: JobAnalysisResult[];
   analysisState: JobAnalysisState;
   applicationId?: string;
@@ -187,6 +190,7 @@ export function extractJob(input: {
   );
   const value = (raw: string) => sourced(raw, raw);
   return {
+    atsPlatform: detectATS(input.sourceUrl ?? ""),
     analysisHistory: [],
     analysisState: "Not analysed",
     capturedAt: now,

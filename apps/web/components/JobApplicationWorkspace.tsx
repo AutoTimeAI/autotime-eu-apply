@@ -265,6 +265,7 @@ function JobsList({
           ) : undefined
         }
       />
+      <p><a className="text-link" href="/dashboard/jobs/browse">Browse aggregated EU jobs</a></p>
       {adding ? (
         <JobCapture
           state={state}
@@ -578,8 +579,15 @@ function JobDetail({
       <p className="phase-two-job-status" aria-live="polite">
         {status}
       </p>
+      <div className="workflow-actions"><a className="button-secondary" href={`/dashboard/cv-tailor?job_id=${encodeURIComponent(job.id)}`}>Tailor CV for this job</a></div>
       {tab === "overview" ? (
-        <JobOverview job={job} updateJob={updateJob} />
+        <>
+          <JobOverview job={job} updateJob={updateJob} />
+          <RecruiterOutreachForm
+            applicationId={state.applications.find((item) => item.jobId === job.id)?.id}
+            job={job}
+          />
+        </>
       ) : tab === "analysis" ? (
         <Analysis job={job} analyse={analyse} />
       ) : tab === "application" ? (
@@ -606,6 +614,25 @@ function JobDetail({
       )}
     </main>
   );
+}
+
+function RecruiterOutreachForm({ applicationId, job }: { applicationId?: string; job: JobRecord }) {
+  const [recruiterName, setRecruiterName] = useState("");
+  const [recruiterRole, setRecruiterRole] = useState("Recruiter");
+  const [recruiterEmail, setRecruiterEmail] = useState("");
+  const [candidateSummary, setCandidateSummary] = useState("");
+  const [strengths, setStrengths] = useState("");
+  const [channel, setChannel] = useState<"email" | "linkedin_note" | "linkedin_inmail">("email");
+  const [contactType, setContactType] = useState<"recruiter"|"hiring_manager"|"peer_target_role">("recruiter");
+  const [status, setStatus] = useState("");
+  return <section className="workflow-section" aria-labelledby="job-outreach-heading">
+    <p className="product-eyebrow">Human-sent outreach</p><h2 id="job-outreach-heading">Draft recruiter outreach</h2>
+    <p>Enter recruiter details manually. This form can accept approved lookup autofill later without changing stored data.</p>
+    <div className="workflow-form-grid"><label>Contact type<select value={contactType} onChange={(e)=>setContactType(e.target.value as typeof contactType)}><option value="recruiter">Recruiter</option><option value="hiring_manager">Hiring manager</option><option value="peer_target_role">Peer in target role</option></select></label><label>Name<input value={recruiterName} onChange={(e) => setRecruiterName(e.target.value)} /></label><label>Role<input value={recruiterRole} onChange={(e) => setRecruiterRole(e.target.value)} /></label><label>Email <span>optional</span><input type="email" value={recruiterEmail} onChange={(e) => { setRecruiterEmail(e.target.value); if (e.target.value) setChannel("email"); }} /></label><label>Channel<select value={channel} onChange={(e) => setChannel(e.target.value as typeof channel)}><option value="email">Email</option><option value="linkedin_note">LinkedIn note</option><option value="linkedin_inmail">LinkedIn InMail</option></select></label><label className="full-span">Candidate summary<textarea value={candidateSummary} onChange={(e) => setCandidateSummary(e.target.value)} /></label><label className="full-span">Strongest matching evidence (comma separated)<input value={strengths} onChange={(e) => setStrengths(e.target.value)} /></label></div>
+    {contactType==="peer_target_role"?<p className="notice-warning">Peer outreach is informational only: ask about the role or team, never for an application update or referral.</p>:null}
+    <button className="button-primary" disabled={!applicationId} onClick={async () => { setStatus("Drafting outreach…"); const response = await fetch("/api/outreach", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jobId: applicationId, jobTitle: job.title.value, companyName: job.employer.value, jobDescription: job.description, recruiterName, recruiterRole, recruiterEmail, contactType, candidateSummary, candidateKeyStrengths: strengths.split(",").map((item) => item.trim()).filter(Boolean), channel }) }); const payload = await response.json(); setStatus(response.ok ? "Draft saved. Open Recruiter outreach to review and copy it." : payload.error || "Drafting failed."); }}>Draft outreach</button>
+    {!applicationId ? <p className="notice-warning">Prepare an application first so outreach can be linked to the private application record.</p> : null}<p role="status">{status}</p>{status.startsWith("Draft saved") ? <a className="text-link" href="/dashboard/follow-ups">Open recruiter outreach</a> : null}
+  </section>;
 }
 
 function JobOverview({
@@ -970,6 +997,10 @@ function ApplicationsList({
         title="Your application pipeline"
         description="See what needs attention and move each application forward."
       />
+      <div className="workflow-actions">
+        <a className="button-secondary" href="/dashboard/cv-tailor">Tailor CV</a>
+        <a className="button-secondary" href="/dashboard/follow-ups">Recruiter outreach</a>
+      </div>
       <section
         className="phase-three-stage-filters"
         aria-label="Application stage filters"

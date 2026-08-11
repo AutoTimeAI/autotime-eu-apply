@@ -1,5 +1,2 @@
-import { redirect } from "next/navigation";
-
-export default function DashboardCvTailorPage() {
-  redirect("/dashboard/applications");
-}
+import CVWorkspace from "../../../components/cv/CVWorkspace";
+export default function DashboardCvTailorPage() { return <CVWorkspace />; }

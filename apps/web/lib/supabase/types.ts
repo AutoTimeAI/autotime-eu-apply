@@ -66,6 +66,43 @@ export type AccountAiTone = "concise" | "coaching" | "detailed";
 export type Database = {
   public: {
     Tables: {
+      job_listings: {
+        Row: { id: string; title: string; company: string; location: string | null; url: string; posted_date: string | null; source: string; ats_platform: string; description_raw: string | null; dedup_hash: string; identity_hash: string; created_at: string; updated_at: string };
+        Insert: { id?: string; title: string; company: string; location?: string | null; url: string; posted_date?: string | null; source: string; ats_platform?: string; description_raw?: string | null; dedup_hash: string; identity_hash: string; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["job_listings"]["Insert"]>;
+        Relationships: [];
+      };
+      outreach_messages: {
+        Row: { id: string; user_id: string; job_id: string; recruiter_name: string | null; recruiter_role: string | null; recruiter_email: string | null; contact_type: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note" | "linkedin_inmail" | "email"; draft_subject: string | null; draft_body: string; status: "drafted" | "sent" | "replied" | "no_response"; sent_at: string | null; follow_up_due: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; job_id: string; recruiter_name?: string | null; recruiter_role?: string | null; recruiter_email?: string | null; contact_type?: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note" | "linkedin_inmail" | "email"; draft_subject?: string | null; draft_body: string; status?: "drafted" | "sent" | "replied" | "no_response"; sent_at?: string | null; follow_up_due?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["outreach_messages"]["Insert"]>;
+        Relationships: [];
+      };
+      esco_skills: {
+        Row: { id: string; preferred_label: string; alt_labels: string[]; skill_type: string|null; language: string; embedding: string|null };
+        Insert: { id: string; preferred_label: string; alt_labels?: string[]; skill_type?: string|null; language?: string; embedding?: string|null };
+        Update: Partial<Database["public"]["Tables"]["esco_skills"]["Insert"]>; Relationships: [];
+      };
+      esco_occupations: {
+        Row: { id: string; preferred_label: string; isco_group: string|null; description: string|null; language: string; embedding: string|null };
+        Insert: { id: string; preferred_label: string; isco_group?: string|null; description?: string|null; language?: string; embedding?: string|null };
+        Update: Partial<Database["public"]["Tables"]["esco_occupations"]["Insert"]>; Relationships: [];
+      };
+      esco_occupation_skills: {
+        Row: { occupation_id: string; skill_id: string; relation_type: "essential"|"optional" };
+        Insert: { occupation_id: string; skill_id: string; relation_type: "essential"|"optional" };
+        Update: Partial<Database["public"]["Tables"]["esco_occupation_skills"]["Insert"]>; Relationships: [];
+      };
+      user_skill_profile: {
+        Row: { user_id: string; esco_skill_id: string; confidence: number; source: "stated"|"inferred"|"confirmed"; updated_at: string };
+        Insert: { user_id: string; esco_skill_id: string; confidence: number; source: "stated"|"inferred"|"confirmed"; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["user_skill_profile"]["Insert"]>; Relationships: [];
+      };
+      esco_questionnaire_answers: {
+        Row: { id: string; user_id: string; question: string; answer: string; sequence: number; next_question: string|null; created_at: string };
+        Insert: { id?: string; user_id: string; question: string; answer: string; sequence: number; next_question?: string|null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["esco_questionnaire_answers"]["Insert"]>; Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -424,6 +461,7 @@ export type Database = {
           company: string | null;
           role_title: string | null;
           source: string | null;
+          ats_platform: string;
           status: ApplicationStatus;
           next_action: string | null;
           next_action_date: string | null;
@@ -448,6 +486,7 @@ export type Database = {
           company?: string | null;
           role_title?: string | null;
           source?: string | null;
+          ats_platform?: string;
           status?: ApplicationStatus;
           next_action?: string | null;
           next_action_date?: string | null;
@@ -472,6 +511,7 @@ export type Database = {
           company?: string | null;
           role_title?: string | null;
           source?: string | null;
+          ats_platform?: string;
           status?: ApplicationStatus;
           next_action?: string | null;
           next_action_date?: string | null;
@@ -1015,6 +1055,11 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      match_esco_jobs: {
+        Args: { p_user_id: string; p_limit?: number };
+        Returns: Array<{ job_id:string; title:string; company:string; location:string|null; matched_skills:number; total_essential_skills:number; matched_skill_labels:string[]; missing_skill_labels:string[]; overlap:number|null }>;
+      };
+      classify_job_listings_esco: { Args: { p_limit?: number }; Returns: number };
       admin_change_beta_access: {
         Args: {
           p_actor_user_id: string;

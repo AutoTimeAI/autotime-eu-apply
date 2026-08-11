@@ -28,6 +28,7 @@
     "test:phase-3b-workflow": "node --experimental-strip-types scripts/phase-3b-workflow.test.mjs",
     "test:phase-3c-interviews": "node --experimental-strip-types scripts/phase-3c-interviews.test.mjs",
     "test:admin-foundation": "node --experimental-strip-types scripts/admin-foundation.test.mjs",
+    "test:job-aggregation": "node --experimental-strip-types scripts/job-aggregation.test.mjs",
     "test:admin-migrations:local": "powershell -ExecutionPolicy Bypass -File scripts/run-local-admin-migration-test.ps1",
     "test:admin-bundle-canary": "node scripts/admin-client-bundle-canary.mjs",
     "test:mvp:python": "python scripts/autotime_mvp_test_runner.py",
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@supabase/supabase-js": "^2.105.3",
     "eslint": "9.38.0",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.7.2",

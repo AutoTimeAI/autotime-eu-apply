@@ -40,6 +40,14 @@ export type JobPlatform =
   | "Personio"
   | "Generic"
 
+export type JobCaptureMode = "api-reference" | "selector-extraction" | "manual-only"
+export function getJobCaptureMode(url = ""): JobCaptureMode {
+  if (isLinkedInUrl(url)) return "manual-only"
+  if (isApiCoveredJobUrl(url)) return "api-reference"
+  const ats = detectATS(url)
+  return ats === "workday" || ats === "icims" || ats === "unknown" ? "selector-extraction" : "manual-only"
+}
+
 type JobPageTextInput = {
   title?: string
   heading?: string
@@ -238,6 +246,7 @@ function getLinkedInJobId(url = "") {
 
 export function getJobPlatform(url = ""): JobPlatform {
   const hostname = getHostname(url)
+  const ats = detectATS(url)
 
   if (isHostname(hostname, "linkedin.com")) {
     return "LinkedIn"
@@ -304,27 +313,27 @@ export function getJobPlatform(url = ""): JobPlatform {
     return "JobTeaser"
   }
 
-  if (isHostname(hostname, "greenhouse.io")) {
+  if (ats === "greenhouse") {
     return "Greenhouse"
   }
 
-  if (isHostname(hostname, "lever.co")) {
+  if (ats === "lever") {
     return "Lever"
   }
 
-  if (isHostname(hostname, "myworkdayjobs.com")) {
+  if (ats === "workday") {
     return "Workday"
   }
 
-  if (isHostname(hostname, "ashbyhq.com")) {
+  if (ats === "ashby") {
     return "Ashby"
   }
 
-  if (isHostname(hostname, "smartrecruiters.com")) {
+  if (ats === "smartrecruiters") {
     return "SmartRecruiters"
   }
 
-  if (isHostname(hostname, "icims.com")) {
+  if (ats === "icims") {
     return "iCIMS"
   }
 
@@ -332,11 +341,11 @@ export function getJobPlatform(url = ""): JobPlatform {
     return "BambooHR"
   }
 
-  if (isHostname(hostname, "teamtailor.com")) {
+  if (ats === "teamtailor") {
     return "Teamtailor"
   }
 
-  if (isHostname(hostname, "recruitee.com")) {
+  if (ats === "recruitee") {
     return "Recruitee"
   }
 
@@ -344,7 +353,7 @@ export function getJobPlatform(url = ""): JobPlatform {
     return "Jobvite"
   }
 
-  if (isHostname(hostname, "personio.de") || isHostname(hostname, "personio.com")) {
+  if (ats === "personio") {
     return "Personio"
   }
 
@@ -576,3 +585,4 @@ export function formatJobPageNotes(details: JobPageDetails) {
     .filter(Boolean)
     .join("\n")
 }
+import { detectATS, isApiCoveredJobUrl } from "shared"

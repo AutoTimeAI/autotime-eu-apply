@@ -1,0 +1,5 @@
+[
+  { "company_name": "Capco", "ats_platform": "greenhouse", "ats_slug": "capco" },
+  { "company_name": "OpenPayd", "ats_platform": "lever", "ats_slug": "OpenPayd" },
+  { "company_name": "Accurx", "ats_platform": "ashby", "ats_slug": "accurx" }
+]
