@@ -1,5 +1,2 @@
-import { redirect } from "next/navigation";
-
-export default function DashboardFollowUpsPage() {
-  redirect("/dashboard/applications");
-}
+import OutreachWorkspace from "../../../components/OutreachWorkspace";
+export default function DashboardFollowUpsPage() { return <OutreachWorkspace />; }

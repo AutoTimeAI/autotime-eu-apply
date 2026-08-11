@@ -23,6 +23,7 @@ import {
   getLinkedInCanonicalJobUrl,
   getLinkedInManualInputMessage,
   getJobPlatform,
+  getJobCaptureMode,
   inferJobPageDetails,
   isLinkedInUrl,
   parseLinkedInPageTitle
@@ -430,6 +431,15 @@ test("detects priority job platforms from urls", () => {
   assert.equal(getJobPlatform("https://acme.jobs.personio.com/job/123"), "Personio")
   assert.equal(getJobPlatform("https://example.com/jobs/123"), "Generic")
   assert.equal(getJobPlatform("https://notlinkedin.com/jobs/123"), "Generic")
+})
+
+test("narrows extraction to uncovered ATS and unknown sites", () => {
+  for (const url of ["https://boards.greenhouse.io/acme/jobs/1", "https://jobs.lever.co/acme/1", "https://jobs.ashbyhq.com/acme/1", "https://acme.jobs.personio.de/job/1", "https://eures.europa.eu/job/1"]) assert.equal(getJobCaptureMode(url), "api-reference")
+  assert.equal(getJobCaptureMode("https://acme.wd3.myworkdayjobs.com/job/1"), "selector-extraction")
+  assert.equal(getJobCaptureMode("https://careers.icims.com/jobs/1"), "selector-extraction")
+  assert.equal(getJobCaptureMode("https://careers.example.com/openings/1"), "selector-extraction")
+  assert.equal(getJobCaptureMode("https://linkedin.com/jobs/view/1"), "manual-only")
+  assert.equal(getJobCaptureMode("https://jobs.smartrecruiters.com/acme/1"), "manual-only")
 })
 
 test("detects Tier 1 EU JSON-LD boards as priority platforms", () => {

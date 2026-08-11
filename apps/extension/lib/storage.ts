@@ -120,6 +120,7 @@ export type ApplicationRecord = {
   notes?: string
   contentSnapshot?: ApplicationContentSnapshot
 }
+export type JobReference = { url: string; platform: string; capturedAt: string }
 
 export type JobAnalysisDraft = {
   jobTitle: string
@@ -176,6 +177,7 @@ const AI_USAGE_LOG_KEY = "ai-usage-log"
 const ACCOUNT_SESSION_KEY = "account-session"
 const DIAGNOSTIC_LOG_KEY = "diagnostic-log"
 const APPLICATION_SYNC_STATE_KEY = "application-sync-state"
+const JOB_REFERENCES_KEY = "job-references"
 const LEGACY_OPENAI_SETTINGS_KEY = "openai-settings"
 const MAX_DIAGNOSTIC_LOG_ENTRIES = 150
 
@@ -691,6 +693,8 @@ export async function saveApplication(record: ApplicationRecord) {
   const updated = [normalizeApplicationRecord(record), ...existing]
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }
+export async function getJobReferences(): Promise<JobReference[]> { const result=await chrome.storage.local.get(JOB_REFERENCES_KEY); return (result[JOB_REFERENCES_KEY] as JobReference[]|undefined)??[] }
+export async function saveJobReference(reference: JobReference) { const existing=await getJobReferences(); const without=existing.filter((item)=>item.url!==reference.url); await chrome.storage.local.set({[JOB_REFERENCES_KEY]:[reference,...without]}) }
 
 export async function deleteApplication(id: string) {
   const existing = await getApplications()

@@ -2,6 +2,9 @@ import OpenAI from "openai"
 import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
 import { getOpenAIEnv } from "./env.server"
+import type { CVData } from "./cv/types"
+import { buildOutreachPrompt, type OutreachContext } from "./outreach-drafter"
+import { buildQuestionnaireContext, type AccumulatedSkill } from "./esco/questionnaire-context"
 import {
   assertInterviewPrepReady,
   createLocalInterviewPrepPack,
@@ -769,4 +772,48 @@ export async function reviewProfileContextWithOpenAI({
       value: result.value,
     }),
   }
+}
+
+const tailoredCvSchema = z.object({
+  summary: z.string(),
+  skills: z.array(z.string()),
+  experience: z.array(z.object({ bullets: z.array(z.string()) })),
+})
+
+export async function tailorCvWithOpenAI({ cv, jobDescription }: { cv: CVData; jobDescription: string }) {
+  const result = await createJsonResponse({
+    instructions: [
+      "Tailor a CV conservatively for the supplied job description.",
+      "Return JSON with summary, skills, and experience where each experience item contains bullets.",
+      "Reorder and rephrase only supplied evidence. Never invent employers, tools, metrics, qualifications, dates, or achievements.",
+      "Keep the same number and order of experience entries. Preserve factual meaning.",
+    ].join(" "),
+    input: { cv, jobDescription },
+    schema: tailoredCvSchema,
+  })
+  return { ...result, value: { ...cv, summary: result.value.summary, skills: result.value.skills,
+    experience: cv.experience.map((item, index) => ({ ...item, bullets: result.value.experience[index]?.bullets ?? item.bullets })) } }
+}
+
+const outreachDraftSchema = z.object({ subject: z.string().nullable(), body: z.string() })
+export async function draftOutreachWithOpenAI(context: OutreachContext) {
+  const result = await createJsonResponse({ instructions: buildOutreachPrompt(context), input: context, schema: outreachDraftSchema })
+  const wordCount = result.value.body.trim().split(/\s+/).filter(Boolean).length
+  if (context.channel === "linkedin_note" && result.value.body.length > 300) throw new Error("LinkedIn note exceeds 300 characters")
+  if (context.channel !== "linkedin_note" && wordCount > 150) throw new Error("Outreach draft exceeds 150 words")
+  if (context.channel === "linkedin_note") result.value.subject = null
+  if (result.value.subject && result.value.subject.length > 60) throw new Error("Outreach subject exceeds 60 characters")
+  return result
+}
+
+const escoQuestionnaireRoundSchema = z.object({
+  skills: z.array(z.object({ escoSkillId: z.string(), confidence: z.number().min(0).max(1), source: z.enum(["stated","inferred"]) })).max(12),
+  nextQuestion: z.string(),
+  complete: z.boolean(),
+})
+export async function runEscoQuestionnaireRoundWithOpenAI({ question, answer, answeredSoFar, candidateSkills, currentSkillProfile, round }: { question:string; answer:string; answeredSoFar:Array<{question:string;answer:string}>; candidateSkills:Array<{id:string;preferredLabel:string;skillType:string|null}>; currentSkillProfile:AccumulatedSkill[]; round:number }) {
+  return createJsonResponse({
+    instructions: ["Map only explicit or strongly supported candidate evidence to the supplied ESCO skill IDs.","Return JSON with skills, nextQuestion and complete. Each skill needs escoSkillId, confidence 0-1 and source stated or inferred.","Use currentSkillProfile across rounds: target lowConfidenceSkillIds with evidence-seeking follow-ups, avoid re-asking establishedSkillIds unless the new answer conflicts, and use answer history to distinguish remaining occupation gaps.","Never return an ID outside candidateSkills. Ask one concise evidence-seeking follow-up that resolves low confidence or distinguishes plausible occupations.","Do not ask more than six total questions. Set complete true at round 6 or when evidence is sufficiently clear. Do not infer credentials, employers, tools or outcomes."].join(" "),
+    input: buildQuestionnaireContext({ question, answer, answeredSoFar, candidateSkills, currentSkillProfile, round }), schema: escoQuestionnaireRoundSchema,
+  })
 }

@@ -305,6 +305,7 @@ export const applicationRecordSchema = z.object({
   company: z.string().optional(),
   roleTitle: z.string().optional(),
   source: z.string().optional(),
+  atsPlatform: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
   status: applicationStatusSchema,
