@@ -178,57 +178,38 @@ export default function CVWorkspace({
             />
           </label>
           <label className="cv-long-field">
-            Skills (one per line)
+            Skills
+            <span className="cv-field-hint">Add one relevant skill per line.</span>
             <textarea
+              rows={5}
+              placeholder={"Project management\nData analysis\nStakeholder communication"}
               value={cv.skills.join("\n")}
               onChange={(e) => save({ ...cv, skills: list(e.target.value) })}
             />
           </label>
-          <label className="cv-long-field">
-            Experience JSON
-            <span className="cv-field-hint">Use a JSON list of roles with title, company, dates and bullets.</span>
+          <section className="cv-builder-section" aria-labelledby="cv-experience-title">
+            <div className="cv-builder-section-heading"><div><h3 id="cv-experience-title">Experience</h3><p>Add your latest role first and focus on measurable outcomes.</p></div><button type="button" className="secondary-button" onClick={() => save({...cv,experience:[...cv.experience,{title:"",company:"",dates:"",bullets:[]}]})}>Add experience</button></div>
+            {cv.experience.length ? cv.experience.map((item,index)=><article className="cv-entry-card" key={`experience-${index}`}><div className="cv-entry-grid"><label>Job title<input value={item.title} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,title:e.target.value}:entry)})}/></label><label>Company<input value={item.company} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,company:e.target.value}:entry)})}/></label><label className="cv-entry-wide">Dates<input placeholder="Example: Jan 2023 – Present" value={item.dates} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,dates:e.target.value}:entry)})}/></label><label className="cv-entry-wide">Achievements<span className="cv-field-hint">One achievement per line. Start with an action and include evidence where possible.</span><textarea rows={5} value={item.bullets.join("\n")} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,bullets:list(e.target.value)}:entry)})}/></label></div><button type="button" className="cv-remove-entry" onClick={()=>save({...cv,experience:cv.experience.filter((_,i)=>i!==index)})}>Remove experience</button></article>):<p className="cv-builder-empty">No experience added yet.</p>}
+          </section>
+          <section className="cv-builder-section" aria-labelledby="cv-education-title">
+            <div className="cv-builder-section-heading"><div><h3 id="cv-education-title">Education</h3><p>Add qualifications in reverse chronological order.</p></div><button type="button" className="secondary-button" onClick={() => save({...cv,education:[...cv.education,{degree:"",institution:"",dates:""}]})}>Add education</button></div>
+            {cv.education.length ? cv.education.map((item,index)=><article className="cv-entry-card" key={`education-${index}`}><div className="cv-entry-grid"><label>Degree or qualification<input value={item.degree} onChange={e=>save({...cv,education:cv.education.map((entry,i)=>i===index?{...entry,degree:e.target.value}:entry)})}/></label><label>Institution<input value={item.institution} onChange={e=>save({...cv,education:cv.education.map((entry,i)=>i===index?{...entry,institution:e.target.value}:entry)})}/></label><label className="cv-entry-wide">Dates<input placeholder="Example: 2019 – 2022" value={item.dates} onChange={e=>save({...cv,education:cv.education.map((entry,i)=>i===index?{...entry,dates:e.target.value}:entry)})}/></label></div><button type="button" className="cv-remove-entry" onClick={()=>save({...cv,education:cv.education.filter((_,i)=>i!==index)})}>Remove education</button></article>):<p className="cv-builder-empty">No education added yet.</p>}
+          </section>
+          <section className="cv-tailor-card">
+            <div><p className="eyebrow">Optional</p><h3>Tailor for a job</h3><p>Paste the vacancy description to create a job-specific draft. Your canonical CV remains the source.</p></div>
+            <label>
+            Job description
             <textarea
-              rows={10}
-              value={JSON.stringify(cv.experience, null, 2)}
-              onChange={(e) => {
-                try {
-                  save({ ...cv, experience: JSON.parse(e.target.value) });
-                  setStatus("");
-                } catch {
-                  setStatus("Experience JSON is not valid yet.");
-                }
-              }}
-            />
-          </label>
-          <label className="cv-long-field">
-            Education JSON
-            <span className="cv-field-hint">Use a JSON list with degree, institution and dates.</span>
-            <textarea
-              rows={7}
-              value={JSON.stringify(cv.education, null, 2)}
-              onChange={(e) => {
-                try {
-                  save({ ...cv, education: JSON.parse(e.target.value) });
-                  setStatus("");
-                } catch {
-                  setStatus("Education JSON is not valid yet.");
-                }
-              }}
-            />
-          </label>
-          <label className="cv-long-field">
-            Tracked job description
-            <textarea
-              rows={10}
+              rows={8}
+              placeholder="Paste the full job description here…"
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
             />
-          </label>
-          <div className="workflow-actions">
-            {returnTo ? <button type="button" className="secondary-button" disabled={!hasCvContent} onClick={() => router.push(returnTo)}>Use this CV and return</button> : null}
+            </label>
             <button
               type="button"
               className="button-primary"
+              disabled={!jobDescription.trim() || !hasCvContent}
               onClick={async () => {
                 setStatus("Tailoring CV…");
                 const response = await fetch("/api/ai/tailor-cv", {
@@ -243,12 +224,10 @@ export default function CVWorkspace({
                 setStatus("Tailored draft ready. Review every claim.");
               }}
             >
-              Tailor with AI
+              Create tailored draft
             </button>
-            <button type="button" className="secondary-button" onClick={() => window.print()}>
-              Export text-based PDF
-            </button>
-          </div>
+          </section>
+          <div className="cv-document-actions"><div><h3>Ready to use your CV?</h3><p>Review the preview, then save it to your profile or download an ATS-friendly PDF.</p></div><div className="workflow-actions">{returnTo ? <button type="button" className="button-primary" disabled={!hasCvContent} onClick={() => router.push(returnTo)}>Save CV and return</button> : null}<button type="button" className="secondary-button" disabled={!hasCvContent} onClick={() => window.print()}>Download PDF</button></div></div>
           <p role="status">{status}</p>
         </section>
         <section className="cv-preview-panel" aria-label="CV preview">
