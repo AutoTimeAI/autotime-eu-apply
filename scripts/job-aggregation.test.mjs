@@ -73,3 +73,42 @@ test("ESCO matching API uses the overlap-only RPC signature", async () => {
   const route = await readFile(new URL("../apps/web/app/api/esco/matches/route.ts", import.meta.url), "utf8");
   assert.doesNotMatch(route, /p_query_embedding/); assert.match(route, /p_user_id:user\.id,p_limit:50/);
 });
+test("profile Connect view reuses the outreach drafting flow", async () => {
+  const [profile, connect, workspace] = await Promise.all([
+    readFile(new URL("../apps/web/app/dashboard/profile/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/profile/ProfileConnect.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/OutreachWorkspace.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(profile, /<ProfileConnect/);
+  assert.match(connect, /OutreachDraftForm/);
+  assert.match(connect, /follow_up_due/);
+  assert.match(connect, /contact_type/);
+  assert.match(workspace, /OutreachDraftForm/);
+});
+test("profile onboarding is persisted, guided, and view-only after completion", async () => {
+  const [wizard, profilePage, summary, migration] = await Promise.all([
+    readFile(new URL("../apps/web/components/OnboardingWizard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/dashboard/profile/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/profile/ProfileSummary.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260812160000_profile_onboarding_wizard.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(wizard, /Step \{step\+1\} of 6/);
+  assert.match(wizard, /right-to-work position for your target countries/i);
+  assert.match(wizard, /AI: check clarity and missing facts/);
+  assert.match(wizard, /Complete setup/);
+  assert.match(wizard, /Upload DOCX/);
+  assert.doesNotMatch(profilePage, /DashboardExperience|CVWorkspace/);
+  assert.match(summary, /view-only/i);
+  assert.match(migration, /profile-photos/);
+  assert.match(migration, /storage\.foldername\(name\)/);
+});
+test("dashboard and onboarding share the restrained EU brand backdrop", async () => {
+  const [shell, backdrop] = await Promise.all([
+    readFile(new URL("../apps/web/components/DashboardShell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/BrandBackdrop.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(shell, /<BrandBackdrop/);
+  assert.match(backdrop, /autotime-mark\.png/);
+  assert.match(backdrop, /Evidence first/);
+  assert.match(backdrop, /Better applications/);
+});

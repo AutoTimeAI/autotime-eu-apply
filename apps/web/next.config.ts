@@ -18,6 +18,7 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  serverExternalPackages: ["@napi-rs/canvas", "pdf-parse"],
   async headers() {
     return [
       {

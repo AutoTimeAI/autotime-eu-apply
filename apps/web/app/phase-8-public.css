@@ -57,11 +57,11 @@
 /* Login page: bare buttons ("Sign in with GitHub", "Continue to
    dashboard") inherit the sitewide teal-gradient default; redirect them,
    same as every other phase's default-button fix. */
-.auth-shell button:not(.secondary-button) {
+.auth-shell button:not(.secondary-button):not(.auth-switch-account) {
   border-color: #174ea6;
   background: #174ea6;
 }
-.auth-shell button:not(.secondary-button):hover {
+.auth-shell button:not(.secondary-button):not(.auth-switch-account):hover {
   border-color: #123b78;
   background: #123b78;
 }

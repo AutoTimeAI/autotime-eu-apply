@@ -111,6 +111,34 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       })
     }
 
+    if (user && pathname.startsWith("/dashboard")) {
+      const isOnboarding = pathname === "/dashboard/onboarding"
+      const isOnboardingCvBuilder =
+        pathname === "/dashboard/cv-tailor" &&
+        request.nextUrl.searchParams
+          .get("returnTo")
+          ?.startsWith("/dashboard/onboarding")
+
+      if (!isOnboarding && !isOnboardingCvBuilder) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("onboarding_completed_at")
+          .eq("user_id", user.id)
+          .maybeSingle()
+
+        if (profileError) throw profileError
+
+        if (!profile?.onboarding_completed_at) {
+          const onboardingUrl = new URL("/dashboard/onboarding", request.url)
+          return applyAuthCookies({
+            cookiesToSet,
+            headersToSet,
+            response: NextResponse.redirect(onboardingUrl),
+          })
+        }
+      }
+    }
+
     if (!isPublicPath(pathname) && !isProtectedPath(pathname)) {
       return response
     }

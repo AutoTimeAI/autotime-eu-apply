@@ -30,7 +30,6 @@ import {
   profileProtocolReadinessEvent,
 } from "./ProfileProtocolLock";
 import {
-  hasCompletedOnboarding,
   markOnboardingComplete,
 } from "./OnboardingWizard";
 import {
@@ -382,6 +381,9 @@ export default function HomeExperience({
     useState<InterviewWorkflowState>();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [status, setStatus] = useState("");
+  const [onboardingGate, setOnboardingGate] = useState<"checking" | "ready">(
+    "checking",
+  );
   const statusRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -393,17 +395,27 @@ export default function HomeExperience({
   useEffect(() => {
     if (testFixture || (testMode && window.__AUTOTIME_HOME_TEST_FIXTURE__))
       return;
-    const refresh = () => {
+    let onboardingVerified = false;
+    const refresh = async () => {
       const storedDashboard = readDashboardState(userId);
 
-      if (!hasCompletedOnboarding(userId)) {
-        const coreReadiness = getProfileReadinessFromParts(
-          storedDashboard?.profile,
-          storedDashboard?.reusableAnswers,
-        );
+      if (!onboardingVerified) {
+        let completedOnServer = false;
+        try {
+          const response = await fetch("/api/profile/onboarding", {
+            cache: "no-store",
+          });
+          const payload = await response.json();
+          completedOnServer = Boolean(
+            response.ok && payload.data?.onboarding_completed_at,
+          );
+        } catch {
+          completedOnServer = false;
+        }
 
-        if (coreReadiness >= 90) {
+        if (completedOnServer) {
           markOnboardingComplete(userId);
+          onboardingVerified = true;
         } else {
           router.replace("/dashboard/onboarding");
           return;
@@ -433,6 +445,7 @@ export default function HomeExperience({
       setLane(storedLane);
       setJobWorkflow(storedJobs);
       setInterviewWorkflow(storedInterviews);
+      setOnboardingGate("ready");
       const params = new URLSearchParams(window.location.search);
       setShowOnboarding(
         params.has("onboarding") ||
@@ -441,7 +454,7 @@ export default function HomeExperience({
             !hasUrgentInterviewAction),
       );
     };
-    refresh();
+    void refresh();
     window.addEventListener("autotime-interview-workflow-changed", refresh);
     window.addEventListener("storage", refresh);
     return () => {
@@ -559,6 +572,16 @@ export default function HomeExperience({
         : "/dashboard/jobs",
     );
   };
+
+  if (!testMode && onboardingGate === "checking") {
+    return (
+      <section className="home-onboarding-gate" role="status" aria-live="polite">
+        <span className="home-onboarding-gate-mark" aria-hidden="true" />
+        <strong>Checking your profile setup…</strong>
+        <p>We’ll open your dashboard or resume the next required step.</p>
+      </section>
+    );
+  }
 
   if (
     testFixture?.viewState === "loading" ||

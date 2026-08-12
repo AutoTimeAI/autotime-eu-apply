@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   DashboardPlanProvider,
@@ -9,6 +9,7 @@ import {
 } from "./UserNav";
 import { InactivityLogout } from "./InactivityLogout";
 import type { SubscriptionPlan } from "../lib/supabase/types";
+import { BrandBackdrop } from "./BrandBackdrop";
 
 const chromeFreePaths = new Set(["/dashboard/onboarding"]);
 
@@ -26,13 +27,17 @@ export function DashboardShell({
   userId: string;
 }) {
   const pathname = usePathname();
-  const showChrome = !chromeFreePaths.has(pathname ?? "");
+  const searchParams = useSearchParams();
+  const isOnboardingCvBuilder =
+    pathname === "/dashboard/cv-tailor" &&
+    searchParams.get("returnTo")?.startsWith("/dashboard/onboarding");
+  const showChrome = !chromeFreePaths.has(pathname ?? "") && !isOnboardingCvBuilder;
 
   if (!showChrome) {
     return (
       <DashboardPlanProvider plan={plan} userId={userId}>
         <InactivityLogout />
-        {children}
+        <div className="dashboard-brand-stage"><BrandBackdrop />{children}</div>
       </DashboardPlanProvider>
     );
   }
@@ -41,6 +46,7 @@ export function DashboardShell({
     <DashboardPlanProvider plan={plan} userId={userId}>
       <InactivityLogout />
       <div className="dashboard-app-shell">
+        <BrandBackdrop />
         <a className="skip-link" href="#dashboard-content">
           Skip to main content
         </a>

@@ -20,6 +20,7 @@
   --border-strong: #aebccc;
   --accent: #174ea6;
   --accent-strong: #123b78;
+  --surface-mint: #eaf2ff;
   --accent-strong-rgb: 18, 59, 120;
   --shadow-rgb: 13, 23, 40;
   --shadow: 0 24px 70px rgba(13, 23, 40, 0.1);
@@ -28,19 +29,21 @@
   --focus-ring: 0 0 0 4px rgba(23, 78, 166, 0.18);
 }
 
-.dashboard-app-shell button:not(.secondary-button):not(.danger-button):not([role="tab"]),
+.dashboard-app-shell button:not(.secondary-button):not(.button-secondary):not(.danger-button):not([role="tab"]),
 .dashboard-app-shell .primary-link {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #ffffff;
   box-shadow: 0 12px 30px rgba(var(--accent-strong-rgb), 0.22);
 }
 
-.dashboard-app-shell button:not(.secondary-button):not(.danger-button):not([role="tab"]):hover,
+.dashboard-app-shell button:not(.secondary-button):not(.button-secondary):not(.danger-button):not([role="tab"]):hover,
 .dashboard-app-shell .primary-link:hover {
   box-shadow: 0 16px 36px rgba(var(--accent-strong-rgb), 0.28);
 }
 
 .dashboard-app-shell .secondary-link,
-.dashboard-app-shell .secondary-button {
+.dashboard-app-shell .secondary-button,
+.dashboard-app-shell .button-secondary {
   box-shadow: 0 8px 24px rgba(var(--shadow-rgb), 0.06);
 }
 
@@ -57,4 +60,115 @@
 .dashboard-app-shell .workflow-recommendation,
 .dashboard-app-shell .workflow-checklist {
   box-shadow: 0 18px 54px rgba(var(--shadow-rgb), 0.08);
+}
+
+/* Interactive filters, steppers and selectable content are not primary CTAs. */
+.dashboard-app-shell .phase-three-stage-filters button {
+  border-color: transparent;
+  background: transparent;
+  color: var(--p3-muted);
+  box-shadow: none;
+}
+
+.dashboard-app-shell .phase-three-stage-filters button:hover {
+  background: #f1f5fb;
+  color: var(--p3-ink);
+  box-shadow: none;
+}
+
+.dashboard-app-shell .phase-three-stage-filters button[aria-pressed="true"] {
+  border-bottom-color: var(--p3-primary);
+  background: transparent;
+  color: var(--p3-primary-strong);
+}
+
+.dashboard-app-shell .phase-six-career-direction .pathway-steps button {
+  background: #ffffff;
+  color: var(--p6-muted);
+  box-shadow: none;
+}
+
+.dashboard-app-shell .phase-six-career-direction .pathway-steps .active button {
+  border-color: var(--p6-primary);
+  background: var(--p6-primary);
+  color: #ffffff;
+}
+
+.dashboard-app-shell .phase-six-career-direction .pathway-steps .done button {
+  background: var(--p6-selected);
+  color: var(--p6-primary-strong);
+}
+
+.dashboard-app-shell .phase-six-career-direction .pathway-card {
+  background: #ffffff;
+  color: var(--p6-ink);
+  box-shadow: none;
+}
+
+.dashboard-app-shell button:disabled {
+  border-color: #cbd6e5 !important;
+  background: #e8eef6 !important;
+  color: #66758a !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* Keep CV evidence disclosures, including the portfolio URL flow, inside the
+ * same EU-blue visual system as the surrounding profile workspace. */
+.dashboard-app-shell .cv-enrichment-panel details {
+  overflow: hidden;
+  border: 1px solid #c8d8f0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0;
+}
+
+.dashboard-app-shell .cv-enrichment-panel details[open] {
+  gap: 12px;
+  border-color: #9db9df;
+  background: linear-gradient(145deg, rgba(234, 242, 255, 0.9), rgba(255, 255, 255, 0.94));
+  padding: 0 16px 16px;
+  box-shadow: 0 12px 30px rgba(var(--accent-strong-rgb), 0.08);
+}
+
+.dashboard-app-shell .cv-enrichment-panel summary {
+  color: var(--accent-strong);
+  background: rgba(234, 242, 255, 0.72);
+  padding: 14px 16px;
+  outline: 0;
+}
+
+.dashboard-app-shell .cv-enrichment-panel details[open] summary {
+  margin: 0 -16px;
+  border-bottom: 1px solid #c8d8f0;
+  background: #eaf2ff;
+}
+
+.dashboard-app-shell .cv-enrichment-panel summary:focus-visible {
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 3px rgba(23, 78, 166, 0.28);
+}
+
+.dashboard-app-shell .cv-enrichment-panel label {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.dashboard-app-shell .cv-enrichment-panel input,
+.dashboard-app-shell .cv-enrichment-panel textarea {
+  border-color: #aebfda !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+}
+
+.dashboard-app-shell .cv-enrichment-panel input:focus,
+.dashboard-app-shell .cv-enrichment-panel textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: var(--focus-ring);
+}
+
+.dashboard-app-shell .cv-enrichment-panel .secondary-button:disabled {
+  border-color: #bfd0e9;
+  background: #eaf2ff;
+  color: #6680a8;
 }

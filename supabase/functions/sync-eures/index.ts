@@ -1,6 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const EURES_URL = "https://europa.eu/eures/api/jv-searchengine/public/jv-search/search";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const clean = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const normalise = (value: string) => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "");
@@ -8,8 +7,11 @@ async function hash(value: string) { const data = await crypto.subtle.digest("SH
 function detectATS(url: string) { const patterns: Array<[string, RegExp]> = [["greenhouse", /greenhouse\.io/i], ["lever", /jobs\.lever\.co/i], ["workday", /myworkdayjobs\.com/i], ["personio", /jobs\.personio\.(de|com)/i], ["ashby", /jobs\.ashbyhq\.com/i]]; return patterns.find(([, regex]) => regex.test(url))?.[0] ?? "unknown"; }
 
 async function requestPage(page: number) {
+  const endpoint = Deno.env.get("EURES_PARTNER_API_URL");
+  const token = Deno.env.get("EURES_PARTNER_API_TOKEN");
+  if (!endpoint || !token) throw new Error("Authorized EURES partner API access is not configured");
   for (let attempt = 0; attempt < 3; attempt++) {
-    const response = await fetch(EURES_URL, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify({ page, resultsPerPage: 100, locationCodes: [] }) });
+    const response = await fetch(endpoint, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "application/json" }, body: JSON.stringify({ page, resultsPerPage: 100, locationCodes: [] }) });
     if (response.ok) return response.json();
     if (response.status < 500 && response.status !== 429) throw new Error(`EURES request failed (${response.status})`);
     await sleep(1000 * 2 ** attempt);
@@ -18,7 +20,11 @@ async function requestPage(page: number) {
 }
 
 Deno.serve(async (request) => {
-  if (request.headers.get("authorization") !== `Bearer ${Deno.env.get("CRON_SECRET")}`) return new Response("Unauthorized", { status: 401 });
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (!cronSecret || request.headers.get("x-cron-secret") !== cronSecret) return new Response("Unauthorized", { status: 401 });
+  if (!Deno.env.get("EURES_PARTNER_API_URL") || !Deno.env.get("EURES_PARTNER_API_TOKEN")) {
+    return Response.json({ synced: 0, status: "disabled_missing_authorized_partner_access" }, { status: 503 });
+  }
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   let page = 1, synced = 0;
   while (page <= 100) {

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.5",
     "@react-email/components": "^1.0.12",
     "@sentry/nextjs": "^10.53.1",
     "@stripe/stripe-js": "^9.4.0",
@@ -19,6 +20,7 @@
     "jszip": "3.10.1",
     "next": "^16.2.4",
     "openai": "^6.36.0",
+    "pdf-parse": "^2.4.5",
     "posthog-js": "^1.372.9",
     "posthog-node": "^5.33.3",
     "react": "^18.2.0",

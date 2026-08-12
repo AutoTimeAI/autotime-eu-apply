@@ -774,6 +774,14 @@ export async function reviewProfileContextWithOpenAI({
   }
 }
 
+const workAuthorisationReviewSchema = z.object({ correctedStatement: z.string(), missingFacts: z.array(z.string()).max(4), caution: z.string() });
+export async function reviewWorkAuthorisationWithOpenAI(input: { category: string; statement: string; targetCountries: string[] }) {
+  return createJsonResponse({
+    instructions: ["Rewrite the user's work-authorisation statement for a job profile using only supplied facts.","Return JSON with correctedStatement, missingFacts, and caution.","Never infer citizenship, immigration status, visa type, sponsorship eligibility, or legal rights.","Do not give immigration or legal advice. If facts are missing, list short questions instead of filling gaps.","Use neutral wording such as candidate or applicant; never use foreigner or native."].join(" "),
+    input, schema: workAuthorisationReviewSchema,
+  });
+}
+
 const tailoredCvSchema = z.object({
   summary: z.string(),
   skills: z.array(z.string()),
