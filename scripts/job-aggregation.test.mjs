@@ -73,3 +73,15 @@ test("ESCO matching API uses the overlap-only RPC signature", async () => {
   const route = await readFile(new URL("../apps/web/app/api/esco/matches/route.ts", import.meta.url), "utf8");
   assert.doesNotMatch(route, /p_query_embedding/); assert.match(route, /p_user_id:user\.id,p_limit:50/);
 });
+test("profile Connect view reuses the outreach drafting flow", async () => {
+  const [profile, connect, workspace] = await Promise.all([
+    readFile(new URL("../apps/web/app/dashboard/profile/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/profile/ProfileConnect.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/OutreachWorkspace.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(profile, /<ProfileConnect/);
+  assert.match(connect, /OutreachDraftForm/);
+  assert.match(connect, /follow_up_due/);
+  assert.match(connect, /contact_type/);
+  assert.match(workspace, /OutreachDraftForm/);
+});

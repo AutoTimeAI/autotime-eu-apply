@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import DashboardExperience from "../../../components/DashboardExperience";
 import CVWorkspace from "../../../components/cv/CVWorkspace";
+import ProfileConnect from "../../../components/profile/ProfileConnect";
 
 export default function DashboardProfilePage() {
   return (
@@ -15,6 +16,7 @@ export default function DashboardProfilePage() {
       >
         <CVWorkspace embedded />
       </Suspense>
+      <ProfileConnect />
     </>
   );
 }
