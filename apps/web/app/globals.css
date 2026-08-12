@@ -5441,6 +5441,36 @@ h4 {
   padding: 10px 12px;
 }
 
+.onboarding-cv-ready {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #9acfb2;
+  border-radius: 12px;
+  background: #edf9f2;
+  color: #145c35;
+  padding: 12px 14px;
+}
+
+.onboarding-cv-ready > span {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: #197a49;
+  color: #fff;
+  font-weight: 800;
+}
+
+.onboarding-cv-ready p {
+  margin: 2px 0 0;
+  color: #356b50;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
 .onboarding-validation-alert {
   margin: 0;
   border: 1px solid #e1b8bd;
