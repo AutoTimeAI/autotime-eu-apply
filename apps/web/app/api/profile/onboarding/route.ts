@@ -15,7 +15,7 @@ const patchSchema = z.object({
   linkedinUrl: optionalWebUrl.optional(), githubUrl: optionalWebUrl.optional(), portfolioUrl: optionalWebUrl.optional(),
   workAuthorisationCategory:z.enum(["eu_eea_swiss_citizen","existing_permission","sponsorship_required","country_specific","unsure"]).optional(),workRightDetails:z.string().trim().max(2000).optional(),
   baseCvText: z.string().max(100_000).optional(), onboardingStep: z.number().int().min(0).max(6).optional(), complete: z.boolean().optional(),
-});
+}).superRefine((body,ctx)=>{if((body.onboardingStep??0)>=3||body.complete){try{const url=new URL(body.linkedinUrl??"");const validHost=url.hostname==="linkedin.com"||url.hostname.endsWith(".linkedin.com");if(!["http:","https:"].includes(url.protocol)||!validHost||!/^\/in\/[^/]+\/?$/i.test(url.pathname))throw new Error();}catch{ctx.addIssue({code:"custom",path:["linkedinUrl"],message:"A valid LinkedIn profile URL is required"});}}});
 
 const select = "full_name,email,phone,photo_url,country_current,countries_target,current_country,target_countries,linkedin_url,github_url,portfolio_url,target_roles,work_authorisation_category,work_right_details,base_cv_text,onboarding_step,onboarding_completed_at";
 export async function GET(request: NextRequest) {
