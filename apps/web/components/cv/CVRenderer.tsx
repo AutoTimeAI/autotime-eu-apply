@@ -1,5 +1,11 @@
 import type { CVData } from "../../lib/cv/types";
 export function CVRenderer({ cv }: { cv: CVData }) {
+  const experience = cv.experience.filter((item) =>
+    [item.title, item.company, item.dates, ...item.bullets].some((value) => value.trim()),
+  );
+  const education = cv.education.filter((item) =>
+    [item.degree, item.institution, item.dates].some((value) => value.trim()),
+  );
   const contactLine = [
     cv.contact.email,
     cv.contact.phone,
@@ -31,12 +37,10 @@ export function CVRenderer({ cv }: { cv: CVData }) {
       {cv.contact.name ? <h1>{cv.contact.name}</h1> : null}
       {contactLine ? <p className="cv-contact-line">{contactLine}</p> : null}
       {cv.summary.trim() ? <><h2>Summary</h2><p>{cv.summary}</p></> : null}
-      {cv.experience.length ? <h2>Experience</h2> : null}
-      {cv.experience.map((item, index) => (
+      {experience.length ? <h2>Experience</h2> : null}
+      {experience.map((item, index) => (
         <section key={`${item.company}-${index}`}>
-          <h3>
-            {item.title}, {item.company}
-          </h3>
+          {[item.title, item.company].filter(Boolean).length ? <h3>{[item.title, item.company].filter(Boolean).join(" · ")}</h3> : null}
           <p>{item.dates}</p>
           <ul>
             {item.bullets.map((bullet, i) => (
@@ -45,12 +49,10 @@ export function CVRenderer({ cv }: { cv: CVData }) {
           </ul>
         </section>
       ))}
-      {cv.education.length ? <h2>Education</h2> : null}
-      {cv.education.map((item, index) => (
+      {education.length ? <h2>Education</h2> : null}
+      {education.map((item, index) => (
         <section key={`${item.institution}-${index}`}>
-          <h3>
-            {item.degree}, {item.institution}
-          </h3>
+          {[item.degree, item.institution].filter(Boolean).length ? <h3>{[item.degree, item.institution].filter(Boolean).join(" · ")}</h3> : null}
           <p>{item.dates}</p>
         </section>
       ))}

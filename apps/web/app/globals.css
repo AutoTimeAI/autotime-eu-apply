@@ -5838,6 +5838,43 @@ h4 {
 
 .cv-document {
   display: flow-root;
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11pt;
+  line-height: 1.45;
+}
+
+.cv-document h1 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 22pt;
+  line-height: 1.15;
+}
+
+.cv-document h2 {
+  margin: 18px 0 8px;
+  border-bottom: 1px solid #9ca3af;
+  color: #111827;
+  font-size: 13pt;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.cv-document h3 {
+  margin: 10px 0 2px;
+  color: #111827;
+  font-size: 11pt;
+  line-height: 1.35;
+}
+
+.cv-document p,
+.cv-document li {
+  font-size: 10.5pt;
+}
+
+.cv-document ul {
+  margin: 4px 0 10px;
+  padding-left: 20px;
 }
 
 .cv-document > :first-child {
@@ -5864,6 +5901,12 @@ h4 {
 .cv-preview-empty p,
 .cv-contact-line {
   margin: 0;
+}
+
+.cv-contact-line {
+  color: #374151;
+  font-size: 9.5pt !important;
+  line-height: 1.35;
 }
 
 @media (max-width: 720px) {
