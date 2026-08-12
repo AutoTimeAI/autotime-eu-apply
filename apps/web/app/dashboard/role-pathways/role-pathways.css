@@ -9,7 +9,7 @@
   gap: 24px;
   align-items: end;
   border-radius: 12px;
-  background: linear-gradient(135deg, #0d1728, #0b5f59);
+  background: linear-gradient(135deg, #0d1728, #123b78);
   color: #eef7f5;
   padding: 26px;
 }
@@ -43,8 +43,8 @@
   padding: 10px;
 }
 .pathway-steps .active button {
-  border-color: #0b5f59;
-  color: #0b5f59;
+  border-color: #123b78;
+  color: #123b78;
 }
 .pathway-steps .done button {
   background: #edf8f2;
@@ -154,7 +154,7 @@
   padding: 14px;
 }
 .pathway-card:hover {
-  border-color: #0b5f59;
+  border-color: #123b78;
 }
 .pathway-card-top {
   display: flex;
@@ -167,7 +167,7 @@
 }
 .pathway-card-top b {
   font-size: 1.7rem;
-  color: #0b5f59;
+  color: #123b78;
 }
 .pathway-card > span:not(.pathway-card-top) {
   font-size: 0.84rem;
@@ -195,7 +195,7 @@
 .pathway-score i {
   display: block;
   height: 100%;
-  background: #0b5f59;
+  background: #123b78;
 }
 .pathway-detail-grid article {
   border: 1px solid var(--border);
