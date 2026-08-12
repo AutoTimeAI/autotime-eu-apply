@@ -115,6 +115,7 @@ export type Database = {
           countries_target: string[];
           onboarding_step: number;
           onboarding_completed_at: string | null;
+          work_authorisation_category: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url: string | null;
           github_url: string | null;
           portfolio_url: string | null;
@@ -146,6 +147,7 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url?: string | null;
           github_url?: string | null;
           portfolio_url?: string | null;
@@ -177,6 +179,7 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url?: string | null;
           github_url?: string | null;
           portfolio_url?: string | null;
