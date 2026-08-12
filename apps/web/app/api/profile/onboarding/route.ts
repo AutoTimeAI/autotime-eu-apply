@@ -32,5 +32,10 @@ export async function PATCH(request: NextRequest) {
     const client=createAdminClient();const {data:existing}=await client.from("profiles").select("id").eq("user_id",user.id).maybeSingle();
     const query=existing?client.from("profiles").update(changes).eq("user_id",user.id):client.from("profiles").insert(values);
     const {data,error}=await query.select(select).single();if(error)throw error;return NextResponse.json({data,error:null});
-  } catch(error){return NextResponse.json({data:null,error:error instanceof Error?error.message:"Profile save failed"},{status:error instanceof z.ZodError?400:500});}
+  } catch(error){
+    if(error instanceof z.ZodError){
+      return NextResponse.json({data:null,error:error.issues[0]?.message??"Correct the highlighted profile fields.",fields:Array.from(new Set(error.issues.map(issue=>String(issue.path[0]??"")).filter(Boolean)))},{status:400});
+    }
+    return NextResponse.json({data:null,error:error instanceof Error?error.message:"Profile save failed"},{status:500});
+  }
 }
