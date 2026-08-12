@@ -123,7 +123,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("onboarding_completed_at")
-          .eq("id", user.id)
+          .eq("user_id", user.id)
           .maybeSingle()
 
         if (profileError) throw profileError
