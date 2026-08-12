@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.5",
     "@react-email/components": "^1.0.12",
     "@sentry/nextjs": "^10.53.1",
     "@stripe/stripe-js": "^9.4.0",

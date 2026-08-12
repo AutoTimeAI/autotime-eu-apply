@@ -1,10 +1,15 @@
-import { PDFParse } from "pdf-parse";
-
 export async function extractPdfText(buffer: Buffer): Promise<string> {
   if (buffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
     throw new Error("This file is not a valid PDF.");
   }
 
+  const canvas = await import("@napi-rs/canvas");
+  Object.assign(globalThis, {
+    DOMMatrix: globalThis.DOMMatrix ?? canvas.DOMMatrix,
+    ImageData: globalThis.ImageData ?? canvas.ImageData,
+    Path2D: globalThis.Path2D ?? canvas.Path2D,
+  });
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const result = await parser.getText();
