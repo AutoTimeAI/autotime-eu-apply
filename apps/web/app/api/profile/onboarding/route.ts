@@ -3,10 +3,16 @@ import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
+const humanName = z.string().trim().min(2).max(100).regex(/^[\p{L}\p{M}][\p{L}\p{M}' .-]+$/u, "Invalid name");
+const placeName = z.string().trim().min(2).max(120).regex(/^[\p{L}\p{M}][\p{L}\p{M}' .,-]+$/u, "Invalid location or country");
+const optionalWebUrl = z.string().trim().max(500).refine((value) => {
+  if (!value) return true;
+  try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; }
+}, "Enter a valid http:// or https:// URL");
 const patchSchema = z.object({
-  fullName: z.string().trim().max(200).optional(), email: z.string().email().or(z.literal("")).optional(), phone: z.string().trim().max(50).optional(),
-  countryCurrent: z.string().trim().max(120).optional(), countriesTarget: z.array(z.string().trim().min(1).max(120)).max(20).optional(),
-  linkedinUrl: z.string().url().or(z.literal("")).optional(), githubUrl: z.string().url().or(z.literal("")).optional(), portfolioUrl: z.string().url().or(z.literal("")).optional(),
+  fullName: humanName.optional(), email: z.string().trim().email().max(254).or(z.literal("")).optional(), phone: z.string().trim().regex(/^\+?[0-9][0-9 ()-]{6,24}$/).or(z.literal("")).optional(),
+  countryCurrent: placeName.optional(), countriesTarget: z.array(placeName).min(1).max(20).optional(),
+  linkedinUrl: optionalWebUrl.optional(), githubUrl: optionalWebUrl.optional(), portfolioUrl: optionalWebUrl.optional(),
   workAuthorisationCategory:z.enum(["eu_eea_swiss_citizen","existing_permission","sponsorship_required","country_specific","unsure"]).optional(),workRightDetails:z.string().trim().max(2000).optional(),
   baseCvText: z.string().max(100_000).optional(), onboardingStep: z.number().int().min(0).max(6).optional(), complete: z.boolean().optional(),
 });
