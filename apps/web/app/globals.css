@@ -5529,6 +5529,78 @@ h4 {
   gap: 12px;
 }
 
+.cv-profile-details {
+  gap: 16px;
+}
+
+.cv-profile-details-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cv-profile-details-heading h2,
+.cv-profile-details-heading p {
+  margin: 0;
+}
+
+.cv-profile-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid #c8d8f0;
+  border-radius: 14px;
+  background: #c8d8f0;
+}
+
+.cv-profile-details-grid > div {
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 12px 14px;
+}
+
+.cv-profile-details-grid dt {
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cv-profile-details-grid dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.cv-profile-details-wide {
+  grid-column: 1 / -1;
+}
+
+.cv-profile-details-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 640px) {
+  .cv-profile-details-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cv-profile-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cv-profile-details-wide {
+    grid-column: auto;
+  }
+}
+
 .cv-enrichment-panel > h2,
 .cv-enrichment-panel > p,
 .cv-editor > h2,

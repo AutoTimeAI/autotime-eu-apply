@@ -14,6 +14,17 @@ const empty: CVData = {
   education: [],
   skills: [],
 };
+type OnboardingProfile = {
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  country_current: string | null;
+  countries_target: string[];
+  work_right_details: string;
+  linkedin_url: string | null;
+  github_url: string | null;
+  portfolio_url: string | null;
+};
 export default function CVWorkspace({
   embedded = false,
 }: {
@@ -26,6 +37,7 @@ export default function CVWorkspace({
   const jobId = searchParams.get("job_id");
   const returnTo = searchParams.get("returnTo");
   const [cv, setCv] = useState(empty);
+  const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [status, setStatus] = useState("");
   const hasCvContent = Boolean(
@@ -39,6 +51,28 @@ export default function CVWorkspace({
     try {
       const saved = JSON.parse(localStorage.getItem(key) || "null") || empty;
       setCv(saved);
+      void fetch("/api/profile/onboarding")
+        .then(async (response) => ({ response, payload: await response.json() }))
+        .then(({ response, payload }) => {
+          if (!response.ok || !payload.data) return;
+          const profileData = payload.data as OnboardingProfile;
+          setProfile(profileData);
+          setCv((current) => {
+            const next = {
+              ...current,
+              contact: {
+                ...current.contact,
+                name: current.contact.name || profileData.full_name || "",
+                email: current.contact.email || profileData.email || "",
+                phone: current.contact.phone || profileData.phone || "",
+                location: current.contact.location || profileData.country_current || "",
+                linkedin: current.contact.linkedin || profileData.linkedin_url || "",
+              },
+            };
+            localStorage.setItem(key, JSON.stringify(next));
+            return next;
+          });
+        });
       const job = jobId
         ? loadJobWorkflow(userId).jobs.find((item) => item.id === jobId)
         : undefined;
@@ -87,6 +121,26 @@ export default function CVWorkspace({
         title="Your canonical CV"
         description="Keep your ATS-safe CV with your profile, then tailor it for a specific tracked job when needed."
       />
+      {profile ? (
+        <section className="workflow-section cv-profile-details" aria-labelledby="cv-profile-details-title">
+          <div className="cv-profile-details-heading">
+            <div>
+              <p className="eyebrow">From your profile</p>
+              <h2 id="cv-profile-details-title">Your saved details</h2>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => router.push("/dashboard/profile")}>View profile</button>
+          </div>
+          <dl className="cv-profile-details-grid">
+            <div><dt>Name</dt><dd>{profile.full_name || "Not recorded"}</dd></div>
+            <div><dt>Contact</dt><dd>{[profile.email, profile.phone].filter(Boolean).join(" · ") || "Not recorded"}</dd></div>
+            <div><dt>Current location</dt><dd>{profile.country_current || "Not recorded"}</dd></div>
+            <div><dt>Target countries</dt><dd>{profile.countries_target?.join(", ") || "Not recorded"}</dd></div>
+            <div className="cv-profile-details-wide"><dt>Work authorisation</dt><dd>{profile.work_right_details || "Not recorded"}</dd></div>
+            <div className="cv-profile-details-wide"><dt>Professional links</dt><dd>{[profile.linkedin_url, profile.github_url, profile.portfolio_url].filter(Boolean).join(" · ") || "None added"}</dd></div>
+          </dl>
+          <p className="cv-profile-details-note">Blank CV contact fields are filled from these saved details. You can still tailor the CV fields below.</p>
+        </section>
+      ) : null}
       <CVEnrichmentPanel cv={cv} onApply={save} />
       <div className="phase-three-detail-grid cv-workspace-grid">
         <section className="workflow-editor cv-editor">
