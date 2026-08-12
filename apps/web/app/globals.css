@@ -6983,7 +6983,8 @@ h4 {
 }
 
 .auth-intro {
-  align-content: space-between;
+  align-content: center;
+  gap: clamp(32px, 6vh, 64px);
 }
 
 .auth-intro h1 {
@@ -7080,7 +7081,45 @@ h4 {
 }
 
 .auth-provider-actions {
+  align-items: center;
+  display: grid;
+  gap: 10px;
   margin-top: -2px;
+}
+
+.auth-provider-actions button {
+  width: 100%;
+}
+
+.auth-switch-account {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--accent-strong);
+  font-size: 0.9rem;
+  padding: 8px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-switch-account:hover {
+  background: transparent;
+  color: var(--accent);
+}
+
+.auth-session-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -2px 0 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.86rem;
+  padding: 0 2px 10px;
+}
+
+.auth-session-summary strong {
+  color: var(--ink);
 }
 
 .identity-link-panel {

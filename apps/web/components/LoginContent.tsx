@@ -2,7 +2,6 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { AccountIdentityLinker } from "./AccountIdentityLinker";
 import { reportClientIssue } from "../lib/client-diagnostics";
 import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
@@ -78,7 +77,7 @@ function LoginForm() {
           setIdentityProviderLabel(null);
         }
         setStatus(
-          "You are already signed in. Confirm account permission below to continue.",
+          "You are already signed in. Confirm access below to continue.",
         );
       }
     });
@@ -94,7 +93,7 @@ function LoginForm() {
       if (event === "SIGNED_IN" && session && !oauthStartedRef.current) {
         setHasExistingSession(true);
         setStatus(
-          "You are already signed in. Confirm account permission below to continue.",
+          "You are already signed in. Confirm access below to continue.",
         );
       }
 
@@ -272,10 +271,11 @@ function LoginForm() {
             onChange={(event) => setAccountConsent(event.target.checked)}
           />
           <span>
-            <strong>Account permission</strong>
+            <strong>Allow AutoTime to connect this account?</strong>
             <small>
-              I allow AutoTime to use this sign-in account for my dashboard,
-              profile sync and billing access.
+              This lets us create your profile, keep your information in sync,
+              and give you access to your dashboard. You can disconnect it
+              later in Settings.
             </small>
           </span>
         </label>
@@ -283,8 +283,9 @@ function LoginForm() {
         {hasExistingSession ? (
           <>
             {identityProviderLabel ? (
-              <p className="auth-consent-hint">
-                Signed in with {identityProviderLabel}.
+              <p className="auth-session-summary">
+                <span>Signed in with</span>
+                <strong>{identityProviderLabel}</strong>
               </p>
             ) : null}
             <div className="header-actions auth-provider-actions">
@@ -296,7 +297,7 @@ function LoginForm() {
                 Continue to dashboard
               </button>
               <button
-                className="secondary-button"
+                className="auth-switch-account"
                 disabled={Boolean(pendingProvider)}
                 type="button"
                 onClick={resetSession}
@@ -304,7 +305,6 @@ function LoginForm() {
                 Use a different account
               </button>
             </div>
-            <AccountIdentityLinker compact returnTo={redirectTo} />
           </>
         ) : (
           <div className="header-actions auth-provider-actions">
@@ -332,8 +332,7 @@ function LoginForm() {
 
         {!accountConsent && !status ? (
           <p className="auth-consent-hint">
-            Confirm account permission first. The sign-in buttons will explain
-            this if you click before ticking it.
+            Confirm access to continue securely.
           </p>
         ) : null}
 
