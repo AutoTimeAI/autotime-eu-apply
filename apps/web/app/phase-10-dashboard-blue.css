@@ -28,19 +28,20 @@
   --focus-ring: 0 0 0 4px rgba(23, 78, 166, 0.18);
 }
 
-.dashboard-app-shell button:not(.secondary-button):not(.danger-button):not([role="tab"]),
+.dashboard-app-shell button:not(.secondary-button):not(.button-secondary):not(.danger-button):not([role="tab"]),
 .dashboard-app-shell .primary-link {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   box-shadow: 0 12px 30px rgba(var(--accent-strong-rgb), 0.22);
 }
 
-.dashboard-app-shell button:not(.secondary-button):not(.danger-button):not([role="tab"]):hover,
+.dashboard-app-shell button:not(.secondary-button):not(.button-secondary):not(.danger-button):not([role="tab"]):hover,
 .dashboard-app-shell .primary-link:hover {
   box-shadow: 0 16px 36px rgba(var(--accent-strong-rgb), 0.28);
 }
 
 .dashboard-app-shell .secondary-link,
-.dashboard-app-shell .secondary-button {
+.dashboard-app-shell .secondary-button,
+.dashboard-app-shell .button-secondary {
   box-shadow: 0 8px 24px rgba(var(--shadow-rgb), 0.06);
 }
 

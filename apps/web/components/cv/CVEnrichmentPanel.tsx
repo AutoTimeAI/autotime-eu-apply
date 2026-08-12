@@ -65,19 +65,19 @@ export function CVEnrichmentPanel({ cv, onApply }: { cv: CVData; onApply: (cv: C
         <summary>Connect GitHub</summary>
         <label>GitHub username<input value={github} onChange={(event) => setGithub(event.target.value)} autoComplete="off" /></label>
         <label>Personal access token (optional, not saved)<input type="password" value={githubToken} onChange={(event) => setGithubToken(event.target.value)} autoComplete="off" /></label>
-        <button type="button" className="button-secondary" disabled={busy || !github.trim()} onClick={() => request("/api/cv/github", { username: github, token: githubToken || undefined })}>Preview GitHub evidence</button>
+        <button type="button" className="secondary-button" disabled={busy || !github.trim()} onClick={() => request("/api/cv/github", { username: github, token: githubToken || undefined })}>Preview GitHub evidence</button>
       </details>
       <details>
         <summary>Import LinkedIn export</summary>
         <p>Select the ZIP from LinkedIn’s “Get a copy of your data”. It is parsed locally in your browser.</p>
         <label>LinkedIn export ZIP<input type="file" accept=".zip,application/zip" disabled={busy} onChange={importZip} /></label>
-        <label>Or paste your LinkedIn About / Experience text<textarea rows={6} value={linkedinText} onChange={(event) => setLinkedinText(event.target.value)} /></label>
-        <button type="button" className="button-secondary" disabled={busy || linkedinText.trim().length < 80} onClick={() => request("/api/ai/cv-enrich", { source: "linkedin_text", content: linkedinText })}>Preview pasted text</button>
+        <label>Or paste your LinkedIn About / Experience text<textarea rows={4} value={linkedinText} onChange={(event) => setLinkedinText(event.target.value)} /></label>
+        <button type="button" className="secondary-button" disabled={busy || linkedinText.trim().length < 80} onClick={() => request("/api/ai/cv-enrich", { source: "linkedin_text", content: linkedinText })}>Preview pasted text</button>
       </details>
       <details>
         <summary>Add portfolio URL</summary>
         <label>Your public portfolio URL<input type="url" value={portfolioUrl} placeholder="https://your-site.example" onChange={(event) => setPortfolioUrl(event.target.value)} /></label>
-        <button type="button" className="button-secondary" disabled={busy || !portfolioUrl.trim()} onClick={() => request("/api/ai/cv-enrich", { source: "portfolio", url: portfolioUrl })}>Preview portfolio evidence</button>
+        <button type="button" className="secondary-button" disabled={busy || !portfolioUrl.trim()} onClick={() => request("/api/ai/cv-enrich", { source: "portfolio", url: portfolioUrl })}>Preview portfolio evidence</button>
       </details>
       <p role="status">{status}</p>
       {preview ? (
@@ -91,7 +91,7 @@ export function CVEnrichmentPanel({ cv, onApply }: { cv: CVData; onApply: (cv: C
           {(preview.escoSuggestions ?? []).length ? <div><h4>Suggested ESCO evidence</h4><p>Applying this preview adds these as low-confidence inferred signals; it never replaces existing evidence.</p><ul>{preview.escoSuggestions?.map((item) => <li key={item.escoSkillId}><strong>{item.sourceSkill}</strong> → {item.preferredLabel}</li>)}</ul></div> : null}
           <div className="workflow-actions">
             <button type="button" className="button-primary" onClick={applyPreview}>Apply reviewed suggestions</button>
-            <button type="button" className="button-secondary" onClick={() => { setPreview(null); setStatus("Preview discarded. Your CV was not changed."); }}>Discard</button>
+            <button type="button" className="secondary-button" onClick={() => { setPreview(null); setStatus("Preview discarded. Your CV was not changed."); }}>Discard</button>
           </div>
         </div>
       ) : null}

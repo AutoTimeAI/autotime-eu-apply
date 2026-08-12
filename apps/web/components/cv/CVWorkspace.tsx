@@ -181,7 +181,7 @@ export default function CVWorkspace({
             >
               Tailor with AI
             </button>
-            <button type="button" className="button-secondary" onClick={() => window.print()}>
+            <button type="button" className="secondary-button" onClick={() => window.print()}>
               Export text-based PDF
             </button>
           </div>
