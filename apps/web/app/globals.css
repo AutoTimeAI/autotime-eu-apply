@@ -5413,6 +5413,66 @@ h4 {
   line-height: 1.15;
 }
 
+.onboarding-required-note {
+  margin: 0;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+  padding: 10px 12px;
+}
+
+.onboarding-validation-alert {
+  margin: 0;
+  border: 1px solid #e1b8bd;
+  border-left: 4px solid var(--red);
+  border-radius: 8px;
+  background: #fff1f2;
+  color: var(--red);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+.onboarding-review-list {
+  display: grid;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.onboarding-review-list > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.38fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 13px 16px;
+}
+
+.onboarding-review-list > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.onboarding-review-list dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.onboarding-review-list dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-confirmed { color: var(--green); font-weight: 700; }
+.review-missing { color: var(--red); font-weight: 700; }
+
+@media (max-width: 520px) {
+  .onboarding-review-list > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
 .cv-enrichment-panel {
   align-content: start;
   display: grid;

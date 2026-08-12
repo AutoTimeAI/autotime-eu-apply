@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ProductPageHeader } from "../product-ui";
 import { CVRenderer } from "./CVRenderer";
 import { CVEnrichmentPanel } from "./CVEnrichmentPanel";
@@ -20,12 +20,21 @@ export default function CVWorkspace({
   embedded?: boolean;
 }) {
   const { userId } = useDashboardPlan();
+  const router = useRouter();
   const key = `autotime-cv-data:${userId}`;
   const searchParams = useSearchParams();
   const jobId = searchParams.get("job_id");
+  const returnTo = searchParams.get("returnTo");
   const [cv, setCv] = useState(empty);
   const [jobDescription, setJobDescription] = useState("");
   const [status, setStatus] = useState("");
+  const hasCvContent = Boolean(
+    cv.contact.name.trim() ||
+      cv.summary.trim() ||
+      cv.experience.length ||
+      cv.education.length ||
+      cv.skills.length,
+  );
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(key) || "null") || empty;
@@ -162,6 +171,7 @@ export default function CVWorkspace({
             />
           </label>
           <div className="workflow-actions">
+            {returnTo ? <button type="button" className="secondary-button" disabled={!hasCvContent} onClick={() => router.push(returnTo)}>Use this CV and return</button> : null}
             <button
               type="button"
               className="button-primary"
