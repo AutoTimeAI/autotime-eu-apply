@@ -110,6 +110,11 @@ export type Database = {
           full_name: string;
           email: string | null;
           phone: string | null;
+          photo_url: string | null;
+          country_current: string | null;
+          countries_target: string[];
+          onboarding_step: number;
+          onboarding_completed_at: string | null;
           linkedin_url: string | null;
           github_url: string | null;
           portfolio_url: string | null;
@@ -136,6 +141,11 @@ export type Database = {
           full_name: string;
           email?: string | null;
           phone?: string | null;
+          photo_url?: string | null;
+          country_current?: string | null;
+          countries_target?: string[];
+          onboarding_step?: number;
+          onboarding_completed_at?: string | null;
           linkedin_url?: string | null;
           github_url?: string | null;
           portfolio_url?: string | null;
@@ -162,6 +172,11 @@ export type Database = {
           full_name?: string;
           email?: string | null;
           phone?: string | null;
+          photo_url?: string | null;
+          country_current?: string | null;
+          countries_target?: string[];
+          onboarding_step?: number;
+          onboarding_completed_at?: string | null;
           linkedin_url?: string | null;
           github_url?: string | null;
           portfolio_url?: string | null;

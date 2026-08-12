@@ -9457,6 +9457,20 @@ textarea:focus {
     flex-direction: column;
   }
 }
+
+.profile-onboarding-photo {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.profile-cv-text {
+  max-height: 28rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  font: inherit;
+}
 @media print {
   body * { visibility: hidden !important; }
   [data-ats-safe-cv], [data-ats-safe-cv] * { visibility: visible !important; }

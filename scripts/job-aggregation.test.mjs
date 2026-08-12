@@ -85,3 +85,18 @@ test("profile Connect view reuses the outreach drafting flow", async () => {
   assert.match(connect, /contact_type/);
   assert.match(workspace, /OutreachDraftForm/);
 });
+test("profile onboarding is five-step, persisted, and view-only after completion", async () => {
+  const [wizard, profilePage, summary, migration] = await Promise.all([
+    readFile(new URL("../apps/web/components/OnboardingWizard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/dashboard/profile/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/profile/ProfileSummary.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260812160000_profile_onboarding_wizard.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(wizard, /Step \{step\+1\} of 5/);
+  assert.match(wizard, /Complete setup/);
+  assert.match(wizard, /Upload DOCX/);
+  assert.doesNotMatch(profilePage, /DashboardExperience|CVWorkspace/);
+  assert.match(summary, /view-only/i);
+  assert.match(migration, /profile-photos/);
+  assert.match(migration, /storage\.foldername\(name\)/);
+});
