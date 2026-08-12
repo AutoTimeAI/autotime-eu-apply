@@ -42,6 +42,19 @@ export function CVEnrichmentPanel({ cv, onApply }: { cv: CVData; onApply: (cv: C
     catch (error) { setStatus(error instanceof Error ? error.message : "LinkedIn import failed"); }
     finally { setBusy(false); event.target.value = ""; }
   };
+  const applyPreview = async () => {
+    if (!preview) return;
+    onApply(mergeCvEnrichment(cv, preview));
+    const ids = (preview.escoSuggestions ?? []).map((item) => item.escoSkillId);
+    setPreview(null);
+    if (!ids.length) { setStatus("Enrichment applied to your CV. Review and edit it before use."); return; }
+    try {
+      const response = await fetch("/api/esco/import-evidence", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ escoSkillIds: ids }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "ESCO evidence import failed");
+      setStatus(`Enrichment applied. Added ${payload.data.inserted} inferred ESCO skill signal${payload.data.inserted === 1 ? "" : "s"}; existing evidence was preserved.`);
+    } catch (error) { setStatus(`CV enrichment applied, but ESCO evidence was not saved: ${error instanceof Error ? error.message : "unknown error"}`); }
+  };
 
   return (
     <section className="workflow-section" aria-labelledby="cv-enrichment-title">
@@ -75,8 +88,9 @@ export function CVEnrichmentPanel({ cv, onApply }: { cv: CVData; onApply: (cv: C
           <label>Suggested skills<textarea readOnly rows={5} value={(preview.skills ?? []).join("\n")} /></label>
           <label>Suggested experience<textarea readOnly rows={8} value={JSON.stringify(preview.experience ?? [], null, 2)} /></label>
           <label>Suggested education<textarea readOnly rows={5} value={JSON.stringify(preview.education ?? [], null, 2)} /></label>
+          {(preview.escoSuggestions ?? []).length ? <div><h4>Suggested ESCO evidence</h4><p>Applying this preview adds these as low-confidence inferred signals; it never replaces existing evidence.</p><ul>{preview.escoSuggestions?.map((item) => <li key={item.escoSkillId}><strong>{item.sourceSkill}</strong> → {item.preferredLabel}</li>)}</ul></div> : null}
           <div className="workflow-actions">
-            <button type="button" className="button-primary" onClick={() => { onApply(mergeCvEnrichment(cv, preview)); setPreview(null); setStatus("Enrichment applied to your CV. Review and edit it before use."); }}>Apply reviewed suggestions</button>
+            <button type="button" className="button-primary" onClick={applyPreview}>Apply reviewed suggestions</button>
             <button type="button" className="button-secondary" onClick={() => { setPreview(null); setStatus("Preview discarded. Your CV was not changed."); }}>Discard</button>
           </div>
         </div>
