@@ -5400,6 +5400,141 @@ h4 {
   width: 100%;
 }
 
+.onboarding-legal-note {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.onboarding-work-right-title {
+  font-size: clamp(1.45rem, 4vw, 1.85rem);
+  line-height: 1.15;
+}
+
+.cv-enrichment-panel {
+  align-content: start;
+  display: grid;
+  gap: 12px;
+}
+
+.cv-enrichment-panel > h2,
+.cv-enrichment-panel > p,
+.cv-editor > h2,
+.cv-editor > p {
+  margin: 0;
+}
+
+.cv-enrichment-panel details {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.cv-enrichment-panel details[open] {
+  display: grid;
+  gap: 14px;
+}
+
+.cv-enrichment-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 4px 0;
+}
+
+.dashboard-app-shell .user-nav-menu {
+  width: min(240px, calc(100vw - 24px));
+  gap: 3px;
+  border-radius: 12px;
+  padding: 7px;
+}
+
+.dashboard-app-shell .user-nav-menu a,
+.dashboard-app-shell .user-nav-menu button {
+  min-height: 40px;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 0.88rem;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+.dashboard-app-shell .user-nav-menu a:hover,
+.dashboard-app-shell .user-nav-menu button:hover {
+  background: var(--surface-muted);
+  box-shadow: none;
+}
+
+.cv-editor {
+  align-content: start;
+  display: grid;
+  gap: 18px;
+  margin-top: 0;
+}
+
+.cv-contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.cv-contact-grid label,
+.cv-long-field {
+  display: grid;
+  gap: 7px;
+  font-weight: 650;
+}
+
+.cv-contact-grid label:last-child {
+  grid-column: 1 / -1;
+}
+
+.cv-editor input,
+.cv-editor textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.cv-editor textarea {
+  resize: vertical;
+}
+
+.cv-field-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.cv-preview-panel {
+  align-self: start;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow-tight);
+}
+
+.cv-preview-panel [data-ats-safe-cv] {
+  width: 100%;
+  padding: clamp(20px, 4vw, 40px);
+}
+
+@media (max-width: 720px) {
+  .cv-contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cv-contact-grid label:last-child {
+    grid-column: auto;
+  }
+
+  .cv-editor .workflow-actions > * {
+    width: 100%;
+  }
+}
+
 .capability-readiness-notice {
   display: grid;
   gap: var(--space-3);

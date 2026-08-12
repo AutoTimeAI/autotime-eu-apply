@@ -280,10 +280,17 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
 
     document.addEventListener("mousedown", closeOnOutsideInteraction);
     document.addEventListener("touchstart", closeOnOutsideInteraction);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("keydown", closeOnEscape);
 
     return () => {
       document.removeEventListener("mousedown", closeOnOutsideInteraction);
       document.removeEventListener("touchstart", closeOnOutsideInteraction);
+      document.removeEventListener("keydown", closeOnEscape);
     };
   }, [isOpen]);
 

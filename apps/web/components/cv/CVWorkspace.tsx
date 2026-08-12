@@ -79,14 +79,22 @@ export default function CVWorkspace({
         description="Keep your ATS-safe CV with your profile, then tailor it for a specific tracked job when needed."
       />
       <CVEnrichmentPanel cv={cv} onApply={save} />
-      <div className="phase-three-detail-grid">
-        <section className="workflow-editor">
+      <div className="phase-three-detail-grid cv-workspace-grid">
+        <section className="workflow-editor cv-editor">
           <h2>CV details</h2>
-          {(["name", "email", "phone", "location", "linkedin"] as const).map(
-            (field) => (
+          <div className="cv-contact-grid">
+          {([
+            ["name", "Name", "text", "name"],
+            ["email", "Email", "email", "email"],
+            ["phone", "Phone", "tel", "tel"],
+            ["location", "Location", "text", "address-level2"],
+            ["linkedin", "LinkedIn URL", "url", "url"],
+          ] as const).map(([field, label, type, autoComplete]) => (
               <label key={field}>
-                {field[0].toUpperCase() + field.slice(1)}
+                {label}
                 <input
+                  type={type}
+                  autoComplete={autoComplete}
                   value={cv.contact[field] ?? ""}
                   onChange={(e) =>
                     save({
@@ -96,24 +104,26 @@ export default function CVWorkspace({
                   }
                 />
               </label>
-            ),
-          )}
-          <label>
+            ))}
+          </div>
+          <label className="cv-long-field">
             Summary
             <textarea
+              rows={6}
               value={cv.summary}
               onChange={(e) => save({ ...cv, summary: e.target.value })}
             />
           </label>
-          <label>
+          <label className="cv-long-field">
             Skills (one per line)
             <textarea
               value={cv.skills.join("\n")}
               onChange={(e) => save({ ...cv, skills: list(e.target.value) })}
             />
           </label>
-          <label>
+          <label className="cv-long-field">
             Experience JSON
+            <span className="cv-field-hint">Use a JSON list of roles with title, company, dates and bullets.</span>
             <textarea
               rows={10}
               value={JSON.stringify(cv.experience, null, 2)}
@@ -127,8 +137,9 @@ export default function CVWorkspace({
               }}
             />
           </label>
-          <label>
+          <label className="cv-long-field">
             Education JSON
+            <span className="cv-field-hint">Use a JSON list with degree, institution and dates.</span>
             <textarea
               rows={7}
               value={JSON.stringify(cv.education, null, 2)}
@@ -142,7 +153,7 @@ export default function CVWorkspace({
               }}
             />
           </label>
-          <label>
+          <label className="cv-long-field">
             Tracked job description
             <textarea
               rows={10}
@@ -152,6 +163,7 @@ export default function CVWorkspace({
           </label>
           <div className="workflow-actions">
             <button
+              type="button"
               className="button-primary"
               onClick={async () => {
                 setStatus("Tailoring CV…");
@@ -169,13 +181,13 @@ export default function CVWorkspace({
             >
               Tailor with AI
             </button>
-            <button className="button-secondary" onClick={() => window.print()}>
+            <button type="button" className="button-secondary" onClick={() => window.print()}>
               Export text-based PDF
             </button>
           </div>
           <p role="status">{status}</p>
         </section>
-        <section>
+        <section className="cv-preview-panel" aria-label="CV preview">
           <CVRenderer cv={cv} />
         </section>
       </div>

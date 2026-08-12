@@ -57,7 +57,7 @@ export function CVEnrichmentPanel({ cv, onApply }: { cv: CVData; onApply: (cv: C
   };
 
   return (
-    <section className="workflow-section" aria-labelledby="cv-enrichment-title">
+    <section className="workflow-section cv-enrichment-panel" aria-labelledby="cv-enrichment-title">
       <p className="product-eyebrow">Optional enrichment</p>
       <h2 id="cv-enrichment-title">Bring in existing evidence</h2>
       <p>Each source creates a preview only. Review it before adding anything to your saved CV.</p>
