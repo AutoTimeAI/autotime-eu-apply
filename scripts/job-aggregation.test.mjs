@@ -102,3 +102,13 @@ test("profile onboarding is persisted, guided, and view-only after completion", 
   assert.match(migration, /profile-photos/);
   assert.match(migration, /storage\.foldername\(name\)/);
 });
+test("dashboard and onboarding share the restrained EU brand backdrop", async () => {
+  const [shell, backdrop] = await Promise.all([
+    readFile(new URL("../apps/web/components/DashboardShell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/BrandBackdrop.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(shell, /<BrandBackdrop/);
+  assert.match(backdrop, /autotime-mark\.png/);
+  assert.match(backdrop, /Evidence first/);
+  assert.match(backdrop, /Better applications/);
+});

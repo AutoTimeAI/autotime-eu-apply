@@ -9,6 +9,7 @@ import {
 } from "./UserNav";
 import { InactivityLogout } from "./InactivityLogout";
 import type { SubscriptionPlan } from "../lib/supabase/types";
+import { BrandBackdrop } from "./BrandBackdrop";
 
 const chromeFreePaths = new Set(["/dashboard/onboarding"]);
 
@@ -32,7 +33,7 @@ export function DashboardShell({
     return (
       <DashboardPlanProvider plan={plan} userId={userId}>
         <InactivityLogout />
-        {children}
+        <div className="dashboard-brand-stage"><BrandBackdrop />{children}</div>
       </DashboardPlanProvider>
     );
   }
@@ -41,6 +42,7 @@ export function DashboardShell({
     <DashboardPlanProvider plan={plan} userId={userId}>
       <InactivityLogout />
       <div className="dashboard-app-shell">
+        <BrandBackdrop />
         <a className="skip-link" href="#dashboard-content">
           Skip to main content
         </a>
