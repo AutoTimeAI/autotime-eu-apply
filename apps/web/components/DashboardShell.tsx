@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   DashboardPlanProvider,
@@ -27,7 +27,11 @@ export function DashboardShell({
   userId: string;
 }) {
   const pathname = usePathname();
-  const showChrome = !chromeFreePaths.has(pathname ?? "");
+  const searchParams = useSearchParams();
+  const isOnboardingCvBuilder =
+    pathname === "/dashboard/cv-tailor" &&
+    searchParams.get("returnTo")?.startsWith("/dashboard/onboarding");
+  const showChrome = !chromeFreePaths.has(pathname ?? "") && !isOnboardingCvBuilder;
 
   if (!showChrome) {
     return (

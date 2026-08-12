@@ -435,9 +435,6 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
           >
             Settings
           </a>
-          <a className="secondary-button" href="/pricing" role="menuitem">
-            Plans
-          </a>{" "}
           {isAdmin ? (
             <a className="secondary-button" href="/admin" role="menuitem">
               Admin panel
