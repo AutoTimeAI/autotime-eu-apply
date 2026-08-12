@@ -5432,6 +5432,35 @@ h4 {
   padding: 10px 12px;
 }
 
+.home-onboarding-gate {
+  display: grid;
+  width: min(520px, calc(100% - 32px));
+  min-height: 220px;
+  margin: clamp(48px, 12vh, 120px) auto;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-tight);
+  color: var(--ink);
+  padding: 28px;
+  text-align: center;
+}
+
+.home-onboarding-gate p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.home-onboarding-gate-mark {
+  width: 34px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 .onboarding-review-list {
   display: grid;
   margin: 0;
