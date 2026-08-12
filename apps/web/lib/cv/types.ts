@@ -16,3 +16,8 @@ export interface CVData {
   education: { degree: string; institution: string; dates: string }[];
   skills: string[];
 }
+
+export type CVEnrichment = Partial<Pick<CVData, "summary" | "experience" | "education" | "skills">> & {
+  sourceLabel: string;
+  notes: string[];
+};

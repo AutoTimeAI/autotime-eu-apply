@@ -795,6 +795,26 @@ export async function tailorCvWithOpenAI({ cv, jobDescription }: { cv: CVData; j
     experience: cv.experience.map((item, index) => ({ ...item, bullets: result.value.experience[index]?.bullets ?? item.bullets })) } }
 }
 
+const cvEnrichmentSchema = z.object({
+  summary: z.string().default(""),
+  skills: z.array(z.string()).default([]),
+  experience: z.array(z.object({ title: z.string(), company: z.string(), dates: z.string(), bullets: z.array(z.string()) })).default([]),
+  education: z.array(z.object({ degree: z.string(), institution: z.string(), dates: z.string() })).default([]),
+});
+
+export async function extractCvEnrichmentWithOpenAI({ content, sourceLabel }: { content: string; sourceLabel: string }) {
+  return createJsonResponse({
+    instructions: [
+      "Extract a conservative CV enrichment draft from user-provided source content.",
+      "Return JSON with summary, skills, experience, and education matching the supplied schema.",
+      "Use only explicit evidence. Never invent employers, roles, dates, qualifications, metrics, tools, or outcomes.",
+      "Omit uncertain facts. Keep experience bullets concise and factual. This is a suggestion the user will review before saving.",
+    ].join(" "),
+    input: { sourceLabel, content },
+    schema: cvEnrichmentSchema,
+  });
+}
+
 const outreachDraftSchema = z.object({ subject: z.string().nullable(), body: z.string() })
 export async function draftOutreachWithOpenAI(context: OutreachContext) {
   const result = await createJsonResponse({ instructions: buildOutreachPrompt(context), input: context, schema: outreachDraftSchema })
