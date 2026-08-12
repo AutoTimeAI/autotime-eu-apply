@@ -9,7 +9,11 @@ export async function extractPdfText(buffer: Buffer): Promise<string> {
     ImageData: globalThis.ImageData ?? canvas.ImageData,
     Path2D: globalThis.Path2D ?? canvas.Path2D,
   });
-  const { PDFParse } = await import("pdf-parse");
+  const [{ PDFParse }, { getData }] = await Promise.all([
+    import("pdf-parse"),
+    import("pdf-parse/worker"),
+  ]);
+  PDFParse.setWorker(getData());
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const result = await parser.getText();
