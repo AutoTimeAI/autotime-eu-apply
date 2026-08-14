@@ -6359,7 +6359,20 @@ export default function HomePage({
       }
     }
 
-    setStatus("Profile reset. Fill it in again whenever you're ready.")
+    window.localStorage.removeItem(
+      `autotime-v2-onboarding-complete:${userId}`
+    )
+    window.localStorage.removeItem(`autotime-cv-data:${userId}`)
+    window.localStorage.removeItem(
+      `autotime-progressive-onboarding:v1:${userId}`
+    )
+    for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.sessionStorage.key(index)
+      if (key?.startsWith(`autotime-cv-tailored:${userId}:`)) {
+        window.sessionStorage.removeItem(key)
+      }
+    }
+    window.location.assign("/dashboard/onboarding")
   }
 
   const deleteProfileForAccount = async () => {
