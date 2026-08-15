@@ -48,3 +48,31 @@ The smoke project uses isolated port 3100 and a 15-second test timeout. Observed
 - Web TypeScript check: passed.
 - Playwright test discovery: passed for core and smoke configurations.
 - `git diff --check`: passed.
+
+## Clean GitHub Actions confirmation
+
+Confirmed on draft PR [#23](https://github.com/AutoTimeAI/autotime-eu-apply/pull/23), using clean Ubuntu runners rather than a local simulation.
+
+### Deploy smoke
+
+- Successful run: [CI run 31909445740](https://github.com/AutoTimeAI/autotime-eu-apply/actions/runs/31909445740).
+- Result: 1 passed, 0 skipped.
+- Playwright process time: 22.6 seconds; browser test time: 13.4 seconds. This meets the under-60-second target.
+- The combined test executed homepage, login controls, authenticated dashboard/onboarding gate, jobs route response, authenticated `/api/account/me`, and the final uncaught-client-error assertion.
+- No port-lock or web-server startup failure occurred.
+
+The first clean attempt failed honestly: a fresh authenticated user is redirected into onboarding, whose dashboard wrapper is not a `<main>`. The test was corrected to assert the authenticated dashboard/onboarding shell and URL. HTML reporting was also enabled so future smoke failures upload useful evidence.
+
+### Journey A–C workflow
+
+- Successful run: [Full end-to-end run 31909726054](https://github.com/AutoTimeAI/autotime-eu-apply/actions/runs/31909726054).
+- Trigger: pull request; the same workflow also declares nightly cron and manual dispatch triggers.
+- Result: 4 passed, 0 skipped in 31.6 seconds of Playwright time.
+- Individual clean-runner results: onboarding upload 6.2s; build-new-CV branch 4.9s; ESCO explainability 3.7s; tracked-job tailoring/export blocking 4.1s.
+- Total job time including checkout, dependency install and Chromium provisioning: 1m14s.
+
+The initial workflow command invoked every historical Playwright test rather than the requested A–C regression suite. It was corrected to use the explicit `test:e2e:core` script; superseded broad-suite runs were cancelled.
+
+### Remaining warning
+
+Both workflows log a non-failing Next.js LCP warning for `/brand/autotime-mark.png`. It does not invalidate the smoke or functional results, but should remain tracked as perceived-performance debt until the eager-loading source change is included in a product commit.
