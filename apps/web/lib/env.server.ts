@@ -37,18 +37,16 @@ export function getStripePriceEnv(): {
   proQuarterly: string
 } {
   return {
-    creditPack: requireServerValue(
-      "billing prices",
-      process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID,
-    ),
+    creditPack:
+      process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID?.trim() ||
+      "lookup:autotime_ai_credits_25_gbp_v1",
     proMonthly: requireServerValue(
       "billing prices",
       process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
     ),
-    proQuarterly: requireServerValue(
-      "billing prices",
-      process.env.STRIPE_PRO_QUARTERLY_PRICE_ID,
-    ),
+    proQuarterly:
+      process.env.STRIPE_PRO_QUARTERLY_PRICE_ID?.trim() ||
+      "lookup:autotime_pro_quarterly_gbp_v1",
   }
 }
 

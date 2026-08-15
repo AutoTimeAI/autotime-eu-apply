@@ -16,6 +16,8 @@ export function getStripeClient(): Stripe {
 export const getPortalStripeClient = getStripeClient
 export const getWebhookStripeClient = getStripeClient
 
+const LOOKUP_SELECTOR_PREFIX = "lookup:"
+
 export const PLAN_DETAILS = {
   pro_monthly: { amount: 900, currency: "gbp", interval: "month" },
   pro_quarterly: { amount: 1900, currency: "gbp", interval: "quarter" },
@@ -65,4 +67,18 @@ export function getCheckoutProduct(priceId: string):
   }
 
   return null
+}
+
+export async function resolveStripePriceId(priceSelector: string): Promise<string> {
+  if (!priceSelector.startsWith(LOOKUP_SELECTOR_PREFIX)) return priceSelector
+
+  const lookupKey = priceSelector.slice(LOOKUP_SELECTOR_PREFIX.length)
+  const prices = await getStripeClient().prices.list({
+    active: true,
+    limit: 1,
+    lookup_keys: [lookupKey],
+  })
+  const price = prices.data[0]
+  if (!price) throw new Error(`Stripe price lookup is not provisioned: ${lookupKey}`)
+  return price.id
 }

@@ -14,6 +14,7 @@ import {
 import {
   getCheckoutProduct,
   getPlans,
+  resolveStripePriceId,
   getStripeClient,
 } from "../../../../lib/stripe"
 import { getTestAuthUser } from "../../../../lib/test-auth"
@@ -141,6 +142,7 @@ export async function POST(
       })
     }
 
+    const resolvedPriceId = await resolveStripePriceId(priceId)
     const customerId = await getOrCreateStripeCustomer({
       email: user.email ?? null,
       userId: user.id,
@@ -151,7 +153,7 @@ export async function POST(
       client_reference_id: user.id,
       line_items: [
         {
-          price: priceId,
+          price: resolvedPriceId,
           quantity: 1,
         },
       ],
