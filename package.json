@@ -49,6 +49,7 @@
     "test": "pnpm test:unit",
     "test:unit": "pnpm --filter extension test && pnpm test:role-pathways && pnpm test:phase-3a-readiness && pnpm test:phase-3b-workflow && pnpm test:phase-3c-interviews && pnpm test:admin-foundation && pnpm test:validation-run && pnpm test:market-ready-gate && pnpm test:production-hardening && pnpm test:country-fit && pnpm test:smoke:web:unit && pnpm test:web:cloud-sync && pnpm test:web:interview && pnpm test:web:sentry-privacy && pnpm test:mvp:coverage",
     "test:e2e": "playwright test",
+    "test:e2e:core": "playwright test tests/e2e/34-core-journeys.spec.ts",
     "test:smoke": "playwright test --config playwright.smoke.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
