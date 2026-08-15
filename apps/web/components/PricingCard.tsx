@@ -250,7 +250,7 @@ export function PricingCards({
           action={isPaid ? "portal" : "checkout"}
           badge="Flexible"
           ctaLabel={isPaid ? "Manage plan" : "Start Pro"}
-          description="50 monthly AI actions, full workflow sync, application writing and interview prep."
+          description="50 monthly AI actions, full workflow sync, application writing and interview-conversion prep."
           disabledMessage={
             billingControl.disabled ? billingUnavailableMessage : undefined
           }
