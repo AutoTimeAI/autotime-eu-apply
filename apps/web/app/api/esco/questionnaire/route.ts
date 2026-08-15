@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const answerInsert = await db.from("esco_questionnaire_answers").insert({ user_id: user.id, question: body.question, answer: body.answer, sequence: round, next_question: round >= 6 ? null : result.value.nextQuestion }); if (answerInsert.error) throw answerInsert.error;
     if (skills.length) { const upsert = await db.from("user_skill_profile").upsert(skills.map((item) => ({ user_id: user.id, esco_skill_id: item.escoSkillId, confidence: item.confidence, source: item.source, updated_at: new Date().toISOString() }))); if (upsert.error) throw upsert.error; }
     await trackAiCall(user.id, { feature: "esco-questionnaire", model: result.model, promptTokens: result.promptTokens, completionTokens: result.completionTokens, costUsd: result.costUsd });
-    return NextResponse.json({ data: { round, skills, nextQuestion: round >= 6 ? "" : result.value.nextQuestion, complete: round >= 6 || result.value.complete }, error: null });
+    return NextResponse.json({ data: { round, skills, nextQuestion: round >= 6 ? "" : result.value.nextQuestion, complete: round >= 6 }, error: null });
   } catch (error) { const status = error instanceof z.ZodError ? 400 : error instanceof FeatureGateError ? 402 : error instanceof RateLimitError ? 429 : 500; return NextResponse.json({ data: null, error: error instanceof Error ? error.message : "Questionnaire failed" }, { status }); }
 }
 

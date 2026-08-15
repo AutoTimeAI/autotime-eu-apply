@@ -2,6 +2,7 @@ import { PublicNav } from "../../components/PublicNav"
 
 const acceptableUse = [
   "Do not use AutoTime to automate job applications.",
+  "AutoTime does not automate LinkedIn connections, messages, applications or other interactions. You must not use the service or extension to automate activity on LinkedIn.",
   "Do not use AutoTime for bulk scraping. User-triggered import of visible job details from pages you open is allowed.",
   "Do not upload unlawful, misleading, discriminatory or malicious content.",
   "Do not attempt to bypass plan limits, rate limits, authentication or security controls."
@@ -15,7 +16,7 @@ export default function TermsPage() {
         <div>
           <p className="eyebrow">Terms of service</p>
           <h1>The rules for using AutoTime</h1>
-          <p>Last updated: 6 May 2026</p>
+          <p>Last updated: 15 August 2026</p>
         </div>
       </header>
 
