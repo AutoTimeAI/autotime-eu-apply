@@ -34,12 +34,12 @@ External Supabase and AI calls are intercepted at the browser boundary. This kee
 - `/api/account/me` success;
 - no uncaught client-side exceptions.
 
-The smoke project uses isolated port 3100 and a 15-second test timeout. Observed browser-test execution was approximately 7 seconds. A complete isolated local run could not be repeated while another Next.js dev process owned this checkout’s `.next/dev` lock; CI runners start clean.
+The smoke project uses isolated port 3100 and a 45-second test timeout. The timeout remains below the 60-second acceptance ceiling while allowing for clean-runner startup and API-response variance. A complete isolated local run could not be repeated while another Next.js dev process owned this checkout’s `.next/dev` lock; CI runners start clean.
 
 ## CI wiring
 
 - `.github/workflows/unit-tests.yml`: smoke runs on pushes to `main` and pull requests after build/browser installation.
-- `.github/workflows/e2e.yml`: full Playwright suite runs on pull requests to `main`, nightly at 02:23 UTC, and manually.
+- `.github/workflows/e2e.yml`: the explicit core Journey A–C Playwright suite runs on pull requests to `main`, nightly at 02:23 UTC, and manually.
 - Both workflows retain Playwright reports for 14 days on failure.
 
 ## Verification
@@ -55,21 +55,21 @@ Confirmed on draft PR [#23](https://github.com/AutoTimeAI/autotime-eu-apply/pull
 
 ### Deploy smoke
 
-- Successful run: [CI run 31909445740](https://github.com/AutoTimeAI/autotime-eu-apply/actions/runs/31909445740).
+- Final successful run: [CI run 31909912784](https://github.com/AutoTimeAI/autotime-eu-apply/actions/runs/31909912784), commit `ee33be5`.
 - Result: 1 passed, 0 skipped.
-- Playwright process time: 22.6 seconds; browser test time: 13.4 seconds. This meets the under-60-second target.
+- Playwright process time: 26.1 seconds; browser test time: 15.1 seconds. This meets the under-60-second target.
 - The combined test executed homepage, login controls, authenticated dashboard/onboarding gate, jobs route response, authenticated `/api/account/me`, and the final uncaught-client-error assertion.
 - No port-lock or web-server startup failure occurred.
 
-The first clean attempt failed honestly: a fresh authenticated user is redirected into onboarding, whose dashboard wrapper is not a `<main>`. The test was corrected to assert the authenticated dashboard/onboarding shell and URL. HTML reporting was also enabled so future smoke failures upload useful evidence.
+The first clean attempt failed honestly: a fresh authenticated user is redirected into onboarding, whose dashboard wrapper is not a `<main>`. The test was corrected to assert the authenticated dashboard/onboarding shell and URL. A later run exposed a second real issue: the browser test crossed the original 15-second timeout by roughly 0.4 seconds while `/api/account/me` was pending. The timeout was raised to 45 seconds, still inside the 60-second requirement, and the final clean run passed. HTML reporting is enabled so future smoke failures upload useful evidence.
 
 ### Journey A–C workflow
 
-- Successful run: [Full end-to-end run 31909726054](https://github.com/AutoTimeAI/autotime-eu-apply/actions/runs/31909726054).
+- Final successful run: [Full end-to-end run 31909912886](https://github.com/AutoTimeAI/autotime-eu-apply/actions/runs/31909912886), commit `ee33be5`.
 - Trigger: pull request; the same workflow also declares nightly cron and manual dispatch triggers.
-- Result: 4 passed, 0 skipped in 31.6 seconds of Playwright time.
-- Individual clean-runner results: onboarding upload 6.2s; build-new-CV branch 4.9s; ESCO explainability 3.7s; tracked-job tailoring/export blocking 4.1s.
-- Total job time including checkout, dependency install and Chromium provisioning: 1m14s.
+- Result: 4 passed, 0 skipped in 31.9 seconds of Playwright time.
+- Individual clean-runner results: onboarding upload 6.1s; build-new-CV branch 4.2s; ESCO explainability 4.5s; tracked-job tailoring/export blocking 5.1s.
+- Total job time including checkout, dependency install and Chromium provisioning: 1m16s.
 
 The initial workflow command invoked every historical Playwright test rather than the requested A–C regression suite. It was corrected to use the explicit `test:e2e:core` script; superseded broad-suite runs were cancelled.
 
