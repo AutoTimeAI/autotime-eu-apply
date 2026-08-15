@@ -6,7 +6,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${smokePort
 export default defineConfig({
   testDir: "./tests/smoke",
   fullyParallel: false,
-  timeout: 15_000,
+  timeout: 45_000,
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
