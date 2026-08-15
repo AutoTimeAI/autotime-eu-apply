@@ -8,7 +8,7 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 15_000,
   workers: 1,
-  reporter: "list",
+  reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
     trace: "retain-on-failure",
