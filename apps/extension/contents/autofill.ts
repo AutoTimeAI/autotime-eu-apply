@@ -1104,7 +1104,7 @@ function cleanLinkedInLocation(value = "") {
   return parts[0] ?? ""
 }
 
-function detectJobPage(): JobPageResponse {
+export function detectJobPage(): JobPageResponse {
   const platform = getJobPlatform(window.location.href)
   const captureMode = getJobCaptureMode(window.location.href)
   if (captureMode !== "selector-extraction") {

@@ -92,13 +92,15 @@ test("profile onboarding is persisted, guided, and view-only after completion", 
     readFile(new URL("../apps/web/components/profile/ProfileSummary.tsx", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260812160000_profile_onboarding_wizard.sql", import.meta.url), "utf8"),
   ]);
-  assert.match(wizard, /Step \{step\+1\} of 6/);
-  assert.match(wizard, /right-to-work position for your target countries/i);
-  assert.match(wizard, /AI: check clarity and missing facts/);
-  assert.match(wizard, /Complete setup/);
-  assert.match(wizard, /Upload DOCX/);
+  const compactWizard = wizard.replace(/\s+/g, " ");
+  assert.match(compactWizard, /Step \{step \+ 1\} of 6/);
+  assert.match(compactWizard, /right-to-work position for your target countries/i);
+  assert.match(compactWizard, /AI: check clarity and missing facts/);
+  assert.match(compactWizard, /Complete setup/);
+  assert.match(compactWizard, /Upload a DOCX/);
   assert.doesNotMatch(profilePage, /DashboardExperience|CVWorkspace/);
-  assert.match(summary, /view-only/i);
+  assert.doesNotMatch(summary, /<(input|textarea|select)\b/i);
+  assert.match(summary, /dashboard\/onboarding\?edit=/);
   assert.match(migration, /profile-photos/);
   assert.match(migration, /storage\.foldername\(name\)/);
 });
@@ -111,4 +113,35 @@ test("dashboard and onboarding share the restrained EU brand backdrop", async ()
   assert.match(backdrop, /autotime-mark\.png/);
   assert.match(backdrop, /Evidence first/);
   assert.match(backdrop, /Better applications/);
+});
+
+test("cover letters are conservative, editable, and versioned per tracked job", async () => {
+  const [server, route, workspace, migration] = await Promise.all([
+    readFile(new URL("../apps/web/lib/openai-server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/api/ai/cover-letter/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/cv/CVWorkspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260815120000_cover_letter_versions.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(server, /tailorCoverLetterWithOpenAI/);
+  assert.match(server, /Never invent employers, qualifications/);
+  assert.match(route, /feature:"cover-letter"/);
+  assert.match(route, /latest\.data\?\.version\?\?0/);
+  assert.match(workspace, /Generate cover letter/);
+  assert.match(workspace, /Save edits/);
+  assert.match(migration, /unique \(user_id, job_id, version\)/);
+  assert.match(migration, /cover_letters_select_own/);
+});
+
+test("extension match overlay reuses ESCO evidence without LinkedIn scraping", async () => {
+  const [overlay, endpoint, entrypoint] = await Promise.all([
+    readFile(new URL("../apps/extension/lib/match-overlay.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/api/esco/score-job/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/extension/entrypoints/autotime.content.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(overlay, /isLinkedInUrl\(window\.location\.href\)/);
+  assert.match(overlay, /mode==="api-reference"\?\{url:window\.location\.href\}/);
+  assert.match(overlay, /essential skills matched/);
+  assert.match(endpoint, /esco_occupation_skills/);
+  assert.match(endpoint, /user_skill_profile/);
+  assert.match(entrypoint, /showEscoMatchOverlay/);
 });

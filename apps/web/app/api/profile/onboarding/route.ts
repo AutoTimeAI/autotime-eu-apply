@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { getMissingOnboardingEvidence, hasCompletedRequiredOnboarding, isValidLinkedInProfile } from "../../../../lib/onboarding-readiness";
 
 const humanName = z.string().trim().min(2).max(100).regex(/^[\p{L}\p{M}][\p{L}\p{M}' .-]+$/u, "Invalid name");
 const placeName = z.string().trim().min(2).max(120).regex(/^[\p{L}\p{M}][\p{L}\p{M}' .,-]+$/u, "Invalid location or country");
@@ -15,7 +16,13 @@ const patchSchema = z.object({
   linkedinUrl: optionalWebUrl.optional(), githubUrl: optionalWebUrl.optional(), portfolioUrl: optionalWebUrl.optional(),
   workAuthorisationCategory:z.enum(["eu_eea_swiss_citizen","existing_permission","sponsorship_required","country_specific","unsure"]).optional(),workRightDetails:z.string().trim().max(2000).optional(),
   baseCvText: z.string().max(100_000).optional(), onboardingStep: z.number().int().min(0).max(6).optional(), complete: z.boolean().optional(),
-}).superRefine((body,ctx)=>{if((body.onboardingStep??0)>=3||body.complete){try{const url=new URL(body.linkedinUrl??"");const validHost=url.hostname==="linkedin.com"||url.hostname.endsWith(".linkedin.com");if(!["http:","https:"].includes(url.protocol)||!validHost||!/^\/in\/[^/]+\/?$/i.test(url.pathname))throw new Error();}catch{ctx.addIssue({code:"custom",path:["linkedinUrl"],message:"A valid LinkedIn profile URL is required"});}}});
+}).superRefine((body,ctx)=>{
+  if(((body.onboardingStep??0)>=3||body.complete)&&!isValidLinkedInProfile(body.linkedinUrl))ctx.addIssue({code:"custom",path:["linkedinUrl"],message:"A valid LinkedIn profile URL is required"});
+  if(body.complete){
+    const missing=getMissingOnboardingEvidence({full_name:body.fullName,phone:body.phone,country_current:body.countryCurrent,countries_target:body.countriesTarget,work_right_details:body.workRightDetails,linkedin_url:body.linkedinUrl,base_cv_text:body.baseCvText});
+    for(const field of missing)ctx.addIssue({code:"custom",path:[field],message:`Complete ${field} before finishing onboarding`});
+  }
+});
 
 const select = "full_name,email,phone,photo_url,country_current,countries_target,current_country,target_countries,linkedin_url,github_url,portfolio_url,target_roles,work_authorisation_category,work_right_details,base_cv_text,onboarding_step,onboarding_completed_at";
 export async function GET(request: NextRequest) {
@@ -23,7 +30,8 @@ export async function GET(request: NextRequest) {
   const client=createAdminClient(); const {data,error}=await client.from("profiles").select(select).eq("user_id",user.id).maybeSingle();
   let photoUrl:string|null=null; if(data?.photo_url){const signed=await client.storage.from("profile-photos").createSignedUrl(data.photo_url,3600);photoUrl=signed.data?.signedUrl??null;}
   const countries=data?.countries_target?.length?data.countries_target:(data?.target_countries??"").split(",").map((item)=>item.trim()).filter(Boolean);
-  return NextResponse.json({data:data?{...data,country_current:data.country_current||data.current_country,countries_target:countries,photoUrl}:null,error:error?.message??null},{status:error?500:200});
+  const normalised=data?{...data,country_current:data.country_current||data.current_country,countries_target:countries,photoUrl}:null;
+  return NextResponse.json({data:normalised?{...normalised,onboarding_ready:hasCompletedRequiredOnboarding(normalised),onboarding_missing:getMissingOnboardingEvidence(normalised)}:null,error:error?.message??null},{status:error?500:200});
 }
 export async function PATCH(request: NextRequest) {
   try { const {user}=await getRequestUser(request);if(!user)return NextResponse.json({data:null,error:"Unauthorised"},{status:401});const body=patchSchema.parse(await request.json());

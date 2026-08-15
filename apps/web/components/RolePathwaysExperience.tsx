@@ -793,10 +793,22 @@ export function RolePathwaysExperience() {
         </p>
       ) : null}
       <footer className="pathway-notice">
-        <a className="button-secondary" href="/dashboard/role-pathways/questionnaire">Open ESCO skills questionnaire</a>
-        Role Pathways does not make legal, immigration or hiring-probability
-        decisions. Occupation taxonomy and market evidence refresh separately
-        and never on page load.
+        <div>
+          <strong>Refine your skills evidence</strong>
+          <p>
+            Answer a short ESCO questionnaire to improve your role matches.
+          </p>
+        </div>
+        <a
+          className="button-secondary"
+          href="/dashboard/role-pathways/questionnaire"
+        >
+          Open skills questionnaire
+        </a>
+        <p className="pathway-notice-disclaimer">
+          Role Pathways does not make legal, immigration, or hiring-probability
+          decisions. Occupation taxonomy and market evidence refresh separately.
+        </p>
       </footer>
     </main>
   );

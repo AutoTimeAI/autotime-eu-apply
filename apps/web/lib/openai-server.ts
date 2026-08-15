@@ -803,6 +803,27 @@ export async function tailorCvWithOpenAI({ cv, jobDescription }: { cv: CVData; j
     experience: cv.experience.map((item, index) => ({ ...item, bullets: result.value.experience[index]?.bullets ?? item.bullets })) } }
 }
 
+const coverLetterSchema = z.object({
+  opening: z.string(),
+  bodyParagraphs: z.array(z.string()).min(2).max(3),
+  closing: z.string(),
+});
+
+export async function tailorCoverLetterWithOpenAI({ cv, jobDescription, companyName, jobTitle }: { cv: CVData; jobDescription: string; companyName: string; jobTitle: string }) {
+  const result = await createJsonResponse({
+    instructions: [
+      "Draft a concise professional cover letter using only the supplied CV evidence and vacancy description.",
+      "Return strict JSON with opening, bodyParagraphs containing two or three paragraphs, and closing.",
+      "Address the role and company specifically. Connect verified candidate evidence to concrete vacancy requirements.",
+      "Never invent employers, qualifications, tools, metrics, work rights, achievements, or personal details.",
+      "Avoid generic flattery and unsupported claims. The candidate will review and edit before use.",
+    ].join(" "),
+    input: { cv, jobDescription, companyName, jobTitle },
+    schema: coverLetterSchema,
+  });
+  return { ...result, value: [result.value.opening, ...result.value.bodyParagraphs, result.value.closing].join("\n\n") };
+}
+
 const cvEnrichmentSchema = z.object({
   summary: z.string().default(""),
   skills: z.array(z.string()).default([]),

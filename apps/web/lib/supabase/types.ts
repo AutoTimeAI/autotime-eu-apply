@@ -67,8 +67,8 @@ export type Database = {
   public: {
     Tables: {
       job_listings: {
-        Row: { id: string; title: string; company: string; location: string | null; url: string; posted_date: string | null; source: string; ats_platform: string; description_raw: string | null; dedup_hash: string; identity_hash: string; created_at: string; updated_at: string };
-        Insert: { id?: string; title: string; company: string; location?: string | null; url: string; posted_date?: string | null; source: string; ats_platform?: string; description_raw?: string | null; dedup_hash: string; identity_hash: string; created_at?: string; updated_at?: string };
+        Row: { id: string; title: string; company: string; location: string | null; url: string; posted_date: string | null; source: string; ats_platform: string; description_raw: string | null; dedup_hash: string; identity_hash: string; esco_occupation_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; title: string; company: string; location?: string | null; url: string; posted_date?: string | null; source: string; ats_platform?: string; description_raw?: string | null; dedup_hash: string; identity_hash: string; esco_occupation_id?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["job_listings"]["Insert"]>;
         Relationships: [];
       };
@@ -76,6 +76,12 @@ export type Database = {
         Row: { id: string; user_id: string; job_id: string; recruiter_name: string | null; recruiter_role: string | null; recruiter_email: string | null; contact_type: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note" | "linkedin_inmail" | "email"; draft_subject: string | null; draft_body: string; status: "drafted" | "sent" | "replied" | "no_response"; sent_at: string | null; follow_up_due: string | null; created_at: string; updated_at: string };
         Insert: { id?: string; user_id: string; job_id: string; recruiter_name?: string | null; recruiter_role?: string | null; recruiter_email?: string | null; contact_type?: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note" | "linkedin_inmail" | "email"; draft_subject?: string | null; draft_body: string; status?: "drafted" | "sent" | "replied" | "no_response"; sent_at?: string | null; follow_up_due?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["outreach_messages"]["Insert"]>;
+        Relationships: [];
+      };
+      cover_letters: {
+        Row: { id:string; user_id:string; job_id:string|null; company_name:string; job_title:string; version:number; content:string; created_at:string; updated_at:string };
+        Insert: { id?:string; user_id:string; job_id?:string|null; company_name:string; job_title:string; version:number; content:string; created_at?:string; updated_at?:string };
+        Update: Partial<Database["public"]["Tables"]["cover_letters"]["Insert"]>;
         Relationships: [];
       };
       esco_skills: {

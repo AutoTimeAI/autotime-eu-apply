@@ -40,6 +40,11 @@ export default function CVWorkspace({
   const [cv, setCv] = useState(empty);
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   const [jobDescription, setJobDescription] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [coverLetter, setCoverLetter] = useState("");
+  const [coverLetterId, setCoverLetterId] = useState<string | null>(null);
+  const [coverLetterJobId, setCoverLetterJobId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const missingRequiredFields = [
     !cv.contact.name.trim() && "name",
@@ -83,6 +88,9 @@ export default function CVWorkspace({
         : undefined;
       if (!job) return;
       setJobDescription(job.description);
+      setJobTitle(job.title.value);
+      setCompanyName(job.employer.value);
+      setCoverLetterJobId(job.applicationId ?? null);
       const marker = `autotime-cv-tailored:${userId}:${job.id}:${job.updatedAt}`;
       if (!saved.contact?.name || sessionStorage.getItem(marker)) return;
       sessionStorage.setItem(marker, "started");
@@ -119,6 +127,15 @@ export default function CVWorkspace({
       .split("\n")
       .map((v) => v.trim())
       .filter(Boolean);
+  const downloadCoverLetter = () => {
+    const blob = new Blob([coverLetter], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${companyName || "company"}-${jobTitle || "role"}-cover-letter.txt`.replace(/[^a-z0-9._-]+/gi, "-");
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
   const content = (
     <>
       <ProductPageHeader
@@ -221,6 +238,10 @@ export default function CVWorkspace({
               onChange={(e) => setJobDescription(e.target.value)}
             />
             </label>
+            <div className="cv-contact-grid">
+              <label>Job title<input value={jobTitle} onChange={(event) => setJobTitle(event.target.value)} /></label>
+              <label>Company<input value={companyName} onChange={(event) => setCompanyName(event.target.value)} /></label>
+            </div>
             <button
               type="button"
               className="button-primary"
@@ -241,6 +262,19 @@ export default function CVWorkspace({
             >
               Create tailored draft
             </button>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={!jobDescription.trim() || !jobTitle.trim() || !companyName.trim() || !isCvComplete}
+              onClick={async () => {
+                setStatus("Generating cover letter…");
+                const response = await fetch("/api/ai/cover-letter", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({cv,jobId:coverLetterJobId??undefined,jobTitle,companyName,jobDescription}) });
+                const payload = await response.json();
+                if(!response.ok)return setStatus(payload.error || "Cover-letter generation failed");
+                setCoverLetter(payload.data.letter.content);setCoverLetterId(payload.data.letter.id);setStatus(payload.data.letter.version?`Cover-letter version ${payload.data.letter.version} ready. Review every claim.`:"Cover-letter draft ready. Review every claim.");
+              }}
+            >Generate cover letter</button>
+            {coverLetter ? <section className="cv-cover-letter" aria-labelledby="cover-letter-title"><h3 id="cover-letter-title">Cover-letter draft</h3><p>Edit and review this draft before using it.</p><textarea rows={16} value={coverLetter} onChange={(event)=>setCoverLetter(event.target.value)} /><div className="workflow-actions"><button type="button" className="secondary-button" onClick={()=>void navigator.clipboard.writeText(coverLetter).then(()=>setStatus("Cover letter copied."))}>Copy text</button><button type="button" className="secondary-button" onClick={downloadCoverLetter}>Download text</button>{coverLetterId?<button type="button" className="secondary-button" onClick={async()=>{const response=await fetch("/api/ai/cover-letter",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id:coverLetterId,content:coverLetter})});const payload=await response.json();setStatus(response.ok?"Cover-letter edits saved.":payload.error||"Could not save edits.");}}>Save edits</button>:null}</div></section>:null}
           </section>
           {!isCvComplete ? <p className="onboarding-validation-alert" role="alert"><strong>Complete the required CV fields:</strong> {missingRequiredFields.join(", ")}.</p> : null}
           <div className="cv-document-actions"><div><h3>Ready to use your CV?</h3><p>Complete every required field and review the preview, then save it or download an ATS-friendly PDF or editable DOCX.</p></div><div className="workflow-actions">{returnTo ? <button type="button" className="button-primary" disabled={!isCvComplete} onClick={() => router.push(returnTo)}>Save CV and return</button> : null}<button type="button" className="secondary-button" disabled={!isCvComplete} onClick={() => window.print()}>Download PDF</button><button type="button" className="secondary-button" disabled={!isCvComplete} onClick={() => void downloadCvDocx(cv).catch(() => setStatus("Could not create the DOCX. Please try again."))}>Download DOCX</button></div></div>
