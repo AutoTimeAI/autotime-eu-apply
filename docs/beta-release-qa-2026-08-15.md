@@ -12,6 +12,7 @@
 - ESCO questionnaire: answers persisted, adaptive follow-up questions were returned, ESCO skills were mapped, and explained job matches loaded.
 - CV workspace: incomplete fields blocked export; complete contact, summary, skills, experience and education enabled PDF print/save and DOCX generation; AI tailoring stayed within supplied evidence; public GitHub enrichment remained preview-only.
 - Job analysis: an evidence-poor listing returned Insufficient information and correctly blocked application preparation; a complete synthetic vacancy produced a saved analysis.
+- Post-deployment boundary check: job analysis hydrated the disposable user's cloud CV/work-authorisation profile and displayed `Sponsorship required`; the jobs browser initially rendered 25 of 200 records with a working load-more control.
 - Analytics: PostHog initialises only after explicit consent.
 
 ## Fixes made during QA
@@ -37,7 +38,6 @@
 - Complete a real Chrome pre-publication extension pass on supported ATS pages and the one-time LinkedIn risk notice. Automated extension contracts pass, but this environment cannot install the unpacked extension into the user's normal Chrome profile.
 - Validate one real alert email to an address controlled by the owner. QA did not send mail to third parties.
 - Complete Stripe checkout/webhook verification in test mode or with a fully refundable owner-controlled transaction. QA did not initiate a real charge.
-- Re-run the repaired cloud-profile-to-job-analysis boundary on the deployed commit and confirm sponsorship/CV evidence is reflected before preparing an application.
 
 ## Safety notes
 
