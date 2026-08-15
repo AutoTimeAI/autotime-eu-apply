@@ -96,8 +96,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run e2e tests
-        run: pnpm test:e2e
+      - name: Run deploy smoke tests
+        run: pnpm test:smoke
         env:
           NEXT_PUBLIC_AUTOTIME_ENV: preview
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
@@ -112,10 +112,10 @@ jobs:
           STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
           RESEND_API_KEY: re_offline_ci
 
-      - name: Upload e2e report on failure
+      - name: Upload smoke report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-smoke-report
           path: playwright-report/
           retention-days: 14
