@@ -9,7 +9,6 @@ import {
   getBillingControlState,
 } from "../lib/pricing-configuration";
 
-type BillingInterval = "month" | "year";
 type PricingCardAction = "checkout" | "link" | "portal";
 
 type PricingCardFeature = {
@@ -19,27 +18,28 @@ type PricingCardFeature = {
 
 type PricingCardProps = {
   action: PricingCardAction;
-  annualPriceId?: string;
-  billingInterval: BillingInterval;
+  badge?: string;
   ctaLabel: string;
   description: string;
   disabledMessage?: string;
   features: PricingCardFeature[];
   highlighted?: boolean;
   href?: string;
-  monthlyPriceId?: string;
   name: string;
   price: string;
+  priceDetail?: string;
+  priceId?: string;
 };
 
 type PricingCardsProps = {
   accountPlan?: SubscriptionPlan | null;
-  annualPriceId?: string;
   billingAvailable?: boolean;
+  creditPackPriceId?: string;
   freeFeatures: PricingCardFeature[];
   isSignedIn?: boolean;
   monthlyPriceId?: string;
   proFeatures: PricingCardFeature[];
+  quarterlyPriceId?: string;
 };
 
 const checkoutResponseSchema = z.object({
@@ -98,21 +98,20 @@ async function startBillingPortal(): Promise<string> {
 
 function PricingCard({
   action,
-  annualPriceId,
-  billingInterval,
+  badge,
   ctaLabel,
   description,
   disabledMessage,
   features,
   highlighted = false,
   href,
-  monthlyPriceId,
   name,
   price,
+  priceDetail,
+  priceId,
 }: PricingCardProps) {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const priceId = billingInterval === "year" ? annualPriceId : monthlyPriceId;
 
   async function handleCheckout() {
     if (action === "link") {
@@ -169,7 +168,7 @@ function PricingCard({
         code: "billing.checkout.start.failed",
         message,
         metadata: {
-          billingInterval,
+          priceId,
         },
       });
     } finally {
@@ -180,8 +179,12 @@ function PricingCard({
   return (
     <article className={highlighted ? "pricing-card featured" : "pricing-card"}>
       <div className="pricing-card-header">
+        {badge ? <span className="pricing-card-badge">{badge}</span> : null}
         <h2>{name}</h2>
         <strong>{price}</strong>
+        {priceDetail ? (
+          <p className="pricing-price-detail">{priceDetail}</p>
+        ) : null}
         <p>{description}</p>
       </div>
       <ul className="pricing-feature-list">
@@ -220,42 +223,22 @@ function PricingCard({
 
 export function PricingCards({
   accountPlan = null,
-  annualPriceId,
   billingAvailable = true,
+  creditPackPriceId,
   freeFeatures,
   isSignedIn = false,
   monthlyPriceId,
   proFeatures,
+  quarterlyPriceId,
 }: PricingCardsProps) {
-  const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("month");
-  const proPrice = billingInterval === "year" ? "GBP 79/year" : "GBP 9/month";
-  const isPro = accountPlan === "pro";
+  const isPaid = accountPlan === "pro";
   const billingControl = getBillingControlState(billingAvailable);
 
   return (
     <>
-      <div className="billing-toggle" aria-label="Billing interval">
-        <button
-          className={billingInterval === "month" ? "active" : ""}
-          type="button"
-          onClick={() => setBillingInterval("month")}
-        >
-          Monthly
-        </button>
-        <button
-          className={billingInterval === "year" ? "active" : ""}
-          type="button"
-          onClick={() => setBillingInterval("year")}
-        >
-          Annual
-          <span>save 27%</span>
-        </button>
-      </div>
       <div className="pricing-card-grid">
         <PricingCard
           action="link"
-          billingInterval={billingInterval}
           ctaLabel={isSignedIn ? "Open dashboard" : "Start free"}
           description="Strategic targeting, country-aware fit, tracked jobs and five monthly AI analyses."
           features={freeFeatures}
@@ -264,21 +247,99 @@ export function PricingCards({
           price="GBP 0/month"
         />
         <PricingCard
-          action={isPro ? "portal" : "checkout"}
-          annualPriceId={annualPriceId}
-          billingInterval={billingInterval}
-          ctaLabel={isPro ? "Manage plan" : "Start Pro"}
-          description="Unlimited AI, full workflow sync, application writing and interview-conversion prep."
+          action={isPaid ? "portal" : "checkout"}
+          badge="Flexible"
+          ctaLabel={isPaid ? "Manage plan" : "Start Pro"}
+          description="50 monthly AI actions, full workflow sync, application writing and interview prep."
+          disabledMessage={
+            billingControl.disabled ? billingUnavailableMessage : undefined
+          }
+          features={proFeatures}
+          name="Pro Monthly"
+          price="GBP 9/month"
+          priceDetail="Cancel any time"
+          priceId={monthlyPriceId}
+        />
+        <PricingCard
+          action={isPaid ? "portal" : "checkout"}
+          badge="Best value"
+          ctaLabel={isPaid ? "Manage plan" : "Choose quarterly"}
+          description="The complete Pro workflow with one payment every three months."
           disabledMessage={
             billingControl.disabled ? billingUnavailableMessage : undefined
           }
           features={proFeatures}
           highlighted
-          monthlyPriceId={monthlyPriceId}
-          name="Pro"
-          price={proPrice}
+          name="Pro Quarterly"
+          price="GBP 19/3 months"
+          priceDetail="Equivalent to GBP 6.33/month - save GBP 8"
+          priceId={quarterlyPriceId}
         />
       </div>
+      <CreditPackPanel
+        billingAvailable={billingAvailable}
+        priceId={creditPackPriceId}
+      />
     </>
+  );
+}
+
+function CreditPackPanel({
+  billingAvailable,
+  priceId,
+}: {
+  billingAvailable: boolean;
+  priceId?: string;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
+
+  async function buyCredits() {
+    if (!priceId) {
+      window.location.assign("/login?redirectTo=%2Fpricing");
+      return;
+    }
+
+    try {
+      setError(null);
+      setIsPending(true);
+      const checkoutUrl = await startCheckout(priceId);
+      if (checkoutUrl) window.location.assign(checkoutUrl);
+    } catch (checkoutError: unknown) {
+      setError(
+        checkoutError instanceof Error
+          ? checkoutError.message
+          : "Credit checkout could not be started",
+      );
+    } finally {
+      setIsPending(false);
+    }
+  }
+
+  return (
+    <section className="credit-pack-panel" aria-labelledby="credit-pack-title">
+      <div>
+        <span className="pricing-card-badge">No subscription required</span>
+        <h2 id="credit-pack-title">Need occasional extra AI?</h2>
+        <p>
+          Add 25 non-expiring AI credits for GBP 5. One successful AI action
+          uses one credit after your monthly allowance.
+        </p>
+      </div>
+      <div className="credit-pack-action">
+        <strong>GBP 5</strong>
+        <button
+          disabled={!billingAvailable || isPending}
+          type="button"
+          onClick={buyCredits}
+        >
+          {isPending ? "Opening" : "Buy 25 credits"}
+        </button>
+        {!billingAvailable ? (
+          <p className="pricing-error">{billingUnavailableMessage}</p>
+        ) : null}
+        {error ? <p className="pricing-error">{error}</p> : null}
+      </div>
+    </section>
   );
 }

@@ -127,7 +127,7 @@ export function SettingsControls({
       setIsBillingPending(true);
       setStatus(null);
       const route =
-        plan === "pro" ? "/api/stripe/portal" : "/api/stripe/checkout";
+        plan !== "free" ? "/api/stripe/portal" : "/api/stripe/checkout";
       const response = await fetch(route, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -345,7 +345,9 @@ export function SettingsControls({
       <article className="settings-control-panel" id="billing-controls">
         <div className="section-heading">
           <p className="eyebrow">Plan & billing</p>
-          <h2>{plan === "pro" ? "Pro plan" : "Free plan"}</h2>
+          <h2>
+            {plan === "pro" ? "Pro plan" : "Free plan"}
+          </h2>
           <p>
             Open checkout or the billing portal without duplicating pricing.
           </p>
@@ -355,7 +357,7 @@ export function SettingsControls({
           type="button"
           onClick={openBillingPortal}
         >
-          {plan === "pro" ? "Manage billing" : "Upgrade plan"}
+          {plan !== "free" ? "Manage billing" : "Upgrade plan"}
         </button>
       </article>
 

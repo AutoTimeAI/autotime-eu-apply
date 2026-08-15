@@ -33,7 +33,8 @@ function providerHealth(): ProviderHealth[] {
         has("STRIPE_SECRET_KEY") &&
         has("STRIPE_WEBHOOK_SECRET") &&
         has("STRIPE_PRO_MONTHLY_PRICE_ID") &&
-        has("STRIPE_PRO_ANNUAL_PRICE_ID"),
+        has("STRIPE_PRO_QUARTERLY_PRICE_ID") &&
+        has("STRIPE_AI_CREDIT_PACK_PRICE_ID"),
       name: "stripe",
       notes: [
         "Checkout, customer portal, subscription webhooks, and plan upgrades depend on Stripe.",

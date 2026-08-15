@@ -6,7 +6,7 @@ export const billingUnavailableMessage =
 export function readPricingConfiguration(
   readPrices: typeof getStripePriceEnv,
   requireDependencies: () => void,
-): { annual: string; monthly: string } | null {
+): ReturnType<typeof getStripePriceEnv> | null {
   try {
     const prices = readPrices()
     requireDependencies()

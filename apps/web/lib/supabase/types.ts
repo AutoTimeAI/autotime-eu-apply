@@ -121,6 +121,8 @@ export type Database = {
           countries_target: string[];
           onboarding_step: number;
           onboarding_completed_at: string | null;
+          alert_frequency: "daily" | "weekly" | "off";
+          alert_last_sent_at: string | null;
           work_authorisation_category: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url: string | null;
           github_url: string | null;
@@ -153,6 +155,8 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          alert_frequency?: "daily" | "weekly" | "off";
+          alert_last_sent_at?: string | null;
           work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url?: string | null;
           github_url?: string | null;
@@ -185,6 +189,8 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          alert_frequency?: "daily" | "weekly" | "off";
+          alert_last_sent_at?: string | null;
           work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url?: string | null;
           github_url?: string | null;
@@ -404,6 +410,28 @@ export type Database = {
           cost_usd?: number;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      ai_credit_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          delta: number;
+          reason: "purchase" | "usage" | "refund" | "admin";
+          stripe_checkout_session_id: string | null;
+          feature: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          delta: number;
+          reason: "purchase" | "usage" | "refund" | "admin";
+          stripe_checkout_session_id?: string | null;
+          feature?: string | null;
+          created_at?: string;
+        };
+        Update: never;
         Relationships: [];
       };
       ai_rate_limits: {
@@ -1132,6 +1160,22 @@ export type Database = {
           p_user_id: string;
         };
         Returns: number;
+      };
+      get_ai_credit_balance: {
+        Args: { p_user_id: string };
+        Returns: number;
+      };
+      grant_ai_credit_pack: {
+        Args: {
+          p_user_id: string;
+          p_credits: number;
+          p_checkout_session_id: string;
+        };
+        Returns: number;
+      };
+      consume_ai_credit: {
+        Args: { p_user_id: string; p_feature: string };
+        Returns: boolean;
       };
       increment_ai_rate_limit: {
         Args: {

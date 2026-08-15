@@ -99,7 +99,9 @@ test("profile onboarding is persisted, guided, and view-only after completion", 
   assert.match(compactWizard, /Complete setup/);
   assert.match(compactWizard, /Upload a DOCX/);
   assert.doesNotMatch(profilePage, /DashboardExperience|CVWorkspace/);
-  assert.doesNotMatch(summary, /<(input|textarea|select)\b/i);
+  assert.doesNotMatch(summary, /<(input|textarea)\b/i);
+  assert.equal(summary.match(/<select\b/gi)?.length, 1);
+  assert.match(summary, /id="profile-alert-frequency"/);
   assert.match(summary, /dashboard\/onboarding\?edit=/);
   assert.match(migration, /profile-photos/);
   assert.match(migration, /storage\.foldername\(name\)/);
@@ -161,4 +163,24 @@ test("LinkedIn scoring requires browser-icon action and explicit risk acknowledg
   assert.match(overlay, /detectJobPage\(\{allowLinkedInRead:true\}\)/);
   assert.doesNotMatch(overlay, /job_listings.*insert|local\.set\([^)]*jobDescription/s);
   assert.match(compliance, /Product-owner exception/);
+});
+
+test("matched-job alerts are explainable, user-controlled, and advance only after delivery", async () => {
+  const [migration, edgeFunction, profile, route, cron] = await Promise.all([
+    readFile(new URL("../supabase/migrations/20260815140000_email_job_alerts.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/functions/sync-job-alerts/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/profile/ProfileSummary.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/api/profile/alerts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/cron/job-ingestion.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /alert_frequency.*daily.*weekly.*off/s);
+  assert.match(migration, /alert_last_sent_at/);
+  assert.match(edgeFunction, /match_esco_jobs/);
+  assert.match(edgeFunction, /essential skills matched/);
+  assert.match(edgeFunction, /await sendEmail[\s\S]*alert_last_sent_at/);
+  assert.match(profile, /Email job alerts/);
+  assert.match(profile, /Daily/);
+  assert.match(route, /z\.enum\(\["daily", "weekly", "off"\]\)/);
+  assert.match(cron, /sync-job-alerts/);
+  assert.match(cron, /x-cron-secret/);
 });

@@ -16,6 +16,12 @@ Status: ready to deploy, pending human confirmation of production accounts and s
 
 No Apollo secret is required because Path B (manual recruiter entry) was selected. The repository and inspected sibling workspaces contained no Apollo client or recruiter-cache table to port.
 
+Additional matched-job alert secrets:
+
+- `RESEND_API_KEY` - required for digest delivery.
+- `APP_URL` - canonical dashboard URL used in digest links.
+- `EMAIL_FROM` - optional verified Resend sender address.
+
 ## Commands for the human operator
 
 From the repository root, authenticate and link the intended production project, then set secrets without committing their values:
@@ -23,7 +29,7 @@ From the repository root, authenticate and link the intended production project,
 ```powershell
 supabase login
 supabase link --project-ref YOUR_PROJECT_REF
-supabase secrets set CRON_SECRET="YOUR_LONG_RANDOM_VALUE" ADZUNA_APP_ID="..." ADZUNA_APP_KEY="..." JOOBLE_API_KEY="..." JOB_SYNC_QUERIES="software engineer,data engineer" JOB_SYNC_COUNTRIES="gb,ie,de,nl,fr" JOB_SYNC_JOOBLE_LOCATION="European Union" --project-ref YOUR_PROJECT_REF
+supabase secrets set CRON_SECRET="YOUR_LONG_RANDOM_VALUE" ADZUNA_APP_ID="..." ADZUNA_APP_KEY="..." JOOBLE_API_KEY="..." RESEND_API_KEY="..." APP_URL="https://autotime-eu-apply.vercel.app" EMAIL_FROM="AutoTime EU Apply <hello@autotime-eu-apply.com>" JOB_SYNC_QUERIES="software engineer,data engineer" JOB_SYNC_COUNTRIES="gb,ie,de,nl,fr" JOB_SYNC_JOOBLE_LOCATION="European Union" --project-ref YOUR_PROJECT_REF
 supabase db push --linked
 powershell -ExecutionPolicy Bypass -File scripts/deploy-job-ingestion.ps1 -ProjectRef YOUR_PROJECT_REF
 ```
@@ -31,6 +37,8 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy-job-ingestion.ps1 -Proje
 Omit Adzuna or Jooble values if that provider account is not approved. The function reports the provider as `disabled_missing_credentials` and continues syncing EURES/direct ATS sources.
 
 Finally, replace placeholders and run [job-ingestion.sql](../supabase/cron/job-ingestion.sql) in the production SQL editor. The daily schedules are 03:17 UTC for EURES and 03:47 UTC for direct ATS/aggregators. This matches the specification’s conservative once-daily polling requirement.
+
+The matched-job alert function runs at 04:17 UTC after ingestion and ESCO classification. It uses each profile's daily, weekly or off preference and sends only newly added matches.
 
 The checked-in GitHub Actions schedule is an alternative to `pg_cron`; enable only one scheduler to avoid duplicate requests. Database uniqueness still makes accidental overlap idempotent.
 

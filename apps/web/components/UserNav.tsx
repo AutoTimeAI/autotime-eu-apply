@@ -262,6 +262,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   const [status, setStatus] = useState<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const planLabel = plan === "pro" ? "Pro" : "Free";
+  const isPaid = plan !== "free";
   const menuId = "user-account-menu";
 
   useEffect(() => {
@@ -298,7 +299,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
     try {
       setStatus(null);
 
-      if (plan !== "pro") {
+      if (!isPaid) {
         const response = await fetch("/api/stripe/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -414,7 +415,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
         </span>
         <span className="user-nav-copy">
           <span>{email}</span>
-          <strong className={plan === "pro" ? "plan-badge pro" : "plan-badge"}>
+          <strong className={isPaid ? "plan-badge pro" : "plan-badge"}>
             {planLabel}
           </strong>
         </span>
@@ -446,7 +447,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
             type="button"
             onClick={openBillingPortal}
           >
-            {plan === "pro" ? "Billing & Plan" : "Upgrade plan"}
+            {isPaid ? "Billing & Plan" : "Upgrade plan"}
           </button>
           <button
             className="secondary-button"
