@@ -145,3 +145,20 @@ test("extension match overlay reuses ESCO evidence without LinkedIn scraping", a
   assert.match(endpoint, /user_skill_profile/);
   assert.match(entrypoint, /showEscoMatchOverlay/);
 });
+
+test("LinkedIn scoring requires browser-icon action and explicit risk acknowledgement", async () => {
+  const [overlay, entrypoint, background, compliance] = await Promise.all([
+    readFile(new URL("../apps/extension/lib/match-overlay.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/extension/entrypoints/autotime.content.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/extension/entrypoints/background/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../docs/job-aggregation-compliance.md", import.meta.url), "utf8"),
+  ]);
+  assert.match(background, /chrome\.action\.onClicked/);
+  assert.match(background, /AUTOTIME_LINKEDIN_MATCH_REQUEST/);
+  assert.match(entrypoint, /message\?\.type !== "AUTOTIME_LINKEDIN_MATCH_REQUEST"/);
+  assert.match(overlay, /linkedin-single-page-match-risk-acknowledged/);
+  assert.match(overlay, /outside LinkedIn’s terms/);
+  assert.match(overlay, /detectJobPage\(\{allowLinkedInRead:true\}\)/);
+  assert.doesNotMatch(overlay, /job_listings.*insert|local\.set\([^)]*jobDescription/s);
+  assert.match(compliance, /Product-owner exception/);
+});

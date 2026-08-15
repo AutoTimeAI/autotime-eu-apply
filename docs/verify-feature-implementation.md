@@ -27,6 +27,7 @@ Run `powershell -ExecutionPolicy Bypass -File scripts/verify-feature-implementat
 - Bespoke career site: generic title and JSON-LD `JobPosting` fallback works.
 - LinkedIn and restricted boards: manual-only; no page extraction or automation.
 - With a connected account and imported ESCO profile, verify the in-page overlay on one API-covered ATS URL and one permitted fallback page; confirm LinkedIn never renders or extracts an overlay.
+- On a LinkedIn job-detail URL, confirm page load alone performs no scoring. Click the extension icon, verify the one-time risk disclosure appears before content is read, acknowledge it, and confirm only an ephemeral ESCO result is shown. Verify search-result pages, clicks, messages, poster data, and raw-content storage remain untouched.
 
 ## Compliance and production
 
