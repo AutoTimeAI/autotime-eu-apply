@@ -1,26 +1,13 @@
-export const API_COVERED_ATS = [
-  "greenhouse",
-  "lever",
-  "ashby",
-  "personio",
-] as const;
-const ATS_PATTERNS: ReadonlyArray<{ ats: string; pattern: RegExp }> = [
-  { ats: "greenhouse", pattern: /(?:boards|job-boards)\.greenhouse\.io/i },
-  { ats: "lever", pattern: /jobs\.lever\.co/i },
-  { ats: "workday", pattern: /myworkdayjobs\.com/i },
-  { ats: "personio", pattern: /jobs\.personio\.(?:de|com)/i },
-  { ats: "teamtailor", pattern: /teamtailor\.com/i },
-  { ats: "recruitee", pattern: /recruitee\.com/i },
-  { ats: "ashby", pattern: /jobs\.ashbyhq\.com/i },
-  { ats: "smartrecruiters", pattern: /jobs\.smartrecruiters\.com/i },
-  { ats: "workable", pattern: /apply\.workable\.com/i },
-  { ats: "icims", pattern: /icims\.com/i },
-  { ats: "successfactors", pattern: /successfactors\.(?:eu|com)/i },
-];
+import { API_COVERED_ATS, PLATFORM_COVERAGE } from "./platform-coverage.ts";
+export { API_COVERED_ATS } from "./platform-coverage.ts";
+const ATS_PATTERNS = PLATFORM_COVERAGE.filter((item) => item.atsKey).flatMap((item) =>
+  item.domains.map((domain) => ({ ats: item.atsKey!, domain })),
+);
 export function detectATS(jobUrl: string): string {
-  return (
-    ATS_PATTERNS.find(({ pattern }) => pattern.test(jobUrl))?.ats ?? "unknown"
-  );
+  try {
+    const host = new URL(jobUrl).hostname.toLowerCase();
+    return ATS_PATTERNS.find(({ domain }) => host === domain || host.endsWith(`.${domain}`))?.ats ?? "unknown";
+  } catch { return "unknown"; }
 }
 export function isApiCoveredJobUrl(jobUrl: string): boolean {
   const ats = detectATS(jobUrl);

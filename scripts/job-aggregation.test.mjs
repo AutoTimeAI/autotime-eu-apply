@@ -6,6 +6,7 @@ import { GreenhouseFeed } from "../apps/web/lib/ats-feeds/greenhouse.ts";
 import { LeverFeed } from "../apps/web/lib/ats-feeds/lever.ts";
 import { AshbyFeed } from "../apps/web/lib/ats-feeds/ashby.ts";
 import { PersonioFeed } from "../apps/web/lib/ats-feeds/personio.ts";
+import { SmartRecruitersFeed } from "../apps/web/lib/ats-feeds/smartrecruiters.ts";
 import { buildOutreachPrompt } from "../apps/web/lib/outreach-drafter.ts";
 import { classifyJobToEsco } from "../apps/web/lib/esco/classify-job.ts";
 import { buildQuestionnaireContext } from "../apps/web/lib/esco/questionnaire-context.ts";
@@ -32,10 +33,16 @@ test("canonicalises tracking parameters and provides cross-source identity hashe
   assert.equal(a.identityHash, b.identityHash); assert.notEqual(a.dedupHash, b.dedupHash);
 });
 const json = (value) => async () => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
-test("normalises Greenhouse, Lever, and Ashby feed results", async () => {
+test("normalises Greenhouse, Lever, Ashby, and SmartRecruiters feed results", async () => {
   assert.equal((await new GreenhouseFeed(json({ jobs: [{ title: "Dev", absolute_url: "https://x", location: { name: "Paris" } }] })).fetchJobs("acme"))[0].atsPlatform, "greenhouse");
   assert.equal((await new LeverFeed(json([{ text: "Dev", hostedUrl: "https://x", categories: { location: "Paris" } }])).fetchJobs("acme"))[0].atsPlatform, "lever");
   assert.equal((await new AshbyFeed(json({ jobs: [{ title: "Dev", jobUrl: "https://x", location: "Paris" }] })).fetchJobs("acme"))[0].atsPlatform, "ashby");
+  const smartRecruiters = await new SmartRecruitersFeed(json({ content: [{ id: "dev-1", name: "Dev", company: { name: "Acme" }, location: { city: "Paris", country: "France" }, releasedDate: "2026-08-18T10:00:00Z" }] })).fetchJobs("acme");
+  assert.deepEqual(smartRecruiters[0], {
+    title: "Dev", company: "Acme", location: "Paris, France",
+    url: "https://jobs.smartrecruiters.com/acme/dev-1", postedDate: "2026-08-18T10:00:00Z",
+    atsPlatform: "smartrecruiters", descriptionRaw: "",
+  });
 });
 test("normalises Personio XML", async () => {
   const fetchXml = async () => new Response("<workzag-jobs><position><id>1</id><name>Developer</name><office>Berlin</office></position></workzag-jobs>");

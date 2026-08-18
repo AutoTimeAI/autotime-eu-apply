@@ -1023,6 +1023,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      platform_coverage_reports: {
+        Row: {
+          id: string;
+          platform: string;
+          site_url: string;
+          problem_category: "not_detected" | "missing_details" | "incorrect_details" | "autofill_problem" | "other";
+          description: string | null;
+          extension_version: string | null;
+          diagnostic_consent: boolean;
+          technical_context: Json;
+          requester_hash: string;
+          status: "new" | "triaged" | "reproduced" | "fixed" | "closed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          platform: string;
+          site_url: string;
+          problem_category: "not_detected" | "missing_details" | "incorrect_details" | "autofill_problem" | "other";
+          description?: string | null;
+          extension_version?: string | null;
+          diagnostic_consent?: boolean;
+          technical_context?: Json;
+          requester_hash: string;
+          status?: "new" | "triaged" | "reproduced" | "fixed" | "closed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: "new" | "triaged" | "reproduced" | "fixed" | "closed";
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       admin_feature_flags: {
         Row: {
           key: string;

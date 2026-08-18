@@ -50,6 +50,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Verify platform coverage registry and fixtures
+        run: node --experimental-strip-types scripts/platform-coverage.test.mjs
+
       - name: Run web interview-prep tests
         run: pnpm test:web:interview
 

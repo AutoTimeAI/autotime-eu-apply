@@ -439,7 +439,7 @@ test("narrows extraction to uncovered ATS and unknown sites", () => {
   assert.equal(getJobCaptureMode("https://careers.icims.com/jobs/1"), "selector-extraction")
   assert.equal(getJobCaptureMode("https://careers.example.com/openings/1"), "selector-extraction")
   assert.equal(getJobCaptureMode("https://linkedin.com/jobs/view/1"), "manual-only")
-  assert.equal(getJobCaptureMode("https://jobs.smartrecruiters.com/acme/1"), "manual-only")
+  assert.equal(getJobCaptureMode("https://jobs.smartrecruiters.com/acme/1"), "api-reference")
 })
 
 test("detects Tier 1 EU JSON-LD boards as priority platforms", () => {
