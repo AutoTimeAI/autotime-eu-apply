@@ -34,7 +34,7 @@ English required. Applications close next month.`;
 const matchedEvidence =
   "Delivered TypeScript Node PostgreSQL services, secure API integration, SQL reporting, requirements analysis, stakeholder workshops, UAT, payments operations, Agile delivery and production support.";
 
-const cases: DecisionCase[] = [
+const cases = [
   {
     id: "DQ-001",
     name: "strong payments analyst evidence",
