@@ -24,7 +24,7 @@ try {
       const bodyText = isNativeFeedCheck ? await page.locator("body").innerText() : "";
       const detected = isNativeFeedCheck ? entry.platform : getCoveragePlatform(finalUrl) ?? getCoveragePlatform(entry.liveCheckUrl);
       const reachable = Boolean(response && response.status() < 400);
-      const feedPattern = ({ Greenhouse:/"jobs"\s*:|"title"\s*:/, Lever:/"text"\s*:|"hostedUrl"\s*:/, Ashby:/"jobs"\s*:|"jobUrl"\s*:/, SmartRecruiters:/"content"\s*:|"releasedDate"\s*:/, Personio:/<position>|<workzag-jobs>/ })[entry.platform];
+      const feedPattern = ({ Greenhouse:/"jobs"\s*:|"title"\s*:/, Lever:/"text"\s*:|"hostedUrl"\s*:/, Ashby:/"jobs"\s*:|"jobUrl"\s*:/, SmartRecruiters:/"content"\s*:|"releasedDate"\s*:/, Personio:/<position>|<workzag-jobs>/, Recruitee:/"offers"\s*:/ })[entry.platform];
       const feedPayloadPresent = !isNativeFeedCheck || Boolean(feedPattern?.test(bodyText));
       const blocked = [401, 403, 405, 429].includes(response?.status() ?? 0);
       const outcome = blocked ? "inconclusive" : reachable && detected === entry.platform && feedPayloadPresent ? "pass" : "fail";

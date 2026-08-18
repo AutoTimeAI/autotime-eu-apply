@@ -1029,7 +1029,17 @@ function InterviewPractice({
   onSave: (value: InterviewRecord) => void;
 }) {
   const [index, setIndex] = useState(0);
+  const [response, setResponse] = useState("");
+  const [remaining, setRemaining] = useState(120);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
   const question = interview.questions[index];
+  const timeLimit = question && ["technical", "scenario"].includes(question.category) ? 120 : 90;
+  useEffect(() => {
+    if (!startedAt || remaining <= 0) return;
+    const timer = window.setInterval(() => setRemaining((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [startedAt, remaining]);
+  useEffect(() => { setResponse(""); setStartedAt(null); setRemaining(timeLimit); }, [index, timeLimit]);
   if (!question)
     return (
       <ProductEmptyState
@@ -1064,6 +1074,19 @@ function InterviewPractice({
           {question.answerDraft?.userEdited || "No answer draft saved yet."}
         </p>
       </details>
+      <section className="workflow-editor" aria-label="Timed typed practice">
+        <h3>Timed typed practice</h3>
+        <p>{startedAt ? `${remaining} seconds remaining` : `${timeLimit} second practice window`}. This is practice only, not a score or hiring prediction.</p>
+        <textarea aria-label="Practice response" value={response} disabled={!startedAt || remaining === 0} onChange={(event) => setResponse(event.target.value)} placeholder="Start the timer, then answer from confirmed evidence." />
+        <div className="workflow-actions">
+          {!startedAt ? <button type="button" className="button-primary" onClick={() => { setRemaining(timeLimit); setStartedAt(new Date().toISOString()); }}>Start practice</button> : <button type="button" className="button-primary" disabled={!response.trim()} onClick={() => {
+            const submittedAt = new Date().toISOString();
+            onSave({ ...interview, questions: interview.questions.map((item) => item.id === question.id ? { ...item, markedForPractice: true, practiceSessions: [...(item.practiceSessions ?? []), { id: crypto.randomUUID(), mode: "typed", startedAt, submittedAt, timeLimitSeconds: timeLimit, responseText: response.trim() }] } : item), updatedAt: submittedAt });
+            setResponse(""); setStartedAt(null); setRemaining(timeLimit);
+          }}>Save practice response</button>}
+        </div>
+        {question.practiceSessions?.length ? <p>{question.practiceSessions.length} saved practice {question.practiceSessions.length === 1 ? "session" : "sessions"} for this question.</p> : null}
+      </section>
       <fieldset>
         <legend>How prepared do you feel?</legend>
         {(["low", "medium", "high"] as const).map((value) => (

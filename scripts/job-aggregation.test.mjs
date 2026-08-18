@@ -7,6 +7,7 @@ import { LeverFeed } from "../apps/web/lib/ats-feeds/lever.ts";
 import { AshbyFeed } from "../apps/web/lib/ats-feeds/ashby.ts";
 import { PersonioFeed } from "../apps/web/lib/ats-feeds/personio.ts";
 import { SmartRecruitersFeed } from "../apps/web/lib/ats-feeds/smartrecruiters.ts";
+import { RecruiteeFeed } from "../apps/web/lib/ats-feeds/recruitee.ts";
 import { buildOutreachPrompt } from "../apps/web/lib/outreach-drafter.ts";
 import { classifyJobToEsco } from "../apps/web/lib/esco/classify-job.ts";
 import { buildQuestionnaireContext } from "../apps/web/lib/esco/questionnaire-context.ts";
@@ -47,6 +48,10 @@ test("normalises Greenhouse, Lever, Ashby, and SmartRecruiters feed results", as
 test("normalises Personio XML", async () => {
   const fetchXml = async () => new Response("<workzag-jobs><position><id>1</id><name>Developer</name><office>Berlin</office></position></workzag-jobs>");
   const jobs = await new PersonioFeed(fetchXml).fetchJobs("acme"); assert.equal(jobs[0].title, "Developer"); assert.equal(jobs[0].atsPlatform, "personio");
+});
+test("normalises Recruitee public careers offers and drops incomplete entries", async () => {
+  const jobs = await new RecruiteeFeed(json({ offers: [{ title: "Engineer", careers_url: "https://acme.recruitee.com/o/engineer", city: "Dublin", country: "Ireland", created_at: "2026-08-18T10:00:00Z", description: "Build reliable systems" }, { title: "Missing URL" }] })).fetchJobs("acme");
+  assert.deepEqual(jobs, [{ title: "Engineer", company: "acme", location: "Dublin, Ireland", url: "https://acme.recruitee.com/o/engineer", postedDate: "2026-08-18T10:00:00Z", atsPlatform: "recruitee", descriptionRaw: "Build reliable systems" }]);
 });
 test("outreach prompt retains human-sent constraints", () => {
   const prompt = buildOutreachPrompt({ jobTitle: "Engineer", companyName: "Acme", jobDescription: "Build secure APIs", recruiterName: "Sam", recruiterRole: "Recruiter", candidateSummary: "API engineer", candidateKeyStrengths: ["security"], channel: "linkedin_note", contactType: "recruiter" });

@@ -78,6 +78,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["outreach_messages"]["Insert"]>;
         Relationships: [];
       };
+      outreach_contacts: {
+        Row: { id: string; user_id: string; name: string; role: string | null; company: string; email: string | null; profile_url: string | null; contact_type: "recruiter" | "hiring_manager" | "peer_target_role"; source: "csv" | "manual"; dedupe_key: string; consented_at: string; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; name: string; role?: string | null; company: string; email?: string | null; profile_url?: string | null; contact_type?: "recruiter" | "hiring_manager" | "peer_target_role"; source?: "csv" | "manual"; dedupe_key: string; consented_at: string; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["outreach_contacts"]["Insert"]>;
+        Relationships: [];
+      };
       cover_letters: {
         Row: { id:string; user_id:string; job_id:string|null; company_name:string; job_title:string; version:number; content:string; created_at:string; updated_at:string };
         Insert: { id?:string; user_id:string; job_id?:string|null; company_name:string; job_title:string; version:number; content:string; created_at?:string; updated_at?:string };

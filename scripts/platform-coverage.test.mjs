@@ -38,7 +38,7 @@ test("generic extraction preserves visible fixture facts without guessing", () =
 test("freshness and aggregate claims exclude stale records", () => {
   assert.equal(isCoverageStale("2026-08-01", new Date("2026-08-30T00:00:00Z")), false);
   assert.equal(isCoverageStale("2026-08-01", new Date("2026-09-01T00:00:01Z")), true);
-  assert.deepEqual(getPublicCoverageSummary(new Date("2026-08-18T00:00:00Z")), { platforms: 26, currentPlatforms: 26, captureVerified: 5, nativeFeeds: 5 });
+  assert.deepEqual(getPublicCoverageSummary(new Date("2026-08-18T00:00:00Z")), { platforms: 26, currentPlatforms: 26, captureVerified: 6, nativeFeeds: 6 });
   assert.equal(getPublicCoverageSummary(new Date("2026-10-01T00:00:00Z")).currentPlatforms, 0);
 });
 
