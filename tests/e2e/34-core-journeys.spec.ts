@@ -58,7 +58,11 @@ test("Journey A: fresh onboarding completes through the CV upload branch", async
   const getProfile = await mockFreshOnboarding(page);
   await page.route("**/api/profile/import-cv", (route) => route.fulfill({ json: { data: { text: cvEvidence }, error: null } }));
 
+  const onboardingLoaded = page.waitForResponse((response) =>
+    response.request().method() === "GET" && response.url().includes("/api/profile/onboarding"),
+  );
   await page.goto("/dashboard/onboarding");
+  await onboardingLoaded;
   await completeStepsBeforeCv(page);
   await page.getByLabel(/Upload CV/).setInputFiles({ name: "journey-cv.pdf", mimeType: "application/pdf", buffer: Buffer.from("test-cv") });
   await expect(page.getByText("CV ready", { exact: true })).toBeVisible();
@@ -74,7 +78,11 @@ test("Journey A: fresh onboarding completes through the CV upload branch", async
 
 test("Journey A: build-new-CV branch opens the builder and communicates export requirements", async ({ page }) => {
   await mockFreshOnboarding(page);
+  const onboardingLoaded = page.waitForResponse((response) =>
+    response.request().method() === "GET" && response.url().includes("/api/profile/onboarding"),
+  );
   await page.goto("/dashboard/onboarding");
+  await onboardingLoaded;
   await completeStepsBeforeCv(page);
   await page.getByRole("link", { name: "Build one now" }).click();
   await expect(page).toHaveURL(/\/dashboard\/cv-tailor\?returnTo=/);
@@ -96,7 +104,11 @@ test("Journey B: ESCO questionnaire renders explainable skill-overlap matches", 
   });
   await page.route("**/api/esco/matches", (route) => route.fulfill({ json: { data: [{ job_id: "job-1", title: "Growth Product Manager", company: "Example EU", location: "Dublin", matched_skills: 4, total_essential_skills: 6, matched_skill_labels: ["Product analytics"], missing_skill_labels: ["Pricing strategy"], overlap: 0.67 }], error: null } }));
 
+  const questionnaireLoaded = page.waitForResponse((response) =>
+    response.request().method() === "GET" && response.url().includes("/api/esco/questionnaire"),
+  );
   await page.goto("/dashboard/role-pathways/questionnaire");
+  await questionnaireLoaded;
   for (let index = 0; index < 6; index += 1) {
     await page.getByLabel("Your evidence").fill(`Verified product analytics evidence for questionnaire round ${index + 1}.`);
     const submit = page.getByRole("button", { name: /Save answer and continue/ });
