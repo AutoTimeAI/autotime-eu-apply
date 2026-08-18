@@ -2,29 +2,17 @@ import assert from "node:assert/strict";
 import {
   analyseJob,
   extractJob,
-  type JobDecision,
+
 } from "../apps/web/lib/job-application-workflow.ts";
 
-type DecisionCase = {
-  id: string;
-  name: string;
-  description: string;
-  evidence: string;
-  expected: JobDecision;
-  sponsorshipRequired?: boolean;
-  expectedUnknowns?: string[];
-  forbiddenCriticalRisk?: string;
-  repeat?: boolean;
-};
-
-const complete = (requirements: string, extra = "") => `Job title: Technical Business Analyst
+const complete = (requirements, extra = "") => `Job title: Technical Business Analyst
 Company: Example Financial Systems
 Location: Dublin, Ireland
 Permanent hybrid position. Salary €70,000 - €82,000.
 ${requirements}
 English required. ${extra}`;
 
-const missingSalaryAndSponsor = (requirements: string) => `Job title: Technical Business Analyst
+const missingSalaryAndSponsor = (requirements) => `Job title: Technical Business Analyst
 Company: Example Financial Systems
 Location: Dublin, Ireland
 Permanent hybrid position with competitive compensation.
