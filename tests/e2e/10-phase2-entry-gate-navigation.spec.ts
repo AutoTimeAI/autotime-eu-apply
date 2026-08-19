@@ -8,7 +8,7 @@ const destinations = [
   ["Applications", "/dashboard/applications"],
   ["Interviews", "/dashboard/interviews"],
   ["Countries", "/dashboard/international"],
-  ["Profile", "/dashboard/autofill-profile"],
+  ["Profile", "/dashboard/profile"],
 ] as const;
 
 const primaryMobileDestinations = [
@@ -21,7 +21,7 @@ const primaryMobileDestinations = [
 const moreMobileDestinations = [
   ["Career Direction", "/dashboard/role-pathways"],
   ["Countries", "/dashboard/international"],
-  ["Profile", "/dashboard/autofill-profile"],
+  ["Profile", "/dashboard/profile"],
 ] as const;
 
 async function assertLanded(

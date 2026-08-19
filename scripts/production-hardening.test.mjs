@@ -174,7 +174,7 @@ test("Proof Library stays a standalone reusable-proof workspace", () => {
   const userNav = read("apps/web/components/UserNav.tsx")
   const publicNav = read("apps/web/components/PublicNav.tsx")
 
-  assert.match(userNav, /aliases: \["\/dashboard\/profile", "\/dashboard\/cv-tailor"\]/)
+  assert.match(userNav, /aliases: \["\/dashboard\/autofill-profile", "\/dashboard\/cv-tailor"\]/)
   assert.match(userNav, /label: "Profile"/)
   assert.match(userNav, /description: "Facts and proof"/)
   assert.doesNotMatch(userNav, /protocol-locked-link|90% before using/)
