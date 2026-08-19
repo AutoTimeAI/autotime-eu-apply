@@ -26,8 +26,8 @@ import {
 } from "../lib/interview-workflow";
 import type { JobWorkflowState } from "../lib/job-application-workflow";
 import {
-  getProfileReadinessFromParts,
   profileProtocolReadinessEvent,
+  useProfileProtocolReadiness,
 } from "./ProfileProtocolLock";
 import {
   markOnboardingComplete,
@@ -369,6 +369,8 @@ export default function HomeExperience({
 }) {
   const router = useRouter();
   const { userId } = useDashboardPlan();
+  const { readinessScore: cloudAwareProfileScore } =
+    useProfileProtocolReadiness(userId);
   const [testFixture, setTestFixture] = useState<HomeTestFixture>();
   const [dashboardState, setDashboardState] =
     useState<CompanionDashboardState | null>(null);
@@ -473,14 +475,7 @@ export default function HomeExperience({
   );
   const context = testFixture?.context ?? liveContext;
   const nextAction = getHomeNextAction(context);
-  const profileScore =
-    testFixture?.profileScore ??
-    (dashboardState
-      ? getProfileReadinessFromParts(
-          dashboardState.profile,
-          dashboardState.reusableAnswers,
-        )
-      : 0);
+  const profileScore = testFixture?.profileScore ?? cloudAwareProfileScore;
   const confirmedAreas = [
     context.hasCareerEvidence ? "Career evidence" : null,
     context.hasCareerLane ? "Career direction" : null,

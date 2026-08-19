@@ -220,6 +220,17 @@ export function extractJob(input: {
 
 const tokens = (value: string) =>
   new Set(value.toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g) ?? []);
+const yearsPattern = /(\d+)\+?\s*(?:years?|yrs?)\b/gi;
+const allYearsMentioned = (value: string): number[] =>
+  [...value.matchAll(yearsPattern)].map((match) => Number(match[1]));
+const maxYearsMentioned = (value: string): number | null => {
+  const years = allYearsMentioned(value);
+  return years.length ? Math.max(...years) : null;
+};
+const requiredYears = (requirement: string): number | null => {
+  const years = allYearsMentioned(requirement);
+  return years.length ? years[0] : null;
+};
 const requirements = (description: string) =>
   description
     .split(/[.\n;•]/)
@@ -263,14 +274,27 @@ export function analyseJob(
     const matchCoverage = meaningful.length
       ? matches.length / meaningful.length
       : 0;
+    const neededYears = requiredYears(requirement);
+    const candidateYears =
+      neededYears !== null ? maxYearsMentioned(candidateEvidence) : null;
+    const yearsSatisfied =
+      neededYears !== null &&
+      candidateYears !== null &&
+      candidateYears >= neededYears;
+    const evidence = matches.map((item) => `Confirmed evidence mentions ${item}`);
+    if (yearsSatisfied) {
+      evidence.unshift(
+        `Confirmed evidence states ${candidateYears}+ years experience (requirement: ${neededYears}+ years)`,
+      );
+    }
     return {
       requirement,
       sourceText: requirement,
-      evidence: matches.map((item) => `Confirmed evidence mentions ${item}`),
+      evidence,
       state:
-        matches.length >= 2 && matchCoverage >= 0.6
+        yearsSatisfied || (matches.length >= 2 && matchCoverage >= 0.6)
           ? "confirmed"
-          : matches.length === 1
+          : matches.length >= 1
             ? "partial"
             : "missing",
     } satisfies RequirementEvidence;
