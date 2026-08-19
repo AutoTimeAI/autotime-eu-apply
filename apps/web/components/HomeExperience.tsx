@@ -589,7 +589,7 @@ export default function HomeExperience({
   ) {
     const unavailable = testFixture.viewState === "unavailable";
     return (
-      <div className="home-experience" data-next-action={nextAction.id}>
+      <main className="home-experience" data-next-action={nextAction.id}>
         <ProductPageHeader
           description="Focus on the task that needs attention now."
           eyebrow="Home"
@@ -627,12 +627,12 @@ export default function HomeExperience({
             </button>
           )}
         </section>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="home-experience" data-next-action={nextAction.id}>
+    <main className="home-experience" data-next-action={nextAction.id}>
       <ProductPageHeader
         description="Focus on the task that needs attention now."
         eyebrow="Home"
@@ -718,6 +718,6 @@ export default function HomeExperience({
           </p>
         </details>
       </section>
-    </div>
+    </main>
   );
 }
