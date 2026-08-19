@@ -62,6 +62,7 @@ export type JobRecord = {
     language: SourcedValue;
     location: SourcedValue;
     salary: SourcedValue;
+    skills: SourcedValue;
     sponsorship: SourcedValue;
     workArrangement: SourcedValue;
     workAuthorisation: SourcedValue;
@@ -117,6 +118,63 @@ export type JobWorkflowState = {
   schemaVersion: 1;
 };
 
+const europeanTechHubCityCountries: Record<string, string> = {
+  London: "United Kingdom", Manchester: "United Kingdom", Edinburgh: "United Kingdom",
+  Bristol: "United Kingdom", Cambridge: "United Kingdom",
+  Dublin: "Ireland", Cork: "Ireland", Belfast: "United Kingdom",
+  Berlin: "Germany", Munich: "Germany", Hamburg: "Germany", Frankfurt: "Germany",
+  Cologne: "Germany", Stuttgart: "Germany",
+  Amsterdam: "Netherlands", Rotterdam: "Netherlands", Eindhoven: "Netherlands",
+  Utrecht: "Netherlands", "The Hague": "Netherlands",
+  Paris: "France", Lyon: "France", Toulouse: "France",
+  Madrid: "Spain", Barcelona: "Spain", Valencia: "Spain",
+  Lisbon: "Portugal", Porto: "Portugal",
+  Brussels: "Belgium", Antwerp: "Belgium",
+  Stockholm: "Sweden", Gothenburg: "Sweden", Malmo: "Sweden", Malmö: "Sweden",
+  Copenhagen: "Denmark", Aarhus: "Denmark",
+  Oslo: "Norway", Bergen: "Norway",
+  Helsinki: "Finland", Espoo: "Finland",
+  Warsaw: "Poland", Krakow: "Poland", Kraków: "Poland",
+  Wroclaw: "Poland", Wrocław: "Poland",
+  Vienna: "Austria", Graz: "Austria",
+  Zurich: "Switzerland", Zürich: "Switzerland", Geneva: "Switzerland", Basel: "Switzerland",
+  Milan: "Italy", Rome: "Italy", Turin: "Italy",
+};
+const europeanTechHubCities = Object.keys(europeanTechHubCityCountries);
+const cityPattern = new RegExp(`\\b(${europeanTechHubCities.join("|")})\\b`, "i");
+const findKnownCity = (text: string): string => {
+  const match = firstMatch(text, cityPattern);
+  const canonical = europeanTechHubCities.find(
+    (city) => city.toLowerCase() === match.toLowerCase(),
+  );
+  return canonical ?? "";
+};
+const skillsTaxonomy = [
+  "TypeScript", "JavaScript", "Python", "Java", "Kotlin", "Swift",
+  "Ruby", "PHP", "Golang", "Rust", "C++", "C#", ".NET", "Scala",
+  "Node.js", "React", "Vue", "Angular", "Next.js", "Django", "Flask",
+  "Spring", "Spring Boot", "Rails",
+  "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch", "Kafka",
+  "RabbitMQ", "DynamoDB", "SQL",
+  "AWS", "GCP", "Azure", "Kubernetes", "Docker", "Terraform", "Ansible",
+  "Jenkins", "CI/CD", "GraphQL", "REST", "gRPC", "Microservices",
+] as const;
+// Custom (rather than \b) boundaries: several entries (".NET", "C++", "C#")
+// start or end with a non-word character, which \b cannot bound correctly.
+const skillsPattern = new RegExp(
+  `(?<![A-Za-z0-9])(${skillsTaxonomy.map((skill) => skill.replace(/[.+#]/g, "\\$&")).join("|")})(?![A-Za-z0-9])`,
+  "gi",
+);
+const extractSkills = (description: string): string => {
+  const matches = new Set<string>();
+  for (const match of description.matchAll(skillsPattern)) {
+    const canonical = skillsTaxonomy.find(
+      (skill) => skill.toLowerCase() === match[0].toLowerCase(),
+    );
+    if (canonical) matches.add(canonical);
+  }
+  return [...matches].join(", ");
+};
 const unknown = (): SourcedValue => ({ state: "missing", value: "" });
 const sourced = (value: string, sourceText: string): SourcedValue =>
   value ? { state: "extracted", value, sourceText } : unknown();
@@ -146,11 +204,16 @@ export function extractJob(input: {
   const employer =
     input.employer?.trim() ||
     lineAfter(description, /^(company|employer)\s*:\s*/i);
-  const location = lineAfter(description, /^(location)\s*:\s*/i);
-  const country = firstMatch(
-    [location, description.slice(0, 1200)].join(" "),
-    /\b(United Kingdom|UK|Ireland|Germany|Netherlands|France|Spain|Portugal|Belgium|Sweden|Denmark|Norway|Finland|Poland|Austria|Switzerland)\b/i,
-  );
+  const labelledLocation = lineAfter(description, /^(location)\s*:\s*/i);
+  const detectedCity = findKnownCity(description.slice(0, 1200));
+  const location = labelledLocation || detectedCity;
+  const country =
+    firstMatch(
+      [labelledLocation, description.slice(0, 1200)].join(" "),
+      /\b(United Kingdom|UK|Ireland|Germany|Netherlands|France|Spain|Portugal|Belgium|Sweden|Denmark|Norway|Finland|Poland|Austria|Switzerland)\b/i,
+    ) ||
+    (detectedCity ? europeanTechHubCityCountries[detectedCity] : "") ||
+    "";
   const salary = firstMatch(
     description,
     /(?:£|€)\s?\d{2,3}(?:[,.]\d{3})?(?:\s?[-–]\s?(?:£|€)?\s?\d{2,3}(?:[,.]\d{3})?)?/i,
@@ -182,12 +245,13 @@ export function extractJob(input: {
   );
   const experience = firstMatch(
     description,
-    /\b\d+\+?\s+years?(?:'| of)? experience\b/i,
+    /\b\d+\+?\s*years?\b[^.\n]{0,40}?\bexperience\b/i,
   );
   const education = firstMatch(
     description,
     /[^.\n]{0,70}\b(?:degree|bachelor|master|certification)\b[^.\n]{0,100}/i,
   );
+  const skills = extractSkills(description);
   const value = (raw: string) => sourced(raw, raw);
   return {
     atsPlatform: detectATS(input.sourceUrl ?? ""),
@@ -211,6 +275,7 @@ export function extractJob(input: {
       language: value(language),
       location: value(location),
       salary: value(salary),
+      skills: value(skills),
       sponsorship: value(sponsorship),
       workArrangement: value(arrangement),
       workAuthorisation: value(workAuth),
