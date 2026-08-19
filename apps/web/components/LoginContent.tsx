@@ -290,7 +290,7 @@ function LoginForm() {
             ) : null}
             <div className="header-actions auth-provider-actions">
               <button
-                disabled={Boolean(pendingProvider)}
+                disabled={Boolean(pendingProvider) || !accountConsent}
                 type="button"
                 onClick={continueWithExistingSession}
               >
@@ -309,7 +309,7 @@ function LoginForm() {
         ) : (
           <div className="header-actions auth-provider-actions">
             <button
-              disabled={Boolean(pendingProvider)}
+              disabled={Boolean(pendingProvider) || !accountConsent}
               type="button"
               onClick={() => handleSignIn("github")}
             >
@@ -319,7 +319,7 @@ function LoginForm() {
             </button>
             <button
               className="secondary-button"
-              disabled={Boolean(pendingProvider)}
+              disabled={Boolean(pendingProvider) || !accountConsent}
               type="button"
               onClick={() => handleSignIn("google")}
             >
