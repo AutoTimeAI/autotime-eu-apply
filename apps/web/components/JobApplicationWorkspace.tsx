@@ -35,6 +35,7 @@ import {
 import { loadInterviewWorkflow } from "../lib/interview-storage";
 import type { InterviewRecord } from "../lib/interview-workflow";
 import { loadMobilityProfile, saveMobilityProfile } from "../lib/international-mobility-storage";
+import { useJobWorkflowSync } from "../lib/useJobWorkflowSync";
 import type { ApplicationRecord, MobilityProfile } from "shared";
 
 type View =
@@ -119,7 +120,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
   const [cloudApplications, setCloudApplications] = useState<
     ApplicationRecord[]
   >([]);
-  const persist = (next: JobWorkflowState) => {
+  const applyLocal = (next: JobWorkflowState) => {
     setState(next);
     saveJobWorkflow(userId, next);
   };
@@ -191,6 +192,25 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
     () => cloudOnly.map((item) => item.job),
     [cloudOnly],
   );
+
+  // Real two-way sync (issue #29 phase 4a) - local storage stays the
+  // source of truth for immediate UI, this mirrors it to the cloud in the
+  // background so it survives across devices. Distinct from the read-only
+  // cloudApplications bridge above (a display-only fallback for the
+  // legacy applications table); this reads/writes the dedicated
+  // job_workflow_* tables and merges results into real local state.
+  const jobWorkflowSync = useJobWorkflowSync({
+    enabled: ready,
+    localJobs: state.jobs,
+    localApplications: state.applications,
+    onReconciled: (next) =>
+      applyLocal({ ...state, jobs: next.jobs, applications: next.applications }),
+    userId,
+  });
+  const persist = (next: JobWorkflowState) => {
+    applyLocal(next);
+    jobWorkflowSync.sync({ jobs: next.jobs, applications: next.applications });
+  };
 
   if (!ready)
     return view.kind === "applications" || view.kind === "application" ? (
