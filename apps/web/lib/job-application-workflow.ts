@@ -1,4 +1,5 @@
 import { detectATS } from "./ats-detector.ts";
+import type { ApplicationRecord } from "shared";
 
 export type EvidenceState = "confirmed" | "partial" | "missing" | "conflicting";
 export type JobDecision =
@@ -460,6 +461,95 @@ export function createApplication(job: JobRecord): ApplicationWorkspace {
     unsupportedClaims: [],
     updatedAt: now,
   };
+}
+
+// Normalizes a job/application URL the same way apps/web/app/api/sync/dashboard/route.ts
+// does server-side, so client-side dedup against cloud records agrees with the server's
+// own identity rule for an application.
+export function normalizeJobUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.hash = "";
+    parsed.hostname = parsed.hostname.toLowerCase();
+    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+    return parsed.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return rawUrl.trim().toLowerCase().replace(/\/$/, "");
+  }
+}
+
+const cloudToLocalStatus: Record<
+  ApplicationRecord["status"],
+  ApplicationWorkspaceStatus
+> = {
+  Saved: "Preparing",
+  "Checking fit": "Preparing",
+  "Ready to apply": "Ready",
+  Applied: "Applied",
+  Interview: "Interview",
+  Offer: "Offer",
+  Rejected: "Rejected",
+  Archived: "Withdrawn",
+};
+
+// Converts a cloud `applications` row (from GET /api/sync/dashboard) into a
+// read-only-in-practice local job/application pair, so it can be displayed
+// alongside browser-local jobs on the Jobs/Applications pages. This is a
+// display bridge only: none of the local-only concepts these pages otherwise
+// support (extracted facts, analysis history, screening answers, checklist,
+// etc.) exist in the cloud row, so those fields are intentionally left empty
+// rather than fabricated. Callers should not feed the result back through
+// saveJobWorkflow/persist - it is not a real local record.
+export function cloudApplicationToWorkspaceJob(record: ApplicationRecord): {
+  application: ApplicationWorkspace;
+  job: JobRecord;
+} {
+  const timestamp = record.updatedAt ?? record.createdAt;
+  const job: JobRecord = {
+    analysisHistory: [],
+    analysisState: "Not analysed",
+    atsPlatform: record.atsPlatform,
+    capturedAt: record.createdAt,
+    description: "",
+    employer: sourced(record.company ?? "", record.company ?? ""),
+    facts: {
+      contract: unknown(),
+      country: unknown(),
+      education: unknown(),
+      employmentType: unknown(),
+      experience: unknown(),
+      language: unknown(),
+      location: unknown(),
+      salary: unknown(),
+      sponsorship: unknown(),
+      workArrangement: unknown(),
+      workAuthorisation: unknown(),
+    },
+    id: record.id,
+    lane: "",
+    source: "Saved job",
+    sourceUrl: record.url,
+    title: sourced(record.title, record.title),
+    updatedAt: timestamp,
+  };
+  const application: ApplicationWorkspace = {
+    checklist: [true, false, false, false, false, false, false, false],
+    consequentialAnswersReviewed: false,
+    coverLetterRequested: false,
+    createdAt: record.createdAt,
+    documentVersions: [],
+    evidenceConfirmed: false,
+    followUpDate: record.nextActionDate,
+    id: record.id,
+    jobId: record.id,
+    screeningAnswers: [],
+    selectedCvVersion: "Confirmed profile",
+    status: cloudToLocalStatus[record.status] ?? "Preparing",
+    submissionConfirmed: false,
+    unsupportedClaims: [],
+    updatedAt: timestamp,
+  };
+  return { application, job };
 }
 
 export function getApplicationReadiness(

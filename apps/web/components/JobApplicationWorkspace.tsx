@@ -12,12 +12,14 @@ import { useDashboardPlan } from "./UserNav";
 import { ApplicationChecklist } from "./ApplicationChecklist";
 import {
   analyseJob,
+  cloudApplicationToWorkspaceJob,
   createApplication,
   duplicateJob,
   extractJob,
   getApplicationReadiness,
   getApplicationReviewQueue,
   isRestrictedJobUrl,
+  normalizeJobUrl,
   transitionApplication,
   type ApplicationWorkspace,
   type ApplicationWorkspaceStatus,
@@ -33,7 +35,7 @@ import {
 import { loadInterviewWorkflow } from "../lib/interview-storage";
 import type { InterviewRecord } from "../lib/interview-workflow";
 import { loadMobilityProfile, saveMobilityProfile } from "../lib/international-mobility-storage";
-import type { MobilityProfile } from "shared";
+import type { ApplicationRecord, MobilityProfile } from "shared";
 
 type View =
   | { kind: "jobs" }
@@ -114,6 +116,9 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
   const [applicationSystemState, setApplicationSystemState] = useState<
     "loading" | "unavailable" | null
   >(null);
+  const [cloudApplications, setCloudApplications] = useState<
+    ApplicationRecord[]
+  >([]);
   const persist = (next: JobWorkflowState) => {
     setState(next);
     saveJobWorkflow(userId, next);
@@ -149,6 +154,44 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
     setReady(true);
   }, [userId, view.kind]);
 
+  // Best-effort read-only bridge: surfaces applications that exist in the
+  // cloud (seeded, created on another device, or by another surface of the
+  // app) but aren't yet tracked in this browser's local workflow. Never
+  // written back through persist/saveJobWorkflow - see
+  // cloudApplicationToWorkspaceJob for why.
+  useEffect(() => {
+    let isActive = true;
+    void fetch("/api/sync/dashboard", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!isActive || !payload?.data?.dashboard?.applications) return;
+        setCloudApplications(payload.data.dashboard.applications);
+      })
+      .catch(() => {
+        // Cloud data is a display-only enhancement; failures here should
+        // never block the local-only workflow these pages already support.
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [userId]);
+
+  const localUrlKeys = useMemo(
+    () => new Set(state.jobs.map((job) => normalizeJobUrl(job.sourceUrl))),
+    [state.jobs],
+  );
+  const cloudOnly = useMemo(
+    () =>
+      cloudApplications
+        .filter((record) => !localUrlKeys.has(normalizeJobUrl(record.url)))
+        .map((record) => cloudApplicationToWorkspaceJob(record)),
+    [cloudApplications, localUrlKeys],
+  );
+  const cloudOnlyJobs = useMemo(
+    () => cloudOnly.map((item) => item.job),
+    [cloudOnly],
+  );
+
   if (!ready)
     return view.kind === "applications" || view.kind === "application" ? (
       <ApplicationsSystemState kind="loading" />
@@ -163,6 +206,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
     return (
       <JobsList
         state={state}
+        cloudOnlyJobs={cloudOnlyJobs}
         onChange={persist}
         onOpen={(id) => router.push(`/dashboard/jobs/${id}`)}
         status={status}
@@ -173,6 +217,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
     return (
       <ApplicationsList
         state={state}
+        cloudOnly={cloudOnly}
         onOpen={(id) => router.push(`/dashboard/applications/${id}`)}
       />
     );
@@ -211,12 +256,14 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
 
 function JobsList({
   state,
+  cloudOnlyJobs,
   onChange,
   onOpen,
   status,
   setStatus,
 }: {
   state: JobWorkflowState;
+  cloudOnlyJobs: JobRecord[];
   onChange: (value: JobWorkflowState) => void;
   onOpen: (id: string) => void;
   status: string;
@@ -379,6 +426,39 @@ function JobsList({
           }
         />
       )}
+      {cloudOnlyJobs.length ? (
+        <section
+          className="workflow-list phase-two-job-list workflow-cloud-bridge"
+          aria-label="Jobs saved to your account"
+        >
+          <h2>Also saved to your account</h2>
+          <p>
+            These were saved from another device or surface of AutoTime and
+            aren&apos;t yet tracked in this browser. Open the original
+            posting to review it, or add it here to track it in this
+            workflow.
+          </p>
+          {cloudOnlyJobs.map((job) => (
+            <article className="workflow-list-row phase-two-job-row" key={job.id}>
+              <div>
+                <p className="product-eyebrow">Synced from your account</p>
+                <h2>{job.title.value || "Untitled role"}</h2>
+                <p>{job.employer.value || "Employer unknown"}</p>
+              </div>
+              {job.sourceUrl ? (
+                <a
+                  className="button-secondary"
+                  href={job.sourceUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  View posting
+                </a>
+              ) : null}
+            </article>
+          ))}
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -994,9 +1074,11 @@ function ApplicationsSystemState({
 
 function ApplicationsList({
   state,
+  cloudOnly,
   onOpen,
 }: {
   state: JobWorkflowState;
+  cloudOnly: { application: ApplicationWorkspace; job: JobRecord }[];
   onOpen: (id: string) => void;
 }) {
   const [filter, setFilter] = useState("all");
@@ -1156,6 +1238,40 @@ function ApplicationsList({
           }
         />
       )}
+      {cloudOnly.length ? (
+        <section
+          className="phase-three-application-list workflow-cloud-bridge"
+          aria-label="Applications saved to your account"
+        >
+          <h2>Also saved to your account</h2>
+          <p>
+            These were saved from another device or surface of AutoTime and
+            aren&apos;t yet tracked in this browser&apos;s pipeline.
+          </p>
+          {cloudOnly.map(({ application, job }) => (
+            <article className="phase-three-application-row" key={application.id}>
+              <div className="phase-three-application-context">
+                <p className="product-eyebrow">Synced from your account</p>
+                <h2>{job.title.value || "Application"}</h2>
+                <p>{job.employer.value || "Employer unknown"}</p>
+              </div>
+              <ProductStatusBadge status={applicationTone(application.status)}>
+                {application.status}
+              </ProductStatusBadge>
+              {job.sourceUrl ? (
+                <a
+                  className="button-secondary"
+                  href={job.sourceUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  View posting
+                </a>
+              ) : null}
+            </article>
+          ))}
+        </section>
+      ) : null}
     </main>
   );
 }
