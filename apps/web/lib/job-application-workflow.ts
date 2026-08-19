@@ -316,6 +316,12 @@ export function analyseJob(
   options: { careerLane?: string; sponsorshipRequired?: boolean } = {},
 ): JobAnalysisResult {
   const evidenceTokens = tokens(candidateEvidence);
+  // Tracked in parallel with `mapped` (rather than added to the returned
+  // RequirementEvidence shape, which is a public wire type) so a single
+  // requirement confirmed via an explicit years-of-experience match can be
+  // told apart from one confirmed via generic keyword overlap - see the
+  // decision logic below.
+  const yearsSatisfiedFlags: boolean[] = [];
   const mapped = requirements(job.description).map((requirement) => {
     const meaningful = [...tokens(requirement)].filter(
       (token) =>
@@ -347,6 +353,7 @@ export function analyseJob(
       neededYears !== null &&
       candidateYears !== null &&
       candidateYears >= neededYears;
+    yearsSatisfiedFlags.push(yearsSatisfied);
     const evidence = matches.map((item) => `Confirmed evidence mentions ${item}`);
     if (yearsSatisfied) {
       evidence.unshift(
@@ -387,9 +394,18 @@ export function analyseJob(
   const coverage = mapped.length
     ? Math.round(((confirmed + partial * 0.5) / mapped.length) * 100)
     : 0;
+  // A single extracted requirement is normally too thin a signal to trust -
+  // matching just one requirement via generic keyword overlap is easy to get
+  // by chance. An explicit years-of-experience match is a much stronger,
+  // harder-to-game signal, so it's allowed to stand on its own.
+  const singleRequirementStrongMatch =
+    mapped.length === 1 &&
+    mapped[0].state === "confirmed" &&
+    yearsSatisfiedFlags[0];
   const decision: JobDecision = incompatible
     ? "Skip"
-    : mapped.length < 2 || !candidateEvidence.trim()
+    : !candidateEvidence.trim() ||
+        (mapped.length < 2 && !singleRequirementStrongMatch)
       ? "Insufficient information"
       : unknowns.length >= 2
         ? "Consider"

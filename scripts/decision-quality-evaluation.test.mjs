@@ -333,10 +333,20 @@ const cases = [
     expected: "Insufficient information",
     repeat: true,
   },
+  {
+    id: "DQ-031",
+    name: "single requirement confirmed via explicit years match is not insufficient",
+    description: complete(
+      "Required 5 years of backend engineering experience.",
+    ),
+    evidence:
+      "8 years of backend engineering experience delivering distributed systems.",
+    expected: "Apply",
+  },
 ];
 
-assert.equal(cases.length, 30, "The decision-quality benchmark must contain exactly 30 cases.");
-assert.equal(new Set(cases.map((item) => item.id)).size, 30, "Every benchmark case needs a unique ID.");
+assert.equal(cases.length, 31, "The decision-quality benchmark must contain exactly 31 cases.");
+assert.equal(new Set(cases.map((item) => item.id)).size, 31, "Every benchmark case needs a unique ID.");
 
 let failed = 0;
 
