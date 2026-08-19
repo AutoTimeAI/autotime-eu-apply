@@ -14,6 +14,7 @@ import {
   type OutcomeRecord,
   type ReusableAnswers,
 } from "shared"
+import { parseContentSnapshot } from "../../../../lib/dashboard-content-snapshot"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
   configurationUnavailableMessage,
@@ -411,7 +412,7 @@ function rowToApplication(
     fitScore: row.fit_score ?? undefined,
     fitDecision: row.fit_decision ?? undefined,
     contentGate: row.content_gate ?? undefined,
-    contentSnapshot: row.content_snapshot ?? undefined,
+    contentSnapshot: parseContentSnapshot(row.id, row.content_snapshot),
   })
 }
 
