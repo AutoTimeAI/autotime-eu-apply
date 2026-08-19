@@ -11,6 +11,7 @@ jobs:
   test:
     name: Tests, static checks, and builds
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -96,8 +97,42 @@ jobs:
           STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
           RESEND_API_KEY: re_offline_ci
 
+      - name: Work around unreliable azure.archive.ubuntu.com mirror
+        run: |
+          # Every observed CI hang traces to azure.archive.ubuntu.com specifically
+          # stalling apt-get update - archive.ubuntu.com has resolved quickly every
+          # time it was reached. Ubuntu 24.04 runners resolve apt mirrors via
+          # /etc/apt/apt-mirrors.txt (a mirror+file:// candidate list, tried in
+          # order); drop the azure entry so apt never waits on it.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+            if [ ! -s /etc/apt/apt-mirrors.txt ]; then
+              echo "http://archive.ubuntu.com/ubuntu" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+            fi
+          fi
+          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          sudo find /etc/apt/sources.list.d -type f -exec sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' {} + 2>/dev/null || true
+
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        timeout-minutes: 15
+        run: |
+          for attempt in 1 2 3; do
+            if timeout --kill-after=10 3m pnpm exec playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "Playwright browser install attempt $attempt failed or timed out - cleaning up and retrying..."
+            # `timeout` only kills the direct child - a timed-out attempt can
+            # leave an orphaned `apt-get` (spawned via sudo) still holding the
+            # apt lock, which fails every subsequent attempt instantly with
+            # "Could not get lock ... held by process N (apt-get)". Clear
+            # that out before retrying.
+            sudo pkill -9 -f apt-get || true
+            sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend || true
+            sudo dpkg --configure -a || true
+            sleep 10
+          done
+          echo "Playwright browser install failed after 3 attempts"
+          exit 1
 
       - name: Run deploy smoke tests
         run: pnpm test:smoke
