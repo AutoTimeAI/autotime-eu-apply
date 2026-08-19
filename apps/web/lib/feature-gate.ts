@@ -4,6 +4,12 @@ import type { SubscriptionPlan, SubscriptionStatus } from "./supabase/types"
 import { getTestAuthPlan, isTestAuthUserId } from "./test-auth"
 
 export const FREE_AI_CALLS_PER_MONTH = 5
+export const PRO_AI_CALLS_PER_MONTH = 50
+
+export const PLAN_AI_CALLS_PER_MONTH: Record<SubscriptionPlan, number> = {
+  free: FREE_AI_CALLS_PER_MONTH,
+  pro: PRO_AI_CALLS_PER_MONTH,
+}
 
 export class FeatureGateError extends Error {
   constructor(
@@ -43,9 +49,10 @@ export async function getUserPlan(
       throw new Error(error.message)
     }
 
+    const storedPlan = normalisePlan(data?.plan)
     const plan =
-      normalisePlan(data?.plan) === "pro" && isEntitledStatus(data?.status)
-        ? "pro"
+      storedPlan !== "free" && isEntitledStatus(data?.status)
+        ? storedPlan
         : "free"
 
     return plan
@@ -68,6 +75,23 @@ export async function isProUser(userId: string): Promise<boolean> {
 
     throw new Error(message)
   }
+}
+
+export async function getPurchasedAiCredits(userId: string): Promise<number> {
+  if (isTestAuthUserId(userId)) {
+    return 0
+  }
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.rpc("get_ai_credit_balance", {
+    p_user_id: userId,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return Math.max(0, data ?? 0)
 }
 
 async function getMonthlyAiCallCount(userId: string): Promise<number> {
@@ -98,12 +122,15 @@ async function getMonthlyAiCallCount(userId: string): Promise<number> {
 
 export async function getRemainingAiCalls(userId: string): Promise<number> {
   try {
-    if (await isProUser(userId)) {
-      return Number.POSITIVE_INFINITY
-    }
-
-    const monthlyCalls = await getMonthlyAiCallCount(userId)
-    return Math.max(0, FREE_AI_CALLS_PER_MONTH - monthlyCalls)
+    const [plan, monthlyCalls, purchasedCredits] = await Promise.all([
+      getUserPlan(userId),
+      getMonthlyAiCallCount(userId),
+      getPurchasedAiCredits(userId),
+    ])
+    return (
+      Math.max(0, PLAN_AI_CALLS_PER_MONTH[plan] - monthlyCalls) +
+      purchasedCredits
+    )
   } catch (error: unknown) {
     console.error("feature_gate_remaining_calls_failed", {
       reason:
@@ -144,6 +171,22 @@ export async function trackAiCall(
     if (error) {
       throw new Error(error.message)
     }
+
+    const [plan, monthlyCalls] = await Promise.all([
+      getUserPlan(userId),
+      getMonthlyAiCallCount(userId),
+    ])
+
+    if (monthlyCalls > PLAN_AI_CALLS_PER_MONTH[plan]) {
+      const { data: consumed, error: consumeError } = await supabase.rpc(
+        "consume_ai_credit",
+        { p_feature: opts.feature, p_user_id: userId },
+      )
+
+      if (consumeError || !consumed) {
+        throw new Error(consumeError?.message ?? "AI credit could not be consumed")
+      }
+    }
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Unable to track AI usage"
@@ -167,17 +210,13 @@ export async function trackAiCall(
 
 export async function assertCanUseAi(userId: string): Promise<void> {
   try {
-    if (await isProUser(userId)) {
-      return
-    }
-
     const remainingCalls = await getRemainingAiCalls(userId)
 
     if (remainingCalls <= 0) {
       throw new FeatureGateError(
         "LIMIT_REACHED",
         0,
-        "Free AI call limit reached. Upgrade to Pro to continue."
+        "Your monthly AI allowance is used. Buy a credit pack or upgrade to continue."
       )
     }
   } catch (error: unknown) {

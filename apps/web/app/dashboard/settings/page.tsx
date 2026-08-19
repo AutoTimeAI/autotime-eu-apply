@@ -51,7 +51,7 @@ export default async function DashboardSettingsPage() {
       : await (async () => {
           const admin = createAdminClient();
           return Promise.all([
-            plan === "free" ? getRemainingAiCalls(user.id) : Promise.resolve(0),
+            getRemainingAiCalls(user.id),
             admin
               .from("profiles")
               .select("updated_at")
@@ -92,11 +92,12 @@ export default async function DashboardSettingsPage() {
           </article>
           <article>
             <span>Plan & billing</span>
-            <strong>{plan === "pro" ? "Pro" : "Free"}</strong>
+            <strong>
+              {plan === "pro" ? "Pro" : "Free"}
+            </strong>
             <p>
-              {plan === "free"
-                ? `${remainingCalls} AI calls remaining.`
-                : "Billing is managed through Stripe."}
+              {remainingCalls} AI actions available. Billing is managed through
+              Stripe.
             </p>
             <a href="#billing-controls">Manage plan</a>
           </article>

@@ -23,6 +23,7 @@ const signedInNavItems: PublicNavItem[] = [
   { href: "/dashboard", label: "Home" },
   { href: "/dashboard/extension", label: "Extension" },
   { href: "/pricing", label: "Plans" },
+  { href: "/compatibility", label: "Compatibility" },
   { href: "/dashboard/settings", label: "Settings" }
 ]
 
@@ -83,6 +84,13 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
           </>
         ) : (
           <>
+            <Link
+              aria-current={currentPath === "/compatibility" ? "page" : undefined}
+              className={currentPath === "/compatibility" ? "active" : undefined}
+              href="/compatibility"
+            >
+              Compatibility
+            </Link>
             <Link
               aria-current={currentPath === "/pricing" ? "page" : undefined}
               className={currentPath === "/pricing" ? "active" : undefined}

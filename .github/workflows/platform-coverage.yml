@@ -1,0 +1,73 @@
+name: Platform coverage evidence
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 3 * * 1"
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Run read-only live checks
+        id: coverage
+        continue-on-error: true
+        run: node --experimental-strip-types scripts/verify-platform-coverage-live.mjs
+      - name: Upload detailed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-coverage-${{ github.run_id }}
+          path: coverage-report/
+          retention-days: 90
+      - name: Open or update regression issues
+        if: steps.coverage.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('coverage-report/platform-coverage.json', 'utf8'));
+            for (const failure of report.results.filter(item => item.outcome === 'fail')) {
+              const title = `[coverage] ${failure.platform} live verification failed`;
+              const body = `Read-only verification failed at ${report.checkedAt}.\n\nReason: ${failure.failureReason}\nHTTP: ${failure.statusCode ?? 'none'}\nDetected: ${failure.detected ?? 'none'}\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nNo application form was filled or submitted.`;
+              const existing = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 100 });
+              const issue = existing.data.find(item => item.title === title);
+              if (issue) await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, body });
+              else await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
+            }
+      - name: Prepare review-only evidence update
+        if: steps.coverage.outcome == 'success'
+        run: node scripts/apply-coverage-verification.mjs
+      - name: Open evidence update pull request
+        if: steps.coverage.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="coverage/live-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add packages/shared/src/platform-coverage.ts
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Refresh reviewed platform coverage evidence"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" --title "Refresh platform coverage evidence" --body "Updates verification dates from read-only live run ${GITHUB_RUN_ID}. No external forms were filled or submitted. Review the attached workflow evidence before merging."
+      - name: Enforce live result
+        if: steps.coverage.outcome == 'failure'
+        run: exit 1

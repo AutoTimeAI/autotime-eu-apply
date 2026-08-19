@@ -28,7 +28,8 @@ const requiredServer = [
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRO_MONTHLY_PRICE_ID",
-  "STRIPE_PRO_ANNUAL_PRICE_ID",
+  "STRIPE_PRO_QUARTERLY_PRICE_ID",
+  "STRIPE_AI_CREDIT_PACK_PRICE_ID",
   "RESEND_API_KEY"
 ]
 
@@ -44,7 +45,7 @@ const placeholderPatterns = [
   /changeme/i,
   /your[-_]/i,
   /_your_/i,
-  /test_(monthly|annual)$/i,
+  /test_(monthly|quarterly)$/i,
   /price_test_/i,
   /pk_test_your/i,
   /sk_test_your/i,

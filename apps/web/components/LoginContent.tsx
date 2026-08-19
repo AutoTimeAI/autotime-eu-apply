@@ -290,7 +290,7 @@ function LoginForm() {
             ) : null}
             <div className="header-actions auth-provider-actions">
               <button
-                disabled={Boolean(pendingProvider)}
+                disabled={Boolean(pendingProvider) || !accountConsent}
                 type="button"
                 onClick={continueWithExistingSession}
               >
@@ -309,7 +309,7 @@ function LoginForm() {
         ) : (
           <div className="header-actions auth-provider-actions">
             <button
-              disabled={Boolean(pendingProvider)}
+              disabled={Boolean(pendingProvider) || !accountConsent}
               type="button"
               onClick={() => handleSignIn("github")}
             >
@@ -319,7 +319,7 @@ function LoginForm() {
             </button>
             <button
               className="secondary-button"
-              disabled={Boolean(pendingProvider)}
+              disabled={Boolean(pendingProvider) || !accountConsent}
               type="button"
               onClick={() => handleSignIn("google")}
             >
@@ -341,8 +341,9 @@ function LoginForm() {
         ) : null}
 
         <p className="auth-privacy-note">
-          EU-hosted analytics only - no email used for tracking - your data is
-          never sold or shared.
+          Analytics runs only after you consent. Your data is never sold and is
+          shared only with the service providers disclosed in our{` `}
+          <a href="/privacy">privacy policy</a>. Review our <a href="/terms">terms</a>.
         </p>
       </section>
     </main>

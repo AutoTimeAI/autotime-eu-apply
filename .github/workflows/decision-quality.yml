@@ -1,0 +1,39 @@
+name: Decision quality evaluation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/web/lib/job-application-workflow.ts"
+      - "scripts/decision-quality-evaluation.test.mjs"
+      - ".github/workflows/decision-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: Run 30-case decision benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run decision-quality suite
+        run: node --experimental-strip-types scripts/decision-quality-evaluation.test.mjs

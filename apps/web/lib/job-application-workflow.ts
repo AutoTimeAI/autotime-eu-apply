@@ -411,6 +411,17 @@ export function getApplicationReadiness(
   return { blockers, ready: blockers.length === 0 };
 }
 
+export function getApplicationReviewQueue(state: JobWorkflowState) {
+  return state.applications.flatMap((application) => {
+    const job = state.jobs.find((item) => item.id === application.jobId);
+    if (!job || application.status !== "Ready") return [];
+    if (job.analysisHistory.at(-1)?.decision !== "Apply") return [];
+    return getApplicationReadiness(application, job).ready
+      ? [{ application, job }]
+      : [];
+  });
+}
+
 export function transitionApplication(
   application: ApplicationWorkspace,
   next: ApplicationWorkspaceStatus,

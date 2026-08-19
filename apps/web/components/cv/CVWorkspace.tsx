@@ -7,6 +7,7 @@ import { CVEnrichmentPanel } from "./CVEnrichmentPanel";
 import type { CVData } from "../../lib/cv/types";
 import { useDashboardPlan } from "../UserNav";
 import { loadJobWorkflow } from "../../lib/job-workflow-storage";
+import { downloadCvDocx } from "../../lib/cv/export-docx";
 const empty: CVData = {
   contact: { name: "", email: "", phone: "", location: "" },
   summary: "",
@@ -39,14 +40,23 @@ export default function CVWorkspace({
   const [cv, setCv] = useState(empty);
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
   const [jobDescription, setJobDescription] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [coverLetter, setCoverLetter] = useState("");
+  const [coverLetterId, setCoverLetterId] = useState<string | null>(null);
+  const [coverLetterJobId, setCoverLetterJobId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
-  const hasCvContent = Boolean(
-    cv.contact.name.trim() ||
-      cv.summary.trim() ||
-      cv.experience.length ||
-      cv.education.length ||
-      cv.skills.length,
-  );
+  const missingRequiredFields = [
+    !cv.contact.name.trim() && "name",
+    !cv.contact.email.trim() && "email",
+    !cv.contact.phone.trim() && "phone",
+    !cv.contact.location.trim() && "location",
+    !cv.summary.trim() && "summary",
+    !cv.skills.some((skill) => skill.trim()) && "at least one skill",
+    (!cv.experience.length || cv.experience.some((item) => !item.title.trim() || !item.company.trim() || !item.dates.trim() || !item.bullets.some((bullet) => bullet.trim()))) && "a complete experience entry",
+    (!cv.education.length || cv.education.some((item) => !item.degree.trim() || !item.institution.trim() || !item.dates.trim())) && "a complete education entry",
+  ].filter((item): item is string => Boolean(item));
+  const isCvComplete = missingRequiredFields.length === 0;
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(key) || "null") || empty;
@@ -78,6 +88,9 @@ export default function CVWorkspace({
         : undefined;
       if (!job) return;
       setJobDescription(job.description);
+      setJobTitle(job.title.value);
+      setCompanyName(job.employer.value);
+      setCoverLetterJobId(job.applicationId ?? null);
       const marker = `autotime-cv-tailored:${userId}:${job.id}:${job.updatedAt}`;
       if (!saved.contact?.name || sessionStorage.getItem(marker)) return;
       sessionStorage.setItem(marker, "started");
@@ -114,6 +127,15 @@ export default function CVWorkspace({
       .split("\n")
       .map((v) => v.trim())
       .filter(Boolean);
+  const downloadCoverLetter = () => {
+    const blob = new Blob([coverLetter], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${companyName || "company"}-${jobTitle || "role"}-cover-letter.txt`.replace(/[^a-z0-9._-]+/gi, "-");
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
   const content = (
     <>
       <ProductPageHeader
@@ -151,13 +173,16 @@ export default function CVWorkspace({
             ["email", "Email", "email", "email"],
             ["phone", "Phone", "tel", "tel"],
             ["location", "Location", "text", "address-level2"],
-            ["linkedin", "LinkedIn URL", "url", "url"],
+            ["linkedin", "LinkedIn URL (optional)", "url", "url"],
           ] as const).map(([field, label, type, autoComplete]) => (
               <label key={field}>
                 {label}
                 <input
                   type={type}
                   autoComplete={autoComplete}
+                  required={field !== "linkedin"}
+                  aria-required={field !== "linkedin"}
+                  aria-invalid={field !== "linkedin" && !cv.contact[field]?.trim()}
                   value={cv.contact[field] ?? ""}
                   onChange={(e) =>
                     save({
@@ -171,32 +196,39 @@ export default function CVWorkspace({
           </div>
           <label className="cv-long-field">
             Summary
+            <span className="cv-field-hint">Required. Add a concise professional summary.</span>
             <textarea
               rows={6}
+              required
+              aria-required="true"
+              aria-invalid={!cv.summary.trim()}
               value={cv.summary}
               onChange={(e) => save({ ...cv, summary: e.target.value })}
             />
           </label>
           <label className="cv-long-field">
             Skills
-            <span className="cv-field-hint">Add one relevant skill per line.</span>
+            <span className="cv-field-hint">Required. Add at least one relevant skill per line.</span>
             <textarea
               rows={5}
+              required
+              aria-required="true"
+              aria-invalid={!cv.skills.some((skill) => skill.trim())}
               placeholder={"Project management\nData analysis\nStakeholder communication"}
               value={cv.skills.join("\n")}
               onChange={(e) => save({ ...cv, skills: list(e.target.value) })}
             />
           </label>
           <section className="cv-builder-section" aria-labelledby="cv-experience-title">
-            <div className="cv-builder-section-heading"><div><h3 id="cv-experience-title">Experience</h3><p>Add your latest role first and focus on measurable outcomes.</p></div><button type="button" className="secondary-button" onClick={() => save({...cv,experience:[...cv.experience,{title:"",company:"",dates:"",bullets:[]}]})}>Add experience</button></div>
+            <div className="cv-builder-section-heading"><div><h3 id="cv-experience-title">Experience</h3><p>Required. Add your latest role, dates and at least one achievement.</p></div><button type="button" className="secondary-button" onClick={() => save({...cv,experience:[...cv.experience,{title:"",company:"",dates:"",bullets:[]}]})}>Add experience</button></div>
             {cv.experience.length ? cv.experience.map((item,index)=><article className="cv-entry-card" key={`experience-${index}`}><div className="cv-entry-grid"><label>Job title<input value={item.title} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,title:e.target.value}:entry)})}/></label><label>Company<input value={item.company} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,company:e.target.value}:entry)})}/></label><label className="cv-entry-wide">Dates<input placeholder="Example: Jan 2023 – Present" value={item.dates} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,dates:e.target.value}:entry)})}/></label><label className="cv-entry-wide">Achievements<span className="cv-field-hint">One achievement per line. Start with an action and include evidence where possible.</span><textarea rows={5} value={item.bullets.join("\n")} onChange={e=>save({...cv,experience:cv.experience.map((entry,i)=>i===index?{...entry,bullets:list(e.target.value)}:entry)})}/></label></div><button type="button" className="cv-remove-entry" onClick={()=>save({...cv,experience:cv.experience.filter((_,i)=>i!==index)})}>Remove experience</button></article>):<p className="cv-builder-empty">No experience added yet.</p>}
           </section>
           <section className="cv-builder-section" aria-labelledby="cv-education-title">
-            <div className="cv-builder-section-heading"><div><h3 id="cv-education-title">Education</h3><p>Add qualifications in reverse chronological order.</p></div><button type="button" className="secondary-button" onClick={() => save({...cv,education:[...cv.education,{degree:"",institution:"",dates:""}]})}>Add education</button></div>
+            <div className="cv-builder-section-heading"><div><h3 id="cv-education-title">Education</h3><p>Required. Add each qualification, institution and date range.</p></div><button type="button" className="secondary-button" onClick={() => save({...cv,education:[...cv.education,{degree:"",institution:"",dates:""}]})}>Add education</button></div>
             {cv.education.length ? cv.education.map((item,index)=><article className="cv-entry-card" key={`education-${index}`}><div className="cv-entry-grid"><label>Degree or qualification<input value={item.degree} onChange={e=>save({...cv,education:cv.education.map((entry,i)=>i===index?{...entry,degree:e.target.value}:entry)})}/></label><label>Institution<input value={item.institution} onChange={e=>save({...cv,education:cv.education.map((entry,i)=>i===index?{...entry,institution:e.target.value}:entry)})}/></label><label className="cv-entry-wide">Dates<input placeholder="Example: 2019 – 2022" value={item.dates} onChange={e=>save({...cv,education:cv.education.map((entry,i)=>i===index?{...entry,dates:e.target.value}:entry)})}/></label></div><button type="button" className="cv-remove-entry" onClick={()=>save({...cv,education:cv.education.filter((_,i)=>i!==index)})}>Remove education</button></article>):<p className="cv-builder-empty">No education added yet.</p>}
           </section>
           <section className="cv-tailor-card">
-            <div><p className="eyebrow">Optional</p><h3>Tailor for a job</h3><p>Paste the vacancy description to create a job-specific draft. Your canonical CV remains the source.</p></div>
+            <div><p className="eyebrow">Optional</p><h3>Tailor for a job</h3><p>Paste a vacancy description only when you want a job-specific draft. Your canonical CV remains the source.</p></div>
             <label>
             Job description
             <textarea
@@ -206,10 +238,14 @@ export default function CVWorkspace({
               onChange={(e) => setJobDescription(e.target.value)}
             />
             </label>
+            <div className="cv-contact-grid">
+              <label>Job title<input value={jobTitle} onChange={(event) => setJobTitle(event.target.value)} /></label>
+              <label>Company<input value={companyName} onChange={(event) => setCompanyName(event.target.value)} /></label>
+            </div>
             <button
               type="button"
               className="button-primary"
-              disabled={!jobDescription.trim() || !hasCvContent}
+              disabled={!jobDescription.trim() || !isCvComplete}
               onClick={async () => {
                 setStatus("Tailoring CV…");
                 const response = await fetch("/api/ai/tailor-cv", {
@@ -226,8 +262,22 @@ export default function CVWorkspace({
             >
               Create tailored draft
             </button>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={!jobDescription.trim() || !jobTitle.trim() || !companyName.trim() || !isCvComplete}
+              onClick={async () => {
+                setStatus("Generating cover letter…");
+                const response = await fetch("/api/ai/cover-letter", { method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify({cv,jobId:coverLetterJobId??undefined,jobTitle,companyName,jobDescription}) });
+                const payload = await response.json();
+                if(!response.ok)return setStatus(payload.error || "Cover-letter generation failed");
+                setCoverLetter(payload.data.letter.content);setCoverLetterId(payload.data.letter.id);setStatus(payload.data.letter.version?`Cover-letter version ${payload.data.letter.version} ready. Review every claim.`:"Cover-letter draft ready. Review every claim.");
+              }}
+            >Generate cover letter</button>
+            {coverLetter ? <section className="cv-cover-letter" aria-labelledby="cover-letter-title"><h3 id="cover-letter-title">Cover-letter draft</h3><p>Edit and review this draft before using it.</p><textarea rows={16} value={coverLetter} onChange={(event)=>setCoverLetter(event.target.value)} /><div className="workflow-actions"><button type="button" className="secondary-button" onClick={()=>void navigator.clipboard.writeText(coverLetter).then(()=>setStatus("Cover letter copied."))}>Copy text</button><button type="button" className="secondary-button" onClick={downloadCoverLetter}>Download text</button>{coverLetterId?<button type="button" className="secondary-button" onClick={async()=>{const response=await fetch("/api/ai/cover-letter",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id:coverLetterId,content:coverLetter})});const payload=await response.json();setStatus(response.ok?"Cover-letter edits saved.":payload.error||"Could not save edits.");}}>Save edits</button>:null}</div></section>:null}
           </section>
-          <div className="cv-document-actions"><div><h3>Ready to use your CV?</h3><p>Review the preview, then save it to your profile or download an ATS-friendly PDF.</p></div><div className="workflow-actions">{returnTo ? <button type="button" className="button-primary" disabled={!hasCvContent} onClick={() => router.push(returnTo)}>Save CV and return</button> : null}<button type="button" className="secondary-button" disabled={!hasCvContent} onClick={() => window.print()}>Download PDF</button></div></div>
+          {!isCvComplete ? <p className="onboarding-validation-alert" role="alert"><strong>Complete the required CV fields:</strong> {missingRequiredFields.join(", ")}.</p> : null}
+          <div className="cv-document-actions"><div><h3>Ready to use your CV?</h3><p>Complete every required field and review the preview, then save it or download an ATS-friendly PDF or editable DOCX.</p></div><div className="workflow-actions">{returnTo ? <button type="button" className="button-primary" disabled={!isCvComplete} onClick={() => router.push(returnTo)}>Save CV and return</button> : null}<button type="button" className="secondary-button" disabled={!isCvComplete} onClick={() => window.print()}>Print / save PDF</button><button type="button" className="secondary-button" disabled={!isCvComplete} onClick={() => void downloadCvDocx(cv).catch(() => setStatus("Could not create the DOCX. Please try again."))}>Download DOCX</button></div></div>
           <p role="status">{status}</p>
         </section>
         <section className="cv-preview-panel" aria-label="CV preview">

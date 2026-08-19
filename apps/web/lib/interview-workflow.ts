@@ -65,6 +65,14 @@ export type InterviewAnswer = {
   structure: "STAR-L" | "technical" | "direct";
   versions: Array<{ value: string; savedAt: string }>;
 };
+export type PracticeSession = {
+  id: string;
+  mode: "typed";
+  startedAt: string;
+  submittedAt: string;
+  timeLimitSeconds: number;
+  responseText: string;
+};
 export type InterviewQuestion = {
   id: string;
   category: InterviewQuestionCategory;
@@ -76,6 +84,7 @@ export type InterviewQuestion = {
   answerDraft?: InterviewAnswer;
   userConfidence?: "not_started" | "low" | "medium" | "high";
   markedForPractice?: boolean;
+  practiceSessions?: PracticeSession[];
   origin:
     | "deterministic"
     | "interview_bank"

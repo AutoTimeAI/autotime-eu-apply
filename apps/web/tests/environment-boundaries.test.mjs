@@ -18,6 +18,7 @@ import {
 } from "../lib/proxy-policy.ts";
 import { runSessionRefresh } from "../lib/sync-refresh-core.ts";
 import {
+  getCheckoutProduct,
   getPlans,
   getPortalStripeClient,
   getWebhookStripeClient,
@@ -40,7 +41,8 @@ const names = [
   "NEXT_PUBLIC_APP_URL",
   "STRIPE_SECRET_KEY",
   "STRIPE_PRO_MONTHLY_PRICE_ID",
-  "STRIPE_PRO_ANNUAL_PRICE_ID",
+  "STRIPE_PRO_QUARTERLY_PRICE_ID",
+  "STRIPE_AI_CREDIT_PACK_PRICE_ID",
 ];
 const tests = [];
 const test = (name, run) => tests.push({ name, run });
@@ -197,12 +199,33 @@ test("Stripe SDK construction requires only its secret", () =>
 test("Stripe price configuration is independent from its secret", () =>
   isolated(() => {
     process.env.STRIPE_PRO_MONTHLY_PRICE_ID = "price_monthly_fixture";
-    process.env.STRIPE_PRO_ANNUAL_PRICE_ID = "price_annual_fixture";
+    process.env.STRIPE_PRO_QUARTERLY_PRICE_ID = "price_quarterly_fixture";
+    process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID = "price_credit_pack_fixture";
     assert.deepEqual(getStripePriceEnv(), {
-      annual: "price_annual_fixture",
-      monthly: "price_monthly_fixture",
+      creditPack: "price_credit_pack_fixture",
+      proMonthly: "price_monthly_fixture",
+      proQuarterly: "price_quarterly_fixture",
     });
     assert.throws(getStripeSecretEnv, ConfigurationUnavailableError);
+  }));
+
+test("Stripe checkout products distinguish tiers and one-off credits", () =>
+  isolated(() => {
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID = "price_monthly_fixture";
+    process.env.STRIPE_PRO_QUARTERLY_PRICE_ID = "price_quarterly_fixture";
+    process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID = "price_credit_pack_fixture";
+
+    assert.deepEqual(getCheckoutProduct("price_quarterly_fixture"), {
+      mode: "subscription",
+      plan: "pro",
+      priceId: "price_quarterly_fixture",
+    });
+    assert.deepEqual(getCheckoutProduct("price_credit_pack_fixture"), {
+      credits: 25,
+      mode: "payment",
+      priceId: "price_credit_pack_fixture",
+    });
+    assert.equal(getCheckoutProduct("price_not_configured"), null);
   }));
 
 test("portal does not require Stripe price IDs", () =>

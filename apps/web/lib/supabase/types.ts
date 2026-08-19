@@ -67,8 +67,8 @@ export type Database = {
   public: {
     Tables: {
       job_listings: {
-        Row: { id: string; title: string; company: string; location: string | null; url: string; posted_date: string | null; source: string; ats_platform: string; description_raw: string | null; dedup_hash: string; identity_hash: string; created_at: string; updated_at: string };
-        Insert: { id?: string; title: string; company: string; location?: string | null; url: string; posted_date?: string | null; source: string; ats_platform?: string; description_raw?: string | null; dedup_hash: string; identity_hash: string; created_at?: string; updated_at?: string };
+        Row: { id: string; title: string; company: string; location: string | null; url: string; posted_date: string | null; source: string; ats_platform: string; description_raw: string | null; dedup_hash: string; identity_hash: string; esco_occupation_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; title: string; company: string; location?: string | null; url: string; posted_date?: string | null; source: string; ats_platform?: string; description_raw?: string | null; dedup_hash: string; identity_hash: string; esco_occupation_id?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["job_listings"]["Insert"]>;
         Relationships: [];
       };
@@ -76,6 +76,18 @@ export type Database = {
         Row: { id: string; user_id: string; job_id: string; recruiter_name: string | null; recruiter_role: string | null; recruiter_email: string | null; contact_type: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note" | "linkedin_inmail" | "email"; draft_subject: string | null; draft_body: string; status: "drafted" | "sent" | "replied" | "no_response"; sent_at: string | null; follow_up_due: string | null; created_at: string; updated_at: string };
         Insert: { id?: string; user_id: string; job_id: string; recruiter_name?: string | null; recruiter_role?: string | null; recruiter_email?: string | null; contact_type?: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note" | "linkedin_inmail" | "email"; draft_subject?: string | null; draft_body: string; status?: "drafted" | "sent" | "replied" | "no_response"; sent_at?: string | null; follow_up_due?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["outreach_messages"]["Insert"]>;
+        Relationships: [];
+      };
+      outreach_contacts: {
+        Row: { id: string; user_id: string; name: string; role: string | null; company: string; email: string | null; profile_url: string | null; contact_type: "recruiter" | "hiring_manager" | "peer_target_role"; source: "csv" | "manual"; dedupe_key: string; consented_at: string; created_at: string; updated_at: string };
+        Insert: { id?: string; user_id: string; name: string; role?: string | null; company: string; email?: string | null; profile_url?: string | null; contact_type?: "recruiter" | "hiring_manager" | "peer_target_role"; source?: "csv" | "manual"; dedupe_key: string; consented_at: string; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["outreach_contacts"]["Insert"]>;
+        Relationships: [];
+      };
+      cover_letters: {
+        Row: { id:string; user_id:string; job_id:string|null; company_name:string; job_title:string; version:number; content:string; created_at:string; updated_at:string };
+        Insert: { id?:string; user_id:string; job_id?:string|null; company_name:string; job_title:string; version:number; content:string; created_at?:string; updated_at?:string };
+        Update: Partial<Database["public"]["Tables"]["cover_letters"]["Insert"]>;
         Relationships: [];
       };
       esco_skills: {
@@ -115,6 +127,8 @@ export type Database = {
           countries_target: string[];
           onboarding_step: number;
           onboarding_completed_at: string | null;
+          alert_frequency: "daily" | "weekly" | "off";
+          alert_last_sent_at: string | null;
           work_authorisation_category: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url: string | null;
           github_url: string | null;
@@ -147,6 +161,8 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          alert_frequency?: "daily" | "weekly" | "off";
+          alert_last_sent_at?: string | null;
           work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url?: string | null;
           github_url?: string | null;
@@ -179,6 +195,8 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          alert_frequency?: "daily" | "weekly" | "off";
+          alert_last_sent_at?: string | null;
           work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
           linkedin_url?: string | null;
           github_url?: string | null;
@@ -398,6 +416,28 @@ export type Database = {
           cost_usd?: number;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      ai_credit_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          delta: number;
+          reason: "purchase" | "usage" | "refund" | "admin";
+          stripe_checkout_session_id: string | null;
+          feature: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          delta: number;
+          reason: "purchase" | "usage" | "refund" | "admin";
+          stripe_checkout_session_id?: string | null;
+          feature?: string | null;
+          created_at?: string;
+        };
+        Update: never;
         Relationships: [];
       };
       ai_rate_limits: {
@@ -989,6 +1029,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      platform_coverage_reports: {
+        Row: {
+          id: string;
+          platform: string;
+          site_url: string;
+          problem_category: "not_detected" | "missing_details" | "incorrect_details" | "autofill_problem" | "other";
+          description: string | null;
+          extension_version: string | null;
+          diagnostic_consent: boolean;
+          technical_context: Json;
+          requester_hash: string;
+          status: "new" | "triaged" | "reproduced" | "fixed" | "closed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          platform: string;
+          site_url: string;
+          problem_category: "not_detected" | "missing_details" | "incorrect_details" | "autofill_problem" | "other";
+          description?: string | null;
+          extension_version?: string | null;
+          diagnostic_consent?: boolean;
+          technical_context?: Json;
+          requester_hash: string;
+          status?: "new" | "triaged" | "reproduced" | "fixed" | "closed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: "new" | "triaged" | "reproduced" | "fixed" | "closed";
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       admin_feature_flags: {
         Row: {
           key: string;
@@ -1126,6 +1201,22 @@ export type Database = {
           p_user_id: string;
         };
         Returns: number;
+      };
+      get_ai_credit_balance: {
+        Args: { p_user_id: string };
+        Returns: number;
+      };
+      grant_ai_credit_pack: {
+        Args: {
+          p_user_id: string;
+          p_credits: number;
+          p_checkout_session_id: string;
+        };
+        Returns: number;
+      };
+      consume_ai_credit: {
+        Args: { p_user_id: string; p_feature: string };
+        Returns: boolean;
       };
       increment_ai_rate_limit: {
         Args: {

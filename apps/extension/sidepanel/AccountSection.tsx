@@ -17,7 +17,7 @@ type AccountSectionProps = {
 }
 
 function PlanBadge({ plan }: { plan: AccountSession["plan"] }) {
-  return <span className={`plan-badge ${plan === "pro" ? "pro" : ""}`}>{plan}</span>
+  return <span className={`plan-badge ${plan !== "free" ? "pro" : ""}`}>{plan}</span>
 }
 
 function openAppPath(path: string) {

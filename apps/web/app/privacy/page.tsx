@@ -2,16 +2,18 @@ import { PublicNav } from "../../components/PublicNav"
 
 const dataItems = [
   "Email address and OAuth account identifiers used for sign-in.",
-  "Candidate profile information you choose to save, including role targets, work-right details and CV evidence.",
-  "Application history, job descriptions, notes, status updates and interview preparation records."
+  "Candidate profile information you choose to save, including role targets, work-right details, CV evidence and your ESCO skill profile.",
+  "Application history, job descriptions, notes, status updates, outreach drafts and interview preparation records."
 ]
 
 const processors = [
   "Supabase stores account and product data in an EU region database.",
-  "Vercel hosts the web application in an EU region.",
+  "Vercel hosts and delivers the web application. Requests and server workloads can be processed in Vercel regions outside the EEA, subject to Vercel's data-processing terms and transfer safeguards.",
   "OpenAI API processes job descriptions and profile data when you use AI features. Data is not used to train OpenAI models, and an OpenAI data processing agreement is in place.",
   "Stripe processes payment data for subscriptions. AutoTime does not store card details.",
-  "PostHog EU receives anonymised usage events only when analytics is configured and enabled."
+  "Resend processes account and matched-job alert email delivery data.",
+  "Adzuna, Jooble, EURES and direct employer ATS providers supply job-listing data. Candidate profile and CV data is not sent to these listing providers.",
+  "PostHog EU receives privacy-minimised usage events only after you allow analytics."
 ]
 
 export default function PrivacyPage() {
@@ -22,7 +24,7 @@ export default function PrivacyPage() {
         <div>
           <p className="eyebrow">Privacy policy</p>
           <h1>How AutoTime handles your data</h1>
-          <p>Last updated: 6 May 2026</p>
+          <p>Last updated: 15 August 2026</p>
         </div>
       </header>
 

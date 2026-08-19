@@ -1,3 +1,5 @@
+import { detectATS, getCoveragePlatform, isApiCoveredJobUrl, type PlatformName } from "shared"
+
 export type JobPageDetails = {
   roleTitle: string
   company: string
@@ -11,34 +13,7 @@ export type JobPageDetails = {
   employmentType?: string
 }
 
-export type JobPlatform =
-  | "LinkedIn"
-  | "Stepstone"
-  | "Indeed"
-  | "EURES"
-  | "EuroTechJobs"
-  | "EuroJobs"
-  | "NextLevelJobs"
-  | "Wellfound"
-  | "Xing"
-  | "WelcomeToTheJungle"
-  | "NationaleVacaturebank"
-  | "InfoJobs"
-  | "Monster"
-  | "EuroTopTech"
-  | "JobTeaser"
-  | "Greenhouse"
-  | "Lever"
-  | "Workday"
-  | "Ashby"
-  | "SmartRecruiters"
-  | "iCIMS"
-  | "BambooHR"
-  | "Teamtailor"
-  | "Recruitee"
-  | "Jobvite"
-  | "Personio"
-  | "Generic"
+export type JobPlatform = PlatformName | "Generic"
 
 export type JobCaptureMode = "api-reference" | "selector-extraction" | "manual-only"
 export function getJobCaptureMode(url = ""): JobCaptureMode {
@@ -229,14 +204,6 @@ function getHostname(url = "") {
   }
 }
 
-function isHostname(hostname: string, domain: string) {
-  return hostname === domain || hostname.endsWith(`.${domain}`)
-}
-
-function isIndeedHostname(hostname: string) {
-  return isHostname(hostname, "indeed.com") || /^indeed\.[a-z.]+$/i.test(hostname)
-}
-
 function getLinkedInJobId(url = "") {
   const directMatch = url.match(/\/jobs\/view\/(\d+)/i)
   const currentJobIdMatch = url.match(/[?&]currentJobId=(\d+)/i)
@@ -245,119 +212,7 @@ function getLinkedInJobId(url = "") {
 }
 
 export function getJobPlatform(url = ""): JobPlatform {
-  const hostname = getHostname(url)
-  const ats = detectATS(url)
-
-  if (isHostname(hostname, "linkedin.com")) {
-    return "LinkedIn"
-  }
-
-  if (isHostname(hostname, "stepstone.de") || isHostname(hostname, "stepstone.com")) {
-    return "Stepstone"
-  }
-
-  if (isIndeedHostname(hostname)) {
-    return "Indeed"
-  }
-
-  if (isHostname(hostname, "eures.europa.eu") || isHostname(hostname, "eures.ec.europa.eu")) {
-    return "EURES"
-  }
-
-  if (isHostname(hostname, "eurotechjobs.com")) {
-    return "EuroTechJobs"
-  }
-
-  if (isHostname(hostname, "eurojobs.com")) {
-    return "EuroJobs"
-  }
-
-  if (isHostname(hostname, "nextleveljobs.eu")) {
-    return "NextLevelJobs"
-  }
-
-  if (isHostname(hostname, "wellfound.com") || isHostname(hostname, "angel.co")) {
-    return "Wellfound"
-  }
-
-  if (isHostname(hostname, "xing.com")) {
-    return "Xing"
-  }
-
-  if (isHostname(hostname, "welcometothejungle.com")) {
-    return "WelcomeToTheJungle"
-  }
-
-  if (isHostname(hostname, "nationalevacaturebank.nl")) {
-    return "NationaleVacaturebank"
-  }
-
-  if (isHostname(hostname, "infojobs.net") || isHostname(hostname, "infojobs.it")) {
-    return "InfoJobs"
-  }
-
-  if (
-    isHostname(hostname, "monster.com") ||
-    isHostname(hostname, "monster.co.uk") ||
-    isHostname(hostname, "monster.de") ||
-    isHostname(hostname, "monster.fr")
-  ) {
-    return "Monster"
-  }
-
-  if (isHostname(hostname, "eurotoptech.com")) {
-    return "EuroTopTech"
-  }
-
-  if (isHostname(hostname, "jobteaser.com")) {
-    return "JobTeaser"
-  }
-
-  if (ats === "greenhouse") {
-    return "Greenhouse"
-  }
-
-  if (ats === "lever") {
-    return "Lever"
-  }
-
-  if (ats === "workday") {
-    return "Workday"
-  }
-
-  if (ats === "ashby") {
-    return "Ashby"
-  }
-
-  if (ats === "smartrecruiters") {
-    return "SmartRecruiters"
-  }
-
-  if (ats === "icims") {
-    return "iCIMS"
-  }
-
-  if (isHostname(hostname, "bamboohr.com")) {
-    return "BambooHR"
-  }
-
-  if (ats === "teamtailor") {
-    return "Teamtailor"
-  }
-
-  if (ats === "recruitee") {
-    return "Recruitee"
-  }
-
-  if (isHostname(hostname, "jobvite.com")) {
-    return "Jobvite"
-  }
-
-  if (ats === "personio") {
-    return "Personio"
-  }
-
-  return "Generic"
+  return getCoveragePlatform(url) ?? "Generic"
 }
 
 export function isLinkedInUrl(url = "") {
@@ -585,4 +440,3 @@ export function formatJobPageNotes(details: JobPageDetails) {
     .filter(Boolean)
     .join("\n")
 }
-import { detectATS, isApiCoveredJobUrl } from "shared"

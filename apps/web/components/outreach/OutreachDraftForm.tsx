@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { SavedOutreachContact } from "./ContactCsvImport";
 
 export type OutreachMessage = { id: string; job_id: string; recruiter_name: string | null; recruiter_role: string | null; recruiter_email: string | null; contact_type: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note"|"linkedin_inmail"|"email"; draft_subject: string|null; draft_body: string; status: "drafted"|"sent"|"replied"|"no_response"; follow_up_due: string|null };
 export type OutreachJob = { id: string; title: string; company: string|null; role_title: string|null; notes: string|null; job_snapshot: unknown };
 
 const initial = { jobId: "", jobTitle: "", companyName: "", jobDescription: "", recruiterName: "", recruiterRole: "Recruiter", recruiterEmail: "", candidateSummary: "", strengths: "", channel: "email", contactType: "recruiter" };
 
-export function OutreachDraftForm({ jobs, initialJobId = "", onCreated }: { jobs: OutreachJob[]; initialJobId?: string; onCreated: (message: OutreachMessage) => void }) {
+export function OutreachDraftForm({ jobs, initialJobId = "", selectedContact, onCreated }: { jobs: OutreachJob[]; initialJobId?: string; selectedContact?: SavedOutreachContact | null; onCreated: (message: OutreachMessage) => void }) {
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState("");
   const selectJob = (jobId: string) => {
@@ -15,6 +16,10 @@ export function OutreachDraftForm({ jobs, initialJobId = "", onCreated }: { jobs
     setForm((current) => ({ ...current, jobId, jobTitle: job?.role_title || job?.title || "", companyName: job?.company || "", jobDescription: job?.notes || JSON.stringify(job?.job_snapshot ?? "") }));
   };
   useEffect(() => { if (initialJobId) selectJob(initialJobId); }, [initialJobId, jobs]);
+  useEffect(() => {
+    if (!selectedContact) return;
+    setForm((current) => ({ ...current, recruiterName: selectedContact.name, recruiterRole: selectedContact.role || selectedContact.contact_type.replaceAll("_", " "), recruiterEmail: selectedContact.email || "", companyName: current.companyName || selectedContact.company, contactType: selectedContact.contact_type }));
+  }, [selectedContact]);
   return <section className="workflow-editor"><h3>Draft outreach</h3><p>AutoTime drafts only. You review, copy, and send it yourself.</p><div className="workflow-form-grid">
     <label>Tracked application<select value={form.jobId} onChange={(event) => selectJob(event.target.value)}><option value="">Choose an application</option>{jobs.map((job) => <option key={job.id} value={job.id}>{job.role_title || job.title} — {job.company || "Unknown company"}</option>)}</select></label>
     {(["jobTitle","companyName","recruiterName","recruiterRole","recruiterEmail","candidateSummary"] as const).map((key) => <label key={key}>{key.replace(/([A-Z])/g," $1")}<input value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} /></label>)}

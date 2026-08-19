@@ -14,7 +14,8 @@ select cron.schedule(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_function_base_url') || '/sync-eures',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret')
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret'),
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret')
     ),
     body := '{}'::jsonb,
     timeout_milliseconds := 120000
@@ -29,7 +30,24 @@ select cron.schedule(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_function_base_url') || '/sync-job-sources',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret')
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret'),
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 120000
+  );$$
+);
+
+-- Matched-job digests run after ingestion and ESCO classification complete.
+select cron.schedule(
+  'autotime-matched-job-alerts-daily',
+  '17 4 * * *',
+  $$select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_function_base_url') || '/sync-job-alerts',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret'),
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'job_sync_cron_secret')
     ),
     body := '{}'::jsonb,
     timeout_milliseconds := 120000

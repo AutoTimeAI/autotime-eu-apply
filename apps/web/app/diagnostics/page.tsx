@@ -20,7 +20,7 @@ const scenarioChecks = [
   {
     title: "Stripe billing",
     checks:
-      "Publishable key, secret key, webhook secret, monthly/annual price IDs, and /api/stripe/webhook."
+      "Publishable key, secret key, webhook secret, monthly/quarterly price IDs, and /api/stripe/webhook."
   },
   {
     title: "AI features",

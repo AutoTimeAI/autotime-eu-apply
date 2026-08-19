@@ -214,10 +214,31 @@
   gap: 8px;
 }
 .pathway-notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 24px;
   color: var(--muted);
   font-size: 0.86rem;
-  text-align: center;
-  padding: 8px;
+  text-align: left;
+  padding: 20px 8px 8px;
+}
+.pathway-notice strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+.pathway-notice p {
+  margin: 4px 0 0;
+}
+.pathway-notice .button-secondary {
+  white-space: nowrap;
+}
+.pathway-notice-disclaimer {
+  grid-column: 1 / -1;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 @media (max-width: 900px) {
   .pathway-card-grid {
@@ -234,6 +255,16 @@
 @media (max-width: 620px) {
   .role-pathways-shell {
     padding-top: 8px;
+  }
+  .pathway-notice {
+    grid-template-columns: 1fr;
+  }
+  .pathway-notice .button-secondary {
+    width: 100%;
+    white-space: normal;
+  }
+  .pathway-notice-disclaimer {
+    grid-column: 1;
   }
   .role-pathways-hero,
   .pathway-heading,

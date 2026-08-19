@@ -265,7 +265,11 @@ async function showWidgetInTab(tab: chrome.tabs.Tab) {
 
 export default defineBackground(() => {
   chrome.action.onClicked.addListener((tab) => {
-    void showWidgetInTab(tab)
+    void showWidgetInTab(tab).then(() => {
+      if (tab.id && tab.url && /^https:\/\/(?:[a-z]+\.)?linkedin\.com\/jobs\//i.test(tab.url)) {
+        return chrome.tabs.sendMessage(tab.id, { type: "AUTOTIME_LINKEDIN_MATCH_REQUEST" })
+      }
+    }).catch(() => undefined)
   })
 
   chrome.runtime.onMessage.addListener(
