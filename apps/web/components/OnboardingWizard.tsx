@@ -223,7 +223,7 @@ export function OnboardingWizard() {
             photoUrl: data.photoUrl ?? null,
           });
         if (requested === null && data?.onboarding_ready) {
-          router.replace("/dashboard/autofill-profile");
+          router.replace("/dashboard/profile");
           return;
         }
         if (requested === null) {
@@ -428,7 +428,7 @@ export function OnboardingWizard() {
     setInvalidFields([]);
     if (await save(6, true)) {
       markOnboardingComplete(userId);
-      window.location.assign("/dashboard/autofill-profile");
+      window.location.assign("/dashboard/profile");
     }
   };
   return (
