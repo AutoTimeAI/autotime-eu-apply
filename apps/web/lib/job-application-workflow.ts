@@ -521,6 +521,7 @@ export function cloudApplicationToWorkspaceJob(record: ApplicationRecord): {
       language: unknown(),
       location: unknown(),
       salary: unknown(),
+      skills: unknown(),
       sponsorship: unknown(),
       workArrangement: unknown(),
       workAuthorisation: unknown(),
