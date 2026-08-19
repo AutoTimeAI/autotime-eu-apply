@@ -21,7 +21,18 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        timeout-minutes: 12
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 4m pnpm exec playwright install --with-deps chromium; then
+              exit 0
+            fi
+            echo "Playwright browser install attempt $attempt failed or timed out (likely an apt mirror stall) - retrying..."
+            sleep 10
+          done
+          echo "Playwright browser install failed after 3 attempts"
+          exit 1
       - name: Run core Journey A-C Playwright suite
         run: pnpm test:e2e:core
         env:
