@@ -25,10 +25,18 @@ jobs:
         timeout-minutes: 12
         run: |
           for attempt in 1 2 3; do
-            if timeout 4m pnpm exec playwright install --with-deps chromium; then
+            if timeout --kill-after=10 4m pnpm exec playwright install --with-deps chromium; then
               exit 0
             fi
-            echo "Playwright browser install attempt $attempt failed or timed out (likely an apt mirror stall) - retrying..."
+            echo "Playwright browser install attempt $attempt failed or timed out (likely an apt mirror stall) - cleaning up and retrying..."
+            # `timeout` only kills the direct child - a timed-out attempt can
+            # leave an orphaned `apt-get` (spawned via sudo) still holding the
+            # apt lock, which fails every subsequent attempt instantly with
+            # "Could not get lock ... held by process N (apt-get)". Clear
+            # that out before retrying.
+            sudo pkill -9 -f apt-get || true
+            sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend || true
+            sudo dpkg --configure -a || true
             sleep 10
           done
           echo "Playwright browser install failed after 3 attempts"
