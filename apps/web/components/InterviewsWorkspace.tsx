@@ -13,6 +13,7 @@ import {
   type JobWorkflowState,
 } from "../lib/job-application-workflow";
 import { loadJobWorkflow, saveJobWorkflow } from "../lib/job-workflow-storage";
+import { useJobWorkflowSync } from "../lib/useJobWorkflowSync";
 import {
   completeInterviewFinalReview,
   createInterview,
@@ -33,6 +34,7 @@ import {
   loadInterviewWorkflow,
   saveInterviewWorkflow,
 } from "../lib/interview-storage";
+import { useInterviewWorkflowSync } from "../lib/useInterviewWorkflowSync";
 
 type View = { kind: "list" } | { kind: "detail"; id: string };
 const stageLabel = (value: string) =>
@@ -56,16 +58,18 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
   const [state, setState] = useState<InterviewWorkflowState>(
     emptyInterviewWorkflowState,
   );
+  const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("");
   useEffect(() => {
     setWorkflow(loadJobWorkflow(userId));
     setState(loadInterviewWorkflow(userId));
+    setReady(true);
   }, [userId]);
-  const persist = (next: InterviewWorkflowState) => {
+  const applyLocal = (next: InterviewWorkflowState) => {
     saveInterviewWorkflow(userId, next);
     setState(next);
   };
-  const persistBoth = (
+  const applyLocalBoth = (
     next: InterviewWorkflowState,
     jobs: JobWorkflowState,
   ) => {
@@ -74,6 +78,45 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
     setState(next);
     setWorkflow(jobs);
   };
+  // Real two-way sync (issue #29 phase 4b), mirroring JobApplicationWorkspace's
+  // useJobWorkflowSync wiring. This component owns its own useJobWorkflowSync
+  // instance (independent of the one mounted inside JobApplicationWorkspace)
+  // because persistBoth also writes job-workflow local state here (an
+  // interview outcome can flip the linked application's status), and that
+  // change needs its own background mirror to the cloud too.
+  const interviewWorkflowSync = useInterviewWorkflowSync({
+    enabled: ready,
+    localInterviews: state.interviews,
+    onReconciled: (next) =>
+      applyLocal({ ...state, interviews: next.interviews }),
+    userId,
+  });
+  const jobWorkflowSync = useJobWorkflowSync({
+    enabled: ready,
+    localJobs: workflow.jobs,
+    localApplications: workflow.applications,
+    onReconciled: (next) =>
+      applyLocalBoth(state, { ...workflow, jobs: next.jobs, applications: next.applications }),
+    userId,
+  });
+  const persist = (next: InterviewWorkflowState) => {
+    applyLocal(next);
+    interviewWorkflowSync.sync({ interviews: next.interviews });
+  };
+  const persistBoth = (
+    next: InterviewWorkflowState,
+    jobs: JobWorkflowState,
+  ) => {
+    applyLocalBoth(next, jobs);
+    interviewWorkflowSync.sync({ interviews: next.interviews });
+    jobWorkflowSync.sync({ jobs: jobs.jobs, applications: jobs.applications });
+  };
+  if (!ready)
+    return (
+      <main className="workflow-page">
+        <p role="status">Loading your private workflow...</p>
+      </main>
+    );
   if (view.kind === "detail") {
     const interview = findOwnedInterview(state, userId, view.id);
     if (!interview)
