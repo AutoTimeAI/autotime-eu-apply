@@ -223,7 +223,7 @@ export function OnboardingWizard() {
             photoUrl: data.photoUrl ?? null,
           });
         if (requested === null && data?.onboarding_ready) {
-          router.replace("/dashboard/profile");
+          router.replace("/dashboard/autofill-profile");
           return;
         }
         if (requested === null) {
@@ -428,7 +428,7 @@ export function OnboardingWizard() {
     setInvalidFields([]);
     if (await save(6, true)) {
       markOnboardingComplete(userId);
-      window.location.assign("/dashboard/profile");
+      window.location.assign("/dashboard/autofill-profile");
     }
   };
   return (
@@ -449,8 +449,8 @@ export function OnboardingWizard() {
             {(
               [
                 ["fullName", "Full name", "text", "name", 100],
-                ["phone", "Phone", "tel", "tel", 25],
-                ["email", "Contact email", "email", "email", 254],
+                ["phone", "Phone *", "tel", "tel", 25],
+                ["email", "Contact email (optional)", "email", "email", 254],
                 [
                   "countryCurrent",
                   "Current location",
