@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
+import type { User } from "@supabase/supabase-js"
 import { isAdminUser } from "../../../lib/admin-access"
 import { sendWelcomeEmail } from "../../../lib/email"
+import { isTestAccountUser } from "../../../lib/qa-test-account"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
@@ -109,16 +111,18 @@ function logAuthCallbackError(stage: string, error: unknown): void {
 async function runFirstLoginSetup({
   email,
   name,
-  userId
+  userId,
+  user
 }: {
   email: string | undefined
   name: string
   userId: string
+  user: User
 }): Promise<void> {
   try {
     const isFirstLogin = await ensureFreeSubscription(userId)
 
-    if (isFirstLogin && email) {
+    if (isFirstLogin && email && !isTestAccountUser(user)) {
       await sendWelcomeEmail(email, name)
     }
   } catch (error: unknown) {
@@ -172,7 +176,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     await runFirstLoginSetup({
       email: user.email,
       name: getMetadataName(user.user_metadata) ?? getFallbackName(user.email),
-      userId: user.id
+      userId: user.id,
+      user
     })
 
     return NextResponse.redirect(
