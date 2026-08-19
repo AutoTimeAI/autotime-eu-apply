@@ -77,14 +77,14 @@ test("job workflow migration preserves ownership, cascade and RLS for every tabl
   for (const table of tables) {
     assert.match(
       source,
-      new RegExp(`create table public\\.${table} \\([\\s\\S]*?\\n\\);`, "i"),
+      new RegExp(`create table public\\.${table} \\([\\s\\S]*?\\r?\\n\\);`, "i"),
     );
     assert.match(source, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
   }
   for (const table of triggeredTables) {
     assert.match(
       source,
-      new RegExp(`create trigger ${table}_set_updated_at\\nbefore update on public\\.${table}`, "i"),
+      new RegExp(`create trigger ${table}_set_updated_at\\r?\\nbefore update on public\\.${table}`, "i"),
     );
   }
   // Every table's user_id column cascades from auth.users, and every one of
