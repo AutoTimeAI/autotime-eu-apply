@@ -6,6 +6,8 @@ import {
   ProductEmptyState,
   ProductPageHeader,
   ProductStatusBadge,
+  SyncStatusLine,
+  type SyncStatusLineState,
 } from "./product-ui";
 import {
   applyInterviewOutcome,
@@ -139,6 +141,7 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
         workflow={workflow}
         status={status}
         onStatus={setStatus}
+        sync={{ state: interviewWorkflowSync.state, status: interviewWorkflowSync.status }}
         onSave={(updated, applicationOutcome) => {
           const next = {
             ...state,
@@ -173,6 +176,7 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
       userId={userId}
       status={status}
       onStatus={setStatus}
+      sync={{ state: interviewWorkflowSync.state, status: interviewWorkflowSync.status }}
       onCreate={(record) => {
         const application = workflow.applications.find(
           (item) => item.id === record.applicationId,
@@ -207,6 +211,7 @@ function InterviewList({
   userId,
   status,
   onStatus,
+  sync,
   onCreate,
 }: {
   state: InterviewWorkflowState;
@@ -214,6 +219,7 @@ function InterviewList({
   userId: string;
   status: string;
   onStatus: (value: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
   onCreate: (record: InterviewRecord) => void;
 }) {
   const [adding, setAdding] = useState(false);
@@ -330,6 +336,7 @@ function InterviewList({
           </div>
         }
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <p className="phase-four-live-status" role="status">
         {status}
       </p>
@@ -605,12 +612,14 @@ function InterviewDetail({
   workflow,
   status,
   onStatus,
+  sync,
   onSave,
 }: {
   interview: InterviewRecord;
   workflow: JobWorkflowState;
   status: string;
   onStatus: (value: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
   onSave: (
     value: InterviewRecord,
     outcome?: "progressed" | "offer" | "rejected" | "withdrawn" | "no_response",
@@ -658,6 +667,7 @@ function InterviewDetail({
         title={job.title.value || "Interview"}
         description={`${job.employer.value || "Employer unknown"} · ${formatDate(interview.scheduledAt, interview.timezone)}`}
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <p role="status" aria-live="polite">
         {status}
       </p>

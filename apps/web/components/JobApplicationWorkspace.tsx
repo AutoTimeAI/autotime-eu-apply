@@ -6,7 +6,9 @@ import {
   ProductEmptyState,
   ProductPageHeader,
   ProductStatusBadge,
+  SyncStatusLine,
   type ProductStatus,
+  type SyncStatusLineState,
 } from "./product-ui";
 import { useDashboardPlan } from "./UserNav";
 import { ApplicationChecklist } from "./ApplicationChecklist";
@@ -231,6 +233,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
         onOpen={(id) => router.push(`/dashboard/jobs/${id}`)}
         status={status}
         setStatus={setStatus}
+        sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
       />
     );
   if (view.kind === "applications")
@@ -239,6 +242,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
         state={state}
         cloudOnly={cloudOnly}
         onOpen={(id) => router.push(`/dashboard/applications/${id}`)}
+        sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
       />
     );
   if (view.kind === "job") {
@@ -251,6 +255,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
         onChange={persist}
         onStatus={setStatus}
         status={status}
+        sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
       />
     );
   }
@@ -270,6 +275,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
       onChange={persist}
       onStatus={setStatus}
       status={status}
+      sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
     />
   );
 }
@@ -281,6 +287,7 @@ function JobsList({
   onOpen,
   status,
   setStatus,
+  sync,
 }: {
   state: JobWorkflowState;
   cloudOnlyJobs: JobRecord[];
@@ -288,6 +295,7 @@ function JobsList({
   onOpen: (id: string) => void;
   status: string;
   setStatus: (value: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
@@ -333,6 +341,7 @@ function JobsList({
           ) : undefined
         }
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <p><a className="text-link" href="/dashboard/jobs/browse">Browse aggregated EU jobs</a></p>
       {adding ? (
         <JobCapture
@@ -589,12 +598,14 @@ function JobDetail({
   onChange,
   onStatus,
   status,
+  sync,
 }: {
   job: JobRecord;
   state: JobWorkflowState;
   onChange: (value: JobWorkflowState) => void;
   onStatus: (value: string) => void;
   status: string;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const { userId } = useDashboardPlan();
   const [tab, setTab] = useState<
@@ -687,6 +698,7 @@ function JobDetail({
           </button>
         }
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <nav className="workflow-tabs" aria-label="Job sections" role="tablist">
         {["overview", "analysis", "application", "activity"].map((item) => (
           <button
@@ -1096,10 +1108,12 @@ function ApplicationsList({
   state,
   cloudOnly,
   onOpen,
+  sync,
 }: {
   state: JobWorkflowState;
   cloudOnly: { application: ApplicationWorkspace; job: JobRecord }[];
   onOpen: (id: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const [filter, setFilter] = useState("all");
   const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
@@ -1125,6 +1139,7 @@ function ApplicationsList({
         title="Your application pipeline"
         description="See what needs attention and move each application forward."
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <div className="workflow-actions">
         <a className="button-secondary" href="/dashboard/cv-tailor">Tailor CV</a>
         <a className="button-secondary" href="/dashboard/follow-ups">Recruiter outreach</a>
@@ -1304,6 +1319,7 @@ function ApplicationDetail({
   onChange,
   onStatus,
   status,
+  sync,
 }: {
   application: ApplicationWorkspace;
   interviews: InterviewRecord[];
@@ -1312,6 +1328,7 @@ function ApplicationDetail({
   onChange: (value: JobWorkflowState) => void;
   onStatus: (value: string) => void;
   status: string;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const readiness = getApplicationReadiness(application, job);
   const analysis = currentAnalysis(job);
@@ -1385,6 +1402,7 @@ function ApplicationDetail({
         }
         action={primaryAction}
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <section
         className="phase-three-readiness-summary"
         aria-labelledby="application-readiness-heading"
