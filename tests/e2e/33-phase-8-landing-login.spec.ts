@@ -89,8 +89,14 @@ test("login page sign-in buttons are green-free with a single primary action", a
   await forbiddenGreen(".auth-shell")(page);
 
   const githubButton = page.getByRole("button", { name: "Sign in with GitHub" });
-  await expect(githubButton).toHaveCSS("background-color", "rgb(23, 78, 166)");
   const googleButton = page.getByRole("button", { name: "Sign in with Google" });
+  await expect(githubButton).toBeDisabled();
+  await expect(googleButton).toBeDisabled();
+
+  await page.getByRole("checkbox").check();
+  await expect(githubButton).toBeEnabled();
+  await expect(githubButton).toHaveCSS("background-color", "rgb(23, 78, 166)");
+  await expect(googleButton).toBeEnabled();
   await expect(googleButton).not.toHaveCSS("background-color", "rgb(23, 78, 166)");
 
   await page.setViewportSize({ width: 390, height: 844 });
