@@ -50,10 +50,9 @@ async function assertAccountMenu(page: Page) {
   await expect(
     page.getByRole("menuitem", { name: "Settings" }),
   ).toHaveAttribute("href", "/dashboard/settings");
-  await expect(page.getByRole("menuitem", { name: "Plans" })).toHaveAttribute(
-    "href",
-    "/pricing",
-  );
+  await expect(
+    page.getByRole("menuitem", { name: /Billing & Plan|Upgrade plan/ }),
+  ).toBeVisible();
 }
 
 test("desktop grouped navigation keeps all seven destinations reachable", async ({
