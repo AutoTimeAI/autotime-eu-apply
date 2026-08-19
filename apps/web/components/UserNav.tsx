@@ -121,8 +121,8 @@ const dashboardWorkflowNavItems: DashboardNavItem[] = [
     description: "Country and mobility facts",
   },
   {
-    aliases: ["/dashboard/profile", "/dashboard/cv-tailor"],
-    href: "/dashboard/autofill-profile",
+    aliases: ["/dashboard/autofill-profile", "/dashboard/cv-tailor"],
+    href: "/dashboard/profile",
     icon: "profile",
     label: "Profile",
     description: "Facts and proof",
@@ -208,7 +208,7 @@ export function DashboardWorkflowSidebar() {
     [
       "/dashboard/role-pathways",
       "/dashboard/international",
-      "/dashboard/autofill-profile",
+      "/dashboard/profile",
     ].includes(item.href),
   );
   const link = (item: DashboardNavItem, compact = false) => {
