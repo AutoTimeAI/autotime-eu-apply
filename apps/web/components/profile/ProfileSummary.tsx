@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ProductEmptyState, ProductPageHeader } from "../product-ui";
 
 type Profile = {
+  alert_frequency: "daily" | "weekly" | "off";
+  alert_last_sent_at: string | null;
   full_name: string;
   email: string | null;
   phone: string | null;
@@ -21,6 +23,7 @@ type Profile = {
 
 export default function ProfileSummary() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [alertStatus, setAlertStatus] = useState("");
   const [status, setStatus] = useState("Loading profile…");
 
   useEffect(() => {
@@ -46,6 +49,26 @@ export default function ProfileSummary() {
     ["GitHub", profile.github_url],
     ["Portfolio", profile.portfolio_url],
   ].filter((entry): entry is [string, string] => Boolean(entry[1]));
+
+  async function updateAlertFrequency(
+    frequency: Profile["alert_frequency"],
+  ) {
+    setAlertStatus("Saving alert preference...");
+    const response = await fetch("/api/profile/alerts", {
+      body: JSON.stringify({ frequency }),
+      headers: { "content-type": "application/json" },
+      method: "PATCH",
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      setAlertStatus(payload.error ?? "Job alert preference could not be saved.");
+      return;
+    }
+    setProfile((current) =>
+      current ? { ...current, alert_frequency: frequency } : current,
+    );
+    setAlertStatus("Job alert preference saved.");
+  }
 
   return (
     <main className="workflow-page profile-page">
@@ -80,6 +103,41 @@ export default function ProfileSummary() {
           <div className="profile-card-heading"><div><p className="product-eyebrow">Online presence</p><h2>Professional links</h2></div></div>
           {links.length ? <ul className="profile-link-list">{links.map(([label, url]) => <li key={label}><a href={url} rel="noreferrer" target="_blank">{label}<span aria-hidden="true">↗</span></a></li>)}</ul> : <p className="profile-empty-value">No professional links added.</p>}
           <div className="profile-card-actions"><Link className="button-secondary" href="/dashboard/onboarding?edit=urls">Edit links</Link></div>
+        </section>
+
+        <section className="workflow-section profile-card profile-alert-card">
+          <div className="profile-card-heading">
+            <div>
+              <p className="product-eyebrow">Matched-job digest</p>
+              <h2>Email job alerts</h2>
+              <p>Receive new ESCO matches with their skill evidence.</p>
+            </div>
+          </div>
+          <label htmlFor="profile-alert-frequency">Frequency</label>
+          <select
+            id="profile-alert-frequency"
+            value={profile.alert_frequency ?? "weekly"}
+            onChange={(event) =>
+              void updateAlertFrequency(
+                event.target.value as Profile["alert_frequency"],
+              )
+            }
+          >
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="off">Off</option>
+          </select>
+          <p className="profile-empty-value">
+            Last sent:{" "}
+            {profile.alert_last_sent_at
+              ? new Date(profile.alert_last_sent_at).toLocaleString("en-GB")
+              : "Not sent yet"}
+          </p>
+          {alertStatus ? (
+            <p aria-live="polite" role="status">
+              {alertStatus}
+            </p>
+          ) : null}
         </section>
       </div>
 

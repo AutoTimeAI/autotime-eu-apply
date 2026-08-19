@@ -14,6 +14,7 @@ import {
   isProtectedPath,
   isPublicPath,
 } from "./lib/proxy-policy"
+import { hasCompletedRequiredOnboarding } from "./lib/onboarding-readiness"
 
 type CookieToSet = {
   name: string
@@ -122,14 +123,15 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       if (!isOnboarding && !isOnboardingCvBuilder) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("onboarding_completed_at")
+          .select("full_name,phone,country_current,countries_target,work_right_details,linkedin_url,base_cv_text,onboarding_completed_at")
           .eq("user_id", user.id)
           .maybeSingle()
 
         if (profileError) throw profileError
 
-        if (!profile?.onboarding_completed_at) {
+        if (!hasCompletedRequiredOnboarding(profile)) {
           const onboardingUrl = new URL("/dashboard/onboarding", request.url)
+          onboardingUrl.searchParams.set("required", "1")
           return applyAuthCookies({
             cookiesToSet,
             headersToSet,

@@ -341,8 +341,9 @@ function LoginForm() {
         ) : null}
 
         <p className="auth-privacy-note">
-          EU-hosted analytics only - no email used for tracking - your data is
-          never sold or shared.
+          Analytics runs only after you consent. Your data is never sold and is
+          shared only with the service providers disclosed in our{` `}
+          <a href="/privacy">privacy policy</a>. Review our <a href="/terms">terms</a>.
         </p>
       </section>
     </main>

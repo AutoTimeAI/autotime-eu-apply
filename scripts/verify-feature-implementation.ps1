@@ -36,10 +36,14 @@ Confirm-Path "CV renderer" "apps/web/components/cv/CVRenderer.tsx"
 Confirm-Path "CV tailoring API" "apps/web/app/api/ai/tailor-cv/route.ts"
 Confirm-Text "CV tailoring server function" "tailorCvWithOpenAI" "apps/web/lib/openai-server.ts"
 Confirm-Path "CV workspace" "apps/web/components/cv/CVWorkspace.tsx"
+Confirm-Path "Cover-letter API" "apps/web/app/api/ai/cover-letter/route.ts"
+Confirm-Path "Cover-letter version migration" "supabase/migrations/20260815120000_cover_letter_versions.sql"
 Confirm-Path "Outreach drafter" "apps/web/lib/outreach-drafter.ts"
 Confirm-Text "Peer contact type" "peer_target_role" "apps/web/lib/outreach-drafter.ts"
 Confirm-Path "ESCO classifier" "apps/web/lib/esco/classify-job.ts"
 Confirm-Path "ESCO questionnaire API" "apps/web/app/api/esco/questionnaire/route.ts"
+Confirm-Path "ESCO single-job score API" "apps/web/app/api/esco/score-job/route.ts"
+Confirm-Path "Extension ESCO overlay" "apps/extension/lib/match-overlay.ts"
 Confirm-Path "Overlap-only ESCO correction" "supabase/migrations/20260811120000_defer_esco_vector_matching.sql"
 Confirm-Path "Feature audit" "docs/autotime-feature-spec-audit.md"
 Confirm-Path "Compliance policy" "docs/job-aggregation-compliance.md"
@@ -51,6 +55,7 @@ Write-Host "=== Automated gates ==="
 Invoke-Gate "web typecheck" { pnpm.cmd --filter web typecheck }
 Invoke-Gate "feature-focused tests" { node --test --experimental-strip-types scripts/job-aggregation.test.mjs }
 Invoke-Gate "repository unit suite" { pnpm.cmd test:unit }
+Invoke-Gate "production extension build" { pnpm.cmd --filter extension build }
 Invoke-Gate "production web build" { pnpm.cmd build:web }
 
 Write-Host "PASS: $passed  FAIL: $failed"

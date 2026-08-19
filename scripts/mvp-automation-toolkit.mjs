@@ -14,7 +14,8 @@ const offlineWebBuildEnv = {
   STRIPE_SECRET_KEY: "sk_test_offline_build",
   STRIPE_WEBHOOK_SECRET: "whsec_offline_build",
   STRIPE_PRO_MONTHLY_PRICE_ID: "price_offline_monthly",
-  STRIPE_PRO_ANNUAL_PRICE_ID: "price_offline_annual",
+  STRIPE_PRO_QUARTERLY_PRICE_ID: "price_offline_quarterly",
+  STRIPE_AI_CREDIT_PACK_PRICE_ID: "price_offline_credit_pack",
   RESEND_API_KEY: "re_offline_build"
 }
 

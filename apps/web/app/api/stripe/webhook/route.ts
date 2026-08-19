@@ -11,7 +11,10 @@ import {
   getSupabaseServiceRoleEnv,
 } from "../../../../lib/env.server"
 import { createAdminClient } from "../../../../lib/supabase/admin"
-import type { SubscriptionStatus } from "../../../../lib/supabase/types"
+import type {
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from "../../../../lib/supabase/types"
 import { getWebhookStripeClient } from "../../../../lib/stripe"
 
 type ApiResponse<T> = {
@@ -44,6 +47,16 @@ function isStripeSubscription(value: unknown): value is Stripe.Subscription {
 
 function isStripeInvoice(value: unknown): value is Stripe.Invoice {
   return isRecord(value) && value.object === "invoice"
+}
+
+function isStripeCheckoutSession(
+  value: unknown,
+): value is Stripe.Checkout.Session {
+  return isRecord(value) && value.object === "checkout.session"
+}
+
+function getSubscriptionPlan(): SubscriptionPlan {
+  return "pro"
 }
 
 function mapStripeStatus(
@@ -100,7 +113,7 @@ async function upsertSubscriptionFromStripe(
         user_id: userId,
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
-        plan: "pro",
+        plan: getSubscriptionPlan(),
         status: mapStripeStatus(subscription.status),
         current_period_end: currentPeriodEnd,
       },
@@ -128,6 +141,7 @@ async function upsertSubscriptionFromStripe(
 async function sendUpgradeEmailForUser(
   userId: string,
   periodEnd: Date,
+  plan: SubscriptionPlan,
 ): Promise<void> {
   try {
     const supabase = createAdminClient()
@@ -137,9 +151,39 @@ async function sendUpgradeEmailForUser(
       return
     }
 
-    await sendUpgradeConfirmed(data.user.email, "Pro", periodEnd)
+    await sendUpgradeConfirmed(
+      data.user.email,
+      "Pro",
+      periodEnd,
+    )
   } catch (error: unknown) {
     return
+  }
+}
+
+async function grantCreditPack(session: Stripe.Checkout.Session): Promise<void> {
+  if (
+    session.payment_status !== "paid" ||
+    session.metadata?.purchase_type !== "ai_credits"
+  ) {
+    return
+  }
+
+  const userId = session.metadata.user_id
+  const credits = Number.parseInt(session.metadata.credits ?? "", 10)
+
+  if (!userId || !Number.isSafeInteger(credits) || credits <= 0) {
+    throw new Error("Credit checkout metadata is invalid")
+  }
+
+  const { error } = await createAdminClient().rpc("grant_ai_credit_pack", {
+    p_checkout_session_id: session.id,
+    p_credits: credits,
+    p_user_id: userId,
+  })
+
+  if (error) {
+    throw new Error(error.message)
   }
 }
 
@@ -217,9 +261,22 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
         result.userId &&
         result.periodEnd
       ) {
-        await sendUpgradeEmailForUser(result.userId, result.periodEnd)
+        await sendUpgradeEmailForUser(
+          result.userId,
+          result.periodEnd,
+          getSubscriptionPlan(),
+        )
       }
 
+      return
+    }
+
+    if (
+      (event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded") &&
+      isStripeCheckoutSession(eventObject)
+    ) {
+      await grantCreditPack(eventObject)
       return
     }
 

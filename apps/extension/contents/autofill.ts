@@ -1104,10 +1104,11 @@ function cleanLinkedInLocation(value = "") {
   return parts[0] ?? ""
 }
 
-function detectJobPage(): JobPageResponse {
+export function detectJobPage(options: { allowLinkedInRead?: boolean } = {}): JobPageResponse {
   const platform = getJobPlatform(window.location.href)
   const captureMode = getJobCaptureMode(window.location.href)
-  if (captureMode !== "selector-extraction") {
+  const explicitLinkedInRead = options.allowLinkedInRead === true && platform === "LinkedIn" && /^\/jobs\//i.test(window.location.pathname)
+  if (captureMode !== "selector-extraction" && !explicitLinkedInRead) {
     return {
       roleTitle: "", company: "", location: "", jobDescription: "",
       url: window.location.href, source: window.location.hostname, platform,

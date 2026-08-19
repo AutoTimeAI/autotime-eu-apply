@@ -6359,7 +6359,20 @@ export default function HomePage({
       }
     }
 
-    setStatus("Profile reset. Fill it in again whenever you're ready.")
+    window.localStorage.removeItem(
+      `autotime-v2-onboarding-complete:${userId}`
+    )
+    window.localStorage.removeItem(`autotime-cv-data:${userId}`)
+    window.localStorage.removeItem(
+      `autotime-progressive-onboarding:v1:${userId}`
+    )
+    for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.sessionStorage.key(index)
+      if (key?.startsWith(`autotime-cv-tailored:${userId}:`)) {
+        window.sessionStorage.removeItem(key)
+      }
+    }
+    window.location.assign("/dashboard/onboarding")
   }
 
   const deleteProfileForAccount = async () => {
@@ -8193,11 +8206,28 @@ export default function HomePage({
                         </div>
                       </div>
                       <div className="profile-purpose-steps">
-                        <span>About you</span>
-                        <span>Work rights</span>
-                        <span>Target roles</span>
-                        <span>CV proof</span>
-                        <span>Reusable answers</span>
+                        {[
+                          ["profile-step-about-you", "About you"],
+                          ["profile-step-work-rights", "Work rights"],
+                          ["profile-step-target-roles", "Target roles"],
+                          ["profile-step-proof", "CV proof"],
+                          ["profile-step-proof", "Reusable answers"],
+                        ].map(([sectionId, label]) => (
+                          <button
+                            key={label}
+                            type="button"
+                            onClick={() =>
+                              document
+                                .getElementById(sectionId)
+                                ?.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "start",
+                                })
+                            }
+                          >
+                            {label}
+                          </button>
+                        ))}
                       </div>
                       <button
                         className="danger-button"
@@ -8346,7 +8376,10 @@ export default function HomePage({
                       </div>
                     </div>
 
-                    <section className="profile-form-section">
+                    <section
+                      className="profile-form-section"
+                      id="profile-step-about-you"
+                    >
                       <div className="section-heading">
                         <p className="eyebrow">Step 1</p>
                         <h3>About you</h3>
@@ -8394,7 +8427,10 @@ export default function HomePage({
                       </label>
                     </section>
 
-                    <section className="profile-form-section">
+                    <section
+                      className="profile-form-section"
+                      id="profile-step-target-roles"
+                    >
                       <div className="section-heading">
                         <p className="eyebrow">Step 2</p>
                         <h3>What you are looking for</h3>
@@ -8432,7 +8468,10 @@ export default function HomePage({
                       </label>
                     </section>
 
-                    <section className="profile-form-section important">
+                    <section
+                      className="profile-form-section important"
+                      id="profile-step-work-rights"
+                    >
                       <div className="section-heading">
                         <p className="eyebrow">Step 3</p>
                         <h3>Work-right facts</h3>
@@ -8457,7 +8496,10 @@ export default function HomePage({
                       </label>
                     </section>
 
-                    <section className="profile-form-section important">
+                    <section
+                      className="profile-form-section important"
+                      id="profile-step-proof"
+                    >
                       <div className="section-heading">
                         <p className="eyebrow">Step 4</p>
                         <h3>Your proof</h3>

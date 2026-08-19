@@ -14,6 +14,7 @@ Run `powershell -ExecutionPolicy Bypass -File scripts/verify-feature-implementat
 
 - At `/dashboard/jobs/browse`, confirm EURES and direct-feed listings appear together and tracking a listing creates one private tracked job.
 - Export a CV and confirm selectable, complete plain text, a single-column layout, conventional headings, and no header/footer contact fields. Tailor against a real tracked job and confirm job-specific changes.
+- Generate two cover-letter versions for a synced tracked job, edit the latest version, and confirm both versions remain user-scoped in `cover_letters`.
 - Draft all three outreach channels and check the 300-character LinkedIn-note and approximately 150-word InMail/email constraints.
 - Confirm manual contact fields persist. Compare peer tone with recruiter/manager tone: peer outreach must be informational, request a short role/team conversation, and contain no application or referral ask.
 - Confirm copying marks the draft sent, records `sent_at`, and schedules the expected follow-up. Confirm no LinkedIn endpoint is called.
@@ -25,6 +26,8 @@ Run `powershell -ExecutionPolicy Bypass -File scripts/verify-feature-implementat
 - Workday: selector extraction remains available.
 - Bespoke career site: generic title and JSON-LD `JobPosting` fallback works.
 - LinkedIn and restricted boards: manual-only; no page extraction or automation.
+- With a connected account and imported ESCO profile, verify the in-page overlay on one API-covered ATS URL and one permitted fallback page; confirm LinkedIn never renders or extracts an overlay.
+- On a LinkedIn job-detail URL, confirm page load alone performs no scoring. Click the extension icon, verify the one-time risk disclosure appears before content is read, acknowledge it, and confirm only an ephemeral ESCO result is shown. Verify search-result pages, clicks, messages, poster data, and raw-content storage remain untouched.
 
 ## Compliance and production
 

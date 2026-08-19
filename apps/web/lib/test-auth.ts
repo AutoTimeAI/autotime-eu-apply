@@ -30,7 +30,8 @@ export function isTestAuthUserId(userId: string): boolean {
 }
 
 export function getTestAuthPlan(): SubscriptionPlan {
-  return process.env.AUTOTIME_TEST_USER_PLAN === "pro" ? "pro" : "free"
+  const plan = process.env.AUTOTIME_TEST_USER_PLAN
+  return plan === "pro" ? "pro" : "free"
 }
 
 export function getTestAuthUser(): User | null {

@@ -6,6 +6,7 @@ import {
   duplicateJob,
   extractJob,
   getApplicationReadiness,
+  getApplicationReviewQueue,
   isRestrictedJobUrl,
   transitionApplication,
 } from "../apps/web/lib/job-application-workflow.ts";
@@ -121,6 +122,8 @@ application = {
 };
 assert.equal(getApplicationReadiness(application, job).ready, true);
 application = transitionApplication(application, "Ready", job);
+assert.equal(getApplicationReviewQueue({ schemaVersion: 1, jobs: [{ ...job, analysisHistory: [apply] }], applications: [application] }).length, 1);
+assert.equal(getApplicationReviewQueue({ schemaVersion: 1, jobs: [{ ...job, analysisHistory: [apply] }], applications: [{ ...application, unsupportedClaims: ["Invented claim"] }] }).length, 0);
 assert.throws(
   () => transitionApplication(application, "Applied", job),
   /Confirm/,

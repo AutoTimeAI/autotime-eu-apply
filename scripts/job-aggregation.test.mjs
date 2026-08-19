@@ -6,6 +6,8 @@ import { GreenhouseFeed } from "../apps/web/lib/ats-feeds/greenhouse.ts";
 import { LeverFeed } from "../apps/web/lib/ats-feeds/lever.ts";
 import { AshbyFeed } from "../apps/web/lib/ats-feeds/ashby.ts";
 import { PersonioFeed } from "../apps/web/lib/ats-feeds/personio.ts";
+import { SmartRecruitersFeed } from "../apps/web/lib/ats-feeds/smartrecruiters.ts";
+import { RecruiteeFeed } from "../apps/web/lib/ats-feeds/recruitee.ts";
 import { buildOutreachPrompt } from "../apps/web/lib/outreach-drafter.ts";
 import { classifyJobToEsco } from "../apps/web/lib/esco/classify-job.ts";
 import { buildQuestionnaireContext } from "../apps/web/lib/esco/questionnaire-context.ts";
@@ -32,14 +34,24 @@ test("canonicalises tracking parameters and provides cross-source identity hashe
   assert.equal(a.identityHash, b.identityHash); assert.notEqual(a.dedupHash, b.dedupHash);
 });
 const json = (value) => async () => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
-test("normalises Greenhouse, Lever, and Ashby feed results", async () => {
+test("normalises Greenhouse, Lever, Ashby, and SmartRecruiters feed results", async () => {
   assert.equal((await new GreenhouseFeed(json({ jobs: [{ title: "Dev", absolute_url: "https://x", location: { name: "Paris" } }] })).fetchJobs("acme"))[0].atsPlatform, "greenhouse");
   assert.equal((await new LeverFeed(json([{ text: "Dev", hostedUrl: "https://x", categories: { location: "Paris" } }])).fetchJobs("acme"))[0].atsPlatform, "lever");
   assert.equal((await new AshbyFeed(json({ jobs: [{ title: "Dev", jobUrl: "https://x", location: "Paris" }] })).fetchJobs("acme"))[0].atsPlatform, "ashby");
+  const smartRecruiters = await new SmartRecruitersFeed(json({ content: [{ id: "dev-1", name: "Dev", company: { name: "Acme" }, location: { city: "Paris", country: "France" }, releasedDate: "2026-08-18T10:00:00Z" }] })).fetchJobs("acme");
+  assert.deepEqual(smartRecruiters[0], {
+    title: "Dev", company: "Acme", location: "Paris, France",
+    url: "https://jobs.smartrecruiters.com/acme/dev-1", postedDate: "2026-08-18T10:00:00Z",
+    atsPlatform: "smartrecruiters", descriptionRaw: "",
+  });
 });
 test("normalises Personio XML", async () => {
   const fetchXml = async () => new Response("<workzag-jobs><position><id>1</id><name>Developer</name><office>Berlin</office></position></workzag-jobs>");
   const jobs = await new PersonioFeed(fetchXml).fetchJobs("acme"); assert.equal(jobs[0].title, "Developer"); assert.equal(jobs[0].atsPlatform, "personio");
+});
+test("normalises Recruitee public careers offers and drops incomplete entries", async () => {
+  const jobs = await new RecruiteeFeed(json({ offers: [{ title: "Engineer", careers_url: "https://acme.recruitee.com/o/engineer", city: "Dublin", country: "Ireland", created_at: "2026-08-18T10:00:00Z", description: "Build reliable systems" }, { title: "Missing URL" }] })).fetchJobs("acme");
+  assert.deepEqual(jobs, [{ title: "Engineer", company: "acme", location: "Dublin, Ireland", url: "https://acme.recruitee.com/o/engineer", postedDate: "2026-08-18T10:00:00Z", atsPlatform: "recruitee", descriptionRaw: "Build reliable systems" }]);
 });
 test("outreach prompt retains human-sent constraints", () => {
   const prompt = buildOutreachPrompt({ jobTitle: "Engineer", companyName: "Acme", jobDescription: "Build secure APIs", recruiterName: "Sam", recruiterRole: "Recruiter", candidateSummary: "API engineer", candidateKeyStrengths: ["security"], channel: "linkedin_note", contactType: "recruiter" });
@@ -92,13 +104,17 @@ test("profile onboarding is persisted, guided, and view-only after completion", 
     readFile(new URL("../apps/web/components/profile/ProfileSummary.tsx", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260812160000_profile_onboarding_wizard.sql", import.meta.url), "utf8"),
   ]);
-  assert.match(wizard, /Step \{step\+1\} of 6/);
-  assert.match(wizard, /right-to-work position for your target countries/i);
-  assert.match(wizard, /AI: check clarity and missing facts/);
-  assert.match(wizard, /Complete setup/);
-  assert.match(wizard, /Upload DOCX/);
+  const compactWizard = wizard.replace(/\s+/g, " ");
+  assert.match(compactWizard, /Step \{step \+ 1\} of 6/);
+  assert.match(compactWizard, /right-to-work position for your target countries/i);
+  assert.match(compactWizard, /AI: check clarity and missing facts/);
+  assert.match(compactWizard, /Complete setup/);
+  assert.match(compactWizard, /Upload a DOCX/);
   assert.doesNotMatch(profilePage, /DashboardExperience|CVWorkspace/);
-  assert.match(summary, /view-only/i);
+  assert.doesNotMatch(summary, /<(input|textarea)\b/i);
+  assert.equal(summary.match(/<select\b/gi)?.length, 1);
+  assert.match(summary, /id="profile-alert-frequency"/);
+  assert.match(summary, /dashboard\/onboarding\?edit=/);
   assert.match(migration, /profile-photos/);
   assert.match(migration, /storage\.foldername\(name\)/);
 });
@@ -111,4 +127,72 @@ test("dashboard and onboarding share the restrained EU brand backdrop", async ()
   assert.match(backdrop, /autotime-mark\.png/);
   assert.match(backdrop, /Evidence first/);
   assert.match(backdrop, /Better applications/);
+});
+
+test("cover letters are conservative, editable, and versioned per tracked job", async () => {
+  const [server, route, workspace, migration] = await Promise.all([
+    readFile(new URL("../apps/web/lib/openai-server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/api/ai/cover-letter/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/cv/CVWorkspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260815120000_cover_letter_versions.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(server, /tailorCoverLetterWithOpenAI/);
+  assert.match(server, /Never invent employers, qualifications/);
+  assert.match(route, /feature:"cover-letter"/);
+  assert.match(route, /latest\.data\?\.version\?\?0/);
+  assert.match(workspace, /Generate cover letter/);
+  assert.match(workspace, /Save edits/);
+  assert.match(migration, /unique \(user_id, job_id, version\)/);
+  assert.match(migration, /cover_letters_select_own/);
+});
+
+test("extension match overlay reuses ESCO evidence without LinkedIn scraping", async () => {
+  const [overlay, endpoint, entrypoint] = await Promise.all([
+    readFile(new URL("../apps/extension/lib/match-overlay.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/api/esco/score-job/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/extension/entrypoints/autotime.content.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(overlay, /isLinkedInUrl\(window\.location\.href\)/);
+  assert.match(overlay, /mode==="api-reference"\?\{url:window\.location\.href\}/);
+  assert.match(overlay, /essential skills matched/);
+  assert.match(endpoint, /esco_occupation_skills/);
+  assert.match(endpoint, /user_skill_profile/);
+  assert.match(entrypoint, /showEscoMatchOverlay/);
+});
+
+test("LinkedIn scoring requires browser-icon action and explicit risk acknowledgement", async () => {
+  const [overlay, entrypoint, background, compliance] = await Promise.all([
+    readFile(new URL("../apps/extension/lib/match-overlay.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/extension/entrypoints/autotime.content.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/extension/entrypoints/background/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../docs/job-aggregation-compliance.md", import.meta.url), "utf8"),
+  ]);
+  assert.match(background, /chrome\.action\.onClicked/);
+  assert.match(background, /AUTOTIME_LINKEDIN_MATCH_REQUEST/);
+  assert.match(entrypoint, /message\?\.type !== "AUTOTIME_LINKEDIN_MATCH_REQUEST"/);
+  assert.match(overlay, /linkedin-single-page-match-risk-acknowledged/);
+  assert.match(overlay, /outside LinkedIn’s terms/);
+  assert.match(overlay, /detectJobPage\(\{allowLinkedInRead:true\}\)/);
+  assert.doesNotMatch(overlay, /job_listings.*insert|local\.set\([^)]*jobDescription/s);
+  assert.match(compliance, /Product-owner exception/);
+});
+
+test("matched-job alerts are explainable, user-controlled, and advance only after delivery", async () => {
+  const [migration, edgeFunction, profile, route, cron] = await Promise.all([
+    readFile(new URL("../supabase/migrations/20260815140000_email_job_alerts.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/functions/sync-job-alerts/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/components/profile/ProfileSummary.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../apps/web/app/api/profile/alerts/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/cron/job-ingestion.sql", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /alert_frequency.*daily.*weekly.*off/s);
+  assert.match(migration, /alert_last_sent_at/);
+  assert.match(edgeFunction, /match_esco_jobs/);
+  assert.match(edgeFunction, /essential skills matched/);
+  assert.match(edgeFunction, /await sendEmail[\s\S]*alert_last_sent_at/);
+  assert.match(profile, /Email job alerts/);
+  assert.match(profile, /Daily/);
+  assert.match(route, /z\.enum\(\["daily", "weekly", "off"\]\)/);
+  assert.match(cron, /sync-job-alerts/);
+  assert.match(cron, /x-cron-secret/);
 });

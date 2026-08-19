@@ -8,7 +8,11 @@ import {
   getSupabaseServiceRoleEnv,
 } from "../../lib/env.server";
 import { getCanonicalAppUrl } from "../../lib/env";
-import { getRemainingAiCalls, getUserPlan } from "../../lib/feature-gate";
+import {
+  getPurchasedAiCredits,
+  getRemainingAiCalls,
+  getUserPlan,
+} from "../../lib/feature-gate";
 import { createServerClient } from "../../lib/supabase/server";
 import type { SubscriptionPlan } from "../../lib/supabase/types";
 import { getTestAuthUser } from "../../lib/test-auth";
@@ -20,6 +24,7 @@ type PricingAccount = {
   email: string;
   id: string;
   plan: SubscriptionPlan;
+  purchasedAiCredits: number;
   remainingAiCalls: number | null;
 };
 
@@ -32,6 +37,7 @@ async function getPricingAccount(): Promise<PricingAccount | null> {
         email: testUser.email ?? "account",
         id: testUser.id,
         plan: await getUserPlan(testUser.id),
+        purchasedAiCredits: 0,
         remainingAiCalls: await getRemainingAiCalls(testUser.id),
       };
     }
@@ -52,8 +58,8 @@ async function getPricingAccount(): Promise<PricingAccount | null> {
       email: user.email ?? "account",
       id: user.id,
       plan,
-      remainingAiCalls:
-        plan === "free" ? await getRemainingAiCalls(user.id) : null,
+      purchasedAiCredits: await getPurchasedAiCredits(user.id),
+      remainingAiCalls: await getRemainingAiCalls(user.id),
     };
   } catch (error: unknown) {
     return null;
@@ -89,23 +95,28 @@ const faqs = [
 
 const freeFeatures = [
   { label: "Strategic role targeting workspace", included: true },
-  { label: "Tracked jobs and progress view", included: true },
-  { label: "5 AI job analyses per month", included: true },
+  { label: "Unlimited tracked jobs and status updates", included: true },
+  { label: "5 AI actions per month", included: true },
   { label: "Work-right and country fit scoring", included: true },
   { label: "Evidence-backed positioning workflow", included: true },
-  { label: "Visible job-post import", included: true },
+  { label: "Browser extension and visible job-post import", included: true },
+  { label: "Unlimited ATS-safe CV editing", included: true },
+  { label: "Unlimited PDF and DOCX CV downloads", included: true },
   { label: "CSV export", included: true },
   { label: "Full profile and workflow cloud sync", included: false },
   { label: "AI application content generation", included: false },
   { label: "Interview prep packs", included: false },
-  { label: "Unlimited AI analyses", included: false },
+  { label: "Optional 25-credit packs for GBP 5", included: true },
 ];
 
 const proFeatures = [
   { label: "Everything in Free", included: true },
   { label: "Full profile and workflow cloud sync", included: true },
-  { label: "Unlimited AI job analyses", included: true },
-  { label: "AI cover letter and application content", included: true },
+  { label: "50 AI actions per month", included: true },
+  {
+    label: "AI cover letters and application content",
+    included: true,
+  },
   { label: "Role-specific interview prep packs", included: true },
   { label: "Interview conversion workflow", included: true },
   { label: "Priority workflow support", included: true },
@@ -130,20 +141,22 @@ export default async function PricingPage() {
             <h1>Quality-first European tech applications</h1>
             <p>
               Start free with strategic targeting, country-aware fit and real
-              evidence discipline. Upgrade when you need unlimited AI, full
-              workflow sync and interview conversion prep.
+              evidence discipline. Upgrade when you need more AI capacity, full
+              workflow sync and interview conversion prep. Every successful AI
+              action uses one clearly counted allowance unit.
             </p>
           </div>
         </header>
 
         <PricingCards
           accountPlan={account?.plan ?? null}
-          annualPriceId={prices?.annual}
           billingAvailable={prices !== null}
+          creditPackPriceId={prices?.creditPack}
           freeFeatures={freeFeatures}
           isSignedIn={Boolean(account)}
-          monthlyPriceId={prices?.monthly}
+          monthlyPriceId={prices?.proMonthly}
           proFeatures={proFeatures}
+          quarterlyPriceId={prices?.proQuarterly}
         />
 
         <section className="pricing-gate-panel" aria-label="Plan gate clarity">
@@ -151,9 +164,9 @@ export default async function PricingPage() {
             <p className="eyebrow">No hidden surprises</p>
             <h2>What is locked, why, and what Pro unlocks</h2>
             <p>
-              Free keeps the quality-over-quantity workflow usable. Pro removes
-              limits when you are actively positioning for interviews and need
-              unlimited AI plus full workflow sync.
+              Free keeps the quality-over-quantity workflow usable. Pro adds a
+              larger monthly AI allowance, application support and full
+              workflow sync, with monthly or quarterly billing.
             </p>
           </div>
           <div className="pricing-gate-grid">
@@ -161,9 +174,7 @@ export default async function PricingPage() {
               <span>Remaining AI calls</span>
               <strong>
                 {account
-                  ? account.plan === "pro"
-                    ? "Unlimited"
-                    : `${account.remainingAiCalls ?? 0} this month`
+                  ? `${account.remainingAiCalls ?? 0} available`
                   : "5/month on Free"}
               </strong>
               <p>
@@ -174,24 +185,33 @@ export default async function PricingPage() {
               <span>Locked on Free</span>
               <strong>Advanced AI + full sync</strong>
               <p>
-                Application content, interview prep packs, unlimited AI and full
-                profile/workflow cloud sync require Pro.
+                Application content, interview prep packs and full
+                profile/workflow cloud sync require Pro. Monthly and quarterly
+                billing include the same 50-action allowance.
               </p>
             </article>
             <article>
               <span>Why it is locked</span>
               <strong>Cost and evidence control</strong>
               <p>
-                AI usage has real compute cost, and Pro features rely on
-                stronger account-level workflow persistence.
+                AI usage has real compute cost. Monthly allowances keep pricing
+                sustainable while GBP 5 credit packs cover occasional peaks.
               </p>
             </article>
             <article>
               <span>Upgrade unlocks</span>
               <strong>More intelligence, same control</strong>
               <p>
-                You still review everything. AutoTime does not auto-submit or
-                hide job-site actions behind the upgrade.
+                You still review everything. Purchased credits never expire and
+                AutoTime does not auto-submit applications.
+              </p>
+            </article>
+            <article>
+              <span>Purchased credits</span>
+              <strong>{account?.purchasedAiCredits ?? 0}</strong>
+              <p>
+                Purchased credits are used only after the included monthly
+                allowance and carry forward until used.
               </p>
             </article>
           </div>

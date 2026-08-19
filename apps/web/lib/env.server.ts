@@ -31,16 +31,22 @@ export function getStripeSecretEnv(): { secretKey: string } {
   }
 }
 
-export function getStripePriceEnv(): { annual: string; monthly: string } {
+export function getStripePriceEnv(): {
+  creditPack: string
+  proMonthly: string
+  proQuarterly: string
+} {
   return {
-    annual: requireServerValue(
-      "billing prices",
-      process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
-    ),
-    monthly: requireServerValue(
+    creditPack:
+      process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID?.trim() ||
+      "lookup:autotime_ai_credits_25_gbp_v1",
+    proMonthly: requireServerValue(
       "billing prices",
       process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
     ),
+    proQuarterly:
+      process.env.STRIPE_PRO_QUARTERLY_PRICE_ID?.trim() ||
+      "lookup:autotime_pro_quarterly_gbp_v1",
   }
 }
 

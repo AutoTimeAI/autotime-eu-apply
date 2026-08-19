@@ -12,9 +12,10 @@ import {
   resolveReturnUrl,
 } from "../../../../lib/return-url"
 import {
+  getCheckoutProduct,
   getPlans,
+  resolveStripePriceId,
   getStripeClient,
-  isConfiguredStripePrice,
 } from "../../../../lib/stripe"
 import { getTestAuthUser } from "../../../../lib/test-auth"
 import { isTestAccountUser } from "../../../../lib/qa-test-account"
@@ -140,7 +141,9 @@ export async function POST(
     const plans = getPlans()
     const priceId = body.priceId ?? plans.pro_monthly.priceId
 
-    if (!isConfiguredStripePrice(priceId)) {
+    const product = getCheckoutProduct(priceId)
+
+    if (!product) {
       return diagnosticJson({
         area: "billing",
         code: "billing.checkout.price.invalid",
@@ -151,28 +154,37 @@ export async function POST(
       })
     }
 
+    const resolvedPriceId = await resolveStripePriceId(priceId)
     const customerId = await getOrCreateStripeCustomer({
       email: user.email ?? null,
       userId: user.id,
     })
     const session = await getStripeClient().checkout.sessions.create({
-      mode: "subscription",
+      mode: product.mode,
       customer: customerId,
       client_reference_id: user.id,
       line_items: [
         {
-          price: priceId,
+          price: resolvedPriceId,
           quantity: 1,
         },
       ],
       metadata: {
+        credits: product.mode === "payment" ? String(product.credits) : "",
+        purchase_type: product.mode === "payment" ? "ai_credits" : "subscription",
+        subscription_plan:
+          product.mode === "subscription" ? product.plan : "",
         user_id: user.id,
       },
-      subscription_data: {
-        metadata: {
-          user_id: user.id,
-        },
-      },
+      subscription_data:
+        product.mode === "subscription"
+          ? {
+              metadata: {
+                subscription_plan: product.plan,
+                user_id: user.id,
+              },
+            }
+          : undefined,
       success_url: resolveReturnUrl(body.returnUrl),
       cancel_url: resolveReturnUrl(body.cancelUrl ?? "/pricing"),
     })

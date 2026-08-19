@@ -16,6 +16,7 @@ import {
   duplicateJob,
   extractJob,
   getApplicationReadiness,
+  getApplicationReviewQueue,
   isRestrictedJobUrl,
   transitionApplication,
   type ApplicationWorkspace,
@@ -31,7 +32,7 @@ import {
 } from "../lib/job-workflow-storage";
 import { loadInterviewWorkflow } from "../lib/interview-storage";
 import type { InterviewRecord } from "../lib/interview-workflow";
-import { loadMobilityProfile } from "../lib/international-mobility-storage";
+import { loadMobilityProfile, saveMobilityProfile } from "../lib/international-mobility-storage";
 import type { MobilityProfile } from "shared";
 
 type View =
@@ -500,13 +501,36 @@ function JobDetail({
     "overview" | "analysis" | "application" | "activity"
   >("overview");
   const analysis = currentAnalysis(job);
+  const [cloudEvidence, setCloudEvidence] = useState<ReturnType<typeof legacyEvidence> | null>(null);
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/profile/onboarding").then(async (response) => ({ response, payload: await response.json() })).then(({ response, payload }) => {
+      if (!active || !response.ok || !payload.data) return;
+      const profile = payload.data as { base_cv_text?: string | null; work_authorisation_category?: string | null; country_current?: string | null; countries_target?: string[] | null };
+      const sponsorshipRequired = profile.work_authorisation_category === "sponsorship_required";
+      setCloudEvidence({ text: profile.base_cv_text ?? "", sponsorshipRequired });
+      const applicantPosition = profile.work_authorisation_category === "eu_eea_swiss_citizen" ? "eu-eea-swiss-citizen" : profile.work_authorisation_category === "existing_permission" ? "existing-country-permission" : sponsorshipRequired ? "sponsorship-required" : "unsure";
+      const existingMobility = loadMobilityProfile(localStorage, userId);
+      if (existingMobility.source !== "saved") {
+        saveMobilityProfile(localStorage, userId, {
+          schemaVersion: 1,
+          currentCountry: profile.country_current ?? "",
+          targetCountries: profile.countries_target?.length ? profile.countries_target : ["Ireland"],
+          applicantPosition,
+          sponsorshipRequired: sponsorshipRequired ? "yes" : profile.work_authorisation_category ? "no" : "unsure",
+          relocationPreference: "depends",
+        });
+      }
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [userId]);
   const updateJob = (nextJob: JobRecord) =>
     onChange({
       ...state,
       jobs: state.jobs.map((item) => (item.id === job.id ? nextJob : item)),
     });
   const analyse = () => {
-    const evidence = legacyEvidence(userId);
+    const evidence = cloudEvidence ?? legacyEvidence(userId);
     const mobilityProfile = loadMobilityProfile(localStorage, userId).profile;
     const sponsorshipRequired =
       mobilityProfile.sponsorshipRequired === "unsure"
@@ -976,6 +1000,8 @@ function ApplicationsList({
   onOpen: (id: string) => void;
 }) {
   const [filter, setFilter] = useState("all");
+  const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
+  const reviewQueue = getApplicationReviewQueue(state);
   const stages: Array<"all" | ApplicationWorkspaceStatus> = [
     "all",
     "Preparing",
@@ -1001,6 +1027,21 @@ function ApplicationsList({
         <a className="button-secondary" href="/dashboard/cv-tailor">Tailor CV</a>
         <a className="button-secondary" href="/dashboard/follow-ups">Recruiter outreach</a>
       </div>
+      {reviewQueue.length ? (
+        <section className="workflow-section" aria-labelledby="review-queue-title">
+          <h2 id="review-queue-title">Ready for final review</h2>
+          <p>Select up to 20 prepared applications. AutoTime opens them for individual review; it never submits or marks them Applied automatically.</p>
+          <ul className="workflow-list">
+            {reviewQueue.map(({ application, job }) => (
+              <li className="workflow-list-row" key={application.id}>
+                <label><input type="checkbox" checked={selectedForReview.includes(application.id)} disabled={!selectedForReview.includes(application.id) && selectedForReview.length >= 20} onChange={(event) => setSelectedForReview((current) => event.target.checked ? [...current, application.id] : current.filter((id) => id !== application.id))} /> {job.title.value} · {job.employer.value}</label>
+                <button type="button" className="button-secondary" onClick={() => onOpen(application.id)}>Review application</button>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="button-primary" disabled={!selectedForReview.length} onClick={() => onOpen(selectedForReview[0])}>Open next selected ({selectedForReview.length})</button>
+        </section>
+      ) : null}
       <section
         className="phase-three-stage-filters"
         aria-label="Application stage filters"
