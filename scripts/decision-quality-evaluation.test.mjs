@@ -343,10 +343,20 @@ const cases = [
       "8 years of backend engineering experience delivering distributed systems.",
     expected: "Apply",
   },
+  {
+    id: "DQ-032",
+    name: "spelled-out years match is treated the same as digit years",
+    description: complete(
+      "Required five years of backend engineering experience.",
+    ),
+    evidence:
+      "Eight years of backend engineering experience delivering distributed systems.",
+    expected: "Apply",
+  },
 ];
 
-assert.equal(cases.length, 31, "The decision-quality benchmark must contain exactly 31 cases.");
-assert.equal(new Set(cases.map((item) => item.id)).size, 31, "Every benchmark case needs a unique ID.");
+assert.equal(cases.length, 32, "The decision-quality benchmark must contain exactly 32 cases.");
+assert.equal(new Set(cases.map((item) => item.id)).size, 32, "Every benchmark case needs a unique ID.");
 
 let failed = 0;
 

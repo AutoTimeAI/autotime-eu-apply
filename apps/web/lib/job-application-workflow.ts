@@ -246,7 +246,10 @@ export function extractJob(input: {
   );
   const experience = firstMatch(
     description,
-    /\b\d+\+?\s*years?\b[^.\n]{0,40}?\bexperience\b/i,
+    new RegExp(
+      `\\b${yearsNumberAlternation}\\+?\\s*years?\\b[^.\\n]{0,40}?\\bexperience\\b`,
+      "i",
+    ),
   );
   const education = firstMatch(
     description,
@@ -286,9 +289,36 @@ export function extractJob(input: {
 
 const tokens = (value: string) =>
   new Set(value.toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g) ?? []);
-const yearsPattern = /(\d+)\+?\s*(?:years?|yrs?)\b/gi;
+// Vacancies and CVs sometimes spell out small numbers ("five years of
+// backend experience") instead of using digits - matched here so years-of-
+// experience requirements aren't silently missed just because of phrasing.
+const spelledYearNumbers: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+};
+const yearsNumberAlternation = `(?:\\d+|${Object.keys(spelledYearNumbers).join("|")})`;
+const yearsPattern = new RegExp(
+  `(${yearsNumberAlternation})\\+?\\s*(?:years?|yrs?)\\b`,
+  "gi",
+);
 const allYearsMentioned = (value: string): number[] =>
-  [...value.matchAll(yearsPattern)].map((match) => Number(match[1]));
+  [...value.matchAll(yearsPattern)].map((match) => {
+    const raw = match[1].toLowerCase();
+    return /^\d+$/.test(raw) ? Number(raw) : spelledYearNumbers[raw];
+  });
 const maxYearsMentioned = (value: string): number | null => {
   const years = allYearsMentioned(value);
   return years.length ? Math.max(...years) : null;
