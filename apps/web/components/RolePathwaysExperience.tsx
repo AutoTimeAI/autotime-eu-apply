@@ -92,6 +92,16 @@ export function RolePathwaysExperience() {
   const [primary, setPrimary] = useState("");
   const [secondary, setSecondary] = useState<string[]>([]);
   const [explorer, setExplorer] = useState("");
+  // Tracks the exact lane selection last successfully saved, so the "Save
+  // career lanes" button can tell an already-saved selection apart from
+  // one with real unsaved changes - previously it stayed enabled after a
+  // successful save with no visual difference, leaving it unclear whether
+  // anything still needed saving.
+  const [savedSelection, setSavedSelection] = useState<{
+    primary: string;
+    secondary: string[];
+    explorer: string;
+  } | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -134,6 +144,11 @@ export function RolePathwaysExperience() {
       setPrimary(saved.primary);
       setSecondary(saved.secondary);
       setExplorer(saved.explorer ?? "");
+      setSavedSelection({
+        primary: saved.primary,
+        secondary: saved.secondary,
+        explorer: saved.explorer ?? "",
+      });
     }
     // Extracted/confirmed evidence, recommendations, the selected role and
     // the current stage previously had no persistence at all, so leaving
@@ -289,6 +304,7 @@ export function RolePathwaysExperience() {
         savedAt: new Date().toISOString(),
       });
       saveLaneSelection(localStorage, userId, value);
+      setSavedSelection({ primary, secondary, explorer });
       setStatus(
         "Career lanes saved for this authenticated account in this browser.",
       );
@@ -298,6 +314,12 @@ export function RolePathwaysExperience() {
       );
     }
   };
+  const hasUnsavedLaneChanges =
+    !savedSelection ||
+    savedSelection.primary !== primary ||
+    savedSelection.explorer !== explorer ||
+    savedSelection.secondary.length !== secondary.length ||
+    savedSelection.secondary.some((item, index) => item !== secondary[index]);
   const cards = (items: RoleRecommendation[]) =>
     items.map((item) => (
       <button
@@ -855,8 +877,14 @@ export function RolePathwaysExperience() {
             </label>
           </div>
           <div className="pathway-actions">
-            <button disabled={!primary} onClick={save} type="button">
-              Save career lanes
+            <button
+              disabled={!primary || !hasUnsavedLaneChanges}
+              onClick={save}
+              type="button"
+            >
+              {primary && !hasUnsavedLaneChanges
+                ? "Career lanes saved"
+                : "Save career lanes"}
             </button>
           </div>
         </section>
