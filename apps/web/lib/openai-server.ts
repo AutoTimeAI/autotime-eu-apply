@@ -250,6 +250,15 @@ function getOpenAIClient(): OpenAI {
   return openAIClient
 }
 
+/**
+ * Test-only seam: overrides the cached client so eval/unit tests can inject
+ * a mock without touching any call site's signature or default behaviour.
+ * Never called outside test code - see scripts/ai-quality-evaluation.test.mjs.
+ */
+export function __setOpenAIClientForTesting(client: OpenAI | null): void {
+  openAIClient = client
+}
+
 export async function assertAiRouteRateLimit(
   rateLimitKey: string,
 ): Promise<void> {
