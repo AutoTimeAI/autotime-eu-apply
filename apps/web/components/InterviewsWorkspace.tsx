@@ -1165,7 +1165,6 @@ function InterviewPractice({
           Previous
         </button>
         <button
-          className="button-primary"
           disabled={index === interview.questions.length - 1}
           onClick={() => setIndex((value) => value + 1)}
         >
