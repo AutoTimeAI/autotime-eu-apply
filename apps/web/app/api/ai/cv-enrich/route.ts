@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 const schema = z.discriminatedUnion("source", [
   z.object({ source: z.literal("linkedin_text"), content: z.string().trim().min(80).max(50_000) }),
   z.object({ source: z.literal("portfolio"), url: z.string().url().max(2_000) }),
+  z.object({ source: z.literal("profile_cv"), content: z.string().trim().min(80).max(50_000) }),
 ]);
 
 export async function POST(request: NextRequest) {
@@ -18,7 +19,12 @@ export async function POST(request: NextRequest) {
     const body = schema.parse(await request.json());
     await assertAiRouteRateLimit(user.id);
     await assertCanUseAi(user.id);
-    const source = body.source === "portfolio" ? await fetchPortfolioText(body.url) : { text: body.content, url: "LinkedIn pasted text" };
+    const source =
+      body.source === "portfolio"
+        ? await fetchPortfolioText(body.url)
+        : body.source === "profile_cv"
+          ? { text: body.content, url: "Profile CV" }
+          : { text: body.content, url: "LinkedIn pasted text" };
     const result = await extractCvEnrichmentWithOpenAI({ content: source.text, sourceLabel: source.url });
     await trackAiCall(user.id, { feature: `cv-enrichment-${body.source}`, model: result.model, promptTokens: result.promptTokens, completionTokens: result.completionTokens, costUsd: result.costUsd });
     return NextResponse.json({ data: { ...result.value, sourceLabel: source.url, notes: ["AI-extracted suggestion. Verify every claim before applying it to your CV."] }, error: null });
