@@ -10,6 +10,7 @@ import {
   isRestrictedJobUrl,
   transitionApplication,
 } from "../apps/web/lib/job-application-workflow.ts";
+import { createInterview } from "../apps/web/lib/interview-workflow.ts";
 
 const strongVacancy = `Job title: Backend Engineer
 Company: Example Payments
@@ -133,6 +134,35 @@ assert.ok(application.appliedAt);
 assert.equal(application.submissionConfirmed, true);
 assert.equal(application.coverLetterRequested, false);
 assert.equal(application.documentVersions.length, 0);
+
+// Completes the happy-path fixture QA asked for (issue #56): a real
+// vacancy, analysed for real by analyseJob (not hand-crafted with
+// decision/status set directly, the way phase-3c-interviews.test.mjs's
+// fixtures do), all the way through Job -> Apply -> Application -> Ready ->
+// Applied -> Interview. Nothing previously proved this full journey
+// actually connects end to end with real analysis output.
+const interview = createInterview({
+  userId: "33333333-3333-4333-8333-333333333333",
+  application,
+  job,
+  stage: "recruiter_screen",
+  format: "video",
+});
+assert.equal(interview.applicationId, application.id);
+assert.equal(interview.jobId, job.id);
+assert.equal(interview.status, "preparing");
+assert.ok(interview.questions.length > 0);
+assert.throws(
+  () =>
+    createInterview({
+      userId: "33333333-3333-4333-8333-333333333333",
+      application: { ...application, status: "Preparing" },
+      job,
+      stage: "recruiter_screen",
+      format: "video",
+    }),
+  /Applied or Interview/,
+);
 
 const blocked = {
   ...createApplication(job),
