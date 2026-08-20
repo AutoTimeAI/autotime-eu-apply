@@ -229,6 +229,16 @@ locally after reviewing.
 
 Documented honestly rather than silently glossed over:
 
+- **One accepted dependency-review exception**: GHSA-jmr9-qjv8-65gv
+  (`extract-zip` symlink path traversal, high severity), transitive via
+  `@lhci/cli` -> `lighthouse` -> `puppeteer-core` -> `@puppeteer/browsers`.
+  No patched `extract-zip` release exists upstream (2.0.1 is latest). Used
+  only to unpack pinned Chrome-for-Testing binaries from Google's own CDN
+  during local/CI Lighthouse runs - never untrusted/user-supplied zip
+  content - so allow-listed in `dependency-review.yml` with that
+  justification recorded in the workflow itself, not silently ignored.
+  Revisit if extract-zip ships a fix, or if `@lhci/cli` drops the
+  puppeteer-core dependency.
 - **No active AI-side prompt-injection defence.** `openai-server.ts`
   structurally separates user content (the `input` field) from system
   instructions (the `instructions` field) when calling the OpenAI Responses
