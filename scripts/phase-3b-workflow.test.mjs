@@ -31,6 +31,20 @@ assert.equal(job.title.state, "extracted");
 assert.equal(job.facts.salary.sourceText, "€75,000 - €90,000");
 assert.equal(job.facts.country.value, "Ireland");
 assert.equal(job.facts.education.state, "missing");
+
+const spelledYearsVacancy = `Job title: Backend Engineer
+Company: Example Payments
+Location: Dublin, Ireland
+Hybrid permanent role. Salary €75,000 - €90,000.
+Required five years of backend engineering experience.
+Essential experience building PostgreSQL services and secure APIs.
+English required.`;
+const spelledYearsJob = extractJob({ description: spelledYearsVacancy });
+assert.match(
+  spelledYearsJob.facts.experience.value,
+  /five years/i,
+  "facts.experience must extract spelled-out years-of-experience wording, not just digits",
+);
 assert.throws(() => extractJob({ description: "short" }), /80/);
 assert.throws(() => extractJob({ description: "x".repeat(50_001) }), /50,000/);
 assert.equal(

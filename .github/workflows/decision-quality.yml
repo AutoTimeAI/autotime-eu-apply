@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   evaluate:
-    name: Run 31-case decision benchmark
+    name: Run 32-case decision benchmark
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
