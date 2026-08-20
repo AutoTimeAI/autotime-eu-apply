@@ -1,0 +1,49 @@
+name: ZAP baseline scan
+
+# Passive/baseline scan only - never an active/attacking scan - against the
+# real production deployment. Runs on a low-frequency schedule plus manual
+# dispatch, never on every PR (too slow, and no reason to scan production
+# for every code change that hasn't deployed yet).
+
+on:
+  schedule:
+    - cron: "31 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zap-baseline
+  cancel-in-progress: false
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "https://autotime-eu-apply.vercel.app"
+          # Baseline is passive-only by design (no attack rules run) - this
+          # repeats that explicitly rather than relying on the action's
+          # default, and keeps report artifacts even when findings exist.
+          cmd_options: "-a"
+          fail_action: false
+          artifact_name: zap-baseline-report
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: |
+            report_html.html
+            report_json.json
+            report_md.md
+          retention-days: 14
+          if-no-files-found: ignore
