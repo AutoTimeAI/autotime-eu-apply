@@ -599,9 +599,9 @@ function InterviewList({
         />
       )}
       <p className="workflow-storage-note phase-four-storage-note">
-        Development storage: interview records are isolated to this signed-in
-        user in this browser and are not durable cross-device production
-        records.
+        {sync.state === "server-disabled" || sync.state === "loading"
+          ? "Interview records are saved to this browser only and are not yet durable across devices."
+          : "Interview records sync to your account and also remain available in this browser if you're offline."}
       </p>
     </main>
   );
