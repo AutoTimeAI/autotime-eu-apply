@@ -88,7 +88,6 @@ test("login page sign-in buttons are green-free with a single primary action", a
   await page.mouse.move(0, 0);
   await capture(page, "login-1440x900.png");
   await forbiddenGreen(".auth-shell")(page);
-  await expectNoSeriousViolations(page);
 
   const githubButton = page.getByRole("button", { name: "Sign in with GitHub" });
   const googleButton = page.getByRole("button", { name: "Sign in with Google" });
@@ -104,6 +103,7 @@ test("login page sign-in buttons are green-free with a single primary action", a
   await page.setViewportSize({ width: 390, height: 844 });
   await capture(page, "login-390x844.png");
   await forbiddenGreen(".auth-shell")(page);
+  await expectNoSeriousViolations(page);
 });
 
 test("shared brand name and PRO badge use blue everywhere, not the sitewide teal/green default", async ({

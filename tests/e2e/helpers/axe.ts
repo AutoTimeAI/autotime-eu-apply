@@ -1,5 +1,33 @@
 import AxeBuilder from "@axe-core/playwright"
-import { expect, type Page } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+import { mkdir, writeFile } from "node:fs/promises"
+import path from "node:path"
+
+let reportDirReady: Promise<unknown> | null = null
+
+function sanitize(value: string): string {
+  return value.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 120)
+}
+
+async function writeAxeReport(page: Page, results: Awaited<ReturnType<AxeBuilder["analyze"]>>) {
+  reportDirReady ??= mkdir("axe-report", { recursive: true })
+  await reportDirReady
+
+  const testInfo = test.info()
+  const fileName = `${sanitize(testInfo.titlePath.join("-"))}-${sanitize(page.url())}.json`
+  await writeFile(
+    path.join("axe-report", fileName),
+    JSON.stringify(
+      {
+        url: page.url(),
+        test: testInfo.titlePath.join(" > "),
+        violations: results.violations
+      },
+      null,
+      2
+    )
+  )
+}
 
 export type AxeCheckOptions = {
   /** Restrict the scan to a CSS selector instead of the full page. */
@@ -23,6 +51,8 @@ export async function expectNoSeriousViolations(
   if (options.disableRules?.length) builder = builder.disableRules(options.disableRules)
 
   const results = await builder.analyze()
+  await writeAxeReport(page, results)
+
   const blocking = results.violations.filter(
     (violation) => violation.impact === "serious" || violation.impact === "critical"
   )

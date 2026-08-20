@@ -1,0 +1,55 @@
+name: Production Playwright smoke
+
+# Runs the authenticated production journeys (tests/e2e/production/)
+# against the real deployed app. Requires the QA_SESSION_URL secret -
+# every authenticated spec skips (not fails) when it's absent, so this
+# workflow degrades gracefully on forks or if the secret is ever removed.
+
+on:
+  schedule:
+    - cron: "43 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-smoke
+  cancel-in-progress: false
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run production Playwright smoke suite
+        run: pnpm test:e2e:production
+        env:
+          PLAYWRIGHT_BASE_URL: https://autotime-eu-apply.vercel.app
+          QA_SESSION_URL: ${{ secrets.QA_SESSION_URL }}
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-report
+          path: playwright-report/
+          retention-days: 14

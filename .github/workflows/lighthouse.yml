@@ -1,0 +1,81 @@
+name: Lighthouse
+
+on:
+  schedule:
+    - cron: "9 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lighthouse
+  cancel-in-progress: false
+
+env:
+  NEXT_PUBLIC_AUTOTIME_ENV: preview
+  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: offline-ci-anon-key
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_offline_ci
+  NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+  SUPABASE_SERVICE_ROLE_KEY: offline-ci-service-role-key
+  OPENAI_API_KEY: offline-ci-openai-key
+  STRIPE_SECRET_KEY: sk_test_offline_ci
+  STRIPE_WEBHOOK_SECRET: whsec_offline_ci
+  STRIPE_PRO_MONTHLY_PRICE_ID: price_offline_ci_monthly
+  STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
+  RESEND_API_KEY: re_offline_ci
+
+jobs:
+  public-pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lighthouse CI (public pages)
+        run: pnpm test:lighthouse
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-public-report
+          path: lighthouse-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  authenticated-dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lighthouse (authenticated /dashboard, best-effort)
+        run: pnpm test:lighthouse:dashboard
+        env:
+          QA_SESSION_URL: ${{ secrets.QA_SESSION_URL }}
