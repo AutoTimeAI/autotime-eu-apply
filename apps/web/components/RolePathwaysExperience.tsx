@@ -105,6 +105,30 @@ export function RolePathwaysExperience() {
   }, [stage]);
   useEffect(() => {
     setCandidateText(savedCandidateText(userId));
+    // The legacy local blob above is a fallback only - the canonical CV
+    // lives in the profiles table (base_cv_text), the same source
+    // /dashboard/profile reads from. A CV seeded directly there (rather
+    // than through the old DashboardExperience local wizard) would
+    // otherwise never populate this field.
+    void fetch("/api/profile/onboarding")
+      .then(async (response) => ({ response, payload: await response.json() }))
+      .then(({ response, payload }) => {
+        if (!response.ok || !payload.data) return;
+        const profile = payload.data as {
+          base_cv_text?: string | null;
+          experience_highlights?: string | null;
+          project_summaries?: string | null;
+        };
+        const canonicalText = [
+          profile.base_cv_text,
+          profile.experience_highlights,
+          profile.project_summaries,
+        ]
+          .filter((item): item is string => Boolean(item))
+          .join("\n\n");
+        if (canonicalText) setCandidateText(canonicalText);
+      })
+      .catch(() => undefined);
     const saved = loadLaneSelection(localStorage, userId);
     if (saved) {
       setPrimary(saved.primary);

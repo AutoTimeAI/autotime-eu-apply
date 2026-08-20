@@ -24,7 +24,7 @@ const patchSchema = z.object({
   }
 });
 
-const select = "full_name,email,phone,photo_url,country_current,countries_target,current_country,target_countries,linkedin_url,github_url,portfolio_url,target_roles,work_authorisation_category,work_right_details,base_cv_text,onboarding_step,onboarding_completed_at,alert_frequency,alert_last_sent_at";
+const select = "full_name,email,phone,photo_url,country_current,countries_target,current_country,target_countries,linkedin_url,github_url,portfolio_url,target_roles,work_authorisation_category,work_right_details,base_cv_text,experience_highlights,project_summaries,onboarding_step,onboarding_completed_at,alert_frequency,alert_last_sent_at";
 export async function GET(request: NextRequest) {
   const { user } = await getRequestUser(request); if (!user) return NextResponse.json({ data:null,error:"Unauthorised" },{status:401});
   const client=createAdminClient(); const {data,error}=await client.from("profiles").select(select).eq("user_id",user.id).maybeSingle();
