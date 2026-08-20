@@ -291,14 +291,10 @@ test("Skip is explained and legacy routes resolve without loops", async ({
     fullPage: true,
     path: `${screenshotDir}/skip-analysis-1440.png`,
   });
-  for (const route of [
-    "match-score",
-    "inbox",
-    "cv-tailor",
-    "application-answers",
-    "documents",
-    "follow-ups",
-  ]) {
+  // cv-tailor and follow-ups were legacy redirect stubs when this list was
+  // written, but are now real pages (CVWorkspace, OutreachWorkspace) -
+  // excluded here since they no longer redirect anywhere.
+  for (const route of ["match-score", "inbox", "application-answers", "documents"]) {
     await page.goto(`/dashboard/${route}`, { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(new RegExp(`/dashboard/(jobs|applications)$`));
   }
