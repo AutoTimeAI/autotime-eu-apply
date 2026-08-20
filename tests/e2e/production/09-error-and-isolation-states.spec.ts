@@ -3,9 +3,15 @@ import { bootstrapQaSession, getProductionOrigin, gotoProduction } from "./helpe
 
 // API error, empty, loading and unavailable states; and the safely
 // testable slice of user-data isolation (this repo has exactly one QA
-// account, so this checks unauthenticated/unauthorized rejection rather
-// than fabricating a second account - see docs/quality-assurance.md).
-// Against real production.
+// account, so this checks unauthenticated rejection rather than
+// fabricating a second account - see docs/quality-assurance.md).
+// Against real production. Every request in this file is a GET - this
+// suite runs on a schedule (production-smoke.yml) and must stay strictly
+// read-only. A write-method isolation probe (DELETE with a tampered
+// application id, confirming RLS rejects it rather than 500ing or
+// silently succeeding) was deliberately removed from here for that
+// reason; that kind of check belongs in the local-fixture suite against
+// mocked data, or a dedicated non-production environment, not real prod.
 
 test.describe("data isolation", () => {
   test("an unauthenticated request to a protected sync endpoint is rejected", async ({
@@ -15,20 +21,6 @@ test.describe("data isolation", () => {
       new URL("/api/sync/dashboard", getProductionOrigin()).toString()
     )
     expect(response.status()).toBe(401)
-  })
-
-  test("an authenticated request with a tampered application id is rejected, not leaked", async ({
-    page
-  }) => {
-    await bootstrapQaSession(page)
-    const response = await page.request.delete(
-      new URL("/api/sync/dashboard", getProductionOrigin()).toString(),
-      { data: { applicationId: "00000000-0000-0000-0000-000000000000" } }
-    )
-    // RLS scopes every delete to the caller's own user_id - a made-up id
-    // belonging to no one (or someone else) must not 500 or report success
-    // for a row it never touched.
-    expect(response.status()).toBeLessThan(500)
   })
 })
 
