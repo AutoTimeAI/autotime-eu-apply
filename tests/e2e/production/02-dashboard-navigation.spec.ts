@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { expectNoSeriousViolations } from "../helpers/axe"
 import { bootstrapQaSession } from "./helpers"
 
 // Dashboard navigation, plus mobile and desktop layouts, against real
@@ -27,6 +28,7 @@ test.describe("desktop layout", () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true)
+    await expectNoSeriousViolations(page, { include: "main.home-experience" })
   })
 
   test("clicking Jobs, Applications and Interviews navigates to each workflow page", async ({

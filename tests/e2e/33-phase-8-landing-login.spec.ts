@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
+import { expectNoSeriousViolations } from "./helpers/axe";
 
 const output = "screenshots/phase-8-landing-login/review";
 
@@ -87,6 +88,7 @@ test("login page sign-in buttons are green-free with a single primary action", a
   await page.mouse.move(0, 0);
   await capture(page, "login-1440x900.png");
   await forbiddenGreen(".auth-shell")(page);
+  await expectNoSeriousViolations(page);
 
   const githubButton = page.getByRole("button", { name: "Sign in with GitHub" });
   const googleButton = page.getByRole("button", { name: "Sign in with Google" });

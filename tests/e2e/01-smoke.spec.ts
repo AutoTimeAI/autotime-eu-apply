@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { expectNoSeriousViolations } from "./helpers/axe"
 
 test("homepage loads and shows the main CTA", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" })
@@ -10,4 +11,5 @@ test("homepage loads and shows the main CTA", async ({ page }) => {
   await expect(
     page.getByRole("link", { name: /Start free|Open dashboard/ })
   ).toBeVisible()
+  await expectNoSeriousViolations(page)
 })

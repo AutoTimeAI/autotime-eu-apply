@@ -71,6 +71,7 @@
     "next": "^16.2.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.60.0",
     "@supabase/supabase-js": "^2.105.3",
     "eslint": "9.38.0",

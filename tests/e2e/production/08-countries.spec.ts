@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { expectNoSeriousViolations } from "../helpers/axe"
 import { bootstrapQaSession, gotoProduction } from "./helpers"
 
 // Countries / International module, including the three fully-supported
@@ -16,6 +17,7 @@ test("International applications overview renders", async ({ page }) => {
     page.getByRole("heading", { name: "International applications" })
   ).toBeVisible()
   await expect(page.locator("main.phase-five-countries")).toBeVisible()
+  await expectNoSeriousViolations(page, { include: "main.phase-five-countries" })
 })
 
 for (const country of ["Ireland", "Germany", "Netherlands"]) {

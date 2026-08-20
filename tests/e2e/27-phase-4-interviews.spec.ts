@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expectNoSeriousViolations } from "./helpers/axe";
 import { mkdir } from "node:fs/promises";
 
 const userId = "00000000-0000-4000-8000-000000000001";
@@ -385,6 +386,9 @@ test("detail is responsive at required intermediate viewports", async ({
   await capture(page, "detail-768x1024.png");
   await page.setViewportSize({ width: 360, height: 800 });
   await assertVisualContract(page);
+  await expectNoSeriousViolations(page, {
+    include: "main.phase-four-interview-detail",
+  });
 });
 
 test("shared tab standard: single underline, no pills or fills", async ({
