@@ -13,7 +13,9 @@ import {
 import { useDashboardPlan } from "./UserNav";
 import {
   loadLaneSelection,
+  loadRolePathwaysProgress,
   saveLaneSelection,
+  saveRolePathwaysProgress,
 } from "../lib/role-pathways-storage";
 import { loadMobilityProfile } from "../lib/international-mobility-storage";
 
@@ -93,6 +95,7 @@ export function RolePathwaysExperience() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const activeStepRef = useRef<HTMLLIElement>(null);
   useEffect(() => {
     activeStepRef.current?.scrollIntoView({
@@ -108,6 +111,22 @@ export function RolePathwaysExperience() {
       setSecondary(saved.secondary);
       setExplorer(saved.explorer ?? "");
     }
+    // Extracted/confirmed evidence, recommendations, the selected role and
+    // the current stage previously had no persistence at all, so leaving
+    // and returning to this page always reset to Stage 1 with everything
+    // empty - see issue #52. Only trust a saved snapshot from the same
+    // ESCO catalogue version, matching loadLaneSelection's own guard.
+    const progress = loadRolePathwaysProgress(localStorage, userId);
+    if (progress && progress.catalogueVersion === ESCO_CACHE_VERSION) {
+      setCandidateText(progress.candidateText);
+      setStage(progress.stage);
+      setEvidence(progress.evidence);
+      setRecommendations(progress.recommendations as unknown as RoleRecommendation[]);
+      setSelectedRole(
+        progress.selectedRole as unknown as RoleRecommendation | null,
+      );
+    }
+    setHydrated(true);
     const mobility = loadMobilityProfile(localStorage, userId).profile;
     const supportedCountries = mobility.targetCountries.filter(
       (country): country is RolePreferences["countries"][number] =>
@@ -123,6 +142,37 @@ export function RolePathwaysExperience() {
       supportRequired: mobility.sponsorshipRequired,
     }));
   }, [userId]);
+  // Persists whenever any of the pieces that used to be lost on navigation
+  // change, rather than at each individual mutation call site - fewer
+  // places to remember to update, and it can't drift out of sync with a
+  // handler that forgets to save. Gated on `hydrated` so this doesn't fire
+  // with the pre-restore empty defaults before the mount effect above has
+  // had a chance to load any existing progress.
+  useEffect(() => {
+    if (!hydrated || !userId) return;
+    try {
+      saveRolePathwaysProgress(localStorage, userId, {
+        schemaVersion: ROLE_PATHWAYS_SCHEMA_VERSION,
+        catalogueVersion: ESCO_CACHE_VERSION,
+        userId,
+        stage,
+        candidateText,
+        evidence,
+        recommendations: recommendations as unknown as Record<
+          string,
+          unknown
+        >[],
+        selectedRole: selectedRole as unknown as Record<
+          string,
+          unknown
+        > | null,
+        savedAt: new Date().toISOString(),
+      });
+    } catch {
+      // Best-effort persistence - a transient parse failure just means this
+      // particular change isn't saved; the next mutation will retry.
+    }
+  }, [hydrated, userId, stage, candidateText, evidence, recommendations, selectedRole]);
   const generate = async () => {
     setBusy(true);
     setStatus("");

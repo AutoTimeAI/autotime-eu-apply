@@ -647,3 +647,34 @@ export const laneSelectionSchema = z
       });
   });
 export type LaneSelection = z.infer<typeof laneSelectionSchema>;
+
+// Persists in-progress Career Direction state (extracted/confirmed
+// competency evidence, generated recommendations, the selected role, and
+// the current stage) across navigation - previously only the final
+// {primary, secondary, explorer} lane selection was ever saved, so leaving
+// and returning to the page always reset stage/evidence/recommendations to
+// empty even when a lane had already been saved.
+//
+// `recommendations`/`selectedRole` are validated loosely (object shape
+// only, not every RoleRecommendation/EscoOccupation field) rather than with
+// a full strict mirror of those TS types - this is a same-browser,
+// same-app round trip of data the app itself just computed, not a wire
+// contract with another system, so a lighter check that still guards
+// against corrupt/malformed localStorage is proportionate. Callers should
+// treat the parsed `recommendations`/`selectedRole` as RoleRecommendation[]
+// / RoleRecommendation | null after validation.
+const looseRoleRecommendationSchema = z.record(z.string(), z.unknown());
+export const rolePathwaysProgressSchema = z
+  .object({
+    schemaVersion: z.literal(ROLE_PATHWAYS_SCHEMA_VERSION),
+    catalogueVersion: z.string().min(1),
+    userId: z.string().trim().min(1),
+    stage: z.number().int().min(1).max(5),
+    candidateText: z.string(),
+    evidence: z.array(competencyEvidenceSchema),
+    recommendations: z.array(looseRoleRecommendationSchema),
+    selectedRole: looseRoleRecommendationSchema.nullable(),
+    savedAt: z.string().datetime(),
+  })
+  .strict();
+export type RolePathwaysProgress = z.infer<typeof rolePathwaysProgressSchema>;
