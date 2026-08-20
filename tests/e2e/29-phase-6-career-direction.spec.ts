@@ -162,11 +162,23 @@ test("stepper active state uses shared blue, not the site teal default", async (
   await gotoRolePathways(page);
   const activeStep = page.locator(".pathway-steps li.active button");
   await expect(activeStep).toHaveCSS("border-color", "rgb(23, 78, 166)");
+  // The button is disabled (and styled accordingly) until there is CV
+  // evidence to extract from - fill it first, matching the setup every
+  // other test in this file uses before interacting with this button.
+  await page
+    .getByRole("textbox", { name: "CV, project and experience evidence" })
+    .fill(backendEvidence);
   const extractButton = page.getByRole("button", {
     name: "Extract evidence",
     exact: true,
   });
-  await expect(extractButton).toHaveCSS("background-color", "rgb(23, 78, 166)");
+  // Buttons use `background: linear-gradient(...)`, which browsers report
+  // via `background-image`, not `background-color` (that stays transparent
+  // regardless of the gradient) - checking background-color here could
+  // never pass. border-color is the property that actually differs between
+  // enabled (var(--accent), the same shared blue checked above) and
+  // disabled (light grey) states.
+  await expect(extractButton).toHaveCSS("border-color", "rgb(23, 78, 166)");
 });
 
 test("active step scrolls into view on mobile when advancing stages", async ({
