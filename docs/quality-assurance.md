@@ -18,6 +18,7 @@ what you find in the repo, trust the repo and treat this doc as stale.
 - [Updating visual regression baselines](#updating-visual-regression-baselines)
 - [Running ZAP and k6 safely](#running-zap-and-k6-safely)
 - [Privacy and data-cleanup requirements](#privacy-and-data-cleanup-requirements)
+- [Pre-release validation - 2026-08-21](#pre-release-validation---2026-08-21)
 - [Known gaps](#known-gaps)
 
 ## What each tool validates
@@ -225,6 +226,69 @@ locally after reviewing.
   `example.test` domains) and reset via `scripts/create-qa-test-account.mjs`
   if you need the QA account back to its known baseline.
 
+## Pre-release validation - 2026-08-21
+
+A dated record of an end-to-end validation pass against **real production**
+(not fixtures, not mocks) - every claim below is backed by a merged PR, a
+GitHub Actions run, or a direct read of the affected code, not assumed from
+a green checkmark that was never actually exercised.
+
+### Confirmed working against real production
+
+- **`production-smoke.yml`** (authenticated Playwright journeys against the
+  live deployment): 23 passed, 4 skipped (no data yet seeded for those
+  journeys), 0 failed. Was blocked entirely by a `QA_SESSION_URL` secret
+  mismatch before this pass; root-caused and fixed.
+- **`Daily job ingestion`**: manually triggered end-to-end - 14 real jobs
+  synced from 3 ATS companies. EURES sync gracefully reports itself
+  disabled (no partner API account configured yet; not a defect - the
+  function is designed to degrade this way).
+- **`ZAP baseline scan`**: completes cleanly - 0 fail-new findings, 11
+  informational warnings (cache-control advisories, `Sec-Fetch-*` headers
+  browsers already send, base64 in public JS bundles). Three real,
+  low-risk gaps (`X-Powered-By` leak, missing
+  `Cross-Origin-Opener-Policy`/`Cross-Origin-Resource-Policy`) fixed and
+  independently re-confirmed absent in a follow-up scan.
+- **`Platform coverage evidence`**: confirmed producing a real
+  evidence-refresh diff and pushing it for review.
+
+### Defects found and fixed this pass
+
+| # | What | Where |
+|---|---|---|
+| #84/#85 | Duplicated "Limited coverage" copy on unsupported-country pages (`european-explorer.ts`); 8 test-authoring bugs in the new production spec suite (wrong link/button targets, timing races) | Production QA specs |
+| #86 | Real CSS defect: a blanket brand-backdrop z-index rule silently flattened the account dropdown's z-index to tie with page content, letting page-header buttons intercept clicks meant for the menu | `phase-1-brand.css` |
+| #87 | Sign-out redirect assertion didn't account for a query string on the redirect target | Test-only |
+| #88-#92 | Daily job ingestion: wrong auth header, missing `--no-verify-jwt` deploy, missing `apikey` header, and a workflow bug that failed the whole job whenever EURES was intentionally disabled | `job-ingestion.yml`, Supabase Edge Functions |
+| #93/#96 | ZAP workflow missing `issues: write`; an artifact-name collision between the scan action's own upload and an explicit one | `zap-baseline.yml` |
+| #94 | Platform-coverage workflow needed `pull-requests: write`, blocked by an organization-level policy neither the repo owner nor the assistant could grant - reworked to push a branch + compare link instead | `platform-coverage.yml` |
+| #98 | No active prompt-injection defense beyond the Responses API's own channel separation, despite a real attack surface (scraped job postings, arbitrary GitHub CV imports) | `openai-server.ts` |
+| #99 | `X-Powered-By` leak; missing `Cross-Origin-Opener-Policy`/`Cross-Origin-Resource-Policy` headers | `next.config.ts` |
+| #100 | **Real, quantifiable financial exposure**: every AI-backed route checked the caller's monthly allowance/credit balance with a plain read *before* the paid OpenAI call, and only recorded usage (atomically, via `consume_ai_credit`) *after* - so concurrent requests could all pass the check simultaneously and all reach OpenAI regardless of actual entitlement, up to 20/minute/user, repeatable indefinitely. Fixed with an atomic reserve-before-call pattern (`reserve_ai_call`/`confirm_ai_call`/`release_ai_call`) across all 12 AI routes | `feature-gate.ts`, new migration |
+
+### Verified, not just assumed
+
+- **Cross-user data isolation**: read every RLS policy on all 41 tables
+  (all correctly scoped to `auth.uid() = user_id`; the only `using (true)`
+  policies are on genuinely shared reference data), audited all 27 API
+  routes using the service-role client (none let a client-supplied user id
+  substitute for the authenticated session's own id), and personally
+  verified the two foundational pieces everything else depends on: session
+  verification re-validates tokens against Supabase on every call (not a
+  local JWT decode), and the test-auth bypass requires four independent
+  conditions including `VERCEL_ENV !== "production"`, a value Vercel sets
+  automatically and app code cannot misconfigure.
+- **Prompt-injection resistance**: the realistic attack surface (scraped
+  EURES/ATS job postings, arbitrary GitHub CV imports) now gets an active
+  instruction, on all 12 AI generation calls, to treat supplied content as
+  data only and disregard anything embedded in it that reads like a
+  command - on top of the pre-existing channel separation and strict
+  schema validation that already bounded a successful injection's impact.
+
+Everything above was independently re-run after its fix merged to confirm
+the fix actually worked in the live environment, not just that CI was
+green on the PR.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
@@ -250,17 +314,28 @@ Documented honestly rather than silently glossed over:
     `adm-zip`, `fast-uri`, `postcss`, `nanoid`, `js-yaml`, `esbuild`,
     `dompurify`, `@opentelemetry/core`, `@babel/core`, and `brace-expansion`)
     - not exceptions, real fixes, verified via full typecheck/build/test.
-- **No active AI-side prompt-injection defence.** `openai-server.ts`
-  structurally separates user content (the `input` field) from system
-  instructions (the `instructions` field) when calling the OpenAI Responses
-  API - `scripts/ai-quality-evaluation.test.mjs`'s AI-006 case verifies
-  this separation holds - but there is no output-side filtering if a
-  future prompt change ever merges the two. Revisit if the AI feature set
+- **AI-side prompt-injection defense is instruction-level, not
+  output-side.** As of #98, every AI generation call explicitly instructs
+  the model to treat supplied content (job descriptions, CVs, GitHub
+  imports) as data only and disregard embedded commands, on top of the
+  Responses API's own `input`/`instructions` channel separation
+  (`scripts/ai-quality-evaluation.test.mjs`'s AI-006 and AI-010 cases
+  verify both). There is still no output-side filtering if a future prompt
+  change ever merges the channels, and strict Zod schema validation on
+  every response is what actually bounds a successful injection's impact
+  (it can only manipulate fields the schema defines, never produce
+  arbitrary output or trigger actions). Revisit if the AI feature set
   changes materially.
-- **Single QA account limits true cross-user data-isolation testing.**
+- **Single QA account limits *dynamic* cross-user data-isolation testing.**
   `tests/e2e/production/09-error-and-isolation-states.spec.ts` verifies
   unauthenticated/unauthorized rejection, not genuine cross-account data
-  leakage, since there is only one QA account by design.
+  leakage with two live accounts, since there is only one QA account by
+  design. Mitigated by a full static audit (2026-08-21, see "Pre-release
+  validation" above) of every RLS policy and every service-role-bypassing
+  API route, which found no path where a client-supplied user id can
+  substitute for the authenticated session's own id - but a live
+  two-account test would still be the stronger guarantee if a second QA
+  account ever becomes available.
 - **Authenticated Lighthouse run is best-effort.** Real dashboard content
   varies with whatever's seeded on the QA account; the budget
   (`scripts/lighthouse-dashboard.mjs`) is deliberately softer than the
@@ -282,3 +357,14 @@ Documented honestly rather than silently glossed over:
 - **Checkly and ZAP active-scan tiers are not deployed/enabled.** Both are
   fully configured but require a human decision (and, for Checkly, an
   account) before going further than what's described here.
+- **CSP still allows `script-src`/`style-src` `'unsafe-inline'`, and there
+  is no `Cross-Origin-Embedder-Policy` header.** Both are real, deliberate
+  deferrals from #99, not oversights. Removing `unsafe-inline` needs a
+  nonce-based CSP threaded through middleware and every inline
+  script/style, including third-party embeds (Stripe, PostHog) - a real
+  refactor, not a header addition. Adding COEP would require every
+  cross-origin resource (Stripe.js, PostHog) to opt in via its own
+  CORP/CORS headers, which aren't under this app's control - real risk of
+  silently breaking checkout/analytics, for a scan warning with no
+  practical benefit here (no `SharedArrayBuffer`/cross-origin-isolation
+  need). Revisit only if either becomes a genuine requirement.
