@@ -12,6 +12,7 @@ import {
   configurationUnavailableMessage,
   isConfigurationUnavailableError,
 } from "../../../../lib/configuration-error";
+import { assertAiRouteRateLimit, RateLimitError } from "../../../../lib/openai-server";
 import {
   createRoleIntelligenceProvider,
   RoleIntelligenceUnavailableError,
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     const input = requestSchema.parse(await request.json());
+    await assertAiRouteRateLimit(user.id);
     const provider = createRoleIntelligenceProvider();
     const extracted = await provider.extractCandidateEvidence({
       text: input.candidateText,
@@ -70,6 +72,11 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { data: null, error: "Role Pathways input is invalid." },
         { status: 400 },
+      );
+    if (error instanceof RateLimitError)
+      return NextResponse.json(
+        { data: null, error: error.message },
+        { status: 429 },
       );
     const unavailable = error instanceof RoleIntelligenceUnavailableError;
     console.error("Role Pathways generation failed", {
