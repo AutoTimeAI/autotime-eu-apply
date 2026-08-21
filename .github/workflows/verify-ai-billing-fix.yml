@@ -1,0 +1,56 @@
+name: Verify AI billing reservation fix (manual, real cost)
+
+# Manual-dispatch only, NEVER scheduled and NOT part of production-smoke.
+# This makes one real, metered OpenAI call (a job analysis) through the QA
+# account to directly confirm the reserve_ai_call/confirm_ai_call RPC chain
+# (supabase/migrations/20260821160000_atomic_ai_call_reservation.sql) works
+# against the live database. Costs a small amount of real money each run -
+# only dispatch this when you specifically need to verify that fix, not as
+# a routine check. Never prints the QA session URL or any cookie value.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Bootstrap session and call /api/ai/analyse (status + body only)
+        env:
+          QA_SESSION_URL: ${{ secrets.QA_SESSION_URL }}
+        run: |
+          if [ -z "$QA_SESSION_URL" ]; then
+            echo "QA_SESSION_URL is not set."
+            exit 1
+          fi
+
+          origin=$(echo "$QA_SESSION_URL" | sed -E 's#(https?://[^/]+).*#\1#')
+          cookie_jar=$(mktemp)
+          curl -sS -c "$cookie_jar" -L "$QA_SESSION_URL" -o /dev/null
+
+          payload='{"jobAnalysis":{"jobTitle":"Backend Engineer","company":"Diagnostic Check Ltd","jobUrl":"https://example.test/diagnostic","location":"Remote, EU","workMode":"hybrid","jobDescription":"Diagnostic-only call made by verify-ai-billing-fix.yml to confirm the AI billing reservation RPC chain works end-to-end. Not a real vacancy - please disregard. Requires TypeScript, Node.js and PostgreSQL experience.","notes":""},"profile":null}'
+
+          response=$(curl -sS -b "$cookie_jar" -w "\n%{http_code}" -X POST \
+            -H "content-type: application/json" \
+            -d "$payload" \
+            "$origin/api/ai/analyse")
+          status=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "HTTP status: $status"
+          echo "Response body: $body"
+
+          if [ "$status" = "200" ]; then
+            echo "Reservation RPC chain works: the real AI call succeeded end-to-end."
+          elif echo "$body" | grep -qiE "reserve_ai_call|confirm_ai_call|does not exist|could not find the function"; then
+            echo "Migration not applied correctly - the reservation RPC function is missing in the database."
+            exit 1
+          elif [ "$status" = "402" ]; then
+            echo "Rejected as LIMIT_REACHED - the QA account's monthly allowance/credits are exhausted. This still confirms the reservation RPC exists and ran (it returned a real gate decision, not a missing-function error)."
+          else
+            echo "Unexpected failure - check status/body above."
+            exit 1
+          fi
