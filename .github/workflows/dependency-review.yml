@@ -33,6 +33,15 @@ jobs:
           # binaries from Google's own CDN during local/CI Lighthouse runs -
           # never untrusted/user-supplied zip content. No patched extract-zip
           # release exists upstream (2.0.1 is latest as of this writing).
-          # Documented accepted risk, not a general severity-threshold change -
-          # see docs/quality-assurance.md.
-          allow-ghsas: GHSA-jmr9-qjv8-65gv
+          #
+          # GHSA-w3rx-r6r6-pgpr / GHSA-5p2g-fcmc-qvqq (image-size ICNS/JXL/HEIF
+          # parser DoS, high): transitive via apps/extension's
+          # @wxt-dev/module-react -> vite -> less -> image-size, a dev-only
+          # build-tool dependency of the browser-extension bundler. Never
+          # parses user-supplied images at runtime - only touched during
+          # `wxt build`/`vite build` on trusted, repo-controlled assets. No
+          # patched image-size release exists upstream (2.0.2 is latest).
+          #
+          # All three are documented accepted risk (no fix available), not a
+          # general severity-threshold change - see docs/quality-assurance.md.
+          allow-ghsas: "GHSA-jmr9-qjv8-65gv,GHSA-w3rx-r6r6-pgpr,GHSA-5p2g-fcmc-qvqq"
