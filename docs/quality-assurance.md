@@ -229,16 +229,27 @@ locally after reviewing.
 
 Documented honestly rather than silently glossed over:
 
-- **One accepted dependency-review exception**: GHSA-jmr9-qjv8-65gv
-  (`extract-zip` symlink path traversal, high severity), transitive via
-  `@lhci/cli` -> `lighthouse` -> `puppeteer-core` -> `@puppeteer/browsers`.
-  No patched `extract-zip` release exists upstream (2.0.1 is latest). Used
-  only to unpack pinned Chrome-for-Testing binaries from Google's own CDN
-  during local/CI Lighthouse runs - never untrusted/user-supplied zip
-  content - so allow-listed in `dependency-review.yml` with that
-  justification recorded in the workflow itself, not silently ignored.
-  Revisit if extract-zip ships a fix, or if `@lhci/cli` drops the
-  puppeteer-core dependency.
+- **Two accepted dependency-review exceptions**, both allow-listed in
+  `dependency-review.yml` with justification recorded in the workflow
+  itself, not silently ignored - revisit each if/when an upstream fix
+  ships:
+  - GHSA-jmr9-qjv8-65gv (`extract-zip` symlink path traversal, high),
+    transitive via `@lhci/cli` -> `lighthouse` -> `puppeteer-core` ->
+    `@puppeteer/browsers`. No patched release exists (2.0.1 is latest).
+    Used only to unpack pinned Chrome-for-Testing binaries from Google's
+    own CDN during local/CI Lighthouse runs - never untrusted zip content.
+  - GHSA-w3rx-r6r6-pgpr / GHSA-5p2g-fcmc-qvqq (`image-size` ICNS/JXL/HEIF
+    parser DoS, high), transitive via `apps/extension`'s
+    `@wxt-dev/module-react` -> `vite` -> `less`. No patched release exists
+    (2.0.2 is latest). Dev-only build-tool dependency of the extension
+    bundler - never parses user-supplied images at runtime.
+  - Every other dependency flagged by `pnpm audit`/Dependabot when the
+    dependency graph was enabled during this pass had a real upstream fix
+    and was bumped directly (`next` 16.2.4 -> 16.3.1 plus a `pnpm.overrides`
+    block for `tmp`, `vite`, `ws`, `protobufjs`, `uuid`, `shell-quote`,
+    `adm-zip`, `fast-uri`, `postcss`, `nanoid`, `js-yaml`, `esbuild`,
+    `dompurify`, `@opentelemetry/core`, `@babel/core`, and `brace-expansion`)
+    - not exceptions, real fixes, verified via full typecheck/build/test.
 - **No active AI-side prompt-injection defence.** `openai-server.ts`
   structurally separates user content (the `input` field) from system
   instructions (the `instructions` field) when calling the OpenAI Responses
