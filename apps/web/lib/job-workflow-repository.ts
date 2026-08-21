@@ -247,6 +247,23 @@ export async function upsertApplication(
     updated_at: new Date().toISOString(),
   };
 
+  // job_id only has to reference an existing row anywhere (the FK doesn't
+  // check ownership), so without this a caller could link their own
+  // application to another user's job id - not a read leak (readJobWorkflow
+  // still scopes the jobs list by user_id), but that job's own "on delete
+  // cascade" would then silently delete this unrelated application the
+  // moment its real owner deletes it.
+  const { data: referencedJob } = await client
+    .from("job_workflow_jobs")
+    .select("id")
+    .eq("id", application.jobId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!referencedJob) {
+    throw new Error("Referenced job does not belong to this account.");
+  }
+
   const { data: existing } = await client
     .from("job_workflow_applications")
     .select("updated_at")

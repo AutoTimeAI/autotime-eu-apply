@@ -96,6 +96,12 @@ export function useJobWorkflowSync({
             })),
           }),
         });
+        if (response.status === 404) {
+          if (!activeRef.current) return;
+          setState("server-disabled");
+          setStatus("Account sync is not available in this environment.");
+          return;
+        }
         const body: unknown = await response.json();
         if (!activeRef.current) return;
         if (!response.ok) {
