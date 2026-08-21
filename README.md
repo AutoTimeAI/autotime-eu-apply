@@ -1,149 +1,100 @@
 # AutoTime EU Apply
 
-European tech-market guide and job application decision workspace.
+Cross-border job application copilot for European tech (and FinTech)
+candidates: a Chrome extension that captures and scores job postings, plus a
+production Next.js dashboard for tracking applications, preparing interviews,
+understanding country and work-right fit, and getting AI-assisted job
+analysis and application content.
 
-This repository is a pnpm monorepo with a WXT Chrome extension, a basic Next.js
-web app shell, and a shared package.
+This repository is a pnpm monorepo: a WXT Chrome extension, a production
+Next.js web app backed by Supabase, and a Python analytics service.
 
 ## Apps
 
-- `apps/extension` - Chrome extension built with WXT.
-- `apps/web` - V2 web companion dashboard built with Next.js.
+- `apps/extension` - Chrome extension built with WXT. Detects job postings on
+  supported job boards and ATS platforms, scores fit locally, and links into
+  the web dashboard.
+- `apps/web` - Production Next.js dashboard: authentication, job tracking,
+  applications pipeline, interview preparation, country/mobility guidance,
+  role pathways, AI-assisted content generation, Stripe billing, and an admin
+  panel. Deployed at <https://autotime-eu-apply.vercel.app>.
 - `apps/analytics` - Python FastAPI evidence and outcome analytics service.
-- `packages/shared` - V2 shared types and schemas.
+- `packages/shared` - Shared domain types and Zod schemas used by both the web
+  app and the extension.
 
-The Chrome extension source of truth is `apps/extension`.
-`packages/shared` now defines the V2 domain contracts used by the web companion.
-The extension remains local-first until backend/web sync is intentionally added.
+Full documentation index: [`docs/README.md`](docs/README.md).
 
-## Version 2 Foundation
+## Product architecture
 
-Current V2 implementation:
+- **Dashboard** (`apps/web`) is organized around seven primary destinations:
+  Home, Career Direction (Role Pathways), Jobs, Applications, Interviews,
+  Countries (international mobility), and Profile. See
+  `docs/product-information-architecture.md` for the full navigation and
+  workflow model.
+- **Auth and data**: Supabase (Postgres + Auth). Row-level security is
+  enforced per-user on every table; a service-role admin client is used only
+  from trusted server-side routes (webhooks, sync, admin).
+- **AI-assisted features** (job analysis, cover letters, tailored CVs,
+  interview prep, outreach drafts) run server-side using AutoTime's own
+  OpenAI key - users do not supply their own key. Usage is gated by an
+  atomic reserve/confirm/release flow plus per-user rate limits so
+  concurrent requests can't double-spend a user's allowance.
+- **Billing**: Stripe subscriptions (Free / Pro) plus one-off AI credit
+  packs, both handled by an idempotent webhook handler
+  (`apps/web/app/api/stripe/webhook/route.ts`).
+- **Admin panel** (`/admin`): role-gated operational tooling, separate from
+  the candidate-facing dashboard. See `docs/admin-operations.md`.
+- **Extension-to-dashboard bridge**: the extension captures a job page and
+  hands off into the dashboard's Jobs/Applications workflow; account linking
+  happens through `/dashboard/extension`.
+- **Observability**: Sentry error tracking with privacy-redacting event
+  filtering, so secrets, tokens, CVs, and job-description content never leave
+  the app in an event payload.
 
-- Web companion dashboard for candidate memory, job review, application history,
-  local JSON import/export, and local or optional AI interview prep pack
-  generation.
-- Product positioning: a tech guide for the European market, helping candidates
-  understand country fit, work-right risk, role positioning, and apply/skip
-  decisions before spending effort.
-- Market context controls for General Tech vs FinTech, foreign/relocating vs
-  native/local candidates, target country, level, and application urgency.
-- AI guidance clarifies role classification, positioning, effort reduction, and
-  interview prep use cases for European tech candidates.
-- User-approved CV/resume intake can suggest candidate type, role market,
-  seniority, and target roles without applying changes until the user approves.
-- AI Decision Brief explains the apply recommendation, confidence, rationale,
-  risks, and next actions before the user commits effort.
-- Extension-to-web bridge through `Export V2 Dashboard JSON` in the extension
-  Applications section and schema-validated import in the web dashboard.
-- Shared Zod schemas and TypeScript types for profile, reusable answers, job
-  analysis, applications, content snapshots, and interview prep packs.
-- Expanded ATS platform detection for Ashby, SmartRecruiters, iCIMS, BambooHR,
-  Teamtailor, Recruitee, Jobvite, and Personio, while preserving LinkedIn
-  manual copy/paste only.
-- Responsive production web surface for light mobile access; no native mobile
-  app is required for the V2 MVP completion gate.
-- Supabase/account sync, notifications, Edge packaging, and production mobile
-  wrapper remain credentialed integration work rather than local-first V2 MVP
-  blockers.
-- AI interview prep in the web dashboard is optional and browser-local: users
-  provide their own OpenAI key, local fallback remains available, and no
-  AutoTime backend stores the key.
-- Python analytics provides evidence summaries, outcome calibration readiness,
-  ML feature rows, and learning-stage signals without exposing unsupported
-  success-probability claims.
-- Production web dashboard: <https://autotime-eu-apply.vercel.app>.
+## Extension
 
-V2 details live in `docs/v2-product-surface.md`.
+The extension detects job postings across major EU/international job boards
+(Indeed, StepStone, EURES, EuroTechJobs, EuroJobs, NextLevelJobs, Wellfound,
+Xing, Welcome to the Jungle, Nationale Vacaturebank, InfoJobs, Monster,
+EuroTopTech, JobTeaser) and ATS platforms (Greenhouse, Lever, Workday, Ashby,
+SmartRecruiters, iCIMS, BambooHR, Teamtailor, Recruitee, Jobvite, Personio).
+LinkedIn remains manual copy/paste only - the extension does not automate or
+scrape LinkedIn job pages. The current, authoritative platform list lives in
+`apps/extension/tests/fixtures/platform-coverage.json` and is checked weekly
+against the live sites by `.github/workflows/platform-coverage.yml`.
 
-## Extension MVP
-
-Current status:
-
-- Repo implementation slice: usable local-first extension workflow is in place.
-- Full uploaded MVP spec: local extension implementation is complete for the
-  V1 scope.
-- Latest MVP validation build tag: `v0.0.1`.
-- V1 implementation completion: 100%; release readiness is about 93% until
-  final manual Chrome evidence, live UK/EU job rows, and exported validation
-  metrics are recorded.
-- Final local-first MVP candidate commit: `3d0cf72`.
-- Final automated release report:
-  `docs/release-runs/2026-05-04T11-05-34-292Z.md`.
-- Next milestone: complete final manual Chrome validation, record live UK/EU job
-  evidence, export validation metrics, and then tag `v0.0.2`.
-
-This status is based on the uploaded `EU Apply.7z` product spec pack,
-especially `AutoTime_MVP_Consolidated_Summary.docx`,
-`AutoTime_EU_Apply_Final_Build_Execution_Spec_v1.docx`, and
-`AutoTime_EU_Apply_MVP_Execution_Document.docx`.
+Release tagging follows `git tag` (see the latest `v0.1.x` tag for the current
+release line); the extension's own package version is tracked separately in
+`apps/extension/package.json`. Release-process detail lives in
+`docs/release-readiness.md` and `docs/market-ready-mvp-procedure.md`.
 
 The extension currently supports:
 
-- Candidate profile settings stored in `chrome.storage.local`.
-- Expanded profile memory for links, target countries and roles, work-right
-  details, salary expectation, base CV text, project summaries, and experience
-  highlights.
-- Country and notice-period profile inputs with required-field validation.
-- International phone validation against the selected country calling code.
-- Reusable answers for sponsorship, relocation, work authorisation, notice
-  period, salary expectation, motivation, strengths, and availability.
-- Creating, viewing, and clearing reusable answers from the side panel.
-- Saving the current tab as a saved application from the side panel.
-- Importing the active job page into Job Analysis and the side-panel tracker
-  for non-LinkedIn job pages.
-- LinkedIn is manual copy/paste only: users copy job details themselves and
-  paste them into AutoTime.
-- Pasting a manual job description into Job Analysis when page extraction is
-  incomplete or unavailable.
+- Candidate profile, reusable answers (sponsorship, relocation, work
+  authorisation, notice period, salary expectation, motivation, strengths,
+  availability), and tracked applications, stored in `chrome.storage.local`.
+- A draggable, resizable in-page widget (injected by the content script - not
+  a Chrome-native side panel) for reviewing job details, job-fit scoring,
+  and the saved-application tracker directly on the job page.
+- JSON-LD `JobPosting` extraction plus platform-specific selectors for the
+  supported job boards and ATS platforms listed above.
+- An ESCO occupation-match overlay on LinkedIn job pages; LinkedIn itself
+  remains manual copy/paste only - the extension does not automate or fill
+  LinkedIn's own application forms.
 - Transparent local job-fit scoring with visible factors, recommendation, and
   positioning angle.
-- Saving side-panel tracker entries into the saved applications list.
-- Viewing, editing, searching, filtering, deleting, and exporting saved
-  applications from the side panel.
-- Preventing duplicate saved applications for the same URL.
-- Basic autofill for obvious first name, last name, email, and phone fields.
-- Basic textarea autofill for obvious sponsorship, relocation, work authorisation,
-  notice period, salary expectation, motivation, strengths, and availability
-  questions.
-- Triggering profile and reusable-answer autofill from the side panel.
-- Generating editable application content from saved profile, reusable answers,
-  and saved job analysis.
-- User-approved insertion of saved application content into obvious empty
-  application textareas.
-- Usage/cost logging for local and future AI-assisted actions.
-- Optional OpenAI Responses API settings with a monthly local budget cap for
-  controlled-cost AI-assisted job analysis and application content generation.
-- User-visible OpenAI fallback reasons for billing/quota/rate-limit, invalid
-  key, unavailable model, and invalid JSON responses.
-- Side-panel drafts for profile, job analysis, application content, and tracker.
-- Generated or saved application content snapshots attached to tracker records.
-- Application notes and editable spec-aligned status tracking: `Saved`,
-  `Applying`, `Applied`, `Interview`, `Rejected`, and `Closed`.
-- Next-action and next-action-date tracking for saved applications.
-- Founder validation metrics for content snapshot coverage, next-action
-  coverage, outcome-note coverage, statuses, and sources.
-- CSV export for founder validation metrics.
+- Basic autofill for common profile and reusable-answer fields on supported
+  application forms, with user review before submission - the extension never
+  submits an application on the user's behalf.
+- Syncing tracked applications to the web dashboard for authenticated users
+  (`syncTrackedApplicationsToDashboard`), so tracking and preparation continue
+  in `apps/web` once a job is captured.
+- CSV export of saved applications.
 
-The extension does not submit forms, does not automate LinkedIn, and does not
-use Firebase or a backend yet. The web app does not depend on Firebase until
-backend work starts.
-
-Remaining release work is manual validation: record live UK/EU application
-outcomes, export founder validation metrics, and complete
-`docs/founder-validation-runs/2026-05-04-final-mvp-validation.md`.
-
-## Current Validation Build
-
-- Tag: `v0.0.1`
-- Commit: `3d0cf72`
-- Latest automated release report:
-  `docs/release-runs/2026-05-04T11-05-34-292Z.md`
-- OpenAI API validation: confirmed with `gpt-4.1-mini` usage/cost log entries.
-- LinkedIn policy: manual copy/paste only.
-- Remaining evidence: live job rows for LinkedIn manual input, Greenhouse,
-  Lever, Workday, and one other UK/EU source, plus Applications and Validation
-  Metrics CSV exports.
+The extension never submits forms or automates LinkedIn. AI-assisted content
+generation (cover letters, tailored CVs, interview prep) happens in the web
+dashboard, not the extension, and runs server-side against AutoTime's own
+OpenAI key rather than a user-supplied one - see "Product architecture" above.
 
 ## Local Setup
 
@@ -202,7 +153,7 @@ pnpm build:web
 pnpm preview:web
 ```
 
-Open the V2 dashboard at:
+Open the dashboard at:
 
 ```text
 http://127.0.0.1:3000
@@ -214,7 +165,7 @@ Build the web app:
 pnpm build:web
 ```
 
-Smoke-test the deployed V2 dashboard:
+Smoke-test the deployed dashboard:
 
 ```bash
 pnpm smoke:web
@@ -265,7 +216,7 @@ pnpm validation:new
 ```
 
 This writes a timestamped file in `docs/founder-validation-runs/` with the
-automated gates, extension smoke test, V2 dashboard smoke test, LinkedIn manual
+automated gates, extension smoke test, dashboard smoke test, LinkedIn manual
 copy/paste check, Greenhouse/Lever/Workday live-job rows, CSV export evidence,
 and release decision sections.
 
@@ -275,7 +226,7 @@ Run the validation report generator tests:
 pnpm test:validation-run
 ```
 
-Deploy the V2 web dashboard to Vercel from the repo root:
+Deploy the web dashboard to Vercel from the repo root:
 
 ```bash
 pnpm build:web
@@ -310,7 +261,7 @@ Run extension typecheck:
 pnpm --filter extension typecheck
 ```
 
-Run V2 web and external-evidence checks:
+Run web and external-evidence checks:
 
 ```bash
 pnpm test:smoke:web
@@ -356,12 +307,15 @@ Current unit tests cover:
 The extension uses these Chrome permissions:
 
 - `storage` for `chrome.storage.local`.
-- `activeTab` for reading/importing the current job page and sending autofill messages.
-- `sidePanel` for opening the Chrome side panel.
+- `activeTab` for reading/importing the current job page.
+- `scripting` for injecting the in-page widget and autofill logic.
 
-The WXT content script is limited to supported ATS domains such as Greenhouse,
-Lever, Workday, Ashby, SmartRecruiters, iCIMS, BambooHR, Teamtailor, Recruitee,
-Jobvite, and Personio. LinkedIn remains manual-input only.
+Host permissions are scoped to the production dashboard
+(`autotime-eu-apply.vercel.app`) plus the job boards listed in "Extension"
+above (`apps/extension/wxt.config.ts`). The content script itself matches all
+pages (`*://*/*`) so it can detect and score jobs anywhere, but only makes
+cross-origin calls to those explicitly permitted hosts. LinkedIn remains
+manual-input only.
 
 After building, load the generated extension from:
 
@@ -399,3 +353,11 @@ docs/founder-validation-report.md
 
 Generated folders such as `node_modules`, `.next`, `.output`, `build`,
 `.plasmo`, `.wxt`, and TypeScript build info files are ignored by Git.
+
+## Policies
+
+- [`LICENSE`](LICENSE)
+- [`PRIVACY.md`](PRIVACY.md) - see the live, authoritative policy at
+  [`/privacy`](https://autotime-eu-apply.vercel.app/privacy)
+- [`SECURITY.md`](SECURITY.md) - vulnerability reporting
+- [`CHANGELOG.md`](CHANGELOG.md)
