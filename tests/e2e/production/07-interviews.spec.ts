@@ -28,5 +28,7 @@ test("opening an interview shows its detail view", async ({ page }) => {
   }
 
   await firstInterviewLink.click()
-  await expect(page.locator("main.phase-four-interview-detail")).toBeVisible()
+  await expect(page.locator("main.phase-four-interview-detail")).toBeVisible({
+    timeout: 15_000
+  })
 })

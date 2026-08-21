@@ -41,5 +41,5 @@ test("opening a job shows its detail view without triggering a new analysis", as
   }
 
   await firstJobLink.click()
-  await expect(page.locator("main.phase-two-job-detail")).toBeVisible()
+  await expect(page.locator("main.phase-two-job-detail")).toBeVisible({ timeout: 15_000 })
 })

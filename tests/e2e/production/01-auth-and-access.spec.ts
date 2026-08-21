@@ -64,7 +64,8 @@ test.describe("sign-out", () => {
     page
   }) => {
     await gotoProduction(page, "/dashboard/profile")
-    await page.getByRole("button", { name: "Sign out" }).click()
+    await page.locator(".user-nav-trigger").click()
+    await page.getByRole("menuitem", { name: "Sign out" }).click()
     await expect(page).toHaveURL(/\/(login)?$/, { timeout: 15_000 })
 
     await gotoProduction(page, "/dashboard")
