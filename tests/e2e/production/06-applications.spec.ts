@@ -25,19 +25,16 @@ test("opening an application shows its detail, evidence and readiness state", as
   page
 }) => {
   await gotoProduction(page, "/dashboard/applications")
-  const firstApplicationLink = page
-    .locator("main.phase-three-applications")
-    .getByRole("link")
-    .first()
+  const firstApplicationRow = page.locator(".phase-three-application-row").first()
 
-  if ((await firstApplicationLink.count()) === 0) {
+  if ((await firstApplicationRow.count()) === 0) {
     await expect(
       page.getByRole("heading", { name: "No applications yet" })
     ).toBeVisible()
     test.skip(true, "No applications are currently seeded for the QA account")
   }
 
-  await firstApplicationLink.click()
+  await firstApplicationRow.getByRole("button", { name: "Open application" }).click()
   await expect(page.locator("main.phase-three-application-detail")).toBeVisible({
     timeout: 15_000
   })
@@ -58,9 +55,11 @@ test("an Applied-stage application, if present, shows its submission record", as
 
   await appliedFilter.click()
   await page
-    .locator("main.phase-three-applications")
-    .getByRole("link")
+    .locator(".phase-three-application-row")
     .first()
+    .getByRole("button", { name: "Open application" })
     .click()
-  await expect(page.locator("main.phase-three-application-detail")).toBeVisible()
+  await expect(page.locator("main.phase-three-application-detail")).toBeVisible({
+    timeout: 15_000
+  })
 })
