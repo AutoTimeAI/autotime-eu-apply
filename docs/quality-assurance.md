@@ -361,6 +361,22 @@ stays the single evidenced record of what has and hasn't been checked.
   `interview-workflow-repository.ts`'s `upsertInterview`/`readInterviewWorkflow`
   consistently scope every read/write to the server-derived `userId`, never a
   client-supplied one. **No fix needed.**
+- **CV import: GitHub and LinkedIn sources** (2026-08-21, alongside #111/#112):
+  `enrichCvFromGitHub` (`lib/cv/sources/github.ts`) only ever calls the fixed,
+  trusted `api.github.com` host - `username`/`repo.name` are URL-encoded path
+  segments, not something that can redirect the request elsewhere, and the
+  optional user-supplied GitHub token is used transiently for that one
+  request, never persisted. Bounded to ~17 requests per enrichment (5
+  featured repos x 3 calls + 1 listing + 1 optional GraphQL call). The PDF
+  import path (`lib/pdf-cv.ts`, behind `/api/profile/import-cv`) has a 5MB
+  upload cap and a magic-byte check; a theoretical PDF-internal decompression
+  bomb is accepted as a low-priority residual risk bounded by Vercel's own
+  per-invocation timeout, not fixed here. `enrichCvFromLinkedInZip`
+  (`lib/cv/sources/linkedin-import.ts`) turned out to be **entirely
+  client-side** - a `"use client"` component whose own status message says
+  "The ZIP was processed in this browser and was not uploaded" - so a
+  malicious LinkedIn-export zip could at most crash the uploading user's own
+  tab, never the server; not a fixable server-side defect. **No fix needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
