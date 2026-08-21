@@ -35,7 +35,6 @@ jobs:
           # default, and keeps report artifacts even when findings exist.
           cmd_options: "-a"
           fail_action: false
-          artifact_name: zap-baseline-report
 
       - name: Upload ZAP report
         if: always()
