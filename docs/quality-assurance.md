@@ -314,6 +314,26 @@ stays the single evidenced record of what has and hasn't been checked.
   Contact import requires an explicit `consent: true` field, dedupes by a
   SHA-256 hash of email/profile-URL/name+company, and every route scopes to
   `user_id` from the validated session. **No fix needed.**
+- **Admin panel authorization** (2026-08-21): the shared layout
+  (`app/admin/layout.tsx`) only gates on the baseline `overview:read`
+  permission and filters *nav links* by permission - so the real question
+  was whether each admin page/route enforces its own specific permission
+  independently, rather than trusting the nav being hidden. Confirmed all
+  six admin pages (`users`, `feedback`, `ai-operations`, `market-data`,
+  `feature-flags`, `audit-log`) and every admin API route call
+  `requireAdminPrincipal`/`requireAdminRequest` with their own specific
+  permission. Both mutation routes checked in depth
+  (`api/admin/feature-flags`, `api/admin/market-data/refresh`,
+  `api/admin/users/[userId]/beta-access`) additionally enforce a same-origin
+  check (`isSameOriginMutation`), strict exact-shape body validation, and
+  RPC-based writes with actor attribution (`p_actor_user_id`) and
+  optimistic-concurrency/idempotency handling. The role/permission matrix
+  (`lib/admin-permissions.ts`) correctly scopes `admin_memberships:manage`
+  to `owner` only, requires `status === "active"` regardless of role, and
+  `getAdminMembership` explicitly excludes test-auth users from ever
+  resolving as an admin. Error responses (`admin-safe-response.ts`) never
+  leak internals - generic message plus an opaque `diagnosticId` only,
+  `Cache-Control: private, no-store` on every response. **No fix needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
