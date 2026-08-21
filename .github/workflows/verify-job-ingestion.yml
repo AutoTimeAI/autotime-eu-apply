@@ -1,0 +1,43 @@
+name: Verify job ingestion secrets
+
+# Diagnostic-only, manual dispatch. Confirms SUPABASE_FUNCTION_BASE_URL and
+# JOB_SYNC_CRON_SECRET are configured correctly without ever printing them:
+# checks only the HTTP status code of each sync function. A working secret
+# pair returns 200/503 (503 means the cron secret is fine but the EURES
+# partner API credentials aren't configured in Supabase - a separate,
+# non-blocking concern); 401 means the shared secret doesn't match; any
+# other status/connection failure means the base URL is wrong.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check sync-eures response (status only)
+        env:
+          FUNCTION_BASE_URL: ${{ secrets.SUPABASE_FUNCTION_BASE_URL }}
+          CRON_SECRET: ${{ secrets.JOB_SYNC_CRON_SECRET }}
+        run: |
+          if [ -z "$FUNCTION_BASE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "SUPABASE_FUNCTION_BASE_URL or JOB_SYNC_CRON_SECRET is not set."
+            exit 1
+          fi
+          status=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
+            -H "x-cron-secret: $CRON_SECRET" \
+            "$FUNCTION_BASE_URL/sync-eures" || true)
+          echo "HTTP status: $status"
+          if [ "$status" = "200" ] || [ "$status" = "503" ]; then
+            echo "Bootstrap looks healthy: shared secret accepted."
+          elif [ "$status" = "401" ]; then
+            echo "Rejected as Unauthorized - JOB_SYNC_CRON_SECRET does not match the Supabase function's CRON_SECRET."
+            exit 1
+          else
+            echo "Unexpected status - check SUPABASE_FUNCTION_BASE_URL is correct (should end in /functions/v1)."
+            exit 1
+          fi
