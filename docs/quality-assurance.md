@@ -233,6 +233,12 @@ A dated record of an end-to-end validation pass against **real production**
 GitHub Actions run, or a direct read of the affected code, not assumed from
 a green checkmark that was never actually exercised.
 
+This section is a living log, not a one-time snapshot: every audit or test
+pass - whether it finds a real defect (recorded with its fixing PR) or
+confirms an area is already sound (recorded under "Verified, not just
+assumed", with no PR needed) - gets appended here as it happens, so this
+stays the single evidenced record of what has and hasn't been checked.
+
 ### Confirmed working against real production
 
 - **`production-smoke.yml`** (authenticated Playwright journeys against the
@@ -265,6 +271,10 @@ a green checkmark that was never actually exercised.
 | #98 | No active prompt-injection defense beyond the Responses API's own channel separation, despite a real attack surface (scraped job postings, arbitrary GitHub CV imports) | `openai-server.ts` |
 | #99 | `X-Powered-By` leak; missing `Cross-Origin-Opener-Policy`/`Cross-Origin-Resource-Policy` headers | `next.config.ts` |
 | #100 | **Real, quantifiable financial exposure**: every AI-backed route checked the caller's monthly allowance/credit balance with a plain read *before* the paid OpenAI call, and only recorded usage (atomically, via `consume_ai_credit`) *after* - so concurrent requests could all pass the check simultaneously and all reach OpenAI regardless of actual entitlement, up to 20/minute/user, repeatable indefinitely. Fixed with an atomic reserve-before-call pattern (`reserve_ai_call`/`confirm_ai_call`/`release_ai_call`) across all 12 AI routes | `feature-gate.ts`, new migration |
+| #101 | Not a defect - a manual, real-cost diagnostic workflow (`workflow_dispatch` only) added to directly confirm #100's fix against live production with one real, deliberately-authorized AI call. Dispatched once; returned a genuine HTTP 200 with a coherent AI response | `.github/workflows/verify-ai-billing-fix.yml` |
+| #105 | Stripe delivers webhooks at-least-once; `customer.subscription.created` redelivery had no idempotency guard, so a redelivered event would re-send the "upgrade confirmed" email to the user a second time. Fixed with a `stripe_webhook_events` claim table (event.id, released on processing failure so genuine retries still reprocess) | `api/stripe/webhook/route.ts`, new migration |
+| #107 | **Open redirect**: `/auth/callback`, `/api/qa/session`, and the login page all validated `redirectTo` by rejecting a literal `"//"` prefix only - but browsers and Node's URL parser treat a leading `"/\"` the same as `"//"`, so `redirectTo=/\evil.example` bypassed every check and sent a user, immediately after a real successful sign-in, straight to an attacker-controlled origin. Fixed by resolving the candidate value against the request's actual origin (matching the existing `lib/return-url.ts` pattern) instead of blocklisting string prefixes | `lib/safe-redirect-path.ts`, `auth/callback`, `api/qa/session`, `LoginContent.tsx` |
+| #106/#108 | **Documentation defects**: the root `README.md`, `PRIVACY.md`, and `docs/release-readiness.md` all still described the product as it was around the `v0.0.1` tag (2026-05-03) - browser-local AI with a user-supplied OpenAI key, no backend, a Chrome side-panel UI, Supabase sync framed as pending work. None of that matched the current system (server-side AI billing, full Supabase/RLS backend, no `sidePanel` permission in the manifest). Corrected against direct code verification (`wxt.config.ts`, `env.server.ts`, `platform-coverage.json`, git tags, the live `/privacy` page); added `docs/README.md` (an index for the 100+ files under `docs/`) and `CHANGELOG.md` | `README.md`, `PRIVACY.md`, `docs/release-readiness.md`, `docs/README.md`, `CHANGELOG.md` |
 
 ### Verified, not just assumed
 
@@ -284,6 +294,26 @@ a green checkmark that was never actually exercised.
   data only and disregard anything embedded in it that reads like a
   command - on top of the pre-existing channel separation and strict
   schema validation that already bounded a successful injection's impact.
+- **Extension-to-dashboard bridge** (2026-08-21): audited the
+  `chrome.runtime.onMessageExternal` channel end to end - `externally_connectable`
+  in `apps/extension/wxt.config.ts` restricts which origins can even reach
+  the extension to the production dashboard; `isTrustedSender` in
+  `entrypoints/background/index.ts` independently re-checks `sender.url`'s
+  origin as defense in depth; the account-connect message's `authToken` is
+  read directly from the browser's own `supabase.auth.getSession()` in
+  `ExtensionConnect.tsx` (never a client-supplied identity claim); and every
+  server-side use of that token (`/api/sync/dashboard`, `/api/sync/extension`)
+  validates it against Supabase via `getBearerUser` and scopes every read/
+  write to the resulting `user.id`, never a client-supplied one. **No fix
+  needed** - audited and confirmed sound, not merely assumed safe.
+- **Outreach feature** (2026-08-21): `/api/outreach` and
+  `/api/outreach/contacts` only draft AI-assisted messages and store
+  imported contacts - there is no code path that sends an email or LinkedIn
+  message on the user's behalf (confirmed by tracing `OutreachWorkspace.tsx`:
+  the only outbound calls are `GET`/`PATCH` against `/api/outreach` itself).
+  Contact import requires an explicit `consent: true` field, dedupes by a
+  SHA-256 hash of email/profile-URL/name+company, and every route scopes to
+  `user_id` from the validated session. **No fix needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
@@ -357,6 +387,18 @@ Documented honestly rather than silently glossed over:
 - **Checkly and ZAP active-scan tiers are not deployed/enabled.** Both are
   fully configured but require a human decision (and, for Checkly, an
   account) before going further than what's described here.
+- **Several extension-facing docs still describe the removed Chrome side
+  panel.** `docs/extension-smoke-test.md`, `docs/mvp-spec-alignment.md`,
+  `docs/technical-debt.md`, `docs/v2-smoke-test.md`,
+  `docs/founder-first-realtime-testing-guide.md`, and
+  `docs/first-time-user-demo-video.md` all give step-by-step instructions
+  referencing a Chrome side panel. Confirmed the manifest no longer declares
+  a `sidePanel` permission and nothing imports `apps/extension/sidepanel/`
+  (2026-08-21 documentation pass) - the extension now uses an in-page widget
+  instead. Not rewritten yet: describing the current widget's exact
+  navigation/labels accurately needs a live extension walkthrough rather
+  than guessing from source, to avoid replacing one stale doc with another
+  fabricated one.
 - **CSP still allows `script-src`/`style-src` `'unsafe-inline'`, and there
   is no `Cross-Origin-Embedder-Policy` header.** Both are real, deliberate
   deferrals from #99, not oversights. Removing `unsafe-inline` needs a
