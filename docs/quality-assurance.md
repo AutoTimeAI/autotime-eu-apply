@@ -283,6 +283,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #115 | **Incomplete GDPR data export**: `/api/account/export` (the "Export my data" feature `PRIVACY.md` and the live `/privacy` page explicitly promise downloads "everything stored about your account") only exported 11 tables. Cross-checked every table with an `ON DELETE CASCADE` ownership link to `auth.users(id)` across all migrations against that list and found 7 real, actively-used, server-synced content tables missing entirely: `job_workflow_jobs`/`job_workflow_analysis_snapshots`/`job_workflow_applications`/`job_workflow_screening_answers` (the old comment claimed this lived only in browser localStorage - confirmed stale by checking `/api/sync/job-workflow` actually syncs it server-side), `interview_records`/`interview_questions`/`interview_preparation_snapshots` (the current interview workflow - a separate, older `interview_prep_packs` table *was* included, creating a false impression of completeness), `cover_letters`, `outreach_contacts`/`outreach_messages`, `user_skill_profile`/`esco_questionnaire_answers`, and `profile_revisions`. Fixed by adding all 7 to the exported set, extracted to `lib/account-export.ts` for testability | `api/account/export/route.ts`, `lib/account-export.ts` |
 | #116 | **Unrate-limited unauthenticated DB-write endpoint**: `/api/diagnostics/client` accepts unauthenticated requests by design (it must capture pre-login/OAuth failures), and every accepted request writes a row to `operational_logs` via `logDiagnostic` - but had no rate limit at all, so anyone could flood the table with an unbounded number of free DB writes, a real resource-exhaustion/cost-inflation vector. Fixed with `assertDiagnosticRouteRateLimit`, reusing the existing atomic `increment_ai_rate_limit` RPC (generic despite the name) rather than a new table/migration: 30 requests/5min, keyed by user id when authenticated or a salted SHA-256 IP hash otherwise, deliberately fail-open on RPC errors (contrasted with the AI-billing limiter's fail-closed behaviour, since this is best-effort reporting not a metered action). Bundled a DRY extraction of `getRequestIp` into a new dependency-free `lib/request-ip.ts` (also deduplicates an identical inline copy already in `api/compatibility/reports/route.ts`) since `lib/diagnostics.ts`'s `next/server` import makes it otherwise untestable in isolation under this repo's plain-node test runner | `lib/diagnostics.ts`, `lib/request-ip.ts`, `api/diagnostics/client/route.ts`, `api/compatibility/reports/route.ts` |
 | #117 | **Unauthenticated public analytics microservice**: `apps/analytics` (a separate FastAPI service `vercel.json` deploys to the same production domain at `/analytics`) had its one real endpoint, `POST /evidence-outcomes`, completely open - no auth, no payload-size limit. The dashboard's "Run online analytics" button called it directly from the browser with no session/identity information at all, so anyone who found the URL could call it directly, repeatedly, with arbitrarily large record arrays, for free - a real unauthenticated resource-exhaustion vector against a non-trivial `Counter`/loop-based compute endpoint on a production domain (not a data leak - the service is stateless, computing only from the POST body). Since it's a separate Python runtime with no way to validate a Supabase session itself, fixed with a shared-secret gate (`x-analytics-secret` matched against `ANALYTICS_INTERNAL_SECRET` via constant-time compare, 401 otherwise, plus a 2000-record cap per array as defense in depth) and a new authenticated Next.js proxy route (`getRequestUser` first, then forwards with the secret) that the dashboard now calls instead of hitting the Python service directly | `apps/analytics/main.py`, `api/analytics/evidence-outcomes/route.ts`, `components/DashboardExperience.tsx` |
+| #118 | **Inconsistent cache header on an admin route**: every other admin read route (`users`, `feedback`, `ai-operations`, `market-data`, `audit-log`, `feature-flags`) sends `Cache-Control: private, no-store`; `/api/admin/overview` was the one exception, sending plain `no-store` without `private`. Found while auditing all six admin read routes for completeness against that pattern (the permission-gating and query-bounding parts of all six were already solid - see below). Low risk in this deployment (no shared proxy cache sits in front of the app), but a real, confirmed inconsistency. Fixed the one line and added a regression test asserting all six routes agree | `api/admin/overview/route.ts` |
 
 ### Verified, not just assumed
 
@@ -494,6 +495,32 @@ stays the single evidenced record of what has and hasn't been checked.
   #111/#112) `lib/cv/sources/github.ts`, which hardcodes `api.github.com`
   for every call - no client-supplied host parameter exists at the route
   layer. **No fix needed** on any of the seven files.
+- **Admin read routes and remaining sync routes** (2026-08-22, alongside
+  #118): all six admin read routes (`overview`, `users`, `feedback`,
+  `ai-operations`, `market-data`, `audit-log`) call `requireAdminRequest`
+  with their own specific `*:read` permission, not a shared/generic gate;
+  `admin/users` additionally gates email inclusion behind a second, finer
+  permission (`users:read_email`) so an admin with only list-view rights
+  gets `email: undefined`, not the address; `admin/feedback` and
+  `admin/overview` select no `user_id`/email columns at all, so they can't
+  leak reporter identity; every query across all six is explicitly bounded
+  (`.limit(50)`/`.limit(100)`/`.limit(10)`, no unbounded-query risk).
+  `sync/extension`, `sync/profile` (GET/POST/DELETE) all scope every
+  read/write to the server-derived session user id, never a client-supplied
+  one. `sync/refresh` is intentionally unauthenticated by session - by
+  design it exchanges a client-held Supabase refresh token for a new access
+  token (mirroring Supabase's own token endpoint), never trusts a
+  client-supplied user id, and cannot be used to refresh or invalidate
+  another user's session without already possessing that user's refresh
+  token - the same precondition needed to attack Supabase's own endpoint
+  directly, so this route adds no new exposure. **No fix needed** beyond
+  #118's cache-header inconsistency (found during this same pass). Noted,
+  not fixed: `admin/users` hardcodes `listUsers({ page: 1, perPage: 50 })`
+  with no pagination and no indication more users exist past the 50th - a
+  real completeness/UX gap once the user base exceeds that, not a security
+  issue. Flagged for the founder to schedule alongside the dashboard's
+  unbounded-query item above, since both are "add real pagination"
+  problems rather than one-line fixes.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
