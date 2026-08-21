@@ -403,6 +403,23 @@ stays the single evidenced record of what has and hasn't been checked.
   are explicitly blocked from deletion. **No fix needed** - this is the
   code-correctness half of the #115 finding; only the *export* route had a
   completeness gap, not the deletion route.
+- **Job-alert email notifications** (2026-08-21): read
+  `supabase/functions/sync-job-alerts/index.ts` in full. All untrusted
+  external content that lands in the digest email (job `title`, `company`,
+  ESCO `missing_skill_labels`) is passed through `escapeHtml` before
+  interpolation - genuinely necessary here, since job titles/company names
+  originate from third-party sources (Adzuna, Jooble, scraped ATS listings),
+  not from this app. Cron-secret gated; matches are fetched per-iteration
+  scoped to that profile's own `user_id` via `match_esco_jobs`, never
+  cross-user; sends carry a Resend `Idempotency-Key` derived from
+  `user_id:jobIds`, so a retried cron run can't double-email the same
+  digest; daily/weekly cadence correctly gated by `isDue()`'s elapsed-time
+  check against `alert_last_sent_at`, independent of the cron itself
+  running daily for both frequencies. The user-facing preference route
+  (`PATCH /api/profile/alerts`) is a simple enum update scoped to
+  `user.id`. **No fix needed.** Noted, not fixed: the `profiles` query caps
+  at 1000 rows with no pagination - a real scalability limit once past
+  1000 alert-eligible users, not a security issue at current scale.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
