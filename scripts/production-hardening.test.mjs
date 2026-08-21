@@ -671,6 +671,25 @@ test("the public analytics service and its authenticated proxy both gate on the 
   assert.ok(authIndex < forwardIndex)
 })
 
+test("every admin read route sends the same private, no-store cache header", () => {
+  const routes = [
+    "apps/web/app/api/admin/overview/route.ts",
+    "apps/web/app/api/admin/users/route.ts",
+    "apps/web/app/api/admin/feedback/route.ts",
+    "apps/web/app/api/admin/ai-operations/route.ts",
+    "apps/web/app/api/admin/market-data/route.ts",
+    "apps/web/app/api/admin/audit-log/route.ts",
+  ]
+
+  for (const routePath of routes) {
+    assert.match(
+      read(routePath),
+      /"Cache-Control":\s*"private, no-store"/,
+      routePath,
+    )
+  }
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
