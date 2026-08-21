@@ -420,6 +420,13 @@ stays the single evidenced record of what has and hasn't been checked.
   `user.id`. **No fix needed.** Noted, not fixed: the `profiles` query caps
   at 1000 rows with no pagination - a real scalability limit once past
   1000 alert-eligible users, not a security issue at current scale.
+- **International mobility sync** (2026-08-21): `api/sync/mobility`
+  follows the identical pattern already verified for interviews and
+  job-workflow sync - `userId` is always server-derived from the validated
+  session, every read/write in `mobility-profile-repository.ts` scopes to
+  that `authenticatedUserId`, and `upsertMobilityProfile` enforces
+  optimistic concurrency via `expectedUpdatedAt` the same way
+  `upsertInterview` does. **No fix needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
