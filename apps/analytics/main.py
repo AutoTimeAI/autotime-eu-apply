@@ -1,10 +1,30 @@
 from __future__ import annotations
 
+import hmac
+import os
 from collections import Counter, defaultdict
 from typing import Literal
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
+
+MAX_RECORDS_PER_REQUEST = 2000
+INTERNAL_SECRET_ENV_VAR = "ANALYTICS_INTERNAL_SECRET"
+
+
+def require_internal_secret(
+    x_analytics_secret: str | None = Header(default=None),
+) -> None:
+    # This service is reachable directly at a public production URL
+    # (vercel.json routes /analytics to this function), so without this
+    # check anyone could call it with no auth and no rate limit. Only the
+    # web app's own server-side API route (which authenticates the caller
+    # and applies the record-count cap below) knows this secret.
+    expected = os.environ.get(INTERNAL_SECRET_ENV_VAR, "").strip()
+    if not expected or not x_analytics_secret or not hmac.compare_digest(
+        x_analytics_secret, expected
+    ):
+        raise HTTPException(status_code=401, detail="unauthorized")
 
 
 ScoreBand = Literal["0-39", "40-59", "60-79", "80-100", "unknown"]
@@ -36,8 +56,12 @@ class OutcomeRecord(BaseModel):
 
 
 class AnalyticsRequest(BaseModel):
-    evidenceRecords: list[EvidenceRecord] = Field(default_factory=list)
-    outcomeRecords: list[OutcomeRecord] = Field(default_factory=list)
+    evidenceRecords: list[EvidenceRecord] = Field(
+        default_factory=list, max_length=MAX_RECORDS_PER_REQUEST
+    )
+    outcomeRecords: list[OutcomeRecord] = Field(
+        default_factory=list, max_length=MAX_RECORDS_PER_REQUEST
+    )
 
 
 class FeatureRow(BaseModel):
@@ -132,7 +156,7 @@ def health() -> dict[str, object]:
     return {"ok": True, "service": "autotime-analytics"}
 
 
-@app.post("/evidence-outcomes")
+@app.post("/evidence-outcomes", dependencies=[Depends(require_internal_secret)])
 def evidence_outcomes(payload: AnalyticsRequest) -> dict[str, object]:
     evidence = payload.evidenceRecords
     outcomes = payload.outcomeRecords

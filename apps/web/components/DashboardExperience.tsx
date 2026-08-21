@@ -349,8 +349,6 @@ type OnlineAnalyticsReport = {
   limits: string[]
 }
 
-const analyticsServiceBaseUrl =
-  process.env.NEXT_PUBLIC_ANALYTICS_URL ?? "/analytics"
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const productContextSchemaVersion = 2
@@ -4633,17 +4631,14 @@ export default function HomePage({
 
     setOnlineAnalyticsStatus("Preparing evidence report from tracked jobs...")
     try {
-      const response = await fetch(
-        `${analyticsServiceBaseUrl}/evidence-outcomes`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            evidenceRecords: persistedEvidenceRecords,
-            outcomeRecords: persistedOutcomeRecords
-          })
-        }
-      )
+      const response = await fetch("/api/analytics/evidence-outcomes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          evidenceRecords: persistedEvidenceRecords,
+          outcomeRecords: persistedOutcomeRecords
+        })
+      })
 
       if (!response.ok) {
         throw new Error(`service returned ${response.status}`)

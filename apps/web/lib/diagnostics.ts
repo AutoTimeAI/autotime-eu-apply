@@ -233,7 +233,8 @@ export function getEnvReadiness() {
     "STRIPE_WEBHOOK_SECRET",
     "STRIPE_PRO_MONTHLY_PRICE_ID",
     "STRIPE_PRO_QUARTERLY_PRICE_ID",
-    "STRIPE_AI_CREDIT_PACK_PRICE_ID"
+    "STRIPE_AI_CREDIT_PACK_PRICE_ID",
+    "ANALYTICS_INTERNAL_SECRET"
   ]
   const optionalKeys = ["NEXT_PUBLIC_POSTHOG_KEY"]
   const keys = [...publicKeys, ...serverKeys, ...optionalKeys]
