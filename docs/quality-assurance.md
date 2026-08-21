@@ -284,6 +284,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #116 | **Unrate-limited unauthenticated DB-write endpoint**: `/api/diagnostics/client` accepts unauthenticated requests by design (it must capture pre-login/OAuth failures), and every accepted request writes a row to `operational_logs` via `logDiagnostic` - but had no rate limit at all, so anyone could flood the table with an unbounded number of free DB writes, a real resource-exhaustion/cost-inflation vector. Fixed with `assertDiagnosticRouteRateLimit`, reusing the existing atomic `increment_ai_rate_limit` RPC (generic despite the name) rather than a new table/migration: 30 requests/5min, keyed by user id when authenticated or a salted SHA-256 IP hash otherwise, deliberately fail-open on RPC errors (contrasted with the AI-billing limiter's fail-closed behaviour, since this is best-effort reporting not a metered action). Bundled a DRY extraction of `getRequestIp` into a new dependency-free `lib/request-ip.ts` (also deduplicates an identical inline copy already in `api/compatibility/reports/route.ts`) since `lib/diagnostics.ts`'s `next/server` import makes it otherwise untestable in isolation under this repo's plain-node test runner | `lib/diagnostics.ts`, `lib/request-ip.ts`, `api/diagnostics/client/route.ts`, `api/compatibility/reports/route.ts` |
 | #117 | **Unauthenticated public analytics microservice**: `apps/analytics` (a separate FastAPI service `vercel.json` deploys to the same production domain at `/analytics`) had its one real endpoint, `POST /evidence-outcomes`, completely open - no auth, no payload-size limit. The dashboard's "Run online analytics" button called it directly from the browser with no session/identity information at all, so anyone who found the URL could call it directly, repeatedly, with arbitrarily large record arrays, for free - a real unauthenticated resource-exhaustion vector against a non-trivial `Counter`/loop-based compute endpoint on a production domain (not a data leak - the service is stateless, computing only from the POST body). Since it's a separate Python runtime with no way to validate a Supabase session itself, fixed with a shared-secret gate (`x-analytics-secret` matched against `ANALYTICS_INTERNAL_SECRET` via constant-time compare, 401 otherwise, plus a 2000-record cap per array as defense in depth) and a new authenticated Next.js proxy route (`getRequestUser` first, then forwards with the secret) that the dashboard now calls instead of hitting the Python service directly | `apps/analytics/main.py`, `api/analytics/evidence-outcomes/route.ts`, `components/DashboardExperience.tsx` |
 | #118 | **Inconsistent cache header on an admin route**: every other admin read route (`users`, `feedback`, `ai-operations`, `market-data`, `audit-log`, `feature-flags`) sends `Cache-Control: private, no-store`; `/api/admin/overview` was the one exception, sending plain `no-store` without `private`. Found while auditing all six admin read routes for completeness against that pattern (the permission-gating and query-bounding parts of all six were already solid - see below). Low risk in this deployment (no shared proxy cache sits in front of the app), but a real, confirmed inconsistency. Fixed the one line and added a regression test asserting all six routes agree | `api/admin/overview/route.ts` |
+| #119 | **Cross-user data-integrity gap in job-workflow sync + a disabled-sync UX bug**: found while independently verifying (not just assuming, since it had never actually been read this session) an earlier claim that `api/sync/job-workflow` "follows the same pattern" as mobility/interview sync. `upsertApplication()` wrote `job_id: application.jobId` straight into the payload with no check that the referenced job belongs to the calling user - the FK only requires the row to exist *somewhere* (not owned by the same account), and `createAdminClient()`'s service-role key means RLS doesn't backstop it either. Not a read leak (`readJobWorkflow` still scopes the jobs list by `user_id`), but a caller who obtains another user's job UUID could link their own application to it, and that job's own `on delete cascade` would then silently delete the *unrelated* application the moment its real owner deletes their job. Separately, `useJobWorkflowSync.ts`'s `upload()` treated a 404 (the feature-disabled response) the same as any real failure, so with `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED=false` in production, every local edit silently showed a false "sync failed" error instead of the correct disabled-state message. Fixed both: verify job ownership before linking, and check `response.status === 404` in `upload()` the same way the initial `GET` already did | `lib/job-workflow-repository.ts`, `lib/useJobWorkflowSync.ts` |
 
 ### Verified, not just assumed
 
@@ -521,6 +522,32 @@ stays the single evidenced record of what has and hasn't been checked.
   issue. Flagged for the founder to schedule alongside the dashboard's
   unbounded-query item above, since both are "add real pagination"
   problems rather than one-line fixes.
+- **Job-workflow sync route** (2026-08-22, alongside #119): a prior audit
+  this session had asserted `api/sync/job-workflow` "follows the same
+  pattern" as mobility/interviews purely by analogy, without actually
+  reading it - this pass read `route.ts`, `job-workflow-repository.ts`, and
+  `job-workflow-sync.ts` in full to verify that claim rather than repeat
+  it. It mostly held up: `userId` is always server-derived via
+  `getRequestUser`, never client-supplied; the `PUT` body is strictly
+  Zod-parsed with no passthrough, and `user_id` in every upsert payload is
+  always the server-derived value, not taken from the client; every
+  upsert uses the same CAS-guarded `expectedUpdatedAt` pattern
+  (`.eq("updated_at", existing.updated_at)` on the actual write, not just a
+  pre-check, so it's race-safe); attempting to reuse another user's row id
+  hits the primary-key unique constraint (`23505`), surfaced as a
+  conflict, not a silent overwrite; and the
+  `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED` flag is checked first in both
+  `GET` and `PUT`, with no partial-write path when it's off. Two real gaps
+  did turn up, both fixed in #119 (see above). **Judgment call for the
+  founder, not fixed**: `reconcileJobWorkflow` has no deletion propagation
+  at all - if a job/application is deleted locally but still exists on the
+  server, the next sync silently **restores it from the cloud**, and no
+  `DELETE` endpoint exists for this feature. This is a real design gap
+  that needs a schema decision (soft-delete/tombstone tracking), not a
+  one-line fix, and it's likely exactly why this feature has sat behind
+  `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED=false` with a "test manually
+  before enabling in production" comment in `.env.production.example` -
+  this pass gives a concrete, named reason why that caution was warranted.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
