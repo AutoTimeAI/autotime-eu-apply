@@ -245,6 +245,29 @@ async function markInvoicePaymentFailed(
   }
 }
 
+async function claimStripeEvent(event: Stripe.Event): Promise<boolean> {
+  const supabase = createAdminClient()
+  const { error } = await supabase.from("stripe_webhook_events").insert({
+    event_id: event.id,
+    event_type: event.type,
+  })
+
+  if (!error) {
+    return true
+  }
+
+  if (error.code === "23505") {
+    return false
+  }
+
+  throw new Error(error.message)
+}
+
+async function releaseStripeEventClaim(event: Stripe.Event): Promise<void> {
+  const supabase = createAdminClient()
+  await supabase.from("stripe_webhook_events").delete().eq("event_id", event.id)
+}
+
 async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   try {
     const eventObject = event.data.object
@@ -327,7 +350,16 @@ export async function POST(
       getStripeWebhookEnv().webhookSecret,
     )
 
-    await handleStripeEvent(event)
+    const claimed = await claimStripeEvent(event)
+
+    if (claimed) {
+      try {
+        await handleStripeEvent(event)
+      } catch (error: unknown) {
+        await releaseStripeEventClaim(event)
+        throw error
+      }
+    }
 
     return jsonResponse({
       data: { received: true },
