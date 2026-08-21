@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { assertAiRouteRateLimit, RateLimitError, tailorCoverLetterWithOpenAI } from "../../../../lib/openai-server";
-import { assertCanUseAi, FeatureGateError, trackAiCall } from "../../../../lib/feature-gate";
+import { reserveAiCall, releaseAiCall, FeatureGateError, finalizeAiCall } from "../../../../lib/feature-gate";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
 const cvSchema = z.object({ contact:z.object({name:z.string(),email:z.string(),phone:z.string(),location:z.string(),linkedin:z.string().optional()}),summary:z.string(),experience:z.array(z.object({title:z.string(),company:z.string(),dates:z.string(),bullets:z.array(z.string())})),education:z.array(z.object({degree:z.string(),institution:z.string(),dates:z.string()})),skills:z.array(z.string()) });
@@ -12,8 +12,9 @@ const updateSchema = z.object({ id:z.string().uuid(), content:z.string().trim().
 export async function POST(request:NextRequest){
   try{
     const {user}=await getRequestUser(request);if(!user)return NextResponse.json({data:null,error:"Unauthorised"},{status:401});
-    const body=createSchema.parse(await request.json());await assertAiRouteRateLimit(user.id);await assertCanUseAi(user.id);
-    const result=await tailorCoverLetterWithOpenAI(body);await trackAiCall(user.id,{feature:"cover-letter",model:result.model,promptTokens:result.promptTokens,completionTokens:result.completionTokens,costUsd:result.costUsd});
+    const body=createSchema.parse(await request.json());await assertAiRouteRateLimit(user.id);const reservationId=await reserveAiCall(user.id);
+    let result;try{result=await tailorCoverLetterWithOpenAI(body);}catch(error){await releaseAiCall(reservationId);throw error;}
+    await finalizeAiCall(reservationId,{feature:"cover-letter",model:result.model,promptTokens:result.promptTokens,completionTokens:result.completionTokens,costUsd:result.costUsd});
     let letter={id:null as string|null,version:null as number|null,content:result.value};
     if(body.jobId){const db=createAdminClient();const latest=await db.from("cover_letters").select("version").eq("user_id",user.id).eq("job_id",body.jobId).order("version",{ascending:false}).limit(1).maybeSingle();if(latest.error)throw latest.error;const inserted=await db.from("cover_letters").insert({user_id:user.id,job_id:body.jobId,company_name:body.companyName,job_title:body.jobTitle,version:(latest.data?.version??0)+1,content:result.value}).select("id,version,content").single();if(inserted.error)throw inserted.error;letter=inserted.data;}
     return NextResponse.json({data:{letter},error:null});

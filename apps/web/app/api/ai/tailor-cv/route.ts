@@ -7,9 +7,10 @@ import {
   tailorCvWithOpenAI,
 } from "../../../../lib/openai-server";
 import {
-  assertCanUseAi,
+  reserveAiCall,
+  releaseAiCall,
   FeatureGateError,
-  trackAiCall,
+  finalizeAiCall,
 } from "../../../../lib/feature-gate";
 const cvSchema = z.object({
   contact: z.object({
@@ -51,9 +52,15 @@ export async function POST(request: NextRequest) {
       );
     const body = schema.parse(await request.json());
     await assertAiRouteRateLimit(user.id);
-    await assertCanUseAi(user.id);
-    const result = await tailorCvWithOpenAI(body);
-    await trackAiCall(user.id, {
+    const reservationId = await reserveAiCall(user.id);
+    let result;
+    try {
+      result = await tailorCvWithOpenAI(body);
+    } catch (error) {
+      await releaseAiCall(reservationId);
+      throw error;
+    }
+    await finalizeAiCall(reservationId, {
       feature: "cv-tailoring",
       model: result.model,
       promptTokens: result.promptTokens,
