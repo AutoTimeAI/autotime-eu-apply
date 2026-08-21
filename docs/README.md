@@ -146,5 +146,8 @@ browse the directory for the run you need rather than looking for individual lin
 
 ## Related, outside `docs/`
 
+- [../README.md](../README.md) — repo root: product overview, architecture, local setup, tests.
+- [../CHANGELOG.md](../CHANGELOG.md) — release tags and notable changes since the last tag.
+- [../PRIVACY.md](../PRIVACY.md) / [../SECURITY.md](../SECURITY.md) — privacy summary (see the live `/privacy` page for the authoritative policy) and vulnerability reporting.
 - [../screenshots/](../screenshots/) — screenshot evidence referenced by QA/release docs, organized by phase.
 - [../.github/workflows/](../.github/workflows/) — CI: PR checks, nightly/weekly scheduled smoke, security scans, and manual-dispatch-only diagnostics (e.g. `verify-ai-billing-fix.yml`).
