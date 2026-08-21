@@ -71,6 +71,16 @@ test("extracts text from a normal document.xml entry", () => {
   assert.equal(text, "Hello CV")
 })
 
+test("decodes entities in one pass without double-escaping", () => {
+  // "&amp;lt;" is a legitimately double-escaped "&lt;" - it should decode
+  // to the literal two characters "&lt;", not be re-decoded into "<".
+  const xml =
+    "<w:document><w:body><w:p><w:r><w:t>Rate &amp;lt; 5&amp;gt;/hr &amp;amp; more</w:t></w:r></w:p></w:body></w:document>"
+  const docx = buildMinimalDocx("word/document.xml", Buffer.from(xml, "utf8"))
+  const text = extractDocxText(docx)
+  assert.equal(text, "Rate &lt; 5&gt;/hr &amp; more")
+})
+
 test("rejects a document.xml entry that decompresses past the output cap", () => {
   // A large run of a single repeated byte compresses to a tiny buffer but
   // expands back to its full size on inflate - the zip-bomb shape this

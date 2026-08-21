@@ -98,13 +98,22 @@ function readZipEntry(buffer: Buffer, entry: ZipEntry): Buffer {
   throw new Error("DOCX compression type is not supported.")
 }
 
+const xmlEntities: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&apos;": "'"
+}
+
+// Decoding &amp; in a separate pass before &lt;/&gt;/etc. is a classic
+// double-escaping bug: text that was legitimately double-escaped (the
+// literal two characters "&lt;", written in the source XML as
+// "&amp;lt;") would decode in two steps into a raw "<" instead of staying
+// "&lt;". Matching every entity in one pass avoids re-scanning content a
+// prior replacement already produced.
 function decodeXmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
+  return value.replace(/&amp;|&lt;|&gt;|&quot;|&apos;/g, (match) => xmlEntities[match])
 }
 
 function documentXmlToText(xml: string): string {
