@@ -428,6 +428,27 @@ stays the single evidenced record of what has and hasn't been checked.
   that `authenticatedUserId`, and `upsertMobilityProfile` enforces
   optimistic concurrency via `expectedUpdatedAt` the same way
   `upsertInterview` does. **No fix needed.**
+- **Pricing/billing surface** (2026-08-22): `PricingCard.tsx` is purely
+  presentational - `accountPlan`/price IDs are supplied only by
+  `pricing/page.tsx`, which derives plan via server-side `getUserPlan(user.id)`
+  and price IDs via server-only `getStripePriceEnv()`; nothing client-readable
+  is trusted for entitlement. `POST /api/stripe/checkout` accepts a `priceId`
+  from the request body but only as a selector into a fixed server allowlist
+  (`getCheckoutProduct`) matched against env-sourced price IDs - a client
+  cannot substitute an arbitrary/cheaper Stripe price this way - and
+  `user.id`/`client_reference_id`/`metadata.user_id` all come from
+  `supabase.auth.getUser()`, never the request body. `stripe/webhook/route.ts`
+  verifies the signature against the raw body before parsing, and the
+  `stripe_webhook_events` idempotency claim (added for #105) gates all four
+  handled event types with no bypass path. `SettingsControls.tsx`/
+  `UserNav.tsx`/`DashboardShell.tsx` all receive `plan` as a prop threaded
+  from a per-request server call (`dashboard/layout.tsx`,
+  `dashboard/settings/page.tsx`), never a JWT claim or client storage. The
+  reserve/finalize/release pattern from #100/#113 was confirmed applied
+  consistently across all 12 AI-consuming routes, with no route calling a
+  provider outside the gate, and no client-side-only "Pro" gate found whose
+  underlying API route skips its own server-side entitlement check. **No fix
+  needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
