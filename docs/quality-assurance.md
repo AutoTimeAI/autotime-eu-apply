@@ -335,6 +335,18 @@ stays the single evidenced record of what has and hasn't been checked.
   resolving as an admin. Error responses (`admin-safe-response.ts`) never
   leak internals - generic message plus an opaque `diagnosticId` only,
   `Cache-Control: private, no-store` on every response. **No fix needed.**
+- **Server-side job-listing ingestion** (2026-08-21, alongside #110): read
+  `supabase/functions/sync-job-sources/index.ts` and `sync-eures/index.ts` in
+  full. The ingestion pipeline only ever fetches from Greenhouse, Lever,
+  Ashby, Personio, and SmartRecruiters' own public APIs (`feed()`'s
+  hardcoded platform list - anything else returns `[]`), plus Adzuna/Jooble
+  behind their own API credentials (`disabled_missing_credentials` when
+  unset), plus EURES via its own dedicated function - exactly matching the
+  compliance doc's permitted-sources list, with no path for an
+  arbitrary/unapproved source to be added without a code change. Cron-secret
+  gated (`x-cron-secret` header check before any work runs). **No fix
+  needed** - this is the code-correctness half of the #110 finding; only the
+  documentation was wrong.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
