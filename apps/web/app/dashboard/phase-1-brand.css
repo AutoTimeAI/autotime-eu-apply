@@ -24,6 +24,19 @@
   z-index: 1;
 }
 
+/*
+ * The blanket rule above flattens .dashboard-topbar to the same z-index as
+ * its sibling .dashboard-body (both are direct children of
+ * .dashboard-app-shell), so the topbar - and the account menu inside it -
+ * loses stacking ties to .dashboard-body content that happens to render
+ * later in the DOM, letting page content intercept clicks meant for the
+ * open account dropdown. Restore the topbar above the rest of the shell;
+ * same selector specificity as the rule above, so this must stay after it.
+ */
+.dashboard-app-shell > .dashboard-topbar {
+  z-index: 20;
+}
+
 .eu-brand-backdrop {
   position: fixed;
   inset: 0;
