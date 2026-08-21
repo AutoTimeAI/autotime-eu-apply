@@ -16,9 +16,9 @@ test("interviews list renders", async ({ page }) => {
 test("opening an interview shows its detail view", async ({ page }) => {
   await gotoProduction(page, "/dashboard/interviews")
   const firstInterviewLink = page
-    .locator("main.phase-four-interview-list")
-    .getByRole("link")
+    .locator(".phase-four-interview-row")
     .first()
+    .getByRole("link", { name: "Open interview" })
 
   if ((await firstInterviewLink.count()) === 0) {
     await expect(

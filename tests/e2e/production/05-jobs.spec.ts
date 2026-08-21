@@ -16,7 +16,7 @@ test("jobs list renders with working search and filter controls", async ({
   await gotoProduction(page, "/dashboard/jobs")
   await expect(page.locator("main.phase-two-jobs")).toBeVisible()
 
-  const jobCount = await page.locator("main.phase-two-jobs").getByRole("link").count()
+  const jobCount = await page.locator(".phase-two-job-row").count()
 
   if (jobCount === 0) {
     await expect(page.getByRole("button", { name: "Add a job" })).toBeVisible()
@@ -34,12 +34,12 @@ test("opening a job shows its detail view without triggering a new analysis", as
   page
 }) => {
   await gotoProduction(page, "/dashboard/jobs")
-  const firstJobLink = page.locator("main.phase-two-jobs").getByRole("link").first()
+  const firstJobRow = page.locator(".phase-two-job-row").first()
 
-  if ((await firstJobLink.count()) === 0) {
+  if ((await firstJobRow.count()) === 0) {
     test.skip(true, "No jobs are currently seeded for the QA account")
   }
 
-  await firstJobLink.click()
+  await firstJobRow.getByRole("button").click()
   await expect(page.locator("main.phase-two-job-detail")).toBeVisible({ timeout: 15_000 })
 })
