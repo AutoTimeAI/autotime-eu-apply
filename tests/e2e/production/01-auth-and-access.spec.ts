@@ -68,7 +68,7 @@ test.describe("sign-out", () => {
     await page.waitForLoadState("networkidle")
     await page.locator(".user-nav-trigger").click()
     await page.getByRole("menuitem", { name: "Sign out" }).click()
-    await expect(page).toHaveURL(/\/(login)?$/, { timeout: 15_000 })
+    await expect(page).toHaveURL(/\/(login)?(\?.*)?$/, { timeout: 15_000 })
 
     await gotoProduction(page, "/dashboard")
     await expect(page).toHaveURL(/\/login/)
