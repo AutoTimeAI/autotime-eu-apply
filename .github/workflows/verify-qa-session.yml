@@ -1,0 +1,44 @@
+name: Verify QA session bootstrap
+
+# Diagnostic-only, manual dispatch. Confirms the QA_SESSION_URL secret is
+# valid without ever printing it: checks only the HTTP status code and
+# redirect Location header of the first hop. A working secret 302s to
+# /dashboard; a bad/missing one 404s per the bootstrap route's own
+# documented behaviour (docs/qa-test-account.md). Useful any time
+# QA_SESSION_URL is set or rotated.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check bootstrap response (status + redirect target only)
+        env:
+          QA_SESSION_URL: ${{ secrets.QA_SESSION_URL }}
+        run: |
+          if [ -z "$QA_SESSION_URL" ]; then
+            echo "QA_SESSION_URL is not set."
+            exit 1
+          fi
+          response=$(curl -sS -o /dev/null -D - --max-redirs 0 "$QA_SESSION_URL" || true)
+          status=$(echo "$response" | grep -i '^HTTP' | tail -1 | awk '{print $2}')
+          location=$(echo "$response" | grep -i '^location:' | tail -1 | sed -E 's#^[Ll]ocation:\s*https?://[^/]+##' | tr -d '\r')
+          echo "HTTP status: $status"
+          echo "Redirect path: ${location:-<none>}"
+          if [ "$status" = "302" ] || [ "$status" = "303" ] || [ "$status" = "307" ]; then
+            if echo "$location" | grep -q '^/dashboard'; then
+              echo "Bootstrap looks healthy: redirects to /dashboard."
+            else
+              echo "Unexpected redirect target - investigate."
+              exit 1
+            fi
+          else
+            echo "Bootstrap did not redirect as expected (secret likely invalid, or QA_SESSION_BOOTSTRAP_SECRET/QA_TEST_ACCOUNT_USER_ID misconfigured in Vercel)."
+            exit 1
+          fi
