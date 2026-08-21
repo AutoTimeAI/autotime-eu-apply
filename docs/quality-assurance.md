@@ -471,6 +471,29 @@ stays the single evidenced record of what has and hasn't been checked.
   user's own real data rather than improve safety, so this needs a UI change
   alongside it, not a one-line backend cap. Flagged as a real, growing
   latency/payload-size defect for the founder to schedule.
+- **ESCO and account/profile routes** (2026-08-22): audited
+  `api/esco/{matches,import-evidence,score-job,questionnaire}`,
+  `api/account/me`, `api/account/settings`, `api/profile/onboarding`, and
+  `api/cv/github` specifically for mass-assignment and IDOR, not just the
+  usual auth-presence check. All four ESCO handlers scope every
+  `user_skill_profile`/`esco_questionnaire_answers` read-write to
+  `user.id`; `score-job`'s job/occupation lookups turned out to hit
+  genuinely public reference tables (`job_listings`, `esco_skills`,
+  `esco_occupations`, `esco_occupation_skills` all have
+  `select ... to authenticated using (true)` RLS policies, confirmed in
+  `20260810120000_esco_adaptive_matching.sql`), so there's no per-user data
+  to leak there. `account/settings` and `profile/onboarding`'s PATCH
+  schemas are strict Zod allow-lists with no `.passthrough()`, and both
+  build their upsert objects field-by-field from validated values rather
+  than spreading the raw request body - confirmed there's no path for a
+  client to smuggle an extra field (`plan`, `role`, `credits`) into a
+  privileged column, and separately confirmed the `profiles` table itself
+  has no such columns to begin with (plan/subscription state lives only in
+  the separate `subscriptions` table, which neither route touches).
+  `cv/github` delegates entirely to the already-audited (alongside
+  #111/#112) `lib/cv/sources/github.ts`, which hardcodes `api.github.com`
+  for every call - no client-supplied host parameter exists at the route
+  layer. **No fix needed** on any of the seven files.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
