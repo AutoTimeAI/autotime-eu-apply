@@ -55,6 +55,10 @@ export interface RoleIntelligenceProvider {
     facts: string[];
     gaps: string[];
   }): Promise<z.infer<typeof explanationSchema>>;
+  // Usage from the most recently completed call, for callers that need to
+  // record real AI spend (e.g. finalizeAiCall). Mock mode makes no external
+  // request, so it has none.
+  readonly lastUsage?: { model: string; promptTokens: number; completionTokens: number } | null;
 }
 export class RoleIntelligenceUnavailableError extends Error {}
 const MAX_INPUT = 80_000;
@@ -203,6 +207,7 @@ export class MockRoleIntelligenceProvider implements RoleIntelligenceProvider {
 }
 export class NvidiaRoleIntelligenceProvider implements RoleIntelligenceProvider {
   private readonly client: Pick<OpenAI, "chat">;
+  lastUsage: { model: string; promptTokens: number; completionTokens: number } | null = null;
   constructor(clientOverride?: Pick<OpenAI, "chat">) {
     if (clientOverride) {
       this.client = clientOverride;
@@ -233,9 +238,12 @@ export class NvidiaRoleIntelligenceProvider implements RoleIntelligenceProvider 
     const key = createHash("sha256")
       .update(task + body)
       .digest("hex");
+    const modelName = process.env.NVIDIA_MODEL?.trim() || "openai/gpt-oss-20b";
     const existing = cache.get(key);
-    if (existing && existing.expires > Date.now())
+    if (existing && existing.expires > Date.now()) {
+      this.lastUsage = { model: modelName, promptTokens: 0, completionTokens: 0 };
       return schema.parse(existing.value);
+    }
     if (activeRequests >= MAX_CONCURRENCY)
       throw new RoleIntelligenceUnavailableError(
         "Role intelligence is busy. Confirm existing evidence and try again.",
@@ -245,7 +253,7 @@ export class NvidiaRoleIntelligenceProvider implements RoleIntelligenceProvider 
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
           const result = await this.client.chat.completions.create({
-            model: process.env.NVIDIA_MODEL?.trim() || "openai/gpt-oss-20b",
+            model: modelName,
             temperature: 0.1,
             response_format: { type: "json_object" },
             messages: [
@@ -259,6 +267,11 @@ export class NvidiaRoleIntelligenceProvider implements RoleIntelligenceProvider 
           const parsed = schema.parse(
             JSON.parse(result.choices[0]?.message.content ?? "{}"),
           );
+          this.lastUsage = {
+            model: result.model || modelName,
+            promptTokens: result.usage?.prompt_tokens ?? 0,
+            completionTokens: result.usage?.completion_tokens ?? 0,
+          };
           cache.set(key, { expires: Date.now() + 15 * 60_000, value: parsed });
           return parsed;
         } catch (error: unknown) {
