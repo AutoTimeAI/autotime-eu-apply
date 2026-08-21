@@ -3,12 +3,20 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { reportClientIssue } from "../lib/client-diagnostics";
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../lib/configuration-error";
 import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
 
 type OAuthProvider = "github" | "google";
 
 function getErrorMessage(error: unknown): string {
+  if (isConfigurationUnavailableError(error)) {
+    return configurationUnavailableMessage;
+  }
+
   return error instanceof Error
     ? error.message
     : "Sign-in could not be started. Please try again.";
@@ -37,7 +45,20 @@ function LoginForm() {
 
   useEffect(() => {
     let isMounted = true;
-    const supabase = createBrowserClient();
+    let supabase: ReturnType<typeof createBrowserClient>;
+
+    try {
+      supabase = createBrowserClient();
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      setStatus(`Failed: ${message}`);
+      reportClientIssue({
+        area: "auth",
+        code: "auth.client.create.failed",
+        message,
+      });
+      return;
+    }
 
     supabase.auth.getSession().then(async ({ data, error }) => {
       if (!isMounted) {

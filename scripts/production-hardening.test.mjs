@@ -419,6 +419,27 @@ test("Client fallbacks surface and record runtime and action failures", () => {
   assert.match(extensionConnect, /extension\.connect\.unhandled/)
 })
 
+test("login page survives a misconfigured Supabase client instead of crashing to the error boundary", () => {
+  // Reproduced live: LoginForm's mount effect called createBrowserClient()
+  // directly with no try/catch. When NEXT_PUBLIC_SUPABASE_URL/ANON_KEY are
+  // missing or invalid, that throws ConfigurationUnavailableError
+  // synchronously inside the effect, which crashed the entire /login page to
+  // the generic error.tsx fallback - the one page where that's most
+  // damaging, since it leaves zero path to sign in. Every other
+  // createBrowserClient() call site in the app already wraps it in a
+  // try/catch; this asserts LoginContent does too, and that it maps the
+  // config error to the same user-facing message used elsewhere (not the
+  // raw internal "Required service configuration is unavailable" string).
+  const login = read("apps/web/components/LoginContent.tsx")
+
+  assert.match(login, /isConfigurationUnavailableError/)
+  assert.match(login, /configurationUnavailableMessage/)
+  assert.match(
+    login,
+    /try\s*\{[\s\S]{0,40}createBrowserClient\(\)[\s\S]{0,40}\}\s*catch/
+  )
+})
+
 test("feature readiness supersedes the universal profile lock", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const readiness = read("apps/web/lib/capability-readiness.ts")
