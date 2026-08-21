@@ -763,6 +763,7 @@ export type Database = {
           prompt_tokens: number;
           completion_tokens: number;
           cost_usd: number;
+          used_credit: boolean;
           created_at: string;
         };
         Insert: {
@@ -770,9 +771,10 @@ export type Database = {
           user_id: string;
           feature: string;
           model: string;
-          prompt_tokens: number;
-          completion_tokens: number;
-          cost_usd: number;
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          cost_usd?: number;
+          used_credit?: boolean;
           created_at?: string;
         };
         Update: {
@@ -783,6 +785,7 @@ export type Database = {
           prompt_tokens?: number;
           completion_tokens?: number;
           cost_usd?: number;
+          used_credit?: boolean;
           created_at?: string;
         };
         Relationships: [];
@@ -1594,6 +1597,29 @@ export type Database = {
           p_max_requests: number;
         };
         Returns: boolean;
+      };
+      reserve_ai_call: {
+        Args: {
+          p_user_id: string;
+          p_reservation_id: string;
+          p_monthly_limit: number;
+        };
+        Returns: boolean;
+      };
+      confirm_ai_call: {
+        Args: {
+          p_reservation_id: string;
+          p_feature: string;
+          p_model: string;
+          p_prompt_tokens: number;
+          p_completion_tokens: number;
+          p_cost_usd: number;
+        };
+        Returns: undefined;
+      };
+      release_ai_call: {
+        Args: { p_reservation_id: string };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;

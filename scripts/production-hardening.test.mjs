@@ -97,7 +97,7 @@ test("profile CV AI review validates input before quota checks", () => {
     const route = read(routePath)
     const parseIndex = route.indexOf("const body = requestSchema.parse")
     const rateLimitIndex = route.indexOf("await assertAiRouteRateLimit")
-    const featureGateIndex = route.indexOf("await assertCanUseAi")
+    const featureGateIndex = route.indexOf("await reserveAiCall")
 
     assert.notEqual(parseIndex, -1, routePath)
     assert.notEqual(rateLimitIndex, -1, routePath)
@@ -451,6 +451,91 @@ test("feature readiness supersedes the universal profile lock", () => {
   assert.match(
     readiness,
     /"prepare_application"[\s\S]*"evidence_confirmation"/
+  )
+})
+
+test("every AI route reserves a call slot before the provider request and releases it on failure", () => {
+  const routesAndProviderCalls = [
+    ["apps/web/app/api/ai/analyse/route.ts", "analyseJobWithOpenAI"],
+    ["apps/web/app/api/ai/content/route.ts", "generateContentWithOpenAI"],
+    ["apps/web/app/api/ai/interview/route.ts", "generateInterviewPrepWithOpenAI"],
+    ["apps/web/app/api/ai/interview-answer/route.ts", "generateInterviewAnswerWithOpenAI"],
+    ["apps/web/app/api/ai/profile-context/route.ts", "reviewProfileContextWithOpenAI"],
+    ["apps/web/app/api/ai/tailor-cv/route.ts", "tailorCvWithOpenAI"],
+    ["apps/web/app/api/ai/cover-letter/route.ts", "tailorCoverLetterWithOpenAI"],
+    ["apps/web/app/api/ai/cv-enrich/route.ts", "extractCvEnrichmentWithOpenAI"],
+    ["apps/web/app/api/ai/technical-interview/route.ts", "generateTechnicalInterviewDrillsWithOpenAI"],
+    ["apps/web/app/api/ai/work-authorisation/route.ts", "reviewWorkAuthorisationWithOpenAI"],
+    ["apps/web/app/api/esco/questionnaire/route.ts", "runEscoQuestionnaireRoundWithOpenAI"],
+    ["apps/web/app/api/outreach/route.ts", "draftOutreachWithOpenAI"],
+  ]
+
+  for (const [routePath, providerCall] of routesAndProviderCalls) {
+    const route = read(routePath)
+    const reserveIndex = route.indexOf("await reserveAiCall")
+    const providerIndex = route.indexOf(providerCall + "(")
+    // A release call guarding an earlier guardrail/validation early-return
+    // (before the provider call) is also valid - only a release reachable
+    // *after* the provider call (in its own catch block) proves this
+    // specific failure mode is covered, so search from providerIndex on.
+    const releaseIndex = route.indexOf("await releaseAiCall", providerIndex)
+    const finalizeIndex = route.indexOf("await finalizeAiCall", providerIndex)
+
+    assert.notEqual(reserveIndex, -1, `${routePath}: no reserveAiCall call`)
+    assert.notEqual(providerIndex, -1, `${routePath}: no ${providerCall} call`)
+    assert.notEqual(releaseIndex, -1, `${routePath}: no releaseAiCall call after the provider call`)
+    assert.notEqual(finalizeIndex, -1, `${routePath}: no finalizeAiCall call after the provider call`)
+
+    // The reservation must happen before the real, paid provider call -
+    // this is the actual fix: a plain read-then-write check let concurrent
+    // requests all pass the allowance/credit check before any of them
+    // reached OpenAI. releaseAiCall must appear between the two (in the
+    // catch block guarding the provider call) so a failed generation never
+    // costs the caller an allowance slot or a purchased credit, and
+    // finalizeAiCall must come after the provider call succeeds.
+    assert.ok(reserveIndex < providerIndex, `${routePath}: reservation must precede the provider call`)
+    assert.ok(providerIndex < releaseIndex, `${routePath}: release must be reachable after the provider call (in its catch block)`)
+    assert.ok(providerIndex < finalizeIndex, `${routePath}: finalize must come after the provider call`)
+    assert.doesNotMatch(
+      route,
+      /assertCanUseAi|trackAiCall/,
+      `${routePath}: must not use the old, racy check-then-track functions`,
+    )
+  }
+})
+
+test("the AI-call reservation RPC is atomic per user and refunds a consumed credit on release", () => {
+  const migration = read("supabase/migrations/20260821160000_atomic_ai_call_reservation.sql")
+
+  assert.match(
+    migration,
+    /create or replace function public\.reserve_ai_call/,
+  )
+  assert.match(
+    migration,
+    /pg_advisory_xact_lock\(hashtext\(p_user_id::text \|\| ':ai_reserve'\)\)/,
+  )
+  // The lock must be acquired, and the reservation row inserted, before
+  // returning - otherwise a second concurrent call could still race past
+  // the count check while the first call's OpenAI request is still in
+  // flight (the actual bug: the row that makes concurrent requests visible
+  // to each other didn't exist until *after* the provider call succeeded).
+  const reserveBody = migration.slice(
+    migration.indexOf("create or replace function public.reserve_ai_call"),
+    migration.indexOf("create or replace function public.confirm_ai_call"),
+  )
+  assert.match(reserveBody, /insert into public\.ai_usage/)
+  assert.match(
+    migration,
+    /create or replace function public\.release_ai_call/,
+  )
+  assert.match(
+    migration,
+    /insert into public\.ai_credit_ledger \(user_id, delta, reason, feature\)\s*\n\s*values \(v_user_id, 1, 'refund', 'ai-call-release'\)/,
+  )
+  assert.match(
+    migration,
+    /grant execute on function public\.reserve_ai_call\(uuid, uuid, integer\) to service_role/,
   )
 })
 
