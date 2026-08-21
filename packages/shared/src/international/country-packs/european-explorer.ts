@@ -32,7 +32,7 @@ export const europeanExplorerPack: CountryPack = {
     },
   ],
   limitations: [
-    "Limited coverage — verification required.",
     "Explorer mode does not calculate permit eligibility or pathway viability.",
+    "Limited coverage — verification required.",
   ],
 };

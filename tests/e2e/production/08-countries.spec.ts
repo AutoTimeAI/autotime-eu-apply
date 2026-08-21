@@ -38,6 +38,6 @@ test("an unsupported country (Belgium) renders in limited explorer mode", async 
   await page.getByLabel("Hiring country").selectOption("Belgium")
   await expect(page.getByRole("heading", { name: "Belgium", level: 2 })).toBeVisible()
   await expect(
-    page.getByText("Limited coverage — verification required")
+    page.getByText("Limited coverage — verification required", { exact: true })
   ).toBeVisible()
 })

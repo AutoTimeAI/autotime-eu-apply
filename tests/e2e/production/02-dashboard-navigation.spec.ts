@@ -28,6 +28,7 @@ test.describe("desktop layout", () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true)
+    await expect(page.locator("main.home-experience")).toBeVisible()
     await expectNoSeriousViolations(page, { include: "main.home-experience" })
   })
 

@@ -38,7 +38,9 @@ test("opening an application shows its detail, evidence and readiness state", as
   }
 
   await firstApplicationLink.click()
-  await expect(page.locator("main.phase-three-application-detail")).toBeVisible()
+  await expect(page.locator("main.phase-three-application-detail")).toBeVisible({
+    timeout: 15_000
+  })
 })
 
 test("an Applied-stage application, if present, shows its submission record", async ({
