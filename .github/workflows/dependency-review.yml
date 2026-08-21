@@ -1,0 +1,38 @@
+name: Dependency review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+          # GHSA-jmr9-qjv8-65gv (extract-zip symlink path traversal, high):
+          # transitive via @lhci/cli -> lighthouse -> puppeteer-core ->
+          # @puppeteer/browsers, used only to unpack pinned Chrome-for-Testing
+          # binaries from Google's own CDN during local/CI Lighthouse runs -
+          # never untrusted/user-supplied zip content. No patched extract-zip
+          # release exists upstream (2.0.1 is latest as of this writing).
+          # Documented accepted risk, not a general severity-threshold change -
+          # see docs/quality-assurance.md.
+          allow-ghsas: GHSA-jmr9-qjv8-65gv

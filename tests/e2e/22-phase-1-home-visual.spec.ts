@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { expectNoSeriousViolations } from "./helpers/axe";
 
 const viewports = [
   { width: 1440, height: 900 },
@@ -88,6 +89,10 @@ test("Home keeps one action and every primary journey reachable", async ({
     expect(metrics.overflow).toBeLessThanOrEqual(1);
     expect(metrics.words).toBeLessThan(100);
     expect(metrics.panels).toBe(2);
+
+    if (viewport.width === 1440) {
+      await expectNoSeriousViolations(page, { include: ".home-experience" });
+    }
 
     await page.screenshot({
       path: path.join(

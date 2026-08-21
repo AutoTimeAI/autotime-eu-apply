@@ -1,0 +1,69 @@
+name: Full E2E suite (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-full
+  cancel-in-progress: false
+
+jobs:
+  e2e-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Work around unreliable azure.archive.ubuntu.com mirror
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+            if [ ! -s /etc/apt/apt-mirrors.txt ]; then
+              echo "http://archive.ubuntu.com/ubuntu" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+            fi
+          fi
+          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          sudo find /etc/apt/sources.list.d -type f -exec sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' {} + 2>/dev/null || true
+
+      - name: Install Playwright browsers
+        timeout-minutes: 15
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the complete local-fixture Playwright suite
+        run: pnpm test:e2e
+        env:
+          NEXT_PUBLIC_AUTOTIME_ENV: preview
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: offline-ci-anon-key
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_offline_ci
+          NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+          SUPABASE_SERVICE_ROLE_KEY: offline-ci-service-role-key
+          OPENAI_API_KEY: offline-ci-openai-key
+          STRIPE_SECRET_KEY: sk_test_offline_ci
+          STRIPE_WEBHOOK_SECRET: whsec_offline_ci
+          STRIPE_PRO_MONTHLY_PRICE_ID: price_offline_ci_monthly
+          STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
+          RESEND_API_KEY: re_offline_ci
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-full-report
+          path: playwright-report/
+          retention-days: 14

@@ -1,0 +1,60 @@
+name: Visual regression (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_snapshots:
+        description: "Regenerate baselines instead of comparing against them"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-regression
+  cancel-in-progress: false
+
+jobs:
+  visual-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run visual regression suite
+        run: |
+          if [ "${{ github.event.inputs.update_snapshots }}" = "true" ]; then
+            pnpm exec playwright test tests/e2e/visual --update-snapshots
+          else
+            pnpm exec playwright test tests/e2e/visual
+          fi
+
+      # Baselines are committed to the repo, not written back by this
+      # workflow - a human reviews the diff/updated-baseline artifact below
+      # and commits any accepted change locally (see docs/quality-assurance.md).
+      - name: Upload visual regression results (diffs and/or updated baselines)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-results
+          path: |
+            playwright-report/
+            tests/e2e/visual/key-states.spec.ts-snapshots/
+          retention-days: 14
