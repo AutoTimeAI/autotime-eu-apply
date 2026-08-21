@@ -347,6 +347,18 @@ stays the single evidenced record of what has and hasn't been checked.
   gated (`x-cron-secret` header check before any work runs). **No fix
   needed** - this is the code-correctness half of the #110 finding; only the
   documentation was wrong.
+- **Interview workflow** (2026-08-21): the three interview AI routes
+  (`api/ai/interview`, `api/ai/interview-answer`, `api/ai/technical-interview`)
+  all correctly use the reserve/confirm/release billing pattern from #100 and
+  the prompt-injection guard from #98 (`UNTRUSTED_CONTENT_GUARD`, confirmed
+  present in every `generate*WithOpenAI` function in `openai-server.ts`, not
+  just some). The interview-prep routes are stateless - the client sends the
+  full application/profile/job context in the request body rather than an ID
+  the server looks up, so there's no IDOR surface from a client-supplied
+  application/interview ID. `api/sync/interviews` and
+  `interview-workflow-repository.ts`'s `upsertInterview`/`readInterviewWorkflow`
+  consistently scope every read/write to the server-derived `userId`, never a
+  client-supplied one. **No fix needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
