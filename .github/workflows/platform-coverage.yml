@@ -8,7 +8,6 @@ on:
 permissions:
   contents: write
   issues: write
-  pull-requests: write
 
 jobs:
   verify:
@@ -54,11 +53,15 @@ jobs:
       - name: Prepare review-only evidence update
         if: steps.coverage.outcome == 'success'
         run: node scripts/apply-coverage-verification.mjs
-      - name: Open evidence update pull request
+      - name: Push evidence update branch
         if: steps.coverage.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The organization disallows GitHub Actions from creating pull
+          # requests, so this pushes the branch and prints a compare link
+          # instead of calling `gh pr create` - a human opens the PR with
+          # one click from that link, with no extra permission required.
           branch="coverage/live-${GITHUB_RUN_ID}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -67,7 +70,7 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Refresh reviewed platform coverage evidence"
           git push origin "$branch"
-          gh pr create --base main --head "$branch" --title "Refresh platform coverage evidence" --body "Updates verification dates from read-only live run ${GITHUB_RUN_ID}. No external forms were filled or submitted. Review the attached workflow evidence before merging."
+          echo "Evidence updated. Open a PR for review: ${{ github.server_url }}/${{ github.repository }}/compare/main...$branch?expand=1" >> "$GITHUB_STEP_SUMMARY"
       - name: Enforce live result
         if: steps.coverage.outcome == 'failure'
         run: exit 1
