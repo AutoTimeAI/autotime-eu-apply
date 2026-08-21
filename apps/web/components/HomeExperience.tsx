@@ -634,6 +634,23 @@ export default function HomeExperience({
         title="Your search"
       />
 
+      <details className="walkthrough-inline-panel">
+        <summary>Product walkthrough</summary>
+        <section aria-labelledby="home-walkthrough-title">
+          <div className="walkthrough-copy">
+            <p className="eyebrow">2-minute walkthrough</p>
+            <h2 id="home-walkthrough-title">See how AutoTime works</h2>
+            <p>
+              A short, narrated tour of evidence-backed job checks, the
+              application tracker and interview prep - watch any time.
+            </p>
+          </div>
+          <video controls preload="metadata" src="/demo/autotime-walkthrough-2min-voiced.mp4">
+            Your browser does not support the walkthrough video.
+          </video>
+        </section>
+      </details>
+
       {status ? (
         <p
           className="status-banner"
