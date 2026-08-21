@@ -28,14 +28,21 @@ jobs:
             echo "SUPABASE_FUNCTION_BASE_URL or JOB_SYNC_CRON_SECRET is not set."
             exit 1
           fi
-          status=$(curl -sS -o /dev/null -w "%{http_code}" -X POST \
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
             -H "x-cron-secret: $CRON_SECRET" \
             "$FUNCTION_BASE_URL/sync-eures" || true)
+          status=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
           echo "HTTP status: $status"
+          echo "Response body: $body"
           if [ "$status" = "200" ] || [ "$status" = "503" ]; then
             echo "Bootstrap looks healthy: shared secret accepted."
           elif [ "$status" = "401" ]; then
-            echo "Rejected as Unauthorized - JOB_SYNC_CRON_SECRET does not match the Supabase function's CRON_SECRET."
+            if echo "$body" | grep -qi "invalid jwt\|missing authorization\|\"code\":401"; then
+              echo "Rejected by Supabase's own API gateway before reaching the function - the function was deployed WITH JWT verification enabled. Redeploy with --no-verify-jwt (see scripts/deploy-job-ingestion.ps1)."
+            else
+              echo "Rejected by the function itself as Unauthorized - JOB_SYNC_CRON_SECRET does not match the Supabase function's CRON_SECRET."
+            fi
             exit 1
           else
             echo "Unexpected status - check SUPABASE_FUNCTION_BASE_URL is correct (should end in /functions/v1)."
