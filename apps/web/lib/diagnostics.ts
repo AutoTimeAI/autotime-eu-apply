@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto"
 import { NextResponse, type NextRequest } from "next/server"
 import loggingConfig from "../../../config/monitoring/logging.json"
+import { getRequestIp } from "./request-ip"
+import { createAdminClient } from "./supabase/admin"
 
 export type DiagnosticLevel = "severe" | "warn" | "info"
 
@@ -241,4 +244,45 @@ export function getEnvReadiness() {
     name,
     required: !optionalKeys.includes(name)
   }))
+}
+
+// /api/diagnostics/client intentionally accepts unauthenticated requests
+// (it needs to capture failures that happen before a session exists, e.g.
+// a login/OAuth error), and every accepted report writes a row to
+// operational_logs - with no rate limit, that's an open, no-auth-required
+// endpoint that lets anyone flood the database for free. Reuses the same
+// atomic, serverless-safe increment_ai_rate_limit RPC already used for AI
+// cost gating (generic despite the name - keyed by an arbitrary string,
+// not AI-specific) rather than a new table/migration for one endpoint.
+// Keyed by user id when authenticated, otherwise a salted hash of the
+// client IP (never the raw IP) - mirrors the existing pattern in
+// lib/coverage-report.ts's getCoverageRequesterHash.
+export async function assertDiagnosticRouteRateLimit(
+  request: NextRequest | Request,
+  userId: string | null
+): Promise<boolean> {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!secret) {
+    return true
+  }
+
+  const identity = userId
+    ? `user:${userId}`
+    : `ip:${createHash("sha256").update(`${secret}:${getRequestIp(request)}`).digest("hex")}`
+
+  const { data, error } = await createAdminClient().rpc("increment_ai_rate_limit", {
+    p_rate_limit_key: `diagnostic-client:${identity}`,
+    p_window_seconds: 300,
+    p_max_requests: 30
+  })
+
+  // Fail open on an RPC error, unlike assertAiRouteRateLimit's fail-closed
+  // behaviour: this is best-effort error reporting, not a real-money AI
+  // call, so a transient DB hiccup should never silently drop a user's
+  // legitimate diagnostic report.
+  if (error) {
+    return true
+  }
+
+  return Boolean(data)
 }
