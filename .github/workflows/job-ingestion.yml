@@ -11,15 +11,19 @@ jobs:
         env:
           FUNCTION_BASE_URL: ${{ secrets.SUPABASE_FUNCTION_BASE_URL }}
           CRON_SECRET: ${{ secrets.JOB_SYNC_CRON_SECRET }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: >-
           curl --fail-with-body --retry 3 -X POST
           -H "x-cron-secret: $CRON_SECRET"
+          -H "apikey: $SUPABASE_ANON_KEY"
           "$FUNCTION_BASE_URL/sync-eures"
       - name: Sync direct ATS sources
         env:
           FUNCTION_BASE_URL: ${{ secrets.SUPABASE_FUNCTION_BASE_URL }}
           CRON_SECRET: ${{ secrets.JOB_SYNC_CRON_SECRET }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: >-
           curl --fail-with-body --retry 3 -X POST
           -H "x-cron-secret: $CRON_SECRET"
+          -H "apikey: $SUPABASE_ANON_KEY"
           "$FUNCTION_BASE_URL/sync-job-sources"

@@ -1,12 +1,16 @@
 name: Verify job ingestion secrets
 
-# Diagnostic-only, manual dispatch. Confirms SUPABASE_FUNCTION_BASE_URL and
-# JOB_SYNC_CRON_SECRET are configured correctly without ever printing them:
-# checks only the HTTP status code of each sync function. A working secret
-# pair returns 200/503 (503 means the cron secret is fine but the EURES
-# partner API credentials aren't configured in Supabase - a separate,
-# non-blocking concern); 401 means the shared secret doesn't match; any
-# other status/connection failure means the base URL is wrong.
+# Diagnostic-only, manual dispatch. Confirms SUPABASE_FUNCTION_BASE_URL,
+# JOB_SYNC_CRON_SECRET and SUPABASE_ANON_KEY are configured correctly
+# without ever printing them: checks only the HTTP status code and (non-
+# sensitive) response body of each sync function. Supabase's own API
+# gateway requires a valid apikey header on every Edge Function call even
+# when the function itself is deployed with --no-verify-jwt - that's a
+# separate concern from this function's own x-cron-secret check. A working
+# setup returns 200/503 (503 means auth passed but the EURES partner API
+# credentials aren't configured in Supabase - a separate, non-blocking
+# concern); 401 means either the apikey or the shared cron secret is wrong;
+# any other status/connection failure means the base URL is wrong.
 
 on:
   workflow_dispatch:
@@ -23,13 +27,15 @@ jobs:
         env:
           FUNCTION_BASE_URL: ${{ secrets.SUPABASE_FUNCTION_BASE_URL }}
           CRON_SECRET: ${{ secrets.JOB_SYNC_CRON_SECRET }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$FUNCTION_BASE_URL" ] || [ -z "$CRON_SECRET" ]; then
-            echo "SUPABASE_FUNCTION_BASE_URL or JOB_SYNC_CRON_SECRET is not set."
+          if [ -z "$FUNCTION_BASE_URL" ] || [ -z "$CRON_SECRET" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "SUPABASE_FUNCTION_BASE_URL, JOB_SYNC_CRON_SECRET or SUPABASE_ANON_KEY is not set."
             exit 1
           fi
           response=$(curl -sS -w "\n%{http_code}" -X POST \
             -H "x-cron-secret: $CRON_SECRET" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
             "$FUNCTION_BASE_URL/sync-eures" || true)
           status=$(echo "$response" | tail -1)
           body=$(echo "$response" | sed '$d')
