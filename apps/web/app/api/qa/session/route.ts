@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto"
 import { type NextRequest, NextResponse } from "next/server"
+import { resolveSafeRedirectPath } from "../../../../lib/safe-redirect-path"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createServerClient } from "../../../../lib/supabase/server"
 
@@ -98,10 +99,5 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   await logBootstrapUse(qaUserId, request)
 
-  const redirectPath = requestUrl.searchParams.get("redirectTo") ?? "/dashboard"
-  const safeRedirectPath = redirectPath.startsWith("/") && !redirectPath.startsWith("//")
-    ? redirectPath
-    : "/dashboard"
-
-  return NextResponse.redirect(new URL(safeRedirectPath, requestUrl.origin))
+  return NextResponse.redirect(new URL(resolveSafeRedirectPath(requestUrl), requestUrl.origin))
 }

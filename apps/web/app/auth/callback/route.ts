@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js"
 import { isAdminUser } from "../../../lib/admin-access"
 import { sendWelcomeEmail } from "../../../lib/email"
 import { isTestAccountUser } from "../../../lib/qa-test-account"
+import { resolveSafeRedirectPath } from "../../../lib/safe-redirect-path"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
@@ -16,17 +17,6 @@ function getErrorRedirect(
   errorUrl.searchParams.set("message", message.slice(0, 180))
 
   return NextResponse.redirect(errorUrl)
-}
-
-function getSafeRedirectPath(request: NextRequest): string {
-  const requestUrl = new URL(request.url)
-  const redirectTo = requestUrl.searchParams.get("redirectTo")
-
-  if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
-    return "/dashboard"
-  }
-
-  return redirectTo
 }
 
 function isAdminRedirect(pathname: string): boolean {
@@ -165,7 +155,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return getErrorRedirect(request, "read-user", message)
     }
 
-    const redirectPath = getSafeRedirectPath(request)
+    const redirectPath = resolveSafeRedirectPath(requestUrl)
 
     if (isAdminRedirect(redirectPath) && !(await isAdminUser(user))) {
       await supabase.auth.signOut()

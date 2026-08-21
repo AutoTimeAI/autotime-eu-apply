@@ -7,6 +7,7 @@ import {
   configurationUnavailableMessage,
   isConfigurationUnavailableError,
 } from "../lib/configuration-error";
+import { getClientSafeRedirectPath } from "../lib/safe-redirect-path";
 import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
 
@@ -41,7 +42,7 @@ function LoginForm() {
   const [hasExistingSession, setHasExistingSession] = useState(false);
   const [identityProviderLabel, setIdentityProviderLabel] = useState<string | null>(null);
   const oauthStartedRef = useRef(false);
-  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+  const redirectTo = getClientSafeRedirectPath(searchParams.get("redirectTo"));
 
   useEffect(() => {
     let isMounted = true;
