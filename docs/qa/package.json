@@ -1,0 +1,12 @@
+{
+  "name": "autotime-qa-documentation",
+  "private": true,
+  "type": "module",
+  "description": "Standalone tool that generates AutoTime-EU-Apply-QA-Documentation.xlsx from the repo's test suite and screenshot evidence. Not part of the main pnpm workspace - run with plain npm from this directory.",
+  "scripts": {
+    "build": "node generate-qa-documentation.mjs"
+  },
+  "devDependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
