@@ -38,7 +38,7 @@ jobs:
           if [ "$status" = "200" ] || [ "$status" = "503" ]; then
             echo "Bootstrap looks healthy: shared secret accepted."
           elif [ "$status" = "401" ]; then
-            if echo "$body" | grep -qi "invalid jwt\|missing authorization\|\"code\":401"; then
+            if echo "$body" | grep -qi "invalid jwt\|missing authorization\|no api key found\|apikey\|\"code\":401"; then
               echo "Rejected by Supabase's own API gateway before reaching the function - the function was deployed WITH JWT verification enabled. Redeploy with --no-verify-jwt (see scripts/deploy-job-ingestion.ps1)."
             else
               echo "Rejected by the function itself as Unauthorized - JOB_SYNC_CRON_SECRET does not match the Supabase function's CRON_SECRET."
