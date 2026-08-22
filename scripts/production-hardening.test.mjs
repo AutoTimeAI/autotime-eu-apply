@@ -613,6 +613,8 @@ test("cover letter and outreach message writes verify the referenced job belongs
   assert.notEqual(outreachOwnershipIndex, -1)
   assert.notEqual(outreachInsertIndex, -1)
   assert.ok(outreachOwnershipIndex < outreachInsertIndex)
+})
+
 test("workflow_dispatch confirmation/boolean inputs are passed via env, not interpolated into run: steps", () => {
   // Substituting github.event.inputs.* straight into a `run:` block before
   // the shell parses the line is the classic GitHub Actions script-injection
