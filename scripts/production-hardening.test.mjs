@@ -690,6 +690,17 @@ test("every admin read route sends the same private, no-store cache header", () 
   }
 })
 
+test("the home page's follow-up-due check anchors to the start of the due date, not the end", () => {
+  // Comparing against T23:59:59 instead of T00:00:00 means a follow-up due
+  // "today" doesn't get flagged until nearly midnight that night, delaying
+  // the home page's single "next best action" nudge by up to a full day.
+  // DashboardExperience.tsx's getNextActionTiming already anchors the same
+  // kind of due-date check to the start of the day - this must match it.
+  const home = read("apps/web/components/HomeExperience.tsx")
+  assert.match(home, /\$\{application\.followUpDate\}T00:00:00/)
+  assert.doesNotMatch(home, /\$\{application\.followUpDate\}T23:59:59/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
