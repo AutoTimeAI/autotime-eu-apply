@@ -292,6 +292,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #124 | **Implicit-only grant on a Postgres RPC**: audited all 8 `security definer` functions across every migration for the classic risks (missing `search_path` pinning enabling schema-shadowing privilege escalation, dynamic SQL/injection, or a function grantable to `authenticated`/`anon` that blindly trusts a client-supplied `p_user_id` instead of the caller's real RLS-scoped identity). All genuinely `security definer` functions are correctly `revoke all ... from public, anon, authenticated` + `grant ... to service_role` only, every one has `set search_path = public` pinned, and none build dynamic SQL - clean across the board. One inconsistency, not a live exploit: `get_monthly_ai_calls` is `security invoker` reading RLS-scoped `ai_usage` (a spoofed `p_user_id` just returns nothing) and is only ever called server-side with a session-derived id, but unlike its exact sibling `get_ai_credit_balance` (which has an explicit `grant execute ... to authenticated`), it never had any explicit grant/revoke, relying implicitly on Postgres's default `PUBLIC` grant - safe because of RLS, not because of an explicit decision, the only RPC left that way. Fixed with a migration making the grant explicit, matching the sibling's already-established pattern; no behaviour change | `supabase/migrations/20260822100000_pin_get_monthly_ai_calls_grant.sql` |
 | #125 | **Two tables relying on implicit RLS-default-deny instead of an explicit revoke**: re-verified RLS coverage across all 44 current tables against a much older claim from earlier this session ("read every RLS policy on all 41 tables") that predates roughly a dozen tables added since - checked directly rather than trusting the stale number. No RLS gaps found anywhere: every table has RLS enabled with a correct `auth.uid() = user_id` policy, is genuinely public reference data (`job_listings`, `esco_skills`/`esco_occupations`/`esco_occupation_skills`, `company_ats_slugs`, all deliberately `using (true)`), or is service-role-only with client access already blocked. One inconsistency, not a live gap: `stripe_webhook_events` and `ai_rate_limits` both have RLS enabled with zero policies (which already default-denies `anon`/`authenticated` regardless of table GRANTs), but every other service-role-only table (`admin_memberships`, `admin_audit_events`, `market_refresh_requests`, `workflow_operational_events`, `platform_coverage_reports`) backs that up with an explicit `revoke all ... from public, anon, authenticated`, so those tables' safety doesn't depend solely on nobody ever adding a permissive policy later without noticing the missing revoke - these two were the only ones left relying on RLS-with-no-policies alone. Fixed by bringing both in line with the established pattern; no behaviour change | `supabase/migrations/20260822110000_explicit_revoke_stripe_events_rate_limits.sql` |
 | #127 | **Two Sentry fields left out of an existing redaction pass**: `filterSentryEvent` already redacts a secret-bearing URL embedded in free text for `event.request.url` and breadcrumb `message` (specifically built to stop the QA session-bootstrap URL's `?secret=...` from reaching Sentry verbatim), but two structurally identical free-text fields were never covered: `event.exception.values[].value` (the thrown Error's own message text) and the top-level `event.message` (used for `Sentry.captureMessage` calls). Checked directly for a live instance - grepped every interpolated `throw new Error(\`...\`)` in the app - and found none that embed a secret-bearing URL today (only HTTP status codes and a non-secret Stripe lookup key), so this isn't closing an active leak. Same defense-in-depth reasoning as #125: two fields identical in risk to already-covered ones, left uncovered only because nothing happened to write a secret through them yet. Fixed by running the same redaction pass over both fields | `lib/sentry-privacy.ts` |
+| #129 | **Concurrent-refresh race in the extension's session logic**: found while auditing how the extension stores and accesses its dashboard auth token (see also the judgment call below). `lib/session.ts`'s `refreshSession()` had no lock around the refresh HTTP call - if two call sites both saw an expiring session at roughly the same time, both would POST the same stale `refreshToken` to `/api/sync/refresh` concurrently. Supabase refresh tokens are single-use/rotating, so only one concurrent request can succeed, but the code treated any non-ok/error response as a fully invalid session and called `clearAccountSession()`, signing the user out even when a sibling call had just obtained a perfectly good new token moments earlier - a real, accidentally-triggerable bug. Fixed by sharing a single in-flight refresh promise so every concurrent caller awaits the one real attempt instead of racing separate HTTP calls against the same single-use token. Also fixed a pre-existing extensionless relative import in `session.ts` that made it untestable directly from the plain-node test harness | `apps/extension/lib/session.ts` |
 
 ### Verified, not just assumed
 
@@ -622,6 +623,32 @@ stays the single evidenced record of what has and hasn't been checked.
   functions, no forgeable insert/update path). **No fix needed** beyond
   #125's consistency fix - the earlier "41 tables" conclusion still holds
   after full re-verification against the current schema.
+- **Extension auth-token lifecycle** (2026-08-22, alongside #129): traced
+  the dashboard session token's full lifecycle - storage
+  (`chrome.storage.local`, plaintext, no encryption - standard for MV3,
+  confirms zero obfuscation), the write path (`ExtensionConnect.tsx` ->
+  `chrome.runtime.sendMessage`, restricted by `externally_connectable` to
+  the production origin, -> `onMessageExternal` -> `isTrustedSender` origin
+  check -> `parseAccountSession` strict validation -> `saveAccountSession`,
+  called from nowhere else but the background script), and every read
+  site. No logging/telemetry leak found: `normalizeDiagnosticDetails`
+  actively strips any key matching `/token|secret|password|authorization/i`
+  before persisting diagnostic entries, and `reportClientIssue` only ever
+  transmits `area`/`code`/`message` strings, never the session object.
+  **Judgment call for the founder, not fixed**: the content script
+  (`contents/autofill.ts`, `lib/match-overlay.ts`), injected on every
+  visited page by design, calls `getAccountSession()` directly and puts
+  `authToken` straight into fetch headers from within its own execution
+  context - a larger exposure surface than if only the background script
+  (never injected into web content) touched the raw token. No current XSS
+  vector was found in the content script's own rendering (verified
+  `escapeHtml` usage on user- and job-description-derived text at the
+  relevant call sites), so this is architectural exposure, not an active
+  exploit. Properly closing it means routing all authenticated calls
+  through the background script via `chrome.runtime.sendMessage` and
+  giving the content script only a connected/plan/email view-model, never
+  the raw tokens - a multi-file refactor, not a one-line fix, so flagged
+  for the founder to schedule rather than done unilaterally.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
