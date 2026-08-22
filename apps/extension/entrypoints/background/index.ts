@@ -92,7 +92,27 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Dashboard sync failed"
 }
 
-async function syncApplicationsWithState({
+// Three separate entry points (widget-triggered sync, the connect-account
+// flow, and the periodic retry) can each call this - a bare in-flight flag
+// on only one of them isn't enough. Queuing every call onto a single chain
+// means concurrent calls run one at a time, each with its own arguments
+// and its own result, instead of racing their GET-dashboard -> merge ->
+// POST cycles (and the local sync-state writes inside them) against each
+// other.
+let applicationSyncQueue: Promise<unknown> = Promise.resolve()
+
+function syncApplicationsWithState(
+  params: Parameters<typeof performApplicationSync>[0]
+) {
+  const run = applicationSyncQueue.then(() => performApplicationSync(params))
+  applicationSyncQueue = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
+}
+
+async function performApplicationSync({
   applications,
   completedEvent,
   failedEvent,

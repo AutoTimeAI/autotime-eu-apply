@@ -1324,6 +1324,26 @@ test("keeps failed application sync state retryable with reason", async () => {
   assert.equal(retryState["application-1"].lastError, undefined)
 })
 
+test("concurrent sync-state updates for different applications don't clobber each other", async () => {
+  // getApplicationSyncState/set is a read-whole-map, mutate, write-whole-map
+  // cycle - without internal serialization, two concurrent calls each read
+  // the same starting snapshot and whichever writes last silently drops the
+  // other's update, even though they touch disjoint application ids.
+  resetStorage()
+
+  await Promise.all([
+    updateApplicationSyncState(["application-1"], "synced"),
+    updateApplicationSyncState(["application-2"], "synced"),
+    updateApplicationSyncState(["application-3"], "failed", { error: "boom" })
+  ])
+
+  const state = await getApplicationSyncState()
+  assert.equal(state["application-1"].status, "synced")
+  assert.equal(state["application-2"].status, "synced")
+  assert.equal(state["application-3"].status, "failed")
+  assert.equal(state["application-3"].lastError, "boom")
+})
+
 test("clears legacy OpenAI settings", async () => {
   resetStorage()
 
