@@ -968,6 +968,27 @@ test("infers location from pasted job descriptions", () => {
   )
 })
 
+test("still infers location from a short description padded with a huge non-matching tail", () => {
+  const padding = "x".repeat(500000)
+  const start = Date.now()
+
+  assert.equal(
+    inferLocationFromJobDescription(
+      `Role: Business Analyst\nLocation: London, United Kingdom\n${padding}`
+    ),
+    "London, United Kingdom"
+  )
+  assert.equal(
+    inferLocationFromJobDescription(`No location is listed. ${padding}`),
+    ""
+  )
+
+  // Regression guard for the unbounded unanchored-regex scan this was
+  // fixed for - a huge adversarial description should resolve quickly,
+  // not hang the tab scraping it.
+  assert.ok(Date.now() - start < 1000)
+})
+
 test("saves and loads candidate profile", async () => {
   resetStorage()
 

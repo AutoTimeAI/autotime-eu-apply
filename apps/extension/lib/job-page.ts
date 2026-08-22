@@ -373,8 +373,17 @@ function getLikelyLocation(value = "") {
   return isLikelyLocationValue(location) ? location : ""
 }
 
+// A real job description is never anywhere near this long - this just
+// bounds the cost of the unanchored regex scans below against a page that
+// hands back an unexpectedly huge (or adversarially padded) description,
+// matching the length-before-regex discipline used elsewhere in this file
+// (isLikelyShortFieldValue/isLikelyLocationValue).
+const MAX_LOCATION_SIGNAL_SCAN_LENGTH = 20000
+
 export function inferLocationSignalFromText(description = "") {
-  const text = description.replace(/\r\n/g, "\n")
+  const text = description
+    .slice(0, MAX_LOCATION_SIGNAL_SCAN_LENGTH)
+    .replace(/\r\n/g, "\n")
   const patterns = [
     /\bLocation\s*[:|-]\s*([A-Z][A-Za-z .'-]+,\s*(?:United Kingdom|UK|Ireland|Germany|France|Spain|Portugal|Italy|Netherlands|Belgium|Switzerland|Austria|Poland|Sweden|Norway|Denmark|Finland|Europe))(?:\s|$)/i,
     /\bLocation\s*[:|-]\s*([^\n<]+)/i,
