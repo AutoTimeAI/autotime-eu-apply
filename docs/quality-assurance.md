@@ -290,6 +290,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #122 | **Unaddressed dependabot alert**: GitHub's one open alert (#74, medium, CVE-2026-41907/GHSA-w5hq-g745-h8pq) had been showing on every push all session without ever being checked - a transitive `uuid@8.3.2` pulled in by `exceljs@4.4.0` in `docs/qa` (a standalone npm project outside the pnpm workspace that generates the QA documentation `.xlsx`, never deployed/run in production). `uuid`'s `v3()`/`v5()`/`v6()` methods don't bounds-check a caller-supplied output buffer, allowing silent partial writes - fixed upstream in `uuid@11.1.1`+. `exceljs@4.4.0` is still the latest release and still requires `uuid@^8.3.0`, so no newer `exceljs` fixes this. Fixed with an npm `overrides` entry pinning `uuid` to `^11.1.1`, matching the same remediation already used for the root workspace's own `uuid` override. Verified `npm install` resolves to `uuid@11.1.1` with 0 vulnerabilities, and `npm run build` still generates the workbook successfully end-to-end | `docs/qa/package.json` |
 | #123 | **Missing least-privilege permissions on the CI workflow**: audited all four GitHub Actions workflows (`unit-tests.yml`, `e2e.yml`, `job-ingestion.yml`, `platform-coverage.yml`) for the classic script-injection/`pull_request_target` vulnerability classes (untrusted PR title/branch data interpolated into a `run:` shell step, or fork PR code executed with write-level secrets). All four are clean: none use `pull_request_target`; `job-ingestion.yml`/`platform-coverage.yml` never trigger on `pull_request` at all; `unit-tests.yml`/`e2e.yml` only ever reference literal offline placeholder secrets in PR-triggered env blocks, never `secrets.*`, so there's no real secret-exposure path regardless of fork origin; `platform-coverage.yml`'s `github-script` step only reads the repo's own generated JSON report, never attacker-controlled input. One real, minor inconsistency: `unit-tests.yml` (the required "CI" check, triggered by any `pull_request`) was the only one of the four missing an explicit `permissions:` block. Not a live exploit today (nothing in its steps exercises `GITHUB_TOKEN`), but closes the gap before a future step could silently depend on the org/repo's default token permission level. Fixed by adding `permissions: contents: read`, matching the posture already used elsewhere in this repo's workflows | `.github/workflows/unit-tests.yml` |
 | #124 | **Implicit-only grant on a Postgres RPC**: audited all 8 `security definer` functions across every migration for the classic risks (missing `search_path` pinning enabling schema-shadowing privilege escalation, dynamic SQL/injection, or a function grantable to `authenticated`/`anon` that blindly trusts a client-supplied `p_user_id` instead of the caller's real RLS-scoped identity). All genuinely `security definer` functions are correctly `revoke all ... from public, anon, authenticated` + `grant ... to service_role` only, every one has `set search_path = public` pinned, and none build dynamic SQL - clean across the board. One inconsistency, not a live exploit: `get_monthly_ai_calls` is `security invoker` reading RLS-scoped `ai_usage` (a spoofed `p_user_id` just returns nothing) and is only ever called server-side with a session-derived id, but unlike its exact sibling `get_ai_credit_balance` (which has an explicit `grant execute ... to authenticated`), it never had any explicit grant/revoke, relying implicitly on Postgres's default `PUBLIC` grant - safe because of RLS, not because of an explicit decision, the only RPC left that way. Fixed with a migration making the grant explicit, matching the sibling's already-established pattern; no behaviour change | `supabase/migrations/20260822100000_pin_get_monthly_ai_calls_grant.sql` |
+| #125 | **Two tables relying on implicit RLS-default-deny instead of an explicit revoke**: re-verified RLS coverage across all 44 current tables against a much older claim from earlier this session ("read every RLS policy on all 41 tables") that predates roughly a dozen tables added since - checked directly rather than trusting the stale number. No RLS gaps found anywhere: every table has RLS enabled with a correct `auth.uid() = user_id` policy, is genuinely public reference data (`job_listings`, `esco_skills`/`esco_occupations`/`esco_occupation_skills`, `company_ats_slugs`, all deliberately `using (true)`), or is service-role-only with client access already blocked. One inconsistency, not a live gap: `stripe_webhook_events` and `ai_rate_limits` both have RLS enabled with zero policies (which already default-denies `anon`/`authenticated` regardless of table GRANTs), but every other service-role-only table (`admin_memberships`, `admin_audit_events`, `market_refresh_requests`, `workflow_operational_events`, `platform_coverage_reports`) backs that up with an explicit `revoke all ... from public, anon, authenticated`, so those tables' safety doesn't depend solely on nobody ever adding a permissive policy later without noticing the missing revoke - these two were the only ones left relying on RLS-with-no-policies alone. Fixed by bringing both in line with the established pattern; no behaviour change | `supabase/migrations/20260822110000_explicit_revoke_stripe_events_rate_limits.sql` |
 
 ### Verified, not just assumed
 
@@ -593,6 +594,33 @@ stays the single evidenced record of what has and hasn't been checked.
   classic schema-shadowing privilege-escalation vector), and none build
   dynamic SQL via `execute format(...)`. **No fix needed** beyond #124's
   consistency fix.
+- **RLS coverage across every table in the schema** (2026-08-22, alongside
+  #125): the single most consequential remaining assumption in this whole
+  session - every API route's careful `user.id`-scoping is worthless if
+  Postgres RLS itself (the only thing standing between the browser's
+  public anon key + a user's own JWT and direct, unrouted access to
+  Supabase's REST API) has a hole anywhere. Re-verified from scratch
+  against the CURRENT set of 44 tables, not by trusting the "41 tables"
+  figure from an audit early in this session that predates roughly a
+  dozen tables added since (all 7 job-workflow/interview tables,
+  `cover_letters`, `outreach_contacts`/`outreach_messages`,
+  `user_skill_profile`, `esco_questionnaire_answers`,
+  `ai_credit_ledger`, `stripe_webhook_events`, and the admin/workflow
+  tables). Read every `create table` across all 35 migration files: no
+  table was ever created without RLS, no table ever had RLS disabled after
+  the fact, and no policy was ever dropped without a replacement. Result:
+  39 tables with RLS + correct per-user (or service-role-only) scoping, 5
+  correctly public/reference data with an intentional `using (true)`, 0
+  problems. Specifically confirmed `admin_memberships`/`admin_audit_events`
+  /`market_refresh_requests` (explicit revoke from
+  public/anon/authenticated, grant to service_role only - the most
+  defensively built tables in the schema, with `admin_audit_events`
+  additionally rejecting UPDATE/DELETE via trigger even from the row's own
+  owner) and `ai_credit_ledger` (client can read their own ledger, all
+  mutations gated through already-locked-down `security definer`
+  functions, no forgeable insert/update path). **No fix needed** beyond
+  #125's consistency fix - the earlier "41 tables" conclusion still holds
+  after full re-verification against the current schema.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
