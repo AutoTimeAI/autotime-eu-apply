@@ -1,5 +1,27 @@
 import type { CVEnrichment } from "../types";
 
+// The overall zip is capped at 25MB compressed, but that only bounds the
+// compressed size - deflate's compression ratio can exceed 1000:1 on
+// crafted repetitive input, so a single attacker-controlled CSV entry
+// inside the zip could otherwise decompress to several GB and OOM the
+// function (the same zip-bomb shape already fixed for docx-cv.ts). JSZip
+// exposes each entry's declared uncompressed size (read from the zip's
+// central directory, before any inflate happens) via a documented-but-
+// unofficial internal field - checking it here rejects a bomb before
+// `.async()` ever decompresses it. Any real LinkedIn export CSV is a small
+// fraction of this; 20MB is far beyond any legitimate positions/education/
+// skills export.
+const maxDecompressedEntryBytes = 20 * 1024 * 1024;
+
+type JSZipCompressedData = { uncompressedSize?: number };
+
+function assertSafeEntrySize(entry: { name: string; _data?: JSZipCompressedData }) {
+  const uncompressedSize = entry._data?.uncompressedSize;
+  if (typeof uncompressedSize === "number" && uncompressedSize > maxDecompressedEntryBytes) {
+    throw new Error(`${entry.name} is too large to process.`);
+  }
+}
+
 function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [], value = "", quoted = false;
@@ -35,6 +57,9 @@ export async function enrichCvFromLinkedInZip(file: File): Promise<CVEnrichment>
   const positionsFile = find(/(^|\/)positions\.csv$/i);
   const educationFile = find(/(^|\/)education\.csv$/i);
   const skillsFile = find(/(^|\/)skills\.csv$/i);
+  for (const entry of [positionsFile, educationFile, skillsFile]) {
+    if (entry) assertSafeEntrySize(entry);
+  }
   const [positions, education, skills] = await Promise.all([
     positionsFile?.async("string").then(records) ?? [],
     educationFile?.async("string").then(records) ?? [],
