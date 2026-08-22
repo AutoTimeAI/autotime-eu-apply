@@ -9,16 +9,25 @@ export function detectATS(jobUrl: string): string {
     return ATS_PATTERNS.find(({ domain }) => host === domain || host.endsWith(`.${domain}`))?.ats ?? "unknown";
   } catch { return "unknown"; }
 }
+function isOrIsSubdomainOf(host: string, domain: string): boolean {
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
 export function isApiCoveredJobUrl(jobUrl: string): boolean {
   const ats = detectATS(jobUrl);
   if ((API_COVERED_ATS as readonly string[]).includes(ats)) return true;
   try {
     const host = new URL(jobUrl).hostname.toLowerCase();
+    // A bare host.endsWith("adzuna.com") also matches "fake-adzuna.com" - a
+    // real, freely registrable domain with no relation to Adzuna - since
+    // endsWith has no concept of a label/dot boundary. Require the domain
+    // to be the exact host or preceded by a dot, matching detectATS's own
+    // correct pattern above.
     return (
-      host.endsWith("eures.europa.eu") ||
-      host.endsWith("eures.ec.europa.eu") ||
-      host.endsWith("adzuna.com") ||
-      host.endsWith("jooble.org")
+      isOrIsSubdomainOf(host, "eures.europa.eu") ||
+      isOrIsSubdomainOf(host, "eures.ec.europa.eu") ||
+      isOrIsSubdomainOf(host, "adzuna.com") ||
+      isOrIsSubdomainOf(host, "jooble.org")
     );
   } catch {
     return false;

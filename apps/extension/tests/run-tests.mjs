@@ -462,6 +462,20 @@ test("narrows extraction to uncovered ATS and unknown sites", () => {
   assert.equal(getJobCaptureMode("https://jobs.smartrecruiters.com/acme/1"), "api-reference")
 })
 
+test("does not treat a look-alike host as an aggregator-covered domain", () => {
+  // A bare host.endsWith("adzuna.com") also matches "fake-adzuna.com" - a
+  // real, freely registrable domain unrelated to Adzuna - since endsWith
+  // has no concept of a label/dot boundary. Same class of bug the
+  // "notlinkedin.com" case above already guards against for LinkedIn.
+  for (const url of [
+    "https://fake-adzuna.com/job/1",
+    "https://notjooble.org/job/1",
+    "https://xeures.europa.eu/job/1"
+  ]) {
+    assert.notEqual(getJobCaptureMode(url), "api-reference", url)
+  }
+})
+
 test("detects Tier 1 EU JSON-LD boards as priority platforms", () => {
   const boards = [
     ["https://www.stepstone.de/stellenangebote--application-support", "Stepstone"],
