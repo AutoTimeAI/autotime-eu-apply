@@ -549,6 +549,23 @@ stays the single evidenced record of what has and hasn't been checked.
   `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED=false` with a "test manually
   before enabling in production" comment in `.env.production.example` -
   this pass gives a concrete, named reason why that caution was warranted.
+- **`api/sync/dashboard`'s applicationId handling** (2026-08-22, alongside
+  #120): the same sweep that found #120 also flagged this route's
+  `applicationIdMap` fallback (`evidence_records`/`outcome_records`/
+  `interview_prep_packs` all fall back to a raw client-supplied
+  `applicationId` when it isn't in the map) as a lower-confidence lead
+  worth checking directly rather than either dismissing or assuming it was
+  a bug. Traced it in full: all three tables' FKs to `applications` are
+  `on delete cascade` (same risk shape as #119/#120 if unverified), but
+  this route already gates the fallback by construction - `evidence_records`
+  /`outcome_records`/`interview_prep_packs` are filtered (lines ~814-826)
+  to only include records whose `applicationId` matches an entry in the
+  *same request's own* `activeApplications` list, and `applications.id` is
+  the primary key with `applications` always upserted with
+  `user_id: auth.user.id` - so a client attempting to claim another user's
+  real application id as its own would collide on that primary key and
+  fail the whole request with a database error, not silently succeed.
+  **No fix needed** - confirmed safe by construction, not merely assumed.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
