@@ -550,6 +550,21 @@ test("get_monthly_ai_calls has an explicit grant, matching every sibling RPC", (
   )
 })
 
+test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, matching the other service-role-only tables", () => {
+  const migration = read(
+    "supabase/migrations/20260822110000_explicit_revoke_stripe_events_rate_limits.sql",
+  )
+
+  assert.match(
+    migration,
+    /revoke all on table public\.stripe_webhook_events from public, anon, authenticated;/,
+  )
+  assert.match(
+    migration,
+    /revoke all on table public\.ai_rate_limits from public, anon, authenticated;/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
