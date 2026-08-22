@@ -583,7 +583,9 @@ function getRelocationFit(
 
   return component(
     "relocationFit",
-    remoteOrHybrid ? 74 - Math.max(frictionPenalty, 0) : 58 - frictionPenalty,
+    remoteOrHybrid
+      ? 74 - Math.max(frictionPenalty, 0)
+      : 58 - Math.max(frictionPenalty, 0),
     remoteOrHybrid
       ? "Remote or hybrid language reduces relocation friction."
       : "Relocation is conditional, so location practicality still needs checking.",
