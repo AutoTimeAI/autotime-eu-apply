@@ -311,6 +311,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #145 | **Portfolio-URL CV import's script/style-tag stripper had two successive CodeQL-confirmed bypasses**: found via CodeQL's default code-scanning setup on PR #111 (the portfolio-import SSRF fix), not a manual audit - `extractReadableText`'s `<script>...<\/script>` removal regex required an exact `</script>` with nothing before the `>`, so `</script >` (a space) left the literal script body as plain text in the extracted output; browsers treat `</script anything>` as a valid closing tag as long as it contains no `>`, which is a strictly wider bypass than just whitespace. First fix (`<\/script\s*>`) only closed the whitespace case; CodeQL's re-scan on the next push caught the wider arbitrary-junk variant immediately, and the regex was widened again to `<\/script\b[^>]*>` (mirroring the pattern the opening-tag regex already used) to close it for real. Traced actual exploitability before fixing: the extracted text only ever flows into an LLM prompt (`extractCvEnrichmentWithOpenAI`) and a read-only `<textarea>` (`CVEnrichmentPanel.tsx`) - never `dangerouslySetInnerHTML`, never stored-then-unescaped-rendered - so this was never a working XSS chain in this codebase, but fixing a CodeQL-flagged sanitizer-completeness bug is cheap and in-pattern regardless. Extracted the inline logic into a testable `extractReadableText` pure function with direct regression coverage for both bypass shapes | `apps/web/lib/cv/sources/portfolio.ts` |
 | #146 | **LinkedIn-export zip import had no cap on any entry's decompressed size**: audited the other CV-import sources (`apps/web/lib/cv/sources/*`) after #112 fixed the same zip-bomb shape server-side in `docx-cv.ts`, since a LinkedIn export is also a zip file. `enrichCvFromLinkedInZip` caps the overall zip's *compressed* size at 25MB but calls JSZip's `.async("string")` on each of `Positions.csv`/`Education.csv`/`Skills.csv` with nothing bounding decompressed output - deflate's compression ratio can exceed 1000:1 on crafted repetitive input, so one entry could still expand to several GB. Lower severity than #112's finding: this whole function runs client-side in the uploading user's own browser tab (confirmed via `CVEnrichmentPanel.tsx`'s `"use client"` directive and its own "processed in this browser and was not uploaded" status text) - worst case is a hung/crashed tab for that one user, never a shared-server DoS. Fixed by checking each entry's declared uncompressed size - JSZip exposes this from the zip's central directory via a documented-but-officially-unexposed `_data.uncompressedSize` field, readable before any inflate happens - against a 20MB cap. New regression test builds a real 21MB-of-repetitive-content zip via actual JSZip compression (not a mocked size field) and confirms it's rejected before decompression | `apps/web/lib/cv/sources/linkedin-import.ts` |
 | #147 | **`transitionApplication` could silently revert Interview/Offer/Rejected/Withdrawn applications back to Preparing**: same bug class as #133 (completed/cancelled interviews silently reverting to "preparing"), found by auditing the adjacent application state machine after that fix. The base-pipeline adjacency guard (`Math.abs(order.indexOf(next) - order.indexOf(application.status)) > 1`, where `order = ["Preparing", "Needs review", "Ready", "Applied"]`) never accounts for the four extended statuses not being in `order` at all - `Array.indexOf` returns `-1` for a value it doesn't contain, and `order.indexOf("Preparing")` is `0`, so the computed "gap" from any of Interview/Offer/Rejected/Withdrawn to `"Preparing"` is exactly `1`, indistinguishable from a real adjacent-step move, so the guard silently waved it through instead of rejecting it. Not reachable through the current UI (checked both call sites - `JobApplicationWorkspace.tsx` only ever passes `"Applied"`/`"Needs review"`/`"Ready"`, `InterviewsWorkspace.tsx` only ever passes `"Interview"`), but a real hole in the exported function itself for any future caller. Fixed by rejecting any move away from those four statuses explicitly, before the order-array arithmetic ever runs | `apps/web/lib/job-application-workflow.ts` |
+| #148 | **Account deletion left profile photos permanently orphaned in storage**: `DELETE /api/account` relies entirely on `ON DELETE CASCADE` to clean up every per-user DB table, but Supabase Storage objects have no foreign key to `auth.users` at all - the `profile-photos` bucket is only scoped by an RLS policy matching folder name to `auth.uid()` (confirmed via the bucket's own migration), which cascade deletion never reaches. A deleted account's profile photo - a real personal image - was left permanently in storage with no code path that would ever clean it up, a genuine GDPR Article 17 completeness gap in a route whose own top-of-file comment explicitly cites Article 17. Fixed by adding `deleteProfilePhotos()`, called before `auth.admin.deleteUser()`: lists the user's objects under their folder prefix via the admin storage client and removes them. Deliberately best-effort and non-blocking - a storage hiccup logs a warning for manual follow-up rather than preventing the user from deleting their account outright | `apps/web/app/api/account/route.ts` |
 
 ### Verified, not just assumed
 
@@ -907,6 +908,28 @@ stays the single evidenced record of what has and hasn't been checked.
   needed** - deletion is complete and correctly ordered at the schema
   level for every table that exists today, not just the 12 named in the
   route's own comment.
+- **Sponsorship-strictness bonus asymmetry in `getSponsorshipLikelihood`**
+  (2026-08-22): found while re-auditing `fit-model.ts` after #131 for the
+  same clamp-consistency shape. Two branches (candidate's own work-right
+  status unverified/ambiguous, `fit-model.ts:454,465`) subtract
+  `strictnessPenalty` unclamped, so an `"open"`-strictness country
+  (penalty `-6`) adds a bonus there; a third branch (job text positively
+  confirms sponsorship, line 479) clamps with `Math.max(strictnessPenalty,
+  0)`, withholding that same bonus; a fourth branch (no sponsorship
+  needed at all, line 487) explicitly grants `"open"` a further `+4`
+  bonus. Unlike #131 - where two identical sibling branches made the
+  intended behaviour unambiguous - this function has no such matching
+  pair: three genuinely different base scores (35/42/72) for three
+  genuinely different risk levels, and the codebase's own precedent at
+  line 487 already grants `"open"` a bonus elsewhere in this same
+  function. Surfaced rather than guessed at, since assuming the #131
+  pattern applies here could just as easily make the scoring *wrong* in
+  the other direction. Founder reviewed and confirmed the bonus in the
+  two ambiguous branches is intended: country openness is a genuinely
+  informative positive signal precisely when the candidate's own
+  situation is still unverified, consistent with line 487. **No fix
+  needed.** Not reachable today either way - `country-rules.ts` only
+  ever uses `"strict"`/`"mixed"`, no country currently uses `"open"`.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
