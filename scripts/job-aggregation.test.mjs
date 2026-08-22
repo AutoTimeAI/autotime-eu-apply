@@ -242,3 +242,26 @@ test("the sync-job-sources cron caps an oversized Personio feed before regex-sca
   assert.match(source, /const MAX_PERSONIO_XML_LENGTH = 5_000_000;/);
   assert.match(source, /\.slice\(0,MAX_PERSONIO_XML_LENGTH\)/);
 });
+
+test("job-aggregation identity hashes include location, not just title+company", async () => {
+  // Two genuinely different, concurrently-open postings for the same role
+  // at the same company (e.g. different cities) must not collide on
+  // identity_hash - otherwise the later one silently overwrites the
+  // earlier one via the job_listings upsert (onConflict: identity_hash).
+  const [eures, jobSources] = await Promise.all([
+    readFile(new URL("../supabase/functions/sync-eures/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/functions/sync-job-sources/index.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(
+    eures,
+    /hash\(`\$\{normalise\(title\)\}\|\$\{normalise\(company\)\}\|\$\{normalise\(location\)\}`\)/,
+  );
+  const jobSourcesIdentityHashes = [
+    ...jobSources.matchAll(/hash\(`\$\{norm\(j\.title\)\}\|\$\{norm\(j\.company\)\}([^`]*)`\)/g),
+  ];
+  assert.ok(jobSourcesIdentityHashes.length >= 2, "expected both ATS-feed and aggregator identity hashes")
+  for (const match of jobSourcesIdentityHashes) {
+    assert.match(match[1], /\$\{norm\(j\.location\)\}/);
+  }
+});
