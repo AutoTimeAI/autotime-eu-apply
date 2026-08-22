@@ -739,6 +739,23 @@ stays the single evidenced record of what has and hasn't been checked.
   scoping of `applicationId`/`jobId` on interview records is correct in
   isolation. The two real bugs found are #133 above. **No fix needed**
   beyond that.
+- **Systematic sweep for the #132/#133 bug class** (2026-08-22): both real
+  bugs found so far in this session's correctness pass shared one
+  precondition - a dedicated transition-guard function establishing
+  restricted/terminal states, plus a SEPARATE function that writes
+  `status` directly, bypassing that guard. Searched every file in
+  `apps/web/lib`, `apps/extension/lib`, and `packages/shared/src` for that
+  same precondition (a local `order`/`allowed` transition map alongside
+  any other direct `status:` assignment). No third instance exists: the
+  extension's own application/sync-state tracking
+  (`getApplicationSyncState`/`updateApplicationSyncState` in
+  `apps/extension/lib/storage.ts`) is a simple pending/synced/failed
+  tracker with no terminal-state concept to bypass; the admin-panel status
+  fields (`admin-market-data.ts`, `admin-feedback.ts`,
+  `admin-monitoring.ts`) are DB-driven display/refresh statuses with no
+  local pure-function state machine at all; `packages/shared/src` has no
+  transition-guard pattern anywhere. **No fix needed** - #132 and #133 are
+  the complete set for this bug class.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
