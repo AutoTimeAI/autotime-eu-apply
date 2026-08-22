@@ -291,6 +291,21 @@ stays the single evidenced record of what has and hasn't been checked.
 | #123 | **Missing least-privilege permissions on the CI workflow**: audited all four GitHub Actions workflows (`unit-tests.yml`, `e2e.yml`, `job-ingestion.yml`, `platform-coverage.yml`) for the classic script-injection/`pull_request_target` vulnerability classes (untrusted PR title/branch data interpolated into a `run:` shell step, or fork PR code executed with write-level secrets). All four are clean: none use `pull_request_target`; `job-ingestion.yml`/`platform-coverage.yml` never trigger on `pull_request` at all; `unit-tests.yml`/`e2e.yml` only ever reference literal offline placeholder secrets in PR-triggered env blocks, never `secrets.*`, so there's no real secret-exposure path regardless of fork origin; `platform-coverage.yml`'s `github-script` step only reads the repo's own generated JSON report, never attacker-controlled input. One real, minor inconsistency: `unit-tests.yml` (the required "CI" check, triggered by any `pull_request`) was the only one of the four missing an explicit `permissions:` block. Not a live exploit today (nothing in its steps exercises `GITHUB_TOKEN`), but closes the gap before a future step could silently depend on the org/repo's default token permission level. Fixed by adding `permissions: contents: read`, matching the posture already used elsewhere in this repo's workflows | `.github/workflows/unit-tests.yml` |
 | #124 | **Implicit-only grant on a Postgres RPC**: audited all 8 `security definer` functions across every migration for the classic risks (missing `search_path` pinning enabling schema-shadowing privilege escalation, dynamic SQL/injection, or a function grantable to `authenticated`/`anon` that blindly trusts a client-supplied `p_user_id` instead of the caller's real RLS-scoped identity). All genuinely `security definer` functions are correctly `revoke all ... from public, anon, authenticated` + `grant ... to service_role` only, every one has `set search_path = public` pinned, and none build dynamic SQL - clean across the board. One inconsistency, not a live exploit: `get_monthly_ai_calls` is `security invoker` reading RLS-scoped `ai_usage` (a spoofed `p_user_id` just returns nothing) and is only ever called server-side with a session-derived id, but unlike its exact sibling `get_ai_credit_balance` (which has an explicit `grant execute ... to authenticated`), it never had any explicit grant/revoke, relying implicitly on Postgres's default `PUBLIC` grant - safe because of RLS, not because of an explicit decision, the only RPC left that way. Fixed with a migration making the grant explicit, matching the sibling's already-established pattern; no behaviour change | `supabase/migrations/20260822100000_pin_get_monthly_ai_calls_grant.sql` |
 | #125 | **Two tables relying on implicit RLS-default-deny instead of an explicit revoke**: re-verified RLS coverage across all 44 current tables against a much older claim from earlier this session ("read every RLS policy on all 41 tables") that predates roughly a dozen tables added since - checked directly rather than trusting the stale number. No RLS gaps found anywhere: every table has RLS enabled with a correct `auth.uid() = user_id` policy, is genuinely public reference data (`job_listings`, `esco_skills`/`esco_occupations`/`esco_occupation_skills`, `company_ats_slugs`, all deliberately `using (true)`), or is service-role-only with client access already blocked. One inconsistency, not a live gap: `stripe_webhook_events` and `ai_rate_limits` both have RLS enabled with zero policies (which already default-denies `anon`/`authenticated` regardless of table GRANTs), but every other service-role-only table (`admin_memberships`, `admin_audit_events`, `market_refresh_requests`, `workflow_operational_events`, `platform_coverage_reports`) backs that up with an explicit `revoke all ... from public, anon, authenticated`, so those tables' safety doesn't depend solely on nobody ever adding a permissive policy later without noticing the missing revoke - these two were the only ones left relying on RLS-with-no-policies alone. Fixed by bringing both in line with the established pattern; no behaviour change | `supabase/migrations/20260822110000_explicit_revoke_stripe_events_rate_limits.sql` |
+| #127 | **Two Sentry fields left out of an existing redaction pass**: `filterSentryEvent` already redacts a secret-bearing URL embedded in free text for `event.request.url` and breadcrumb `message` (specifically built to stop the QA session-bootstrap URL's `?secret=...` from reaching Sentry verbatim), but two structurally identical free-text fields were never covered: `event.exception.values[].value` (the thrown Error's own message text) and the top-level `event.message` (used for `Sentry.captureMessage` calls). Checked directly for a live instance - grepped every interpolated `throw new Error(\`...\`)` in the app - and found none that embed a secret-bearing URL today (only HTTP status codes and a non-secret Stripe lookup key), so this isn't closing an active leak. Same defense-in-depth reasoning as #125: two fields identical in risk to already-covered ones, left uncovered only because nothing happened to write a secret through them yet. Fixed by running the same redaction pass over both fields | `lib/sentry-privacy.ts` |
+| #129 | **Concurrent-refresh race in the extension's session logic**: found while auditing how the extension stores and accesses its dashboard auth token (see also the judgment call below). `lib/session.ts`'s `refreshSession()` had no lock around the refresh HTTP call - if two call sites both saw an expiring session at roughly the same time, both would POST the same stale `refreshToken` to `/api/sync/refresh` concurrently. Supabase refresh tokens are single-use/rotating, so only one concurrent request can succeed, but the code treated any non-ok/error response as a fully invalid session and called `clearAccountSession()`, signing the user out even when a sibling call had just obtained a perfectly good new token moments earlier - a real, accidentally-triggerable bug. Fixed by sharing a single in-flight refresh promise so every concurrent caller awaits the one real attempt instead of racing separate HTTP calls against the same single-use token. Also fixed a pre-existing extensionless relative import in `session.ts` that made it untestable directly from the plain-node test harness | `apps/extension/lib/session.ts` |
+| #130 | **Unbounded regex scan on untrusted page text**: audited every regex in the extension's page-parsing code for ReDoS (the content script runs regex against arbitrary-length text from any website, injected on every page by design). No genuinely exploitable catastrophic-backtracking pattern exists anywhere - every regex here uses single-level quantifiers or negated-character-class matching, never the nested-quantifier shapes (`(a+)+`, `(.*)+`) that cause exponential blowup. One real inconsistency, not exponential but still unbounded: `inferLocationSignalFromText` ran 9 unanchored regex patterns directly against the full, uncapped job description, unlike its siblings in the same file (`isLikelyShortFieldValue`, `isLikelyLocationValue`), which check length before running their own regexes - an unanchored pattern re-attempts from every position, so scan cost scales with input length with nothing bounding it. Fixed by capping the scanned text at 20,000 characters (far beyond any real job description) before the pattern loop, matching the length-then-regex discipline already used by its siblings. New test guards against this scan ever going unbounded again (a 500,000-character padded description now resolves in well under a second) | `apps/extension/lib/job-page.ts` |
+| #131 | **Inconsistent friction-penalty clamping in relocation-fit scoring**: audited the core Decision Index / fit-scoring engine (`packages/shared/src/fit-model.ts`) for business-logic correctness - the "Apply now/Stretch/Skip" math real users rely on for real decisions, not just a security surface. `getRelocationFit()` computes a `frictionPenalty` from the target country's `relocationFriction` (high=8, low=-5, medium=0); two of its three scoring branches clamp it with `Math.max(frictionPenalty, 0)` before subtracting (so "low" friction never adds a bonus, only avoids the high-friction penalty), but the third branch (onsite job, unclear relocation willingness) subtracted the raw unclamped value, letting a "low" friction country score a +5 bonus the other two branches deliberately withhold. Not reachable with live data today (every country in `country-rules.ts` is currently "high" or "medium", none "low"), but "low" is a real, documented `RelocationFriction` value and the two sibling branches already establish the intended behavior in this exact function - would silently misscore the moment a "low" friction country is added. Fixed by applying the same clamp to the third branch. Verified via the full existing test suite (unchanged, since no live country data exercises the "low" branch either way) plus manual arithmetic tracing against the two sibling cases; did not export the internal `getRelocationFit` function just to add a direct unit test, since only `evaluate*` functions are part of the shared package's public API | `packages/shared/src/fit-model.ts` |
+| #132 | **An Applied application could silently revert to Ready**: audited `job-application-workflow.ts`'s readiness/transition gate for correctness. The unsupported-claims attestation gate (`getApplicationReadiness`) was verified sound (`.length > 0`, not array truthiness; every field defaults safely). But `transitionApplication`'s guard for `next === "Ready"` only checked readiness blockers, never the application's *current* status - and since `"Ready"`/`"Applied"` are adjacent in the status-order array, the generic one-step adjacency check let `transitionApplication(application, "Ready", job)` succeed on an application whose status was already `"Applied"`, silently reverting it: status flips back to `"Ready"` while `appliedAt` keeps the stale original timestamp, `submissionConfirmed` clears, and the application reappears in the "ready to apply" review queue despite already being submitted in the real world - risking a guided duplicate real-world application, and a subsequent re-confirm would silently overwrite the original `appliedAt`. Not reachable through the current UI (checked both call sites), but a real hole in the exported function itself. Fixed by explicitly rejecting `next === "Ready"` when the application is already `"Applied"`, with its own clear error message | `apps/web/lib/job-application-workflow.ts` |
+| #133 | **Completed/cancelled interviews could be silently reverted, and outcomes silently overwritten**: same class of bug as #132, found by auditing the adjacent interview state machine. `transitionInterview`'s own `allowed` map correctly declares `completed`/`cancelled` as terminal (zero outbound transitions), but `saveInterviewAnswer` and `refreshInterviewPreparation` bypassed that guard entirely by writing `status: "preparing"` directly on every call regardless of the interview's current status. Reachable in production - `InterviewsWorkspace.tsx` never hides the Preparation tab's "Save draft"/"Refresh preparation" controls once an interview is completed - so a user could complete an interview, record a real outcome (e.g. "offer"), then save a draft answer or refresh preparation and silently revert `status` to `"preparing"` while `outcome`/`outcomeDetails` still held the real result: `getInterviewHomeSignals` would resurface the closed interview as active with "needs final review" prompts, and `InterviewOutcomePanel` would hide the already-recorded outcome and ask the user to "mark completed" again. Separately, `recordInterviewOutcome` had no guard against being called a second time (only checked `status === "completed"` and rejected the `"awaiting"` sentinel, never `interview.outcome !== "awaiting"` as a precondition), so reaching it twice could silently overwrite a real outcome (offer -> rejected) with no warning. Fixed all three: the two status-writing functions now preserve the interview's existing terminal status instead of resetting it, and `recordInterviewOutcome` now rejects re-recording once an outcome already exists | `apps/web/lib/interview-workflow.ts` |
+| #134 | **`admin/users` had no pagination, hardcoded to the first 50 accounts**: founder-reviewed judgment call (flagged as "noted, not fixed" alongside #118) - founder explicitly chose "Fix now" rather than deferring. `getAdminUsersOverview` called `listUsers({ page: 1, perPage: 50 })` unconditionally, with no way to see any user past the 50th and no signal to the operator that more existed. Fixed by threading real pagination end-to-end: `getAdminUsersOverview` now accepts a `page` argument and returns `{ users, page, perPage, total, hasMore }` (using Supabase Admin Auth API's own `nextPage`/`total` fields); `GET /api/admin/users` reads `?page=`; the page/table component gained Previous/Next controls and a "Showing X-Y of N users" line (via a new pure `getVisibleRowRange` helper, unit-tested for first/middle/last-partial-page/zero-total cases) | `lib/admin-users.ts`, `lib/admin-users-pagination.ts`, `api/admin/users/route.ts`, `app/admin/users/page.tsx`, `app/admin/users/AdminUsersTable.tsx` |
+| #135 | **`GET /api/sync/dashboard` had no row limit at all on any of its four per-user tables**: same founder-approved "Fix now" judgment call as #134 (flagged alongside #117), but a different fix shape - this endpoint fully replaces local component state on every load (`loadDashboardSnapshot`), so it's a local-first state-hydration call, not a list view; naive pagination here would silently hide a user's own real data (search/filter/CSV export all depend on the complete local dataset). Fixed with a generous defensive ceiling instead (`MAX_SYNCED_ROWS_PER_TABLE = 20_000`, added to all four `applications`/`evidence_records`/`outcome_records`/`interview_prep_packs` queries, each already ordered by recency descending so a cap - if ever hit - drops only the oldest rows). The architecturally correct fix for "resync cost grows with total history" is incremental/delta sync, explicitly scoped out as a separate, larger initiative | `api/sync/dashboard/route.ts` |
+| #136 | **Extension content script held the raw dashboard auth token directly**: founder chose "Fix now (Recommended)" on this flagged judgment call. The content script (injected into every visited page) read the full account session via `getAccountSession()` - `lib/match-overlay.ts` performed authenticated fetches itself with an `Authorization` header, and `contents/autofill.ts` read the whole session object just to check a connection-status boolean for the widget UI. Separately and more fundamentally: `chrome.storage.local`'s `onChanged` event delivers the full old/new value of any changed key to every listener with access to that storage area, including content scripts - so the token was reaching the content script's execution context via that event's payload even in code paths that never explicitly called `getAccountSession()`. App-level message-passing discipline alone can't close that, since any content-script JS can call `chrome.storage.local.get()` directly regardless of what this codebase's own code chooses to call. Fixed at the actual boundary: moved the account session from `chrome.storage.local` to `chrome.storage.session`, whose default access level (`TRUSTED_CONTEXTS`) is background-worker-and-extension-pages-only and blocks content scripts at the browser API level, not just by convention - plus rewired the content script to request a token-free `ConnectionState` and job-match scoring from the background worker via `chrome.runtime.sendMessage`, rather than reading the session or fetching with the token itself. Real, disclosed trade-off: session storage clears on a full browser restart (unlike `.local`, which persists indefinitely), so users now need to reconnect after fully closing the browser, not just after closing a tab | `lib/storage.ts`, `lib/connection-state.ts`, `lib/match-overlay.ts`, `contents/autofill.ts`, `lib/cloud-sync.ts`, `entrypoints/background/index.ts`, `sidepanel/main.tsx` |
+| #137 | **Job-workflow cloud sync had no deletion propagation at all**: founder chose "Design tombstone support (Recommended)" on this flagged judgment call. `reconcileJobWorkflow` treated "exists on the server, not present locally" as "adopt it from the server" unconditionally - correct for a device that has never synced before, but indistinguishable from a job/application a user had deleted locally, which would then silently reappear on the very next sync; no `DELETE` endpoint existed for this feature at all. Fixed schema-first: a new migration adds a nullable `deleted_at` tombstone column to both `job_workflow_jobs` and `job_workflow_applications`; `readJobWorkflow` now excludes `deleted_at` rows entirely, so a soft-deleted row never comes back down to any client regardless of how the deletion got there; new `softDeleteJobWorkflowItems()` plus an authenticated `DELETE /api/sync/job-workflow` handler (scoped to the caller's own `user_id`, matching every other write in this file) cascades a job's tombstone onto its own application, mirroring the real FK's `on delete cascade`; `upsertJob`/`upsertApplication`'s existing-row lookups now exclude soft-deleted rows too, so resaving an already-tombstoned id surfaces as a conflict rather than silently reviving it; `reconcileJobWorkflow` gained optional `pendingDeletedJobIds`/`pendingDeletedApplicationIds` parameters (both defaulting to empty, fully backward compatible) so an offline/failed delete attempt isn't silently undone by the next reconciliation before it reaches the server. Deliberately out of scope: there is no delete/archive action anywhere in the job-workflow UI today (verified - no such function exists in `job-application-workflow.ts` or any dashboard component), so this ships the sync-layer machinery a delete feature needs, not a delete button - choosing that UX is a product decision outside this fix | `job-workflow-repository.ts`, `job-workflow-sync.ts`, `api/sync/job-workflow/route.ts`, `lib/supabase/types.ts`, new migration |
+| #138 | **CSV/formula injection in extension application exports**: `escapeCsvValue` in `apps/extension/lib/applications.ts` (used by both `applicationsToCsv` and `validationMetricsToCsv`) only wrapped cells in quotes and escaped embedded quote characters - it never neutralized a leading `=`, `+`, `-`, or `@`, the characters that make Excel/Google Sheets/LibreOffice evaluate a cell as a live formula instead of literal text when the exported CSV is opened. Reachable, not theoretical: `application.roleTitle`/`application.company` are populated by `inferJobPageDetails()` in `lib/job-page.ts` directly from scraped DOM content of arbitrary third-party job posting pages - untrusted, attacker-influenceable strings that flow straight into the exported CSV a real user later opens in a spreadsheet app. A malicious or compromised job listing with a title like `=HYPERLINK("http://evil.example","click me")` would render as a live, clickable formula once exported and opened. Checked every other CSV path in the repo: `apps/web` only ever *imports* CSV (outreach contacts, LinkedIn CV import), never exports it, and the GDPR account export emits JSON only (`Content-Type: application/json`, confirmed by reading both `lib/account-export.ts` and its route in full) - no export surface there. Fixed by renaming the function to `sanitizeCsvCell` and prefixing a leading `'` before quoting any cell whose value starts with `=`, `+`, `-`, `@`, tab, or CR, forcing spreadsheet apps to treat it as literal text | `apps/extension/lib/applications.ts` |
+| #139 | **Unauthenticated, unbounded-cost `/api/sync/refresh` route with zero rate limiting**: audited rate-limit coverage across all 47 API routes (grepped every route for a rate-limit reference, then manually reasoned about each unmatched one - most are admin-gated, authenticated-and-scoped, or Stripe/signature-verified, all lower priority). `/api/sync/refresh` stood out: deliberately unauthenticated by design (exchanges a client-held Supabase refresh token for a new access token, mirroring Supabase's own token endpoint), but every POST - including one with a garbage `refreshToken` - triggers a real `auth.refreshSession()` call against Supabase's own Auth service (`runSessionRefresh` only checks the field is a non-empty string first) plus, on an unauthorised result, a DB write via `diagnosticJson`'s `log: true` path. Same vulnerability class already fixed twice this session for other unauthenticated routes (AI billing race #100, analytics microservice #117), just not yet applied here. Fixed by rate-limiting on a salted SHA-256 IP hash (no session to key on, same pattern as the unauthenticated `compatibility/reports` route) via the existing generic `increment_ai_rate_limit` RPC, 10 requests/60s per IP; the 429 branch deliberately never sets the diagnostic-logging flag, since logging every rate-limited hit would recreate the exact unbounded-write cost being closed | `api/sync/refresh/route.ts` |
+| #140 | **Cron secret compared with a non-constant-time `!==` across all three Edge Functions**: audited the three Supabase Edge Functions (`sync-eures`, `sync-job-alerts`, `sync-job-sources`), which hadn't been individually reviewed for this class of issue yet. All three gate every request behind `request.headers.get("x-cron-secret") !== cronSecret` - a plain string inequality that short-circuits at the first differing byte, so comparison time leaks a signal proportional to how many leading characters of a guess match the real `CRON_SECRET`, letting a remote attacker in principle recover it one character at a time rather than needing the whole value. Same class already fixed correctly elsewhere in this codebase (`api/qa/session/route.ts` uses `timingSafeEqual` for its own bootstrap secret), just not applied consistently here. Practical severity is low - the secret is long/random and internet timing jitter makes remote extraction hard - but the fix is essentially free. Fixed with a small, dependency-free constant-time comparison (XOR-accumulate over the full length) added to each file, matching the codebase's existing convention of each edge function being fully self-contained rather than sharing a new module. Verification gap disclosed: no Deno CLI available in this environment to run/typecheck these functions directly - the change uses only standard Web APIs and was verified via a new static-inspection test instead | `supabase/functions/sync-eures/index.ts`, `supabase/functions/sync-job-alerts/index.ts`, `supabase/functions/sync-job-sources/index.ts` |
+| #141 | **GitHub Actions script-injection via an unescaped `workflow_dispatch` input**: audited all 15 GitHub Actions workflows (this repo has grown well beyond the four checked in #123) for the classic `${{ github.event.inputs.* }}` substituted directly into a `run:` shell block - substitution happens as literal text before the shell parses the line, so a crafted input value can break out of its quoted context and run as an injected command. `k6-manual.yml`'s confirmation-phrase check had exactly this: `if [ "${{ github.event.inputs.confirm }}" != "$expected" ]`, and `confirm` is a free-text string input with no type constraint, so this was genuinely exploitable by anyone able to trigger the workflow. `visual-regression.yml` had the identical textual pattern for `update_snapshots`, but that input is declared `type: boolean` - GitHub Actions constrains a boolean `workflow_dispatch` input to a literal `true`/`false` at dispatch time, so this instance isn't actually exploitable, though fixed anyway to avoid the anti-pattern outright. Fixed both by passing the input through `env:` and referencing it as a shell variable instead of substituting `${{ }}` directly into the script body - the standard GitHub-recommended mitigation. Swept all 15 workflows for the same pattern afterward and found no other instances; the remaining `github.event.inputs.*` uses (`k6-manual.yml`'s `TARGET_URL`/`VUS`/`DURATION`) were already passed via `env:` correctly | `.github/workflows/k6-manual.yml`, `.github/workflows/visual-regression.yml` |
+| #142 | **AI credit-pack refunds/disputes had no visibility trail**: founder chose "Log for manual review (Recommended)" on this flagged gap - a user could buy AI credits, spend them, then dispute/refund the charge and keep the credits with zero record for the founder to review. Added handlers for `charge.refunded` and `charge.dispute.created` that write a structured entry to `operational_logs` (`area: "stripe"`) with the charge/dispute id, amount, currency, and - when resolvable via `subscriptions.stripe_customer_id` - the affected user's id (one bounded follow-up Charges-API call resolves the customer id for disputes, whose webhook payload usually only references the charge, not an expanded object). Deliberately no automatic account action (no credit revocation, no subscription change, no `beta_access` suspension), and deliberately no new admin UI - reviewing these entries today means querying `operational_logs` directly, since neither of that table's two existing admin-facing consumers currently surfaces a "stripe" section; a dedicated view is a natural follow-up, not something to build speculatively alongside a logging-only ask | `api/stripe/webhook/route.ts` |
 
 ### Verified, not just assumed
 
@@ -469,16 +484,18 @@ stays the single evidenced record of what has and hasn't been checked.
   data via simple length/filter counts - no division, so no div-by-zero risk;
   the server-side `pct()` in the Python analytics service (see #117) is
   explicitly `whole <= 0 -> 0.0` guarded. **No fix needed** on authorization
-  or aggregation correctness. Noted, not fixed: `GET /api/sync/dashboard`'s
-  four table queries (`applications`, `evidence_records`, `outcome_records`,
-  `interview_prep_packs`) have no `.limit()` at all - unlike the job-alerts
-  cron's 1000-row cap, there isn't even a ceiling here, so a long-tenured
-  user's entire history loads on every dashboard/insights page view. Not
-  fixed now because the dashboard has no pagination UI to receive a
-  truncated result - adding a `.limit()` without one would silently hide a
-  user's own real data rather than improve safety, so this needs a UI change
-  alongside it, not a one-line backend cap. Flagged as a real, growing
-  latency/payload-size defect for the founder to schedule.
+  or aggregation correctness. Was noted, not fixed, at the time of this
+  pass: `GET /api/sync/dashboard`'s four table queries (`applications`,
+  `evidence_records`, `outcome_records`, `interview_prep_packs`) had no
+  `.limit()` at all - unlike the job-alerts cron's 1000-row cap, there
+  wasn't even a ceiling here, so a long-tenured user's entire history
+  loaded on every dashboard/insights page view. Flagged to the founder as a
+  judgment call rather than fixed unilaterally, since a naive `.limit()`
+  without a pagination UI to receive the truncated result would silently
+  hide a user's own real data. Founder chose "Fix now" - see #135, fixed
+  with a generous defensive row ceiling rather than a UI-facing pagination
+  change, since this endpoint turned out to be full local-state hydration,
+  not a list view.
 - **ESCO and account/profile routes** (2026-08-22): audited
   `api/esco/{matches,import-evidence,score-job,questionnaire}`,
   `api/account/me`, `api/account/settings`, `api/profile/onboarding`, and
@@ -521,13 +538,15 @@ stays the single evidenced record of what has and hasn't been checked.
   another user's session without already possessing that user's refresh
   token - the same precondition needed to attack Supabase's own endpoint
   directly, so this route adds no new exposure. **No fix needed** beyond
-  #118's cache-header inconsistency (found during this same pass). Noted,
-  not fixed: `admin/users` hardcodes `listUsers({ page: 1, perPage: 50 })`
-  with no pagination and no indication more users exist past the 50th - a
-  real completeness/UX gap once the user base exceeds that, not a security
-  issue. Flagged for the founder to schedule alongside the dashboard's
-  unbounded-query item above, since both are "add real pagination"
-  problems rather than one-line fixes.
+  #118's cache-header inconsistency (found during this same pass). Was
+  noted, not fixed, at the time of this pass: `admin/users` hardcoded
+  `listUsers({ page: 1, perPage: 50 })` with no pagination and no
+  indication more users existed past the 50th - a real completeness/UX gap
+  once the user base exceeds that, not a security issue. Flagged for the
+  founder alongside the dashboard's unbounded-query item above, since both
+  were "add real pagination" problems rather than one-line fixes. Founder
+  chose "Fix now" for both - see #134 (real pagination, this route) and
+  #135 (a defensive row cap, the dashboard's different shape of problem).
 - **Job-workflow sync route** (2026-08-22, alongside #119): a prior audit
   this session had asserted `api/sync/job-workflow` "follows the same
   pattern" as mobility/interviews purely by analogy, without actually
@@ -544,16 +563,21 @@ stays the single evidenced record of what has and hasn't been checked.
   conflict, not a silent overwrite; and the
   `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED` flag is checked first in both
   `GET` and `PUT`, with no partial-write path when it's off. Two real gaps
-  did turn up, both fixed in #119 (see above). **Judgment call for the
-  founder, not fixed**: `reconcileJobWorkflow` has no deletion propagation
-  at all - if a job/application is deleted locally but still exists on the
-  server, the next sync silently **restores it from the cloud**, and no
-  `DELETE` endpoint exists for this feature. This is a real design gap
-  that needs a schema decision (soft-delete/tombstone tracking), not a
-  one-line fix, and it's likely exactly why this feature has sat behind
-  `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED=false` with a "test manually
-  before enabling in production" comment in `.env.production.example` -
-  this pass gives a concrete, named reason why that caution was warranted.
+  did turn up, both fixed in #119 (see above). Was a judgment call for the
+  founder, not fixed, at the time of this pass: `reconcileJobWorkflow` had
+  no deletion propagation at all - if a job/application was deleted locally
+  but still existed on the server, the next sync would silently **restore
+  it from the cloud**, and no `DELETE` endpoint existed for this feature.
+  This was a real design gap needing a schema decision (soft-delete/
+  tombstone tracking), not a one-line fix, and it's likely exactly why this
+  feature had sat behind `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED=false`
+  with a "test manually before enabling in production" comment in
+  `.env.production.example` - this pass gave a concrete, named reason why
+  that caution was warranted. Founder chose "Design tombstone support
+  (Recommended)" - see #137, which ships the full schema + repository +
+  endpoint + reconciliation-guard machinery, deliberately stopping short of
+  a delete UI (none exists in the product yet, so its UX is a separate
+  product decision).
 - **`api/sync/dashboard`'s applicationId handling** (2026-08-22, alongside
   #120): the same sweep that found #120 also flagged this route's
   `applicationIdMap` fallback (`evidence_records`/`outcome_records`/
@@ -621,6 +645,263 @@ stays the single evidenced record of what has and hasn't been checked.
   functions, no forgeable insert/update path). **No fix needed** beyond
   #125's consistency fix - the earlier "41 tables" conclusion still holds
   after full re-verification against the current schema.
+- **Extension auth-token lifecycle** (2026-08-22, alongside #129): traced
+  the dashboard session token's full lifecycle - storage
+  (`chrome.storage.local`, plaintext, no encryption - standard for MV3,
+  confirms zero obfuscation), the write path (`ExtensionConnect.tsx` ->
+  `chrome.runtime.sendMessage`, restricted by `externally_connectable` to
+  the production origin, -> `onMessageExternal` -> `isTrustedSender` origin
+  check -> `parseAccountSession` strict validation -> `saveAccountSession`,
+  called from nowhere else but the background script), and every read
+  site. No logging/telemetry leak found: `normalizeDiagnosticDetails`
+  actively strips any key matching `/token|secret|password|authorization/i`
+  before persisting diagnostic entries, and `reportClientIssue` only ever
+  transmits `area`/`code`/`message` strings, never the session object.
+  Was a judgment call for the founder, not fixed, at the time of this pass:
+  the content script (`contents/autofill.ts`, `lib/match-overlay.ts`),
+  injected on every visited page by design, called `getAccountSession()`
+  directly and put `authToken` straight into fetch headers from within its
+  own execution context - a larger exposure surface than if only the
+  background script (never injected into web content) touched the raw
+  token. No current XSS vector was found in the content script's own
+  rendering (verified `escapeHtml` usage on user- and job-description-
+  derived text at the relevant call sites), so this was architectural
+  exposure, not an active exploit. Founder chose "Fix now (Recommended)" -
+  see #136, which went further than the routing fix originally sketched
+  here: message-passing discipline alone can't fully close this, since
+  `chrome.storage.local`'s `onChanged` event hands the full session to any
+  listener with access to that area (content scripts included) regardless
+  of what this codebase's own code calls - so the real fix moved the
+  session to `chrome.storage.session` (browser-enforced
+  `TRUSTED_CONTEXTS`-only access), on top of routing the content script's
+  authenticated calls through the background worker.
+- **Extension regex parsing, broader ReDoS sweep** (2026-08-22, alongside
+  #130): every regex in `lib/job-page.ts`, `lib/autofill.ts`,
+  `contents/autofill.ts`, `lib/job-analysis.ts`, `lib/match-overlay.ts`,
+  and `lib/validation.ts` read in full and checked for genuine
+  catastrophic-backtracking structure, not just "complex-looking"
+  patterns. Confirmed clean: `cleanText`'s HTML/entity stripping (single
+  negated-class quantifiers, linear regardless of size), the field/answer
+  detectors in `lib/autofill.ts` (plain `.includes()` string search, no
+  regex/backtracking possible at all), `getExactLabeledText`'s dynamically
+  built label pattern (anchored, single trailing `.+`), and the
+  email/phone regexes in `validation.ts` (only ever applied to short
+  user-typed profile fields, never attacker-controlled page content). The
+  one real gap found (unbounded scan, not exponential) is #130 above.
+  **No fix needed** beyond that one.
+- **Admin impersonation, remaining SSRF surfaces, OAuth callback, and
+  shared schemas** (2026-08-22): checked for an "act as user"/impersonation
+  feature anywhere in the admin panel - none exists at all, so there's
+  nothing to audit there. Swept every server-side `fetch()`/`fetchImpl()`
+  call site across `apps/web/lib` for a user-supplied-URL SSRF surface
+  beyond the one already fixed (#111) - every other site is either a
+  server-controlled fixed endpoint (OpenAI's API in
+  `lib/interview-prep.ts`, the ATS/aggregator feeds' hardcoded platform
+  URLs already verified clean earlier this session) or the already-fixed
+  portfolio/GitHub CV importers - no new SSRF surface exists.
+  `auth/callback/route.ts` delegates PKCE code-verifier handling entirely
+  to Supabase's SDK (`exchangeCodeForSession`) rather than implementing it
+  itself, and correctly signs a non-admin out before completing an
+  `/admin`-bound redirect. `packages/shared/src/schemas.ts` (used by both
+  web and extension) is a data-shape contract for client-side/sync
+  payloads, not an input-validation security boundary - every actual API
+  route already enforces its own stricter, length-bounded Zod schema
+  before untrusted input ever reaches code that uses these shared types,
+  confirmed by cross-referencing several already-audited routes. **No fix
+  needed anywhere in this pass.**
+- **Decision Index / fit-scoring engine, broader correctness sweep**
+  (2026-08-22, alongside #131): read `fit-model.ts`, `country-rules.ts`,
+  and the international assessment/migration/orchestration modules in
+  full and hand-traced worked examples through the most complex scoring
+  functions, not just pattern-matched for suspicious-looking code. `evaluateAutoTimeFitScore`'s
+  score-breakdown `maxPoints` sum to exactly 100 as documented; every
+  sub-score is clamped to its own max; label/threshold ladders
+  (`getStatus` 35/55/75, `getFitLabel` 50/65/80, `getApplicationPriority`
+  50/65/80, `orchestration.ts`'s `fitDecision` 50/65) are all
+  non-overlapping and consistently `>=`-based with no gaps between them;
+  `evaluateCountryFit`'s `overallScore` averages a fixed 6-component
+  array, so no divide-by-zero risk; `getLanguageBarrierScore`'s
+  low-is-easier orientation was checked against its actual UI consumer
+  and is correctly signed; `orchestrateJobDecision`'s branch order only
+  ever escalates caution (nothing overrides toward "Apply"), the safe
+  direction for this product. The one real bug found is #131 above.
+  **Judgment call for the founder, not changed**: `getConfidence` returns
+  `"High"` confidence whenever a hard blocker is present - i.e. it
+  measures certainty-of-verdict, not positivity-of-outcome. Plausible
+  intentional design ("we're confident this should be skipped"), but
+  worth confirming that's the intended reading, since "High confidence"
+  displayed next to a rejection could read as counterintuitive in the UI.
+- **Readiness/transition gate, broader correctness sweep** (2026-08-22,
+  alongside #132): read `job-application-workflow.ts` in full and
+  hand-traced worked examples through the two most safety-critical
+  functions. `getApplicationReadiness` correctly uses
+  `unsupportedClaims.length > 0` (not array truthiness) so an empty array
+  never blocks and any non-empty array always does; `createApplication`
+  and `cloudApplicationToWorkspaceJob` both default `unsupportedClaims` to
+  `[]` and `evidenceConfirmed`/`consequentialAnswersReviewed` to `false` -
+  restrictive, not permissive, defaults. `analyseJob`'s decision ternary
+  chain and its "single weak requirement" carve-out were traced and match
+  their accompanying comments, with no AND/OR inversion. The one real bug
+  found is #132 above; every other transition in `transitionApplication`
+  (backward moves among `Preparing`/`Needs review`/`Ready`, and the
+  dedicated `Applied`->`Interview`/`Offer`/`Rejected`/`Withdrawn`
+  sub-machine) was checked and correctly guarded. **No fix needed** beyond
+  #132.
+- **Interview state machine, broader correctness sweep** (2026-08-22,
+  alongside #133): read `interview-workflow.ts` in full and hand-traced
+  worked examples through `getInterviewReadiness` and
+  `getInterviewHomeSignals`. `getInterviewReadiness`'s blocker/label logic
+  is correct (a 4-question worked example with one clean, one
+  unsupported-claim-blocked, one unanswered, and one missing-evidence
+  question correctly landed on "Needs attention"); `markedForPractice:
+  confidence !== "high"` has the correct polarity, not inverted; every
+  boolean default (`answerDraft?.confirmed`, etc.) is restrictive, not
+  permissive; the 72-hour "interview soon" window
+  (`hours >= 0 && hours <= 72`) is correctly directional; cross-file
+  scoping of `applicationId`/`jobId` on interview records is correct in
+  isolation. The two real bugs found are #133 above. **No fix needed**
+  beyond that.
+- **Systematic sweep for the #132/#133 bug class** (2026-08-22): both real
+  bugs found so far in this session's correctness pass shared one
+  precondition - a dedicated transition-guard function establishing
+  restricted/terminal states, plus a SEPARATE function that writes
+  `status` directly, bypassing that guard. Searched every file in
+  `apps/web/lib`, `apps/extension/lib`, and `packages/shared/src` for that
+  same precondition (a local `order`/`allowed` transition map alongside
+  any other direct `status:` assignment). No third instance exists: the
+  extension's own application/sync-state tracking
+  (`getApplicationSyncState`/`updateApplicationSyncState` in
+  `apps/extension/lib/storage.ts`) is a simple pending/synced/failed
+  tracker with no terminal-state concept to bypass; the admin-panel status
+  fields (`admin-market-data.ts`, `admin-feedback.ts`,
+  `admin-monitoring.ts`) are DB-driven display/refresh statuses with no
+  local pure-function state machine at all; `packages/shared/src` has no
+  transition-guard pattern anywhere. **No fix needed** - #132 and #133 are
+  the complete set for this bug class.
+- **ESCO job-classification scoring** (2026-08-22): read
+  `classifyJobToEsco` (`lib/esco/classify-job.ts`) and `score-job`'s
+  matched/missing-skill computation in full. No clear-cut logic bug -
+  the exact-match path, `words()`'s Unicode-normalization for accent
+  insensitivity, and the matched/missing skill split (essential skills
+  cross-referenced against confirmed `user_skill_profile` entries) are all
+  sound. **Judgment call for the founder, not changed**: the token-overlap
+  confidence score is normalized by the *occupation's* own token count
+  (`overlap = matchingTokens / occupationTokenCount`), not the job
+  description's - this systematically inflates confidence for occupations
+  with short preferred-label/description text relative to occupations
+  with long, detailed ones, since a short label needs fewer matching
+  tokens to reach a high overlap ratio. This is a modeling/tuning
+  characteristic of a deliberately simple bag-of-words classifier, not an
+  implementation error with an obviously "correct" fix - flagging for the
+  founder's awareness rather than changing the scoring formula
+  unilaterally, since the intended precision/recall balance for this
+  feature isn't something to guess at.
+- **Rate-limit coverage across every API route, and the QA session
+  bootstrap specifically** (2026-08-22, alongside #139): swept all 47
+  `route.ts` files for rate-limit coverage; most gaps are low-priority by
+  construction (admin-gated, authenticated-and-scoped-to-caller, or
+  Stripe/signature-verified) - `/api/sync/refresh` was the one genuine gap,
+  fixed as #139. Separately audited `/api/qa/session` (the QA test-account
+  bootstrap, gated by `QA_SESSION_BOOTSTRAP_SECRET`) for the same
+  free-for-anyone cost-amplification shape sync/refresh had, since it's
+  also unauthenticated by design. It doesn't have that shape: the
+  `timingSafeEqual` secret check runs *before* any Supabase Auth call or DB
+  write, and a wrong secret returns 404 immediately with zero backend
+  cost - unlike sync/refresh, where even a garbage input reached the real
+  Supabase Auth API before failing. A right guess requires already having
+  the actual high-entropy secret, at which point rate limiting the
+  resulting magic-link generation is a smaller concern than the secret
+  itself being compromised. **No fix needed.**
+- **CSRF defenses on session-cookie-authenticated routes** (2026-08-22):
+  `getRequestUser`/`requireAdminRequest` authenticate primarily via a
+  Supabase session cookie (`getCookieUser`, tried before the `Authorization`
+  bearer-token fallback used by the extension), which makes every such
+  route a classic CSRF target unless something blocks a forged cross-site
+  request from carrying that cookie. Traced two independent layers: (1)
+  neither this app nor `@supabase/ssr` sets an explicit `SameSite`
+  attribute on the auth cookie anywhere in the codebase (grepped for
+  `sameSite` - no match), which means it inherits the browser's own
+  default - every current major browser (Chrome, Firefox, Edge, Safari)
+  treats a cookie with no explicit `SameSite` as `Lax`, which already
+  blocks a forged cross-site POST/PUT/DELETE from carrying the cookie at
+  all; (2) `isSameOriginMutation()` (`lib/admin-authorization.ts`) is
+  additionally applied as defense-in-depth on the four highest-value admin
+  mutation routes (`admin/feature-flags`, `admin/market-data/refresh`,
+  `admin/users/[userId]/beta-access`, `operations/workflow-events`).
+  Audited that function itself line by line for a bypass: it correctly
+  rejects a same-*site*-but-different-*origin* request (checking
+  `sec-fetch-site === "same-origin"`, not the weaker `"same-site"`, so a
+  compromised subdomain can't use it either), and a malformed/`"null"`
+  `Origin` header fails safe via the try/catch rather than being treated
+  as trusted. No bypass found in either layer. **No fix needed.**
+- **Remaining admin mutation routes, field by field** (2026-08-22):
+  `admin/feature-flags` (POST) and `admin/users/[userId]/beta-access`
+  (POST) hadn't been individually read end-to-end this session. Both are
+  solid: specific permissions (`feature_flags:write`,
+  `users:manage_beta`), `isSameOriginMutation` CSRF checks, and strict
+  input validation (feature-flags rejects any request whose body doesn't
+  have *exactly* the four expected keys - `Object.keys(body).sort().join(",")`
+  compared against a literal string - closing mass-assignment outright
+  rather than just checking each field's type; beta-access validates the
+  path-param UUID format and requires a >=4-character reason when
+  suspending). Both RPCs (`admin_update_feature_flag`,
+  `admin_change_beta_access`) re-check the actor's role from
+  `admin_memberships` independently inside the function itself (`owner`
+  only for feature flags, `owner`/`admin` for beta access) rather than
+  trusting the route's own permission check alone, and both write a
+  proper `admin_audit_events` row. Feature-flag keys are validated against
+  a real fixed allowlist (`adminFeatureFlagKeys`), not just "is a string".
+  `admin_change_beta_access` doesn't restrict `p_target_user_id` from
+  being another admin's account, but `beta_access` only gates beta-program
+  participation, not admin panel access (a separate table,
+  `admin_memberships`) - no privilege-escalation path there. **No fix
+  needed.**
+- **Stripe webhook handler and its supporting RPCs** (2026-08-22): read
+  `api/stripe/webhook/route.ts` and `grant_ai_credit_pack` in full, ahead
+  of a real-money beta launch. Signature verification runs against the raw
+  request body before any parsing (standard, correct); the
+  `stripe_webhook_events` idempotency claim (#105) prevents a redelivered
+  event from double-processing; `markInvoicePaymentFailed`'s
+  `parent.subscription_details?.subscription.id` navigation looked like a
+  possible null-dereference at first read, but Stripe's own type
+  (`SubscriptionDetails.subscription: string | Subscription`, never
+  null once `subscription_details` itself is present) confirms it's safe -
+  verified against the installed package's `.d.ts`, not assumed.
+  `grant_ai_credit_pack` has its own independent, database-level
+  idempotency on top of the webhook-level dedup: `stripe_checkout_session_id`
+  carries a unique constraint with `on conflict ... do nothing`, so even a
+  bug elsewhere calling this RPC twice for the same checkout session can't
+  double-grant credits. **No fix needed** on any of that. Was a known gap,
+  flagged rather than fixed unilaterally, at the time of this pass: there
+  was no handler for `charge.refunded` or `charge.dispute.created`. A user
+  who buys an AI credit pack, spends the credits, then disputes/refunds
+  the charge with their card issuer kept the credits with no automatic
+  clawback or even a visibility trail for the founder to review. This was
+  a business-policy decision (revoke remaining credits immediately? flag
+  the account for manual review? suspend access pending resolution?), not
+  a clear-cut implementation bug with one obviously correct fix - surfaced
+  for the founder to decide rather than guessing at fraud policy. Founder
+  chose "Log for manual review" - see #142.
+- **Account deletion cascade completeness, schema-wide** (2026-08-22):
+  the private-beta acceptance criteria explicitly require account
+  deletion to work correctly, and #115's original audit predates roughly
+  a dozen tables added since. Rather than trust the `DELETE /api/account`
+  route's own code comment (which enumerates only 12 example tables),
+  grepped every column in every migration that references
+  `auth.users(id)`, of any name, across the whole schema. Every single one
+  declares an explicit `ON DELETE` behaviour - no column relies on
+  Postgres's default (`NO ACTION`/restrict), which would otherwise risk
+  silently blocking account deletion the first time a new table forgot to
+  specify one. The three behaviours in use are all deliberate and
+  consistent: `on delete cascade` for genuine per-user content (`user_id`),
+  `on delete restrict` for audit-integrity actor columns
+  (`actor_user_id`, `requested_by` - an admin with audit history can't
+  self-delete, already documented as intentional), and `on delete set
+  null` for attribution-only columns (`created_by`, `updated_by`) where
+  the referencing row should survive without its creator. **No fix
+  needed** - deletion is complete and correctly ordered at the schema
+  level for every table that exists today, not just the 12 named in the
+  route's own comment.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
