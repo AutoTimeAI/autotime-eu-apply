@@ -131,7 +131,12 @@ function getContext(
       (application) =>
         application.status === "Applied" &&
         Boolean(application.followUpDate) &&
-        new Date(`${application.followUpDate}T23:59:59`) <= new Date(),
+        // Anchor to the start of the due date, not the end - otherwise a
+        // follow-up due "today" doesn't get flagged until 23:59:59 that
+        // night, delaying the nudge by up to a full day. Matches the
+        // start-of-day pattern DashboardExperience.tsx's getNextActionTiming
+        // already uses for the same "is this due" question.
+        new Date(`${application.followUpDate}T00:00:00`) <= new Date(),
     ) ||
     applications.some(
       (application) =>
