@@ -153,6 +153,23 @@ assert.throws(
   /cannot be moved back to Ready/,
 );
 
+// An application that has moved into Interview/Offer/Rejected/Withdrawn must
+// never silently revert into the base Preparing/Needs review/Ready/Applied
+// pipeline - Array.indexOf's -1-for-not-found result made "Preparing" only
+// look one step away from each of those four statuses.
+for (const extendedStatus of ["Interview", "Offer", "Rejected", "Withdrawn"]) {
+  assert.throws(
+    () =>
+      transitionApplication(
+        { ...application, status: extendedStatus },
+        "Preparing",
+        job,
+      ),
+    /Invalid application status transition/,
+    extendedStatus,
+  );
+}
+
 // Completes the happy-path fixture QA asked for (issue #56): a real
 // vacancy, analysed for real by analyseJob (not hand-crafted with
 // decision/status set directly, the way phase-3c-interviews.test.mjs's
