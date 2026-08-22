@@ -1,10 +1,10 @@
-import { appUrl } from "./openai"
+import { appUrl } from "./openai.ts"
 import {
   clearAccountSession,
   getAccountSession,
   saveAccountSession,
   type AccountSession
-} from "./storage"
+} from "./storage.ts"
 
 // Supabase access tokens are short-lived (commonly ~1 hour). Refresh a
 // little before the real expiry so an in-flight Track Job click never races
@@ -38,6 +38,16 @@ function isExpiringSoon(session: AccountSession): boolean {
   return Date.now() >= session.expiresAt - REFRESH_BUFFER_MS
 }
 
+// Supabase refresh tokens are single-use/rotating: if two call sites (e.g.
+// the background message handler and a content-script sync, or the retry
+// path in withFreshSession) both see an expiring session and refresh
+// concurrently, the second POST reuses an already-consumed refresh token
+// and fails - which used to clear the session the first call just saved
+// successfully, signing the user out for no reason. Sharing one in-flight
+// promise means every concurrent caller waits on and gets the result of
+// the single real refresh attempt instead of racing separate ones.
+let inFlightRefresh: Promise<ActiveSessionResult> | null = null
+
 async function refreshSession(
   session: AccountSession
 ): Promise<ActiveSessionResult> {
@@ -50,6 +60,20 @@ async function refreshSession(
     }
   }
 
+  if (inFlightRefresh) {
+    return inFlightRefresh
+  }
+
+  inFlightRefresh = performRefresh(session).finally(() => {
+    inFlightRefresh = null
+  })
+
+  return inFlightRefresh
+}
+
+async function performRefresh(
+  session: AccountSession
+): Promise<ActiveSessionResult> {
   try {
     const response = await fetch(`${appUrl}/api/sync/refresh`, {
       method: "POST",

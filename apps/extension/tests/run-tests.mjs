@@ -75,6 +75,7 @@ import {
   updateApplication,
   updateApplicationSyncState
 } from "../lib/storage.ts"
+import { getActiveSession } from "../lib/session.ts"
 import {
   countWords,
   validateApplicationContentDraft,
@@ -1218,6 +1219,62 @@ test("normalizes a legacy account session saved before refresh tokens existed", 
     plan: "free",
     provider: "email"
   })
+})
+
+test("concurrent getActiveSession calls on an expiring token share one refresh, not a racing pair", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "stale-token",
+    refreshToken: "single-use-refresh-token",
+    expiresAt: Date.now(), // already within the refresh buffer
+    email: "user@example.com",
+    plan: "pro",
+    provider: "github"
+  })
+
+  let fetchCallCount = 0
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => {
+    fetchCallCount += 1
+    return {
+      ok: true,
+      async json() {
+        return {
+          data: {
+            authToken: "fresh-token",
+            refreshToken: "fresh-refresh-token",
+            expiresAt: Date.now() + 60 * 60 * 1000
+          },
+          error: null
+        }
+      }
+    }
+  }
+
+  try {
+    // A second refresh token is single-use in Supabase - if two callers both
+    // raced their own /api/sync/refresh with the stale refresh token, the
+    // second would fail and clear the session the first one just saved.
+    const [first, second] = await Promise.all([
+      getActiveSession(),
+      getActiveSession()
+    ])
+
+    assert.equal(fetchCallCount, 1)
+    assert.equal(first.session?.authToken, "fresh-token")
+    assert.equal(second.session?.authToken, "fresh-token")
+    assert.deepEqual(await getAccountSession(), {
+      authToken: "fresh-token",
+      refreshToken: "fresh-refresh-token",
+      expiresAt: first.session.expiresAt,
+      email: "user@example.com",
+      plan: "pro",
+      provider: "github"
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 
 test("tracks application sync state from pending to synced", async () => {
