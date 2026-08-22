@@ -652,6 +652,8 @@ export function transitionApplication(
       updatedAt: new Date().toISOString(),
     };
   }
+  if (next === "Ready" && application.status === "Applied")
+    throw new Error("An applied application cannot be moved back to Ready.");
   if (next === "Ready" && !getApplicationReadiness(application, job).ready)
     throw new Error("Resolve every readiness blocker before marking Ready.");
   if (next === "Applied" && (application.status !== "Ready" || !confirm))
