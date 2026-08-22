@@ -652,6 +652,15 @@ export function transitionApplication(
       updatedAt: new Date().toISOString(),
     };
   }
+  // application.status here may itself be Interview/Offer/Rejected/Withdrawn
+  // (none of those are in `order` above), and Array.indexOf returns -1 for
+  // a value it doesn't contain - so e.g. order.indexOf("Preparing") (0) minus
+  // order.indexOf("Interview") (-1) is only 1, the same "one step" gap as a
+  // real adjacent pair, letting the adjacency check below silently wave
+  // through "Interview" -> "Preparing" instead of rejecting it. Reject any
+  // such move explicitly before that arithmetic ever runs.
+  if (["Interview", "Offer", "Rejected", "Withdrawn"].includes(application.status))
+    throw new Error("Invalid application status transition.");
   if (next === "Ready" && application.status === "Applied")
     throw new Error("An applied application cannot be moved back to Ready.");
   if (next === "Ready" && !getApplicationReadiness(application, job).ready)
