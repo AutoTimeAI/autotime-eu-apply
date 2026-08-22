@@ -233,6 +233,12 @@ A dated record of an end-to-end validation pass against **real production**
 GitHub Actions run, or a direct read of the affected code, not assumed from
 a green checkmark that was never actually exercised.
 
+This section is a living log, not a one-time snapshot: every audit or test
+pass - whether it finds a real defect (recorded with its fixing PR) or
+confirms an area is already sound (recorded under "Verified, not just
+assumed", with no PR needed) - gets appended here as it happens, so this
+stays the single evidenced record of what has and hasn't been checked.
+
 ### Confirmed working against real production
 
 - **`production-smoke.yml`** (authenticated Playwright journeys against the
@@ -265,6 +271,25 @@ a green checkmark that was never actually exercised.
 | #98 | No active prompt-injection defense beyond the Responses API's own channel separation, despite a real attack surface (scraped job postings, arbitrary GitHub CV imports) | `openai-server.ts` |
 | #99 | `X-Powered-By` leak; missing `Cross-Origin-Opener-Policy`/`Cross-Origin-Resource-Policy` headers | `next.config.ts` |
 | #100 | **Real, quantifiable financial exposure**: every AI-backed route checked the caller's monthly allowance/credit balance with a plain read *before* the paid OpenAI call, and only recorded usage (atomically, via `consume_ai_credit`) *after* - so concurrent requests could all pass the check simultaneously and all reach OpenAI regardless of actual entitlement, up to 20/minute/user, repeatable indefinitely. Fixed with an atomic reserve-before-call pattern (`reserve_ai_call`/`confirm_ai_call`/`release_ai_call`) across all 12 AI routes | `feature-gate.ts`, new migration |
+| #101 | Not a defect - a manual, real-cost diagnostic workflow (`workflow_dispatch` only) added to directly confirm #100's fix against live production with one real, deliberately-authorized AI call. Dispatched once; returned a genuine HTTP 200 with a coherent AI response | `.github/workflows/verify-ai-billing-fix.yml` |
+| #105 | Stripe delivers webhooks at-least-once; `customer.subscription.created` redelivery had no idempotency guard, so a redelivered event would re-send the "upgrade confirmed" email to the user a second time. Fixed with a `stripe_webhook_events` claim table (event.id, released on processing failure so genuine retries still reprocess) | `api/stripe/webhook/route.ts`, new migration |
+| #107 | **Open redirect**: `/auth/callback`, `/api/qa/session`, and the login page all validated `redirectTo` by rejecting a literal `"//"` prefix only - but browsers and Node's URL parser treat a leading `"/\"` the same as `"//"`, so `redirectTo=/\evil.example` bypassed every check and sent a user, immediately after a real successful sign-in, straight to an attacker-controlled origin. Fixed by resolving the candidate value against the request's actual origin (matching the existing `lib/return-url.ts` pattern) instead of blocklisting string prefixes | `lib/safe-redirect-path.ts`, `auth/callback`, `api/qa/session`, `LoginContent.tsx` |
+| #106/#108 | **Documentation defects**: the root `README.md`, `PRIVACY.md`, and `docs/release-readiness.md` all still described the product as it was around the `v0.0.1` tag (2026-05-03) - browser-local AI with a user-supplied OpenAI key, no backend, a Chrome side-panel UI, Supabase sync framed as pending work. None of that matched the current system (server-side AI billing, full Supabase/RLS backend, no `sidePanel` permission in the manifest). Corrected against direct code verification (`wxt.config.ts`, `env.server.ts`, `platform-coverage.json`, git tags, the live `/privacy` page); added `docs/README.md` (an index for the 100+ files under `docs/`) and `CHANGELOG.md` | `README.md`, `PRIVACY.md`, `docs/release-readiness.md`, `docs/README.md`, `CHANGELOG.md` |
+| #110 | **Compliance-doc defect**: `docs/job-aggregation-compliance.md` explicitly said "do not scrape ... Indeed, national job boards" and claimed automatic extraction was limited to "Workday, iCIMS, and generic/unknown company career sites" - but tracing the real enforcement path (`getJobCaptureMode` -> `detectATS`/`isApiCoveredJobUrl` -> `PLATFORM_COVERAGE`) showed 13 named job boards (Indeed, Stepstone, Xing, Monster, InfoJobs, JobTeaser, EuroTopTech, NationaleVacaturebank, WelcomeToTheJungle, EuroTechJobs, EuroJobs, NextLevelJobs, Wellfound) are deliberately configured for full selector-extraction, verified 2026-08-18 with per-platform fixtures - a real, reviewed product decision the compliance doc never caught up to. Flagged to the founder as a legal/business judgment call rather than silently picked a side; founder chose to update the doc. Rewritten to separate server-side automated bulk ingestion from the extension's user-initiated single-page capture, and to point at `platform-coverage.ts`'s `expectedCaptureMode` field as the one source of truth instead of duplicating the list | `docs/job-aggregation-compliance.md` |
+| #111 | **DNS-rebinding SSRF gap**: `fetchPortfolioText` (the user-supplied portfolio-URL CV importer behind `/api/ai/cv-enrich`) already blocked private/loopback/link-local hostnames and pre-checked the resolved IP with a separate `dns.lookup()` call before fetching - but `fetch()` re-resolves the hostname internally at connect time, independent of that earlier check. An attacker controlling their own domain's DNS could return a public address for the pre-check and a private/internal one (e.g. `169.254.169.254`, a cloud metadata address) moments later when `fetch()` actually connects. Fixed by passing a custom lookup directly into undici's `Agent` (`connect.lookup`), so the same validation runs inside the actual connection layer instead of racing it - whatever address is validated is guaranteed to be the address connected to | `lib/cv/sources/portfolio.ts` |
+| #112 | **Zip-bomb DoS + double-escaping bug**: `extractDocxText` (DOCX CV import behind `/api/profile/import-cv`) only ever reads the one `word/document.xml` zip entry - already far safer than a general-purpose zip extractor - but its `inflateRawSync` call on that entry had no output-size limit. The route's 5MB upload cap only bounds the entry's *compressed* size; deflate can exceed a 1000:1 ratio on crafted repetitive input (confirmed in the new test: an 80MB run of zeros compresses to a tiny buffer), so a small, valid-looking DOCX could decompress to several GB and OOM the function. Fixed with zlib's built-in `maxOutputLength` (50MB, far above any real CV's `document.xml`). Also fixed a real double-escaping bug CodeQL flagged in the same file: `decodeXmlEntities` decoded `&amp;` in its own pass before `&lt;`/`&gt;`, so a legitimately double-escaped `&amp;lt;` (representing the literal text "&lt;") decoded through two passes into a raw `<` - corrupts real CV content, not just a security nicety. Fixed with a single-pass multi-entity regex; CodeQL's separate `js/incomplete-multi-character-sanitization` alert on the same function cleared as a result, confirming both alerts were two angles on the same root bug | `lib/docx-cv.ts` |
+| #113 | **AI safety fixes missed in a second AI pathway**: `lib/role-intelligence.ts` (NVIDIA-backed, used by Role Pathways' evidence extraction) is a completely separate AI client from `openai-server.ts` and had bypassed both major fixes already applied everywhere else - no `UNTRUSTED_CONTENT_GUARD`-equivalent instruction on candidate CV/job-posting text (the same untrusted-content class #98 fixed elsewhere), and no real rate limiting: its only protection was a module-level in-memory `activeRequests`/`MAX_CONCURRENCY = 2` counter, which does not coordinate across Vercel's horizontally-scaled serverless instances (the same class of bug #100 fixed for the main AI billing path, in a different form). Fixed by appending the guard text to the NVIDIA provider's system prompt and wiring the existing, database-backed `assertAiRouteRateLimit` into `POST /api/role-pathways/generate`. Also raised, rather than deciding unilaterally, whether this should be gated behind a subscription/credit check like every other AI route - founder decided yes, so also wired the same reserve/finalize/release primitives from #100 (mock mode still costs nothing and isn't gated; only the real nvidia path reserves a call) plus the standard `FeatureGateError` -> 402 upgrade response | `lib/role-intelligence.ts`, `api/role-pathways/generate/route.ts` |
+| #114 | **Missing magic-byte validation on profile photo upload**: `/api/profile/photo` trusted the client-supplied `file.type` to decide whether an upload was JPG/PNG/WebP - a plain REST endpoint any authenticated HTTP client can call directly with any declared Content-Type for any bytes, not just a browser file picker. Nothing checked the actual file signature before storing it and setting that same claimed type as the Supabase Storage object's Content-Type (a separate origin, not covered by this app's own `next.config.ts` security headers). Bounded impact - no `dangerouslySetInnerHTML` sink exists anywhere in this app, and photos are only ever consumed via `<img>` - but a real gap relative to the magic-byte checks already used for PDF/DOCX uploads elsewhere in this codebase. Fixed with `lib/image-signature.ts` checking real JPEG/PNG/WebP signatures before upload | `api/profile/photo/route.ts`, `lib/image-signature.ts` |
+| #115 | **Incomplete GDPR data export**: `/api/account/export` (the "Export my data" feature `PRIVACY.md` and the live `/privacy` page explicitly promise downloads "everything stored about your account") only exported 11 tables. Cross-checked every table with an `ON DELETE CASCADE` ownership link to `auth.users(id)` across all migrations against that list and found 7 real, actively-used, server-synced content tables missing entirely: `job_workflow_jobs`/`job_workflow_analysis_snapshots`/`job_workflow_applications`/`job_workflow_screening_answers` (the old comment claimed this lived only in browser localStorage - confirmed stale by checking `/api/sync/job-workflow` actually syncs it server-side), `interview_records`/`interview_questions`/`interview_preparation_snapshots` (the current interview workflow - a separate, older `interview_prep_packs` table *was* included, creating a false impression of completeness), `cover_letters`, `outreach_contacts`/`outreach_messages`, `user_skill_profile`/`esco_questionnaire_answers`, and `profile_revisions`. Fixed by adding all 7 to the exported set, extracted to `lib/account-export.ts` for testability | `api/account/export/route.ts`, `lib/account-export.ts` |
+| #116 | **Unrate-limited unauthenticated DB-write endpoint**: `/api/diagnostics/client` accepts unauthenticated requests by design (it must capture pre-login/OAuth failures), and every accepted request writes a row to `operational_logs` via `logDiagnostic` - but had no rate limit at all, so anyone could flood the table with an unbounded number of free DB writes, a real resource-exhaustion/cost-inflation vector. Fixed with `assertDiagnosticRouteRateLimit`, reusing the existing atomic `increment_ai_rate_limit` RPC (generic despite the name) rather than a new table/migration: 30 requests/5min, keyed by user id when authenticated or a salted SHA-256 IP hash otherwise, deliberately fail-open on RPC errors (contrasted with the AI-billing limiter's fail-closed behaviour, since this is best-effort reporting not a metered action). Bundled a DRY extraction of `getRequestIp` into a new dependency-free `lib/request-ip.ts` (also deduplicates an identical inline copy already in `api/compatibility/reports/route.ts`) since `lib/diagnostics.ts`'s `next/server` import makes it otherwise untestable in isolation under this repo's plain-node test runner | `lib/diagnostics.ts`, `lib/request-ip.ts`, `api/diagnostics/client/route.ts`, `api/compatibility/reports/route.ts` |
+| #117 | **Unauthenticated public analytics microservice**: `apps/analytics` (a separate FastAPI service `vercel.json` deploys to the same production domain at `/analytics`) had its one real endpoint, `POST /evidence-outcomes`, completely open - no auth, no payload-size limit. The dashboard's "Run online analytics" button called it directly from the browser with no session/identity information at all, so anyone who found the URL could call it directly, repeatedly, with arbitrarily large record arrays, for free - a real unauthenticated resource-exhaustion vector against a non-trivial `Counter`/loop-based compute endpoint on a production domain (not a data leak - the service is stateless, computing only from the POST body). Since it's a separate Python runtime with no way to validate a Supabase session itself, fixed with a shared-secret gate (`x-analytics-secret` matched against `ANALYTICS_INTERNAL_SECRET` via constant-time compare, 401 otherwise, plus a 2000-record cap per array as defense in depth) and a new authenticated Next.js proxy route (`getRequestUser` first, then forwards with the secret) that the dashboard now calls instead of hitting the Python service directly | `apps/analytics/main.py`, `api/analytics/evidence-outcomes/route.ts`, `components/DashboardExperience.tsx` |
+| #118 | **Inconsistent cache header on an admin route**: every other admin read route (`users`, `feedback`, `ai-operations`, `market-data`, `audit-log`, `feature-flags`) sends `Cache-Control: private, no-store`; `/api/admin/overview` was the one exception, sending plain `no-store` without `private`. Found while auditing all six admin read routes for completeness against that pattern (the permission-gating and query-bounding parts of all six were already solid - see below). Low risk in this deployment (no shared proxy cache sits in front of the app), but a real, confirmed inconsistency. Fixed the one line and added a regression test asserting all six routes agree | `api/admin/overview/route.ts` |
+| #119 | **Cross-user data-integrity gap in job-workflow sync + a disabled-sync UX bug**: found while independently verifying (not just assuming, since it had never actually been read this session) an earlier claim that `api/sync/job-workflow` "follows the same pattern" as mobility/interview sync. `upsertApplication()` wrote `job_id: application.jobId` straight into the payload with no check that the referenced job belongs to the calling user - the FK only requires the row to exist *somewhere* (not owned by the same account), and `createAdminClient()`'s service-role key means RLS doesn't backstop it either. Not a read leak (`readJobWorkflow` still scopes the jobs list by `user_id`), but a caller who obtains another user's job UUID could link their own application to it, and that job's own `on delete cascade` would then silently delete the *unrelated* application the moment its real owner deletes their job. Separately, `useJobWorkflowSync.ts`'s `upload()` treated a 404 (the feature-disabled response) the same as any real failure, so with `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED=false` in production, every local edit silently showed a false "sync failed" error instead of the correct disabled-state message. Fixed both: verify job ownership before linking, and check `response.status === 404` in `upload()` the same way the initial `GET` already did | `lib/job-workflow-repository.ts`, `lib/useJobWorkflowSync.ts` |
+| #120 | **Same unverified-FK pattern found elsewhere, deliberately swept for**: after fixing #119, dispatched a targeted sweep of every other repository/upsert function in the codebase for the exact same pattern (a client-supplied foreign key written into an insert/update payload with no ownership check). Found one real instance: `upsertInterview()` (`lib/interview-workflow-repository.ts`) wrote both `application_id` and `job_id` - two client-supplied FKs - with no verification that either referenced row belongs to the calling user. Same non-leak-but-cascade-risk shape as #119, and arguably higher severity here since there are two cascading FKs instead of one, and `interview_questions`/`interview_preparation_snapshots` cascade off `interview_records.id` in turn - so the blast radius of a real owner deleting their own application/job could take out an unrelated user's interview plus its questions and prep snapshots. `mobility-profile-repository.ts` and `cloud-sync.ts` were checked and confirmed clean (no client-supplied FK fields in the former; the latter's FK values are always server-generated or scoped to the caller). Fixed the same way as #119: verify both referenced rows before writing | `lib/interview-workflow-repository.ts` |
+| #121 | **Two more instances of the same unverified-FK pattern**: extended the #120 sweep to every `.insert()`/`.upsert()` call in `apps/web/app/api` and found two more. `POST /api/ai/cover-letter` inserts into `cover_letters` with `job_id: body.jobId` (optional) with no ownership check; `POST /api/outreach` inserts into `outreach_messages` with `job_id: body.jobId` (required) with the same gap. Both FKs reference `public.applications(id) on delete cascade`. Same impact shape as #119/#120: not a read leak, but a caller who obtains another user's application UUID could link their own cover letter or outreach message to it, silently cascade-deleted the moment that application's real owner deletes it. Fixed both by verifying the referenced application belongs to the caller before writing. Swept the remainder of `apps/web/app/api` and `apps/web/lib` and found nothing else: `esco/questionnaire`'s `escoSkillId` only ever references the public `esco_skills` reference table (no per-user ownership applicable), and `sync/extension`'s `extension_id` is an opaque identifier, not a foreign key to another user's row - this closes out the sweep across the whole codebase | `api/ai/cover-letter/route.ts`, `api/outreach/route.ts` |
+| #122 | **Unaddressed dependabot alert**: GitHub's one open alert (#74, medium, CVE-2026-41907/GHSA-w5hq-g745-h8pq) had been showing on every push all session without ever being checked - a transitive `uuid@8.3.2` pulled in by `exceljs@4.4.0` in `docs/qa` (a standalone npm project outside the pnpm workspace that generates the QA documentation `.xlsx`, never deployed/run in production). `uuid`'s `v3()`/`v5()`/`v6()` methods don't bounds-check a caller-supplied output buffer, allowing silent partial writes - fixed upstream in `uuid@11.1.1`+. `exceljs@4.4.0` is still the latest release and still requires `uuid@^8.3.0`, so no newer `exceljs` fixes this. Fixed with an npm `overrides` entry pinning `uuid` to `^11.1.1`, matching the same remediation already used for the root workspace's own `uuid` override. Verified `npm install` resolves to `uuid@11.1.1` with 0 vulnerabilities, and `npm run build` still generates the workbook successfully end-to-end | `docs/qa/package.json` |
+| #123 | **Missing least-privilege permissions on the CI workflow**: audited all four GitHub Actions workflows (`unit-tests.yml`, `e2e.yml`, `job-ingestion.yml`, `platform-coverage.yml`) for the classic script-injection/`pull_request_target` vulnerability classes (untrusted PR title/branch data interpolated into a `run:` shell step, or fork PR code executed with write-level secrets). All four are clean: none use `pull_request_target`; `job-ingestion.yml`/`platform-coverage.yml` never trigger on `pull_request` at all; `unit-tests.yml`/`e2e.yml` only ever reference literal offline placeholder secrets in PR-triggered env blocks, never `secrets.*`, so there's no real secret-exposure path regardless of fork origin; `platform-coverage.yml`'s `github-script` step only reads the repo's own generated JSON report, never attacker-controlled input. One real, minor inconsistency: `unit-tests.yml` (the required "CI" check, triggered by any `pull_request`) was the only one of the four missing an explicit `permissions:` block. Not a live exploit today (nothing in its steps exercises `GITHUB_TOKEN`), but closes the gap before a future step could silently depend on the org/repo's default token permission level. Fixed by adding `permissions: contents: read`, matching the posture already used elsewhere in this repo's workflows | `.github/workflows/unit-tests.yml` |
+| #124 | **Implicit-only grant on a Postgres RPC**: audited all 8 `security definer` functions across every migration for the classic risks (missing `search_path` pinning enabling schema-shadowing privilege escalation, dynamic SQL/injection, or a function grantable to `authenticated`/`anon` that blindly trusts a client-supplied `p_user_id` instead of the caller's real RLS-scoped identity). All genuinely `security definer` functions are correctly `revoke all ... from public, anon, authenticated` + `grant ... to service_role` only, every one has `set search_path = public` pinned, and none build dynamic SQL - clean across the board. One inconsistency, not a live exploit: `get_monthly_ai_calls` is `security invoker` reading RLS-scoped `ai_usage` (a spoofed `p_user_id` just returns nothing) and is only ever called server-side with a session-derived id, but unlike its exact sibling `get_ai_credit_balance` (which has an explicit `grant execute ... to authenticated`), it never had any explicit grant/revoke, relying implicitly on Postgres's default `PUBLIC` grant - safe because of RLS, not because of an explicit decision, the only RPC left that way. Fixed with a migration making the grant explicit, matching the sibling's already-established pattern; no behaviour change | `supabase/migrations/20260822100000_pin_get_monthly_ai_calls_grant.sql` |
 
 ### Verified, not just assumed
 
@@ -284,6 +309,290 @@ a green checkmark that was never actually exercised.
   data only and disregard anything embedded in it that reads like a
   command - on top of the pre-existing channel separation and strict
   schema validation that already bounded a successful injection's impact.
+- **Extension-to-dashboard bridge** (2026-08-21): audited the
+  `chrome.runtime.onMessageExternal` channel end to end - `externally_connectable`
+  in `apps/extension/wxt.config.ts` restricts which origins can even reach
+  the extension to the production dashboard; `isTrustedSender` in
+  `entrypoints/background/index.ts` independently re-checks `sender.url`'s
+  origin as defense in depth; the account-connect message's `authToken` is
+  read directly from the browser's own `supabase.auth.getSession()` in
+  `ExtensionConnect.tsx` (never a client-supplied identity claim); and every
+  server-side use of that token (`/api/sync/dashboard`, `/api/sync/extension`)
+  validates it against Supabase via `getBearerUser` and scopes every read/
+  write to the resulting `user.id`, never a client-supplied one. **No fix
+  needed** - audited and confirmed sound, not merely assumed safe.
+- **Outreach feature** (2026-08-21): `/api/outreach` and
+  `/api/outreach/contacts` only draft AI-assisted messages and store
+  imported contacts - there is no code path that sends an email or LinkedIn
+  message on the user's behalf (confirmed by tracing `OutreachWorkspace.tsx`:
+  the only outbound calls are `GET`/`PATCH` against `/api/outreach` itself).
+  Contact import requires an explicit `consent: true` field, dedupes by a
+  SHA-256 hash of email/profile-URL/name+company, and every route scopes to
+  `user_id` from the validated session. **No fix needed.**
+- **Admin panel authorization** (2026-08-21): the shared layout
+  (`app/admin/layout.tsx`) only gates on the baseline `overview:read`
+  permission and filters *nav links* by permission - so the real question
+  was whether each admin page/route enforces its own specific permission
+  independently, rather than trusting the nav being hidden. Confirmed all
+  six admin pages (`users`, `feedback`, `ai-operations`, `market-data`,
+  `feature-flags`, `audit-log`) and every admin API route call
+  `requireAdminPrincipal`/`requireAdminRequest` with their own specific
+  permission. Both mutation routes checked in depth
+  (`api/admin/feature-flags`, `api/admin/market-data/refresh`,
+  `api/admin/users/[userId]/beta-access`) additionally enforce a same-origin
+  check (`isSameOriginMutation`), strict exact-shape body validation, and
+  RPC-based writes with actor attribution (`p_actor_user_id`) and
+  optimistic-concurrency/idempotency handling. The role/permission matrix
+  (`lib/admin-permissions.ts`) correctly scopes `admin_memberships:manage`
+  to `owner` only, requires `status === "active"` regardless of role, and
+  `getAdminMembership` explicitly excludes test-auth users from ever
+  resolving as an admin. Error responses (`admin-safe-response.ts`) never
+  leak internals - generic message plus an opaque `diagnosticId` only,
+  `Cache-Control: private, no-store` on every response. **No fix needed.**
+- **Server-side job-listing ingestion** (2026-08-21, alongside #110): read
+  `supabase/functions/sync-job-sources/index.ts` and `sync-eures/index.ts` in
+  full. The ingestion pipeline only ever fetches from Greenhouse, Lever,
+  Ashby, Personio, and SmartRecruiters' own public APIs (`feed()`'s
+  hardcoded platform list - anything else returns `[]`), plus Adzuna/Jooble
+  behind their own API credentials (`disabled_missing_credentials` when
+  unset), plus EURES via its own dedicated function - exactly matching the
+  compliance doc's permitted-sources list, with no path for an
+  arbitrary/unapproved source to be added without a code change. Cron-secret
+  gated (`x-cron-secret` header check before any work runs). **No fix
+  needed** - this is the code-correctness half of the #110 finding; only the
+  documentation was wrong.
+- **Interview workflow** (2026-08-21): the three interview AI routes
+  (`api/ai/interview`, `api/ai/interview-answer`, `api/ai/technical-interview`)
+  all correctly use the reserve/confirm/release billing pattern from #100 and
+  the prompt-injection guard from #98 (`UNTRUSTED_CONTENT_GUARD`, confirmed
+  present in every `generate*WithOpenAI` function in `openai-server.ts`, not
+  just some). The interview-prep routes are stateless - the client sends the
+  full application/profile/job context in the request body rather than an ID
+  the server looks up, so there's no IDOR surface from a client-supplied
+  application/interview ID. `api/sync/interviews` and
+  `interview-workflow-repository.ts`'s `upsertInterview`/`readInterviewWorkflow`
+  consistently scope every read/write to the server-derived `userId`, never a
+  client-supplied one. **No fix needed.**
+- **CV import: GitHub and LinkedIn sources** (2026-08-21, alongside #111/#112):
+  `enrichCvFromGitHub` (`lib/cv/sources/github.ts`) only ever calls the fixed,
+  trusted `api.github.com` host - `username`/`repo.name` are URL-encoded path
+  segments, not something that can redirect the request elsewhere, and the
+  optional user-supplied GitHub token is used transiently for that one
+  request, never persisted. Bounded to ~17 requests per enrichment (5
+  featured repos x 3 calls + 1 listing + 1 optional GraphQL call). The PDF
+  import path (`lib/pdf-cv.ts`, behind `/api/profile/import-cv`) has a 5MB
+  upload cap and a magic-byte check; a theoretical PDF-internal decompression
+  bomb is accepted as a low-priority residual risk bounded by Vercel's own
+  per-invocation timeout, not fixed here. `enrichCvFromLinkedInZip`
+  (`lib/cv/sources/linkedin-import.ts`) turned out to be **entirely
+  client-side** - a `"use client"` component whose own status message says
+  "The ZIP was processed in this browser and was not uploaded" - so a
+  malicious LinkedIn-export zip could at most crash the uploading user's own
+  tab, never the server; not a fixable server-side defect. **No fix needed.**
+- **Extension autofill/DOM-injection** (2026-08-21): read the actual fill
+  logic in `apps/extension/contents/autofill.ts` and `lib/autofill.ts`.
+  Multiple independent safety layers, not just one: `canFillInput`/
+  `canFillTextarea` require the target field to be empty, visible, and
+  neither disabled nor read-only; `allowedInputTypes` whitelists only
+  `email`/`search`/`tel`/`text`/`""` (no `password`); every fill is
+  user-triggered from the widget, never automatic on page load; and
+  `getAutofillRoot()` scopes LinkedIn specifically to the open Easy Apply
+  modal - autofill silently declines if the modal isn't open, matching the
+  documented LinkedIn policy. The widget UI itself is Shadow-DOM isolated
+  from the host page. **No fix needed.**
+- **Account deletion (GDPR Article 17)** (2026-08-21, alongside #115):
+  `DELETE /api/account` deletes only the calling user's own `auth.users` row
+  (`user.id` from the validated session, never client-supplied), and the
+  code comment's cascade/restrict claims were verified against the actual
+  migration SQL rather than trusted at face value - every genuine per-user
+  table uses `on delete cascade`, while `admin_audit_events.actor_user_id`
+  and `market_refresh_requests.requested_by` correctly use
+  `on delete restrict` (a deliberate audit-integrity safeguard: an admin
+  with audit history can't self-delete their account). Test-auth accounts
+  are explicitly blocked from deletion. **No fix needed** - this is the
+  code-correctness half of the #115 finding; only the *export* route had a
+  completeness gap, not the deletion route.
+- **Job-alert email notifications** (2026-08-21): read
+  `supabase/functions/sync-job-alerts/index.ts` in full. All untrusted
+  external content that lands in the digest email (job `title`, `company`,
+  ESCO `missing_skill_labels`) is passed through `escapeHtml` before
+  interpolation - genuinely necessary here, since job titles/company names
+  originate from third-party sources (Adzuna, Jooble, scraped ATS listings),
+  not from this app. Cron-secret gated; matches are fetched per-iteration
+  scoped to that profile's own `user_id` via `match_esco_jobs`, never
+  cross-user; sends carry a Resend `Idempotency-Key` derived from
+  `user_id:jobIds`, so a retried cron run can't double-email the same
+  digest; daily/weekly cadence correctly gated by `isDue()`'s elapsed-time
+  check against `alert_last_sent_at`, independent of the cron itself
+  running daily for both frequencies. The user-facing preference route
+  (`PATCH /api/profile/alerts`) is a simple enum update scoped to
+  `user.id`. **No fix needed.** Noted, not fixed: the `profiles` query caps
+  at 1000 rows with no pagination - a real scalability limit once past
+  1000 alert-eligible users, not a security issue at current scale.
+- **International mobility sync** (2026-08-21): `api/sync/mobility`
+  follows the identical pattern already verified for interviews and
+  job-workflow sync - `userId` is always server-derived from the validated
+  session, every read/write in `mobility-profile-repository.ts` scopes to
+  that `authenticatedUserId`, and `upsertMobilityProfile` enforces
+  optimistic concurrency via `expectedUpdatedAt` the same way
+  `upsertInterview` does. **No fix needed.**
+- **Pricing/billing surface** (2026-08-22): `PricingCard.tsx` is purely
+  presentational - `accountPlan`/price IDs are supplied only by
+  `pricing/page.tsx`, which derives plan via server-side `getUserPlan(user.id)`
+  and price IDs via server-only `getStripePriceEnv()`; nothing client-readable
+  is trusted for entitlement. `POST /api/stripe/checkout` accepts a `priceId`
+  from the request body but only as a selector into a fixed server allowlist
+  (`getCheckoutProduct`) matched against env-sourced price IDs - a client
+  cannot substitute an arbitrary/cheaper Stripe price this way - and
+  `user.id`/`client_reference_id`/`metadata.user_id` all come from
+  `supabase.auth.getUser()`, never the request body. `stripe/webhook/route.ts`
+  verifies the signature against the raw body before parsing, and the
+  `stripe_webhook_events` idempotency claim (added for #105) gates all four
+  handled event types with no bypass path. `SettingsControls.tsx`/
+  `UserNav.tsx`/`DashboardShell.tsx` all receive `plan` as a prop threaded
+  from a per-request server call (`dashboard/layout.tsx`,
+  `dashboard/settings/page.tsx`), never a JWT claim or client storage. The
+  reserve/finalize/release pattern from #100/#113 was confirmed applied
+  consistently across all 12 AI-consuming routes, with no route calling a
+  provider outside the gate, and no client-side-only "Pro" gate found whose
+  underlying API route skips its own server-side entitlement check. **No fix
+  needed.**
+- **Dashboard insights page** (2026-08-22, alongside #117): `dashboard/insights/page.tsx`
+  is a thin wrapper around `DashboardExperience.tsx` - all real data comes
+  from a single client-side fetch to `GET /api/sync/dashboard`, which uses
+  the service-role client (bypasses RLS) but consistently scopes every one
+  of its 10+ queries to `auth.user.id` from the validated session; the DELETE
+  handler additionally re-scopes any client-supplied `applicationId` to
+  `user_id`, so a foreign id simply matches zero rows (no IDOR). All stats
+  (`getOutcomeAnalytics`) are computed client-side over that already-scoped
+  data via simple length/filter counts - no division, so no div-by-zero risk;
+  the server-side `pct()` in the Python analytics service (see #117) is
+  explicitly `whole <= 0 -> 0.0` guarded. **No fix needed** on authorization
+  or aggregation correctness. Noted, not fixed: `GET /api/sync/dashboard`'s
+  four table queries (`applications`, `evidence_records`, `outcome_records`,
+  `interview_prep_packs`) have no `.limit()` at all - unlike the job-alerts
+  cron's 1000-row cap, there isn't even a ceiling here, so a long-tenured
+  user's entire history loads on every dashboard/insights page view. Not
+  fixed now because the dashboard has no pagination UI to receive a
+  truncated result - adding a `.limit()` without one would silently hide a
+  user's own real data rather than improve safety, so this needs a UI change
+  alongside it, not a one-line backend cap. Flagged as a real, growing
+  latency/payload-size defect for the founder to schedule.
+- **ESCO and account/profile routes** (2026-08-22): audited
+  `api/esco/{matches,import-evidence,score-job,questionnaire}`,
+  `api/account/me`, `api/account/settings`, `api/profile/onboarding`, and
+  `api/cv/github` specifically for mass-assignment and IDOR, not just the
+  usual auth-presence check. All four ESCO handlers scope every
+  `user_skill_profile`/`esco_questionnaire_answers` read-write to
+  `user.id`; `score-job`'s job/occupation lookups turned out to hit
+  genuinely public reference tables (`job_listings`, `esco_skills`,
+  `esco_occupations`, `esco_occupation_skills` all have
+  `select ... to authenticated using (true)` RLS policies, confirmed in
+  `20260810120000_esco_adaptive_matching.sql`), so there's no per-user data
+  to leak there. `account/settings` and `profile/onboarding`'s PATCH
+  schemas are strict Zod allow-lists with no `.passthrough()`, and both
+  build their upsert objects field-by-field from validated values rather
+  than spreading the raw request body - confirmed there's no path for a
+  client to smuggle an extra field (`plan`, `role`, `credits`) into a
+  privileged column, and separately confirmed the `profiles` table itself
+  has no such columns to begin with (plan/subscription state lives only in
+  the separate `subscriptions` table, which neither route touches).
+  `cv/github` delegates entirely to the already-audited (alongside
+  #111/#112) `lib/cv/sources/github.ts`, which hardcodes `api.github.com`
+  for every call - no client-supplied host parameter exists at the route
+  layer. **No fix needed** on any of the seven files.
+- **Admin read routes and remaining sync routes** (2026-08-22, alongside
+  #118): all six admin read routes (`overview`, `users`, `feedback`,
+  `ai-operations`, `market-data`, `audit-log`) call `requireAdminRequest`
+  with their own specific `*:read` permission, not a shared/generic gate;
+  `admin/users` additionally gates email inclusion behind a second, finer
+  permission (`users:read_email`) so an admin with only list-view rights
+  gets `email: undefined`, not the address; `admin/feedback` and
+  `admin/overview` select no `user_id`/email columns at all, so they can't
+  leak reporter identity; every query across all six is explicitly bounded
+  (`.limit(50)`/`.limit(100)`/`.limit(10)`, no unbounded-query risk).
+  `sync/extension`, `sync/profile` (GET/POST/DELETE) all scope every
+  read/write to the server-derived session user id, never a client-supplied
+  one. `sync/refresh` is intentionally unauthenticated by session - by
+  design it exchanges a client-held Supabase refresh token for a new access
+  token (mirroring Supabase's own token endpoint), never trusts a
+  client-supplied user id, and cannot be used to refresh or invalidate
+  another user's session without already possessing that user's refresh
+  token - the same precondition needed to attack Supabase's own endpoint
+  directly, so this route adds no new exposure. **No fix needed** beyond
+  #118's cache-header inconsistency (found during this same pass). Noted,
+  not fixed: `admin/users` hardcodes `listUsers({ page: 1, perPage: 50 })`
+  with no pagination and no indication more users exist past the 50th - a
+  real completeness/UX gap once the user base exceeds that, not a security
+  issue. Flagged for the founder to schedule alongside the dashboard's
+  unbounded-query item above, since both are "add real pagination"
+  problems rather than one-line fixes.
+- **Job-workflow sync route** (2026-08-22, alongside #119): a prior audit
+  this session had asserted `api/sync/job-workflow` "follows the same
+  pattern" as mobility/interviews purely by analogy, without actually
+  reading it - this pass read `route.ts`, `job-workflow-repository.ts`, and
+  `job-workflow-sync.ts` in full to verify that claim rather than repeat
+  it. It mostly held up: `userId` is always server-derived via
+  `getRequestUser`, never client-supplied; the `PUT` body is strictly
+  Zod-parsed with no passthrough, and `user_id` in every upsert payload is
+  always the server-derived value, not taken from the client; every
+  upsert uses the same CAS-guarded `expectedUpdatedAt` pattern
+  (`.eq("updated_at", existing.updated_at)` on the actual write, not just a
+  pre-check, so it's race-safe); attempting to reuse another user's row id
+  hits the primary-key unique constraint (`23505`), surfaced as a
+  conflict, not a silent overwrite; and the
+  `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED` flag is checked first in both
+  `GET` and `PUT`, with no partial-write path when it's off. Two real gaps
+  did turn up, both fixed in #119 (see above). **Judgment call for the
+  founder, not fixed**: `reconcileJobWorkflow` has no deletion propagation
+  at all - if a job/application is deleted locally but still exists on the
+  server, the next sync silently **restores it from the cloud**, and no
+  `DELETE` endpoint exists for this feature. This is a real design gap
+  that needs a schema decision (soft-delete/tombstone tracking), not a
+  one-line fix, and it's likely exactly why this feature has sat behind
+  `AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED=false` with a "test manually
+  before enabling in production" comment in `.env.production.example` -
+  this pass gives a concrete, named reason why that caution was warranted.
+- **`api/sync/dashboard`'s applicationId handling** (2026-08-22, alongside
+  #120): the same sweep that found #120 also flagged this route's
+  `applicationIdMap` fallback (`evidence_records`/`outcome_records`/
+  `interview_prep_packs` all fall back to a raw client-supplied
+  `applicationId` when it isn't in the map) as a lower-confidence lead
+  worth checking directly rather than either dismissing or assuming it was
+  a bug. Traced it in full: all three tables' FKs to `applications` are
+  `on delete cascade` (same risk shape as #119/#120 if unverified), but
+  this route already gates the fallback by construction - `evidence_records`
+  /`outcome_records`/`interview_prep_packs` are filtered (lines ~814-826)
+  to only include records whose `applicationId` matches an entry in the
+  *same request's own* `activeApplications` list, and `applications.id` is
+  the primary key with `applications` always upserted with
+  `user_id: auth.user.id` - so a client attempting to claim another user's
+  real application id as its own would collide on that primary key and
+  fail the whole request with a database error, not silently succeed.
+  **No fix needed** - confirmed safe by construction, not merely assumed.
+- **Postgres RPC layer** (2026-08-22, alongside #124): every API route
+  audited this session enforces authorization at the Next.js layer -
+  deriving `user.id` from a validated session, then calling Postgres RPCs
+  via the service-role client with that id as a parameter - resting on an
+  assumption that had never itself been directly verified: that these RPCs
+  aren't ALSO directly callable by an ordinary end user via
+  `supabase.rpc(...)` from the browser (which uses the `authenticated`
+  role, not `service_role`). Confirmed this holds: every genuinely
+  `security definer` RPC (`reserve_ai_call`, `confirm_ai_call`,
+  `release_ai_call`, `increment_ai_rate_limit`, `grant_ai_credit_pack`,
+  `consume_ai_credit`, `classify_job_listings_esco`, the admin/workflow
+  RPCs, and the two `auth.users` trigger functions) is `revoke`d from
+  `public`/`anon`/`authenticated` and granted only to `service_role` - none
+  reachable by a client at all. The few RPCs that ARE granted to
+  `authenticated` (`match_esco_jobs`, `get_ai_credit_balance`, and now
+  `get_monthly_ai_calls` per #124) are all `security invoker`, and every
+  table they read has an RLS policy scoping rows to `auth.uid() = user_id`
+  - so even a spoofed `p_user_id` argument from a malicious direct RPC call
+  returns nothing, regardless of what's passed. Also checked: every
+  `security definer` function has `set search_path = public` pinned (the
+  classic schema-shadowing privilege-escalation vector), and none build
+  dynamic SQL via `execute format(...)`. **No fix needed** beyond #124's
+  consistency fix.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
@@ -357,6 +666,18 @@ Documented honestly rather than silently glossed over:
 - **Checkly and ZAP active-scan tiers are not deployed/enabled.** Both are
   fully configured but require a human decision (and, for Checkly, an
   account) before going further than what's described here.
+- **Several extension-facing docs still describe the removed Chrome side
+  panel.** `docs/extension-smoke-test.md`, `docs/mvp-spec-alignment.md`,
+  `docs/technical-debt.md`, `docs/v2-smoke-test.md`,
+  `docs/founder-first-realtime-testing-guide.md`, and
+  `docs/first-time-user-demo-video.md` all give step-by-step instructions
+  referencing a Chrome side panel. Confirmed the manifest no longer declares
+  a `sidePanel` permission and nothing imports `apps/extension/sidepanel/`
+  (2026-08-21 documentation pass) - the extension now uses an in-page widget
+  instead. Not rewritten yet: describing the current widget's exact
+  navigation/labels accurately needs a live extension walkthrough rather
+  than guessing from source, to avoid replacing one stale doc with another
+  fabricated one.
 - **CSP still allows `script-src`/`style-src` `'unsafe-inline'`, and there
   is no `Cross-Origin-Embedder-Policy` header.** Both are real, deliberate
   deferrals from #99, not oversights. Removing `unsafe-inline` needs a
