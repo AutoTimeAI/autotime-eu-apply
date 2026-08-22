@@ -259,6 +259,47 @@ test("progressed outcome can create a stage-specific next interview", () => {
   assert.ok(next.questions.some((item) => item.category === "technical"));
   assert.notEqual(next.id, previous.id);
 });
+test("saving an answer or refreshing preparation cannot resurrect a completed interview", () => {
+  let interview = createInterview({
+    userId,
+    application: { ...application, status: "Interview" },
+    job,
+    stage: "recruiter_screen",
+    format: "video",
+  });
+  interview = transitionInterview(interview, "completed");
+  interview = recordInterviewOutcome(interview, "offer", {
+    questionsAsked: [],
+    difficultAreas: [],
+    notes: "",
+    followUpAction: "",
+    learningSignals: ["unknown"],
+  });
+
+  const afterAnswer = saveInterviewAnswer(interview, interview.questions[0].id, {
+    value: "Reviewing my notes after the fact.",
+    evidenceIds: [],
+    confirmed: false,
+  });
+  assert.equal(afterAnswer.status, "completed");
+  assert.equal(afterAnswer.outcome, "offer");
+
+  const afterRefresh = refreshInterviewPreparation(interview, application, job);
+  assert.equal(afterRefresh.status, "completed");
+  assert.equal(afterRefresh.outcome, "offer");
+
+  assert.throws(
+    () =>
+      recordInterviewOutcome(interview, "rejected", {
+        questionsAsked: [],
+        difficultAreas: [],
+        notes: "",
+        followUpAction: "",
+        learningSignals: ["unknown"],
+      }),
+    /already been recorded/,
+  );
+});
 test("storage rejects malformed and cross-user records", () => {
   const interview = createInterview({
     userId,
