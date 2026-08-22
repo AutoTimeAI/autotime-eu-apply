@@ -855,6 +855,31 @@ stays the single evidenced record of what has and hasn't been checked.
   participation, not admin panel access (a separate table,
   `admin_memberships`) - no privilege-escalation path there. **No fix
   needed.**
+- **Stripe webhook handler and its supporting RPCs** (2026-08-22): read
+  `api/stripe/webhook/route.ts` and `grant_ai_credit_pack` in full, ahead
+  of a real-money beta launch. Signature verification runs against the raw
+  request body before any parsing (standard, correct); the
+  `stripe_webhook_events` idempotency claim (#105) prevents a redelivered
+  event from double-processing; `markInvoicePaymentFailed`'s
+  `parent.subscription_details?.subscription.id` navigation looked like a
+  possible null-dereference at first read, but Stripe's own type
+  (`SubscriptionDetails.subscription: string | Subscription`, never
+  null once `subscription_details` itself is present) confirms it's safe -
+  verified against the installed package's `.d.ts`, not assumed.
+  `grant_ai_credit_pack` has its own independent, database-level
+  idempotency on top of the webhook-level dedup: `stripe_checkout_session_id`
+  carries a unique constraint with `on conflict ... do nothing`, so even a
+  bug elsewhere calling this RPC twice for the same checkout session can't
+  double-grant credits. **No fix needed** on any of that. **Known gap,
+  flagged rather than fixed unilaterally**: there is no handler for
+  `charge.refunded` or `charge.dispute.created`. A user who buys an AI
+  credit pack, spends the credits, then disputes/refunds the charge with
+  their card issuer keeps the credits with no automatic clawback or even a
+  visibility trail for the founder to review. This is a business-policy
+  decision (revoke remaining credits immediately? flag the account for
+  manual review? suspend access pending resolution?), not a clear-cut
+  implementation bug with one obviously correct fix - surfacing it for the
+  founder to decide rather than guessing at fraud policy.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
