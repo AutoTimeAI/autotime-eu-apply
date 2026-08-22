@@ -650,6 +650,27 @@ test("diagnostics client route rate-limits before logging (unauthenticated write
   assert.ok(rateLimitIndex < logIndex)
 })
 
+test("the public analytics service and its authenticated proxy both gate on the shared internal secret", () => {
+  const service = read("apps/analytics/main.py")
+  const proxyRoute = read(
+    "apps/web/app/api/analytics/evidence-outcomes/route.ts",
+  )
+
+  // apps/analytics is a separate Python service reachable at a public
+  // production URL (vercel.json routes /analytics to it) - it can't
+  // validate a Supabase session itself, so /evidence-outcomes must reject
+  // any call missing the shared secret, and the proxy route must
+  // authenticate the caller before it ever forwards that secret.
+  assert.match(service, /dependencies=\[Depends\(require_internal_secret\)\]/)
+  assert.match(service, /def require_internal_secret/)
+
+  const authIndex = proxyRoute.indexOf("await getRequestUser(request)")
+  const forwardIndex = proxyRoute.indexOf("x-analytics-secret")
+  assert.notEqual(authIndex, -1)
+  assert.notEqual(forwardIndex, -1)
+  assert.ok(authIndex < forwardIndex)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
