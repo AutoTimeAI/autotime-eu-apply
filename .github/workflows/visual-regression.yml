@@ -39,8 +39,17 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run visual regression suite
+        env:
+          # Passed as an env var rather than interpolated directly into the
+          # script below, matching the same hardening applied to
+          # k6-manual.yml's confirmation check. This particular input is
+          # type: boolean (GitHub Actions constrains it to a literal
+          # true/false at dispatch time), so it isn't actually exploitable
+          # here - fixed anyway to avoid the anti-pattern outright rather
+          # than relying on a reader knowing that constraint.
+          UPDATE_SNAPSHOTS: ${{ github.event.inputs.update_snapshots }}
         run: |
-          if [ "${{ github.event.inputs.update_snapshots }}" = "true" ]; then
+          if [ "$UPDATE_SNAPSHOTS" = "true" ]; then
             pnpm exec playwright test tests/e2e/visual --update-snapshots
           else
             pnpm exec playwright test tests/e2e/visual
