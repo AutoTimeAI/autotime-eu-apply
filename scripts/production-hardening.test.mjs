@@ -638,6 +638,18 @@ test("workflow_dispatch confirmation/boolean inputs are passed via env, not inte
   )
 })
 
+test("diagnostics client route rate-limits before logging (unauthenticated writes are otherwise unbounded)", () => {
+  const route = read("apps/web/app/api/diagnostics/client/route.ts")
+  const parseIndex = route.indexOf("clientDiagnosticSchema.parse")
+  const rateLimitIndex = route.indexOf("await assertDiagnosticRouteRateLimit")
+  const logIndex = route.indexOf("logDiagnostic(diagnostic")
+
+  assert.notEqual(rateLimitIndex, -1)
+  assert.notEqual(logIndex, -1)
+  assert.ok(parseIndex < rateLimitIndex)
+  assert.ok(rateLimitIndex < logIndex)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

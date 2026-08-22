@@ -6,6 +6,7 @@ import {
   isConfigurationUnavailableError,
 } from "../../../../lib/configuration-error"
 import {
+  assertDiagnosticRouteRateLimit,
   createDiagnostic,
   diagnosticJson,
   logDiagnostic,
@@ -48,6 +49,19 @@ export async function POST(request: NextRequest): Promise<
   try {
     const payload = clientDiagnosticSchema.parse(await request.json())
     const { user } = await getRequestUser(request)
+
+    const allowed = await assertDiagnosticRouteRateLimit(request, user?.id ?? null)
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          data: null,
+          error: "Too many diagnostic reports. Please try again shortly.",
+          status: 429,
+        },
+        { status: 429 },
+      )
+    }
+
     const diagnostic = createDiagnostic({
       area: payload.area,
       code: payload.code,
