@@ -882,6 +882,26 @@ stays the single evidenced record of what has and hasn't been checked.
   a clear-cut implementation bug with one obviously correct fix - surfaced
   for the founder to decide rather than guessing at fraud policy. Founder
   chose "Log for manual review" - see #142.
+- **Account deletion cascade completeness, schema-wide** (2026-08-22):
+  the private-beta acceptance criteria explicitly require account
+  deletion to work correctly, and #115's original audit predates roughly
+  a dozen tables added since. Rather than trust the `DELETE /api/account`
+  route's own code comment (which enumerates only 12 example tables),
+  grepped every column in every migration that references
+  `auth.users(id)`, of any name, across the whole schema. Every single one
+  declares an explicit `ON DELETE` behaviour - no column relies on
+  Postgres's default (`NO ACTION`/restrict), which would otherwise risk
+  silently blocking account deletion the first time a new table forgot to
+  specify one. The three behaviours in use are all deliberate and
+  consistent: `on delete cascade` for genuine per-user content (`user_id`),
+  `on delete restrict` for audit-integrity actor columns
+  (`actor_user_id`, `requested_by` - an admin with audit history can't
+  self-delete, already documented as intentional), and `on delete set
+  null` for attribution-only columns (`created_by`, `updated_by`) where
+  the referencing row should survive without its creator. **No fix
+  needed** - deletion is complete and correctly ordered at the schema
+  level for every table that exists today, not just the 12 named in the
+  route's own comment.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
