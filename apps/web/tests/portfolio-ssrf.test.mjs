@@ -110,23 +110,27 @@ test("supports the (hostname, callback) two-argument shape", async () => {
   assert.equal(result.address, "93.184.216.34")
 })
 
-test("strips script content even when the closing tag has whitespace before '>'", () => {
-  // A bare `<\/script>` regex misses `</script >`, letting the literal script
-  // body (e.g. `alert(1)`) survive as plain text - matches the CodeQL
-  // js/incomplete-multi-character-sanitization finding for this pattern.
-  const html = "<p>hello</p><script>alert(1)</script >world"
-  const text = extractReadableText(html)
-  assert.doesNotMatch(text, /alert\(1\)/)
-  assert.match(text, /hello/)
-  assert.match(text, /world/)
+test("strips script content even when the closing tag has junk before '>'", () => {
+  // Browsers treat `</script anything>` as a valid closing tag as long as
+  // it contains no '>' - a bare `<\/script>` regex misses that, letting the
+  // literal script body (e.g. `alert(1)`) survive as plain text. Matches the
+  // CodeQL js/incomplete-multi-character-sanitization finding for this
+  // pattern (both the plain-whitespace and arbitrary-junk variants).
+  for (const closer of ["</script >", "</script\t\n bar>"]) {
+    const text = extractReadableText(`<p>hello</p><script>alert(1)${closer}world`)
+    assert.doesNotMatch(text, /alert\(1\)/, closer)
+    assert.match(text, /hello/, closer)
+    assert.match(text, /world/, closer)
+  }
 })
 
-test("strips style content even when the closing tag has whitespace before '>'", () => {
-  const html = "<p>hello</p><style>body{color:red}</style >world"
-  const text = extractReadableText(html)
-  assert.doesNotMatch(text, /color:red/)
-  assert.match(text, /hello/)
-  assert.match(text, /world/)
+test("strips style content even when the closing tag has junk before '>'", () => {
+  for (const closer of ["</style >", "</style\t\n bar>"]) {
+    const text = extractReadableText(`<p>hello</p><style>body{color:red}${closer}world`)
+    assert.doesNotMatch(text, /color:red/, closer)
+    assert.match(text, /hello/, closer)
+    assert.match(text, /world/, closer)
+  }
 })
 
 let failed = 0
