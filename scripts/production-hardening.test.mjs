@@ -701,6 +701,24 @@ test("the home page's follow-up-due check anchors to the start of the due date, 
   assert.doesNotMatch(home, /\$\{application\.followUpDate\}T23:59:59/)
 })
 
+test("admin login preserves the post-login redirect target instead of always discarding it", () => {
+  // getUnauthenticatedRedirect (proxy-policy.ts) sends an unauthenticated
+  // admin visiting a deep link (e.g. /admin/users) to
+  // /admin/login?redirectTo=/admin/users - the page's own safeRedirect
+  // check previously had both ternary branches return the same literal
+  // "/admin", silently discarding that value on every login regardless of
+  // where the admin actually came from.
+  const page = read("apps/web/app/(admin-auth)/admin/login/page.tsx")
+
+  assert.doesNotMatch(
+    page,
+    /=== "\/admin" \? "\/admin" : "\/admin"/,
+    "both ternary branches must not return the same literal",
+  )
+  assert.match(page, /candidate === "\/admin" \|\| candidate\.startsWith\("\/admin\/"\)/)
+  assert.match(page, /candidate\.includes\("\\\\"\)/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
