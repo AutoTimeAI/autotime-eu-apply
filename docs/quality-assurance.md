@@ -299,6 +299,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #133 | **Completed/cancelled interviews could be silently reverted, and outcomes silently overwritten**: same class of bug as #132, found by auditing the adjacent interview state machine. `transitionInterview`'s own `allowed` map correctly declares `completed`/`cancelled` as terminal (zero outbound transitions), but `saveInterviewAnswer` and `refreshInterviewPreparation` bypassed that guard entirely by writing `status: "preparing"` directly on every call regardless of the interview's current status. Reachable in production - `InterviewsWorkspace.tsx` never hides the Preparation tab's "Save draft"/"Refresh preparation" controls once an interview is completed - so a user could complete an interview, record a real outcome (e.g. "offer"), then save a draft answer or refresh preparation and silently revert `status` to `"preparing"` while `outcome`/`outcomeDetails` still held the real result: `getInterviewHomeSignals` would resurface the closed interview as active with "needs final review" prompts, and `InterviewOutcomePanel` would hide the already-recorded outcome and ask the user to "mark completed" again. Separately, `recordInterviewOutcome` had no guard against being called a second time (only checked `status === "completed"` and rejected the `"awaiting"` sentinel, never `interview.outcome !== "awaiting"` as a precondition), so reaching it twice could silently overwrite a real outcome (offer -> rejected) with no warning. Fixed all three: the two status-writing functions now preserve the interview's existing terminal status instead of resetting it, and `recordInterviewOutcome` now rejects re-recording once an outcome already exists | `apps/web/lib/interview-workflow.ts` |
 | #134 | **`admin/users` had no pagination, hardcoded to the first 50 accounts**: founder-reviewed judgment call (flagged as "noted, not fixed" alongside #118) - founder explicitly chose "Fix now" rather than deferring. `getAdminUsersOverview` called `listUsers({ page: 1, perPage: 50 })` unconditionally, with no way to see any user past the 50th and no signal to the operator that more existed. Fixed by threading real pagination end-to-end: `getAdminUsersOverview` now accepts a `page` argument and returns `{ users, page, perPage, total, hasMore }` (using Supabase Admin Auth API's own `nextPage`/`total` fields); `GET /api/admin/users` reads `?page=`; the page/table component gained Previous/Next controls and a "Showing X-Y of N users" line (via a new pure `getVisibleRowRange` helper, unit-tested for first/middle/last-partial-page/zero-total cases) | `lib/admin-users.ts`, `lib/admin-users-pagination.ts`, `api/admin/users/route.ts`, `app/admin/users/page.tsx`, `app/admin/users/AdminUsersTable.tsx` |
 | #135 | **`GET /api/sync/dashboard` had no row limit at all on any of its four per-user tables**: same founder-approved "Fix now" judgment call as #134 (flagged alongside #117), but a different fix shape - this endpoint fully replaces local component state on every load (`loadDashboardSnapshot`), so it's a local-first state-hydration call, not a list view; naive pagination here would silently hide a user's own real data (search/filter/CSV export all depend on the complete local dataset). Fixed with a generous defensive ceiling instead (`MAX_SYNCED_ROWS_PER_TABLE = 20_000`, added to all four `applications`/`evidence_records`/`outcome_records`/`interview_prep_packs` queries, each already ordered by recency descending so a cap - if ever hit - drops only the oldest rows). The architecturally correct fix for "resync cost grows with total history" is incremental/delta sync, explicitly scoped out as a separate, larger initiative | `api/sync/dashboard/route.ts` |
+| #136 | **Extension content script held the raw dashboard auth token directly**: founder chose "Fix now (Recommended)" on this flagged judgment call. The content script (injected into every visited page) read the full account session via `getAccountSession()` - `lib/match-overlay.ts` performed authenticated fetches itself with an `Authorization` header, and `contents/autofill.ts` read the whole session object just to check a connection-status boolean for the widget UI. Separately and more fundamentally: `chrome.storage.local`'s `onChanged` event delivers the full old/new value of any changed key to every listener with access to that storage area, including content scripts - so the token was reaching the content script's execution context via that event's payload even in code paths that never explicitly called `getAccountSession()`. App-level message-passing discipline alone can't close that, since any content-script JS can call `chrome.storage.local.get()` directly regardless of what this codebase's own code chooses to call. Fixed at the actual boundary: moved the account session from `chrome.storage.local` to `chrome.storage.session`, whose default access level (`TRUSTED_CONTEXTS`) is background-worker-and-extension-pages-only and blocks content scripts at the browser API level, not just by convention - plus rewired the content script to request a token-free `ConnectionState` and job-match scoring from the background worker via `chrome.runtime.sendMessage`, rather than reading the session or fetching with the token itself. Real, disclosed trade-off: session storage clears on a full browser restart (unlike `.local`, which persists indefinitely), so users now need to reconnect after fully closing the browser, not just after closing a tab | `lib/storage.ts`, `lib/connection-state.ts`, `lib/match-overlay.ts`, `contents/autofill.ts`, `lib/cloud-sync.ts`, `entrypoints/background/index.ts`, `sidepanel/main.tsx` |
 
 ### Verified, not just assumed
 
@@ -645,20 +646,24 @@ stays the single evidenced record of what has and hasn't been checked.
   actively strips any key matching `/token|secret|password|authorization/i`
   before persisting diagnostic entries, and `reportClientIssue` only ever
   transmits `area`/`code`/`message` strings, never the session object.
-  **Judgment call for the founder, not fixed**: the content script
-  (`contents/autofill.ts`, `lib/match-overlay.ts`), injected on every
-  visited page by design, calls `getAccountSession()` directly and puts
-  `authToken` straight into fetch headers from within its own execution
-  context - a larger exposure surface than if only the background script
-  (never injected into web content) touched the raw token. No current XSS
-  vector was found in the content script's own rendering (verified
-  `escapeHtml` usage on user- and job-description-derived text at the
-  relevant call sites), so this is architectural exposure, not an active
-  exploit. Properly closing it means routing all authenticated calls
-  through the background script via `chrome.runtime.sendMessage` and
-  giving the content script only a connected/plan/email view-model, never
-  the raw tokens - a multi-file refactor, not a one-line fix, so flagged
-  for the founder to schedule rather than done unilaterally.
+  Was a judgment call for the founder, not fixed, at the time of this pass:
+  the content script (`contents/autofill.ts`, `lib/match-overlay.ts`),
+  injected on every visited page by design, called `getAccountSession()`
+  directly and put `authToken` straight into fetch headers from within its
+  own execution context - a larger exposure surface than if only the
+  background script (never injected into web content) touched the raw
+  token. No current XSS vector was found in the content script's own
+  rendering (verified `escapeHtml` usage on user- and job-description-
+  derived text at the relevant call sites), so this was architectural
+  exposure, not an active exploit. Founder chose "Fix now (Recommended)" -
+  see #136, which went further than the routing fix originally sketched
+  here: message-passing discipline alone can't fully close this, since
+  `chrome.storage.local`'s `onChanged` event hands the full session to any
+  listener with access to that area (content scripts included) regardless
+  of what this codebase's own code calls - so the real fix moved the
+  session to `chrome.storage.session` (browser-enforced
+  `TRUSTED_CONTEXTS`-only access), on top of routing the content script's
+  authenticated calls through the background worker.
 - **Extension regex parsing, broader ReDoS sweep** (2026-08-22, alongside
   #130): every regex in `lib/job-page.ts`, `lib/autofill.ts`,
   `contents/autofill.ts`, `lib/job-analysis.ts`, `lib/match-overlay.ts`,
