@@ -163,6 +163,30 @@ test("redacts secret-bearing breadcrumb messages, not just breadcrumb.data", () 
   assert.equal(event.breadcrumbs[1].message, "Navigated to /dashboard/applications")
 })
 
+test("redacts a secret-bearing URL from the exception value and top-level message", () => {
+  const event = filterSentryEvent({
+    exception: {
+      values: [
+        {
+          type: "Error",
+          value: `Request to ${fakeQaBootstrapUrl} failed with 500`
+        },
+        { type: "Error", value: "Request to /dashboard/jobs failed with 500" }
+      ]
+    },
+    message: `Unhandled rejection for ${fakeQaBootstrapUrl}`
+  })
+
+  assert.doesNotMatch(event.exception.values[0].value, new RegExp(fakeSecret))
+  assert.match(event.exception.values[0].value, /secret=%5BFiltered%5D/)
+  assert.equal(
+    event.exception.values[1].value,
+    "Request to /dashboard/jobs failed with 500"
+  )
+  assert.doesNotMatch(event.message, new RegExp(fakeSecret))
+  assert.match(event.message, /secret=%5BFiltered%5D/)
+})
+
 test("maps Sentry environment to development or production only", () => {
   const originalAppEnv = process.env.NEXT_PUBLIC_APP_ENV
   const originalAutotimeEnv = process.env.NEXT_PUBLIC_AUTOTIME_ENV

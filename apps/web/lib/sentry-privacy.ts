@@ -6,9 +6,10 @@ const sensitiveKeyPattern =
 // Matches key=value pairs (query-string style, whether or not the
 // surrounding text is a well-formed URL) whose key looks sensitive, so a
 // secret-bearing URL embedded in free text - a breadcrumb message, an
-// event.request.url, a nested "url" field inside breadcrumb data - gets
-// its value scrubbed even though the field carrying that string isn't
-// itself named "secret" or "token" (e.g. request.url, breadcrumb.message).
+// event.request.url, a nested "url" field inside breadcrumb data, an
+// exception message, or the top-level event.message - gets its value
+// scrubbed even though the field carrying that string isn't itself named
+// "secret" or "token" (e.g. request.url, breadcrumb.message).
 function redactSensitiveUrlText(value: string): string {
   return value.replace(
     /([?&]?)([a-zA-Z0-9_.-]+)=([^&\s"']*)/g,
@@ -76,6 +77,18 @@ export function filterSentryEvent(event: ErrorEvent): ErrorEvent {
     if (typeof event.request.url === "string") {
       event.request.url = redactSensitiveUrlText(event.request.url)
     }
+  }
+
+  if (typeof event.message === "string") {
+    event.message = redactSensitiveUrlText(event.message)
+  }
+
+  if (event.exception?.values) {
+    event.exception.values = event.exception.values.map((exception) =>
+      typeof exception.value === "string"
+        ? { ...exception, value: redactSensitiveUrlText(exception.value) }
+        : exception
+    )
   }
 
   event.extra = redactSensitiveValue(event.extra) as ErrorEvent["extra"]
