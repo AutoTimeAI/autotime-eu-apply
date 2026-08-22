@@ -833,6 +833,28 @@ stays the single evidenced record of what has and hasn't been checked.
   compromised subdomain can't use it either), and a malformed/`"null"`
   `Origin` header fails safe via the try/catch rather than being treated
   as trusted. No bypass found in either layer. **No fix needed.**
+- **Remaining admin mutation routes, field by field** (2026-08-22):
+  `admin/feature-flags` (POST) and `admin/users/[userId]/beta-access`
+  (POST) hadn't been individually read end-to-end this session. Both are
+  solid: specific permissions (`feature_flags:write`,
+  `users:manage_beta`), `isSameOriginMutation` CSRF checks, and strict
+  input validation (feature-flags rejects any request whose body doesn't
+  have *exactly* the four expected keys - `Object.keys(body).sort().join(",")`
+  compared against a literal string - closing mass-assignment outright
+  rather than just checking each field's type; beta-access validates the
+  path-param UUID format and requires a >=4-character reason when
+  suspending). Both RPCs (`admin_update_feature_flag`,
+  `admin_change_beta_access`) re-check the actor's role from
+  `admin_memberships` independently inside the function itself (`owner`
+  only for feature flags, `owner`/`admin` for beta access) rather than
+  trusting the route's own permission check alone, and both write a
+  proper `admin_audit_events` row. Feature-flag keys are validated against
+  a real fixed allowlist (`adminFeatureFlagKeys`), not just "is a string".
+  `admin_change_beta_access` doesn't restrict `p_target_user_id` from
+  being another admin's account, but `beta_access` only gates beta-program
+  participation, not admin panel access (a separate table,
+  `admin_memberships`) - no privilege-escalation path there. **No fix
+  needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
