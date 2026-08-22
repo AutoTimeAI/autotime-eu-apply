@@ -297,6 +297,8 @@ stays the single evidenced record of what has and hasn't been checked.
 | #131 | **Inconsistent friction-penalty clamping in relocation-fit scoring**: audited the core Decision Index / fit-scoring engine (`packages/shared/src/fit-model.ts`) for business-logic correctness - the "Apply now/Stretch/Skip" math real users rely on for real decisions, not just a security surface. `getRelocationFit()` computes a `frictionPenalty` from the target country's `relocationFriction` (high=8, low=-5, medium=0); two of its three scoring branches clamp it with `Math.max(frictionPenalty, 0)` before subtracting (so "low" friction never adds a bonus, only avoids the high-friction penalty), but the third branch (onsite job, unclear relocation willingness) subtracted the raw unclamped value, letting a "low" friction country score a +5 bonus the other two branches deliberately withhold. Not reachable with live data today (every country in `country-rules.ts` is currently "high" or "medium", none "low"), but "low" is a real, documented `RelocationFriction` value and the two sibling branches already establish the intended behavior in this exact function - would silently misscore the moment a "low" friction country is added. Fixed by applying the same clamp to the third branch. Verified via the full existing test suite (unchanged, since no live country data exercises the "low" branch either way) plus manual arithmetic tracing against the two sibling cases; did not export the internal `getRelocationFit` function just to add a direct unit test, since only `evaluate*` functions are part of the shared package's public API | `packages/shared/src/fit-model.ts` |
 | #132 | **An Applied application could silently revert to Ready**: audited `job-application-workflow.ts`'s readiness/transition gate for correctness. The unsupported-claims attestation gate (`getApplicationReadiness`) was verified sound (`.length > 0`, not array truthiness; every field defaults safely). But `transitionApplication`'s guard for `next === "Ready"` only checked readiness blockers, never the application's *current* status - and since `"Ready"`/`"Applied"` are adjacent in the status-order array, the generic one-step adjacency check let `transitionApplication(application, "Ready", job)` succeed on an application whose status was already `"Applied"`, silently reverting it: status flips back to `"Ready"` while `appliedAt` keeps the stale original timestamp, `submissionConfirmed` clears, and the application reappears in the "ready to apply" review queue despite already being submitted in the real world - risking a guided duplicate real-world application, and a subsequent re-confirm would silently overwrite the original `appliedAt`. Not reachable through the current UI (checked both call sites), but a real hole in the exported function itself. Fixed by explicitly rejecting `next === "Ready"` when the application is already `"Applied"`, with its own clear error message | `apps/web/lib/job-application-workflow.ts` |
 | #133 | **Completed/cancelled interviews could be silently reverted, and outcomes silently overwritten**: same class of bug as #132, found by auditing the adjacent interview state machine. `transitionInterview`'s own `allowed` map correctly declares `completed`/`cancelled` as terminal (zero outbound transitions), but `saveInterviewAnswer` and `refreshInterviewPreparation` bypassed that guard entirely by writing `status: "preparing"` directly on every call regardless of the interview's current status. Reachable in production - `InterviewsWorkspace.tsx` never hides the Preparation tab's "Save draft"/"Refresh preparation" controls once an interview is completed - so a user could complete an interview, record a real outcome (e.g. "offer"), then save a draft answer or refresh preparation and silently revert `status` to `"preparing"` while `outcome`/`outcomeDetails` still held the real result: `getInterviewHomeSignals` would resurface the closed interview as active with "needs final review" prompts, and `InterviewOutcomePanel` would hide the already-recorded outcome and ask the user to "mark completed" again. Separately, `recordInterviewOutcome` had no guard against being called a second time (only checked `status === "completed"` and rejected the `"awaiting"` sentinel, never `interview.outcome !== "awaiting"` as a precondition), so reaching it twice could silently overwrite a real outcome (offer -> rejected) with no warning. Fixed all three: the two status-writing functions now preserve the interview's existing terminal status instead of resetting it, and `recordInterviewOutcome` now rejects re-recording once an outcome already exists | `apps/web/lib/interview-workflow.ts` |
+| #134 | **`admin/users` had no pagination, hardcoded to the first 50 accounts**: founder-reviewed judgment call (flagged as "noted, not fixed" alongside #118) - founder explicitly chose "Fix now" rather than deferring. `getAdminUsersOverview` called `listUsers({ page: 1, perPage: 50 })` unconditionally, with no way to see any user past the 50th and no signal to the operator that more existed. Fixed by threading real pagination end-to-end: `getAdminUsersOverview` now accepts a `page` argument and returns `{ users, page, perPage, total, hasMore }` (using Supabase Admin Auth API's own `nextPage`/`total` fields); `GET /api/admin/users` reads `?page=`; the page/table component gained Previous/Next controls and a "Showing X-Y of N users" line (via a new pure `getVisibleRowRange` helper, unit-tested for first/middle/last-partial-page/zero-total cases) | `lib/admin-users.ts`, `lib/admin-users-pagination.ts`, `api/admin/users/route.ts`, `app/admin/users/page.tsx`, `app/admin/users/AdminUsersTable.tsx` |
+| #135 | **`GET /api/sync/dashboard` had no row limit at all on any of its four per-user tables**: same founder-approved "Fix now" judgment call as #134 (flagged alongside #117), but a different fix shape - this endpoint fully replaces local component state on every load (`loadDashboardSnapshot`), so it's a local-first state-hydration call, not a list view; naive pagination here would silently hide a user's own real data (search/filter/CSV export all depend on the complete local dataset). Fixed with a generous defensive ceiling instead (`MAX_SYNCED_ROWS_PER_TABLE = 20_000`, added to all four `applications`/`evidence_records`/`outcome_records`/`interview_prep_packs` queries, each already ordered by recency descending so a cap - if ever hit - drops only the oldest rows). The architecturally correct fix for "resync cost grows with total history" is incremental/delta sync, explicitly scoped out as a separate, larger initiative | `api/sync/dashboard/route.ts` |
 
 ### Verified, not just assumed
 
@@ -475,16 +477,18 @@ stays the single evidenced record of what has and hasn't been checked.
   data via simple length/filter counts - no division, so no div-by-zero risk;
   the server-side `pct()` in the Python analytics service (see #117) is
   explicitly `whole <= 0 -> 0.0` guarded. **No fix needed** on authorization
-  or aggregation correctness. Noted, not fixed: `GET /api/sync/dashboard`'s
-  four table queries (`applications`, `evidence_records`, `outcome_records`,
-  `interview_prep_packs`) have no `.limit()` at all - unlike the job-alerts
-  cron's 1000-row cap, there isn't even a ceiling here, so a long-tenured
-  user's entire history loads on every dashboard/insights page view. Not
-  fixed now because the dashboard has no pagination UI to receive a
-  truncated result - adding a `.limit()` without one would silently hide a
-  user's own real data rather than improve safety, so this needs a UI change
-  alongside it, not a one-line backend cap. Flagged as a real, growing
-  latency/payload-size defect for the founder to schedule.
+  or aggregation correctness. Was noted, not fixed, at the time of this
+  pass: `GET /api/sync/dashboard`'s four table queries (`applications`,
+  `evidence_records`, `outcome_records`, `interview_prep_packs`) had no
+  `.limit()` at all - unlike the job-alerts cron's 1000-row cap, there
+  wasn't even a ceiling here, so a long-tenured user's entire history
+  loaded on every dashboard/insights page view. Flagged to the founder as a
+  judgment call rather than fixed unilaterally, since a naive `.limit()`
+  without a pagination UI to receive the truncated result would silently
+  hide a user's own real data. Founder chose "Fix now" - see #135, fixed
+  with a generous defensive row ceiling rather than a UI-facing pagination
+  change, since this endpoint turned out to be full local-state hydration,
+  not a list view.
 - **ESCO and account/profile routes** (2026-08-22): audited
   `api/esco/{matches,import-evidence,score-job,questionnaire}`,
   `api/account/me`, `api/account/settings`, `api/profile/onboarding`, and
@@ -527,13 +531,15 @@ stays the single evidenced record of what has and hasn't been checked.
   another user's session without already possessing that user's refresh
   token - the same precondition needed to attack Supabase's own endpoint
   directly, so this route adds no new exposure. **No fix needed** beyond
-  #118's cache-header inconsistency (found during this same pass). Noted,
-  not fixed: `admin/users` hardcodes `listUsers({ page: 1, perPage: 50 })`
-  with no pagination and no indication more users exist past the 50th - a
-  real completeness/UX gap once the user base exceeds that, not a security
-  issue. Flagged for the founder to schedule alongside the dashboard's
-  unbounded-query item above, since both are "add real pagination"
-  problems rather than one-line fixes.
+  #118's cache-header inconsistency (found during this same pass). Was
+  noted, not fixed, at the time of this pass: `admin/users` hardcoded
+  `listUsers({ page: 1, perPage: 50 })` with no pagination and no
+  indication more users existed past the 50th - a real completeness/UX gap
+  once the user base exceeds that, not a security issue. Flagged for the
+  founder alongside the dashboard's unbounded-query item above, since both
+  were "add real pagination" problems rather than one-line fixes. Founder
+  chose "Fix now" for both - see #134 (real pagination, this route) and
+  #135 (a defensive row cap, the dashboard's different shape of problem).
 - **Job-workflow sync route** (2026-08-22, alongside #119): a prior audit
   this session had asserted `api/sync/job-workflow` "follows the same
   pattern" as mobility/interviews purely by analogy, without actually
