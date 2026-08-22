@@ -565,6 +565,17 @@ test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, 
   )
 })
 
+test("dashboard sync GET caps every per-user table query instead of fetching without limit", () => {
+  const route = read("apps/web/app/api/sync/dashboard/route.ts")
+
+  const limitCount = (route.match(/\.limit\(MAX_SYNCED_ROWS_PER_TABLE\)/g) ?? [])
+    .length
+
+  assert.match(route, /const MAX_SYNCED_ROWS_PER_TABLE = 20_000/)
+  // applications, evidence_records, outcome_records, interview_prep_packs
+  assert.equal(limitCount, 4)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
