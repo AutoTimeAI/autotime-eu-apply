@@ -35,9 +35,17 @@ jobs:
     steps:
       - name: Verify confirmation phrase
         id: check
+        env:
+          # Passed as an env var rather than interpolated directly into the
+          # script below - github.event.inputs.confirm is a free-text field,
+          # and substituting it straight into `run:` before the shell parses
+          # the line is the classic GitHub Actions script-injection pattern
+          # (a value like `"; curl ...; #` would break out of the string and
+          # run as an injected command in this step).
+          CONFIRM_INPUT: ${{ github.event.inputs.confirm }}
         run: |
           expected="I understand this targets a real, possibly production, environment"
-          if [ "${{ github.event.inputs.confirm }}" != "$expected" ]; then
+          if [ "$CONFIRM_INPUT" != "$expected" ]; then
             echo "Confirmation phrase did not match exactly. Aborting without running k6."
             echo "proceed=false" >> "$GITHUB_OUTPUT"
             exit 1

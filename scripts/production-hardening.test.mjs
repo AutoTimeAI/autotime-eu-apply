@@ -565,6 +565,29 @@ test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, 
   )
 })
 
+test("workflow_dispatch confirmation/boolean inputs are passed via env, not interpolated into run: steps", () => {
+  // Substituting github.event.inputs.* straight into a `run:` block before
+  // the shell parses the line is the classic GitHub Actions script-injection
+  // pattern - a crafted input value can break out of its quoted context and
+  // run as an injected command. The safe pattern passes the input through
+  // `env:` and references it as a shell variable instead.
+  const k6 = read(".github/workflows/k6-manual.yml")
+  assert.match(k6, /CONFIRM_INPUT: \$\{\{ github\.event\.inputs\.confirm \}\}/)
+  assert.match(k6, /if \[ "\$CONFIRM_INPUT" != "\$expected" \]/)
+  assert.doesNotMatch(k6, /if \[ "\$\{\{ github\.event\.inputs\.confirm \}\}"/)
+
+  const visualRegression = read(".github/workflows/visual-regression.yml")
+  assert.match(
+    visualRegression,
+    /UPDATE_SNAPSHOTS: \$\{\{ github\.event\.inputs\.update_snapshots \}\}/,
+  )
+  assert.match(visualRegression, /if \[ "\$UPDATE_SNAPSHOTS" = "true" \]/)
+  assert.doesNotMatch(
+    visualRegression,
+    /if \[ "\$\{\{ github\.event\.inputs\.update_snapshots \}\}"/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
