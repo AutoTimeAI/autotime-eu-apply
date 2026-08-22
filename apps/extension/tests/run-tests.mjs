@@ -1980,6 +1980,52 @@ test("exports applications to csv", () => {
   )
 })
 
+test("neutralizes CSV/formula injection payloads scraped from job postings", () => {
+  const csv = applicationsToCsv([
+    {
+      id: "application",
+      title: "=HYPERLINK(\"http://evil.example\",\"click me\")",
+      roleTitle: "+cmd|'/c calc'!A1",
+      company: "-2+3",
+      source: "example.com",
+      url: "https://example.com/jobs/frontend",
+      nextAction: "@SUM(A1:A9)",
+      nextActionDate: "2026-04-10",
+      notes: "Senior Engineer",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "Applied"
+    }
+  ])
+
+  const rows = csv.split("\n")
+  const dataRow = rows[1]
+
+  // Dangerous leading characters (=, +, -, @) are neutralized with a
+  // leading single quote so spreadsheet apps treat the value as literal
+  // text instead of evaluating it as a formula.
+  assert.equal(
+    dataRow,
+    [
+      '"\'=HYPERLINK(""http://evil.example"",""click me"")"',
+      '"\'+cmd|\'/c calc\'!A1"',
+      '"\'-2+3"',
+      '"https://example.com/jobs/frontend"',
+      '"example.com"',
+      '"2026-04-01T00:00:00.000Z"',
+      '"Applied"',
+      '"\'@SUM(A1:A9)"',
+      '"2026-04-10"',
+      '"Senior Engineer"',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""'
+    ].join(",")
+  )
+})
+
 test("summarizes founder validation metrics from applications", () => {
   const metrics = getApplicationValidationMetrics([
     {
