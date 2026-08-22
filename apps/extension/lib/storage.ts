@@ -630,10 +630,34 @@ export async function getApplicationSyncState(): Promise<
   )
 }
 
+// Read-modify-write over the whole map (chrome.storage.local.get/set are
+// real async round trips) - two concurrent calls (e.g. a retry sync and a
+// widget-triggered sync racing) would each read the same starting
+// snapshot, mutate only their own applicationIds, and whichever writes
+// last would silently clobber the other's status updates for its own ids.
+// Queuing every call onto a single chain makes each one see the previous
+// call's write before it reads, regardless of which code path calls it.
+let applicationSyncStateQueue: Promise<unknown> = Promise.resolve()
+
 export async function updateApplicationSyncState(
   applicationIds: string[],
   status: ApplicationSyncStatus,
   options: { error?: string } = {}
+) {
+  const run = applicationSyncStateQueue.then(() =>
+    writeApplicationSyncState(applicationIds, status, options)
+  )
+  applicationSyncStateQueue = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
+}
+
+async function writeApplicationSyncState(
+  applicationIds: string[],
+  status: ApplicationSyncStatus,
+  options: { error?: string }
 ) {
   const existing = await getApplicationSyncState()
   const now = new Date().toISOString()
