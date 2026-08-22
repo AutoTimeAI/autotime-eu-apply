@@ -661,12 +661,24 @@ export async function updateApplicationSyncState(
   return existing
 }
 
+// The account session (raw auth/refresh tokens) is deliberately kept in
+// chrome.storage.session rather than chrome.storage.local. Session storage's
+// default access level is TRUSTED_CONTEXTS only (background + extension
+// pages) - content scripts, which run injected into every visited website,
+// cannot read it or receive its onChanged events at all, even if compromised
+// by a malicious page. This is a hard boundary enforced by the browser, not
+// just an app-level convention: storing the token in .local would let any
+// content-script-context code call chrome.storage.local.get directly and
+// bypass whatever message-passing discipline this codebase follows. The
+// trade-off: session storage is cleared when the browser fully restarts
+// (unlike .local, which persists indefinitely), so a full browser restart
+// requires reconnecting the dashboard from the extension's Connect flow.
 export async function saveAccountSession(session: AccountSession) {
-  await chrome.storage.local.set({ [ACCOUNT_SESSION_KEY]: session })
+  await chrome.storage.session.set({ [ACCOUNT_SESSION_KEY]: session })
 }
 
 export async function getAccountSession(): Promise<AccountSession | null> {
-  const result = await chrome.storage.local.get(ACCOUNT_SESSION_KEY)
+  const result = await chrome.storage.session.get(ACCOUNT_SESSION_KEY)
   const session = result[ACCOUNT_SESSION_KEY] as
     | Partial<AccountSession>
     | undefined
@@ -674,7 +686,7 @@ export async function getAccountSession(): Promise<AccountSession | null> {
 }
 
 export async function clearAccountSession() {
-  await chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
+  await chrome.storage.session.remove(ACCOUNT_SESSION_KEY)
 }
 
 export async function clearLegacyOpenAISettings() {
