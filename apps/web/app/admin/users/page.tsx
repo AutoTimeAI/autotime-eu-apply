@@ -5,13 +5,18 @@ import {
 import { getAdminUsersOverview } from "../../../lib/admin-users"
 import { AdminUsersTable } from "./AdminUsersTable"
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const principal = await requireAdminPrincipal("users:read")
   const includeEmail = hasAdminPermission(
     principal.membership,
     "users:read_email",
   )
-  const users = await getAdminUsersOverview(includeEmail)
+  const requestedPage = Number((await searchParams).page ?? "1")
+  const initialData = await getAdminUsersOverview(includeEmail, requestedPage)
 
   return (
     <main className="operations-admin-page">
@@ -26,7 +31,7 @@ export default async function AdminUsersPage() {
           </p>
         </div>
       </header>
-      <AdminUsersTable includeEmail={includeEmail} initialUsers={users} />
+      <AdminUsersTable includeEmail={includeEmail} initialData={initialData} />
     </main>
   )
 }

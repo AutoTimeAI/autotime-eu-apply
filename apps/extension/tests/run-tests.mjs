@@ -75,6 +75,7 @@ import {
   updateApplication,
   updateApplicationSyncState
 } from "../lib/storage.ts"
+import { getActiveSession } from "../lib/session.ts"
 import {
   countWords,
   validateApplicationContentDraft,
@@ -92,6 +93,8 @@ function test(name, run) {
 
 const store = new Map()
 
+const sessionStore = new Map()
+
 globalThis.chrome = {
   storage: {
     local: {
@@ -106,12 +109,29 @@ globalThis.chrome = {
       async remove(key) {
         store.delete(key)
       }
+    },
+    // The account session lives in chrome.storage.session (see storage.ts),
+    // not .local, so content scripts can't read it - kept as a separate map
+    // here to mirror that real separation.
+    session: {
+      async get(key) {
+        return { [key]: sessionStore.get(key) }
+      },
+      async set(values) {
+        Object.entries(values).forEach(([key, value]) => {
+          sessionStore.set(key, value)
+        })
+      },
+      async remove(key) {
+        sessionStore.delete(key)
+      }
     }
   }
 }
 
 function resetStorage() {
   store.clear()
+  sessionStore.clear()
 }
 
 test("splits a full name into first and last name", () => {
@@ -968,6 +988,27 @@ test("infers location from pasted job descriptions", () => {
   )
 })
 
+test("still infers location from a short description padded with a huge non-matching tail", () => {
+  const padding = "x".repeat(500000)
+  const start = Date.now()
+
+  assert.equal(
+    inferLocationFromJobDescription(
+      `Role: Business Analyst\nLocation: London, United Kingdom\n${padding}`
+    ),
+    "London, United Kingdom"
+  )
+  assert.equal(
+    inferLocationFromJobDescription(`No location is listed. ${padding}`),
+    ""
+  )
+
+  // Regression guard for the unbounded unanchored-regex scan this was
+  // fixed for - a huge adversarial description should resolve quickly,
+  // not hang the tab scraping it.
+  assert.ok(Date.now() - start < 1000)
+})
+
 test("saves and loads candidate profile", async () => {
   resetStorage()
 
@@ -1138,6 +1179,29 @@ test("saves and clears account session", async () => {
   assert.equal(await getAccountSession(), null)
 })
 
+test("account session lives in chrome.storage.session, not .local - content scripts can't read it", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "supabase-token",
+    refreshToken: "supabase-refresh-token",
+    expiresAt: 1893456000000,
+    email: "user@example.com",
+    plan: "pro",
+    provider: "github"
+  })
+
+  const local = await chrome.storage.local.get("account-session")
+  assert.equal(local["account-session"], undefined)
+
+  const session = await chrome.storage.session.get("account-session")
+  assert.equal(session["account-session"].authToken, "supabase-token")
+
+  await clearAccountSession()
+  const cleared = await chrome.storage.session.get("account-session")
+  assert.equal(cleared["account-session"], undefined)
+})
+
 test("normalizes a legacy account session saved before refresh tokens existed", async () => {
   resetStorage()
 
@@ -1155,6 +1219,62 @@ test("normalizes a legacy account session saved before refresh tokens existed", 
     plan: "free",
     provider: "email"
   })
+})
+
+test("concurrent getActiveSession calls on an expiring token share one refresh, not a racing pair", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "stale-token",
+    refreshToken: "single-use-refresh-token",
+    expiresAt: Date.now(), // already within the refresh buffer
+    email: "user@example.com",
+    plan: "pro",
+    provider: "github"
+  })
+
+  let fetchCallCount = 0
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => {
+    fetchCallCount += 1
+    return {
+      ok: true,
+      async json() {
+        return {
+          data: {
+            authToken: "fresh-token",
+            refreshToken: "fresh-refresh-token",
+            expiresAt: Date.now() + 60 * 60 * 1000
+          },
+          error: null
+        }
+      }
+    }
+  }
+
+  try {
+    // A second refresh token is single-use in Supabase - if two callers both
+    // raced their own /api/sync/refresh with the stale refresh token, the
+    // second would fail and clear the session the first one just saved.
+    const [first, second] = await Promise.all([
+      getActiveSession(),
+      getActiveSession()
+    ])
+
+    assert.equal(fetchCallCount, 1)
+    assert.equal(first.session?.authToken, "fresh-token")
+    assert.equal(second.session?.authToken, "fresh-token")
+    assert.deepEqual(await getAccountSession(), {
+      authToken: "fresh-token",
+      refreshToken: "fresh-refresh-token",
+      expiresAt: first.session.expiresAt,
+      email: "user@example.com",
+      plan: "pro",
+      provider: "github"
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 
 test("tracks application sync state from pending to synced", async () => {
@@ -1977,6 +2097,52 @@ test("exports applications to csv", () => {
       '"Title","Role Title","Company","URL","Source","Created At","Status","Next Action","Next Action Date","Notes","Content Snapshot Saved At","Snapshot Cover Letter","Snapshot Profile Summary","Snapshot Motivation Answer","Snapshot Strengths Answer","Snapshot Availability Answer"',
       '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","Applied","Follow up","2026-04-10","Remote, EU role","2026-04-01T12:00:00.000Z","Tailored cover letter.","Analyst profile summary.","Motivation answer.","Strengths answer.","Available in one month."'
     ].join("\n")
+  )
+})
+
+test("neutralizes CSV/formula injection payloads scraped from job postings", () => {
+  const csv = applicationsToCsv([
+    {
+      id: "application",
+      title: "=HYPERLINK(\"http://evil.example\",\"click me\")",
+      roleTitle: "+cmd|'/c calc'!A1",
+      company: "-2+3",
+      source: "example.com",
+      url: "https://example.com/jobs/frontend",
+      nextAction: "@SUM(A1:A9)",
+      nextActionDate: "2026-04-10",
+      notes: "Senior Engineer",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "Applied"
+    }
+  ])
+
+  const rows = csv.split("\n")
+  const dataRow = rows[1]
+
+  // Dangerous leading characters (=, +, -, @) are neutralized with a
+  // leading single quote so spreadsheet apps treat the value as literal
+  // text instead of evaluating it as a formula.
+  assert.equal(
+    dataRow,
+    [
+      '"\'=HYPERLINK(""http://evil.example"",""click me"")"',
+      '"\'+cmd|\'/c calc\'!A1"',
+      '"\'-2+3"',
+      '"https://example.com/jobs/frontend"',
+      '"example.com"',
+      '"2026-04-01T00:00:00.000Z"',
+      '"Applied"',
+      '"\'@SUM(A1:A9)"',
+      '"2026-04-10"',
+      '"Senior Engineer"',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""'
+    ].join(",")
   )
 })
 

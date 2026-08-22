@@ -148,6 +148,10 @@ assert.ok(application.appliedAt);
 assert.equal(application.submissionConfirmed, true);
 assert.equal(application.coverLetterRequested, false);
 assert.equal(application.documentVersions.length, 0);
+assert.throws(
+  () => transitionApplication(application, "Ready", job),
+  /cannot be moved back to Ready/,
+);
 
 // Completes the happy-path fixture QA asked for (issue #56): a real
 // vacancy, analysed for real by analyseJob (not hand-crafted with
