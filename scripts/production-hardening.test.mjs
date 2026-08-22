@@ -565,6 +565,29 @@ test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, 
   )
 })
 
+test("cover letter and outreach message writes verify the referenced job belongs to the same account", () => {
+  const coverLetter = read("apps/web/app/api/ai/cover-letter/route.ts")
+  const outreach = read("apps/web/app/api/outreach/route.ts")
+
+  const coverLetterOwnershipIndex = coverLetter.indexOf(
+    'from("applications").select("id").eq("id",body.jobId).eq("user_id",user.id)',
+  )
+  const coverLetterInsertIndex = coverLetter.indexOf(
+    'from("cover_letters").insert(',
+  )
+  assert.notEqual(coverLetterOwnershipIndex, -1)
+  assert.notEqual(coverLetterInsertIndex, -1)
+  assert.ok(coverLetterOwnershipIndex < coverLetterInsertIndex)
+
+  const outreachOwnershipIndex = outreach.indexOf(
+    'from("applications").select("id").eq("id", body.jobId).eq("user_id", user.id)',
+  )
+  const outreachInsertIndex = outreach.indexOf('from("outreach_messages").insert(')
+  assert.notEqual(outreachOwnershipIndex, -1)
+  assert.notEqual(outreachInsertIndex, -1)
+  assert.ok(outreachOwnershipIndex < outreachInsertIndex)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
