@@ -289,6 +289,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #121 | **Two more instances of the same unverified-FK pattern**: extended the #120 sweep to every `.insert()`/`.upsert()` call in `apps/web/app/api` and found two more. `POST /api/ai/cover-letter` inserts into `cover_letters` with `job_id: body.jobId` (optional) with no ownership check; `POST /api/outreach` inserts into `outreach_messages` with `job_id: body.jobId` (required) with the same gap. Both FKs reference `public.applications(id) on delete cascade`. Same impact shape as #119/#120: not a read leak, but a caller who obtains another user's application UUID could link their own cover letter or outreach message to it, silently cascade-deleted the moment that application's real owner deletes it. Fixed both by verifying the referenced application belongs to the caller before writing. Swept the remainder of `apps/web/app/api` and `apps/web/lib` and found nothing else: `esco/questionnaire`'s `escoSkillId` only ever references the public `esco_skills` reference table (no per-user ownership applicable), and `sync/extension`'s `extension_id` is an opaque identifier, not a foreign key to another user's row - this closes out the sweep across the whole codebase | `api/ai/cover-letter/route.ts`, `api/outreach/route.ts` |
 | #122 | **Unaddressed dependabot alert**: GitHub's one open alert (#74, medium, CVE-2026-41907/GHSA-w5hq-g745-h8pq) had been showing on every push all session without ever being checked - a transitive `uuid@8.3.2` pulled in by `exceljs@4.4.0` in `docs/qa` (a standalone npm project outside the pnpm workspace that generates the QA documentation `.xlsx`, never deployed/run in production). `uuid`'s `v3()`/`v5()`/`v6()` methods don't bounds-check a caller-supplied output buffer, allowing silent partial writes - fixed upstream in `uuid@11.1.1`+. `exceljs@4.4.0` is still the latest release and still requires `uuid@^8.3.0`, so no newer `exceljs` fixes this. Fixed with an npm `overrides` entry pinning `uuid` to `^11.1.1`, matching the same remediation already used for the root workspace's own `uuid` override. Verified `npm install` resolves to `uuid@11.1.1` with 0 vulnerabilities, and `npm run build` still generates the workbook successfully end-to-end | `docs/qa/package.json` |
 | #123 | **Missing least-privilege permissions on the CI workflow**: audited all four GitHub Actions workflows (`unit-tests.yml`, `e2e.yml`, `job-ingestion.yml`, `platform-coverage.yml`) for the classic script-injection/`pull_request_target` vulnerability classes (untrusted PR title/branch data interpolated into a `run:` shell step, or fork PR code executed with write-level secrets). All four are clean: none use `pull_request_target`; `job-ingestion.yml`/`platform-coverage.yml` never trigger on `pull_request` at all; `unit-tests.yml`/`e2e.yml` only ever reference literal offline placeholder secrets in PR-triggered env blocks, never `secrets.*`, so there's no real secret-exposure path regardless of fork origin; `platform-coverage.yml`'s `github-script` step only reads the repo's own generated JSON report, never attacker-controlled input. One real, minor inconsistency: `unit-tests.yml` (the required "CI" check, triggered by any `pull_request`) was the only one of the four missing an explicit `permissions:` block. Not a live exploit today (nothing in its steps exercises `GITHUB_TOKEN`), but closes the gap before a future step could silently depend on the org/repo's default token permission level. Fixed by adding `permissions: contents: read`, matching the posture already used elsewhere in this repo's workflows | `.github/workflows/unit-tests.yml` |
+| #124 | **Implicit-only grant on a Postgres RPC**: audited all 8 `security definer` functions across every migration for the classic risks (missing `search_path` pinning enabling schema-shadowing privilege escalation, dynamic SQL/injection, or a function grantable to `authenticated`/`anon` that blindly trusts a client-supplied `p_user_id` instead of the caller's real RLS-scoped identity). All genuinely `security definer` functions are correctly `revoke all ... from public, anon, authenticated` + `grant ... to service_role` only, every one has `set search_path = public` pinned, and none build dynamic SQL - clean across the board. One inconsistency, not a live exploit: `get_monthly_ai_calls` is `security invoker` reading RLS-scoped `ai_usage` (a spoofed `p_user_id` just returns nothing) and is only ever called server-side with a session-derived id, but unlike its exact sibling `get_ai_credit_balance` (which has an explicit `grant execute ... to authenticated`), it never had any explicit grant/revoke, relying implicitly on Postgres's default `PUBLIC` grant - safe because of RLS, not because of an explicit decision, the only RPC left that way. Fixed with a migration making the grant explicit, matching the sibling's already-established pattern; no behaviour change | `supabase/migrations/20260822100000_pin_get_monthly_ai_calls_grant.sql` |
 
 ### Verified, not just assumed
 
@@ -569,6 +570,29 @@ stays the single evidenced record of what has and hasn't been checked.
   real application id as its own would collide on that primary key and
   fail the whole request with a database error, not silently succeed.
   **No fix needed** - confirmed safe by construction, not merely assumed.
+- **Postgres RPC layer** (2026-08-22, alongside #124): every API route
+  audited this session enforces authorization at the Next.js layer -
+  deriving `user.id` from a validated session, then calling Postgres RPCs
+  via the service-role client with that id as a parameter - resting on an
+  assumption that had never itself been directly verified: that these RPCs
+  aren't ALSO directly callable by an ordinary end user via
+  `supabase.rpc(...)` from the browser (which uses the `authenticated`
+  role, not `service_role`). Confirmed this holds: every genuinely
+  `security definer` RPC (`reserve_ai_call`, `confirm_ai_call`,
+  `release_ai_call`, `increment_ai_rate_limit`, `grant_ai_credit_pack`,
+  `consume_ai_credit`, `classify_job_listings_esco`, the admin/workflow
+  RPCs, and the two `auth.users` trigger functions) is `revoke`d from
+  `public`/`anon`/`authenticated` and granted only to `service_role` - none
+  reachable by a client at all. The few RPCs that ARE granted to
+  `authenticated` (`match_esco_jobs`, `get_ai_credit_balance`, and now
+  `get_monthly_ai_calls` per #124) are all `security invoker`, and every
+  table they read has an RLS policy scoping rows to `auth.uid() = user_id`
+  - so even a spoofed `p_user_id` argument from a malicious direct RPC call
+  returns nothing, regardless of what's passed. Also checked: every
+  `security definer` function has `set search_path = public` pinned (the
+  classic schema-shadowing privilege-escalation vector), and none build
+  dynamic SQL via `execute format(...)`. **No fix needed** beyond #124's
+  consistency fix.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
