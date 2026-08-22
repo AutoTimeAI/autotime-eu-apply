@@ -664,6 +664,26 @@ stays the single evidenced record of what has and hasn't been checked.
   user-typed profile fields, never attacker-controlled page content). The
   one real gap found (unbounded scan, not exponential) is #130 above.
   **No fix needed** beyond that one.
+- **Admin impersonation, remaining SSRF surfaces, OAuth callback, and
+  shared schemas** (2026-08-22): checked for an "act as user"/impersonation
+  feature anywhere in the admin panel - none exists at all, so there's
+  nothing to audit there. Swept every server-side `fetch()`/`fetchImpl()`
+  call site across `apps/web/lib` for a user-supplied-URL SSRF surface
+  beyond the one already fixed (#111) - every other site is either a
+  server-controlled fixed endpoint (OpenAI's API in
+  `lib/interview-prep.ts`, the ATS/aggregator feeds' hardcoded platform
+  URLs already verified clean earlier this session) or the already-fixed
+  portfolio/GitHub CV importers - no new SSRF surface exists.
+  `auth/callback/route.ts` delegates PKCE code-verifier handling entirely
+  to Supabase's SDK (`exchangeCodeForSession`) rather than implementing it
+  itself, and correctly signs a non-admin out before completing an
+  `/admin`-bound redirect. `packages/shared/src/schemas.ts` (used by both
+  web and extension) is a data-shape contract for client-side/sync
+  payloads, not an input-validation security boundary - every actual API
+  route already enforces its own stricter, length-bounded Zod schema
+  before untrusted input ever reaches code that uses these shared types,
+  confirmed by cross-referencing several already-audited routes. **No fix
+  needed anywhere in this pass.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
