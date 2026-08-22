@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { createSsrfSafeLookup } from "../lib/cv/sources/portfolio.ts"
+import { createSsrfSafeLookup, extractReadableText } from "../lib/cv/sources/portfolio.ts"
 
 const tests = []
 
@@ -108,6 +108,25 @@ test("supports the (hostname, callback) two-argument shape", async () => {
     })
   })
   assert.equal(result.address, "93.184.216.34")
+})
+
+test("strips script content even when the closing tag has whitespace before '>'", () => {
+  // A bare `<\/script>` regex misses `</script >`, letting the literal script
+  // body (e.g. `alert(1)`) survive as plain text - matches the CodeQL
+  // js/incomplete-multi-character-sanitization finding for this pattern.
+  const html = "<p>hello</p><script>alert(1)</script >world"
+  const text = extractReadableText(html)
+  assert.doesNotMatch(text, /alert\(1\)/)
+  assert.match(text, /hello/)
+  assert.match(text, /world/)
+})
+
+test("strips style content even when the closing tag has whitespace before '>'", () => {
+  const html = "<p>hello</p><style>body{color:red}</style >world"
+  const text = extractReadableText(html)
+  assert.doesNotMatch(text, /color:red/)
+  assert.match(text, /hello/)
+  assert.match(text, /world/)
 })
 
 let failed = 0

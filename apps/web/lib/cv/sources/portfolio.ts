@@ -54,6 +54,17 @@ export function createSsrfSafeLookup(
   };
 }
 
+export function extractReadableText(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function fetchPortfolioText(rawUrl: string): Promise<{ text: string; url: string }> {
   const url = new URL(rawUrl);
 
@@ -91,14 +102,7 @@ export async function fetchPortfolioText(rawUrl: string): Promise<{ text: string
   }
 
   const html = (await response.text()).slice(0, 500_000);
-  const text = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/\s+/g, " ")
-    .trim();
+  const text = extractReadableText(html);
 
   if (text.length < 80) {
     throw new Error("Not enough readable portfolio content was found.");
