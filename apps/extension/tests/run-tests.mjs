@@ -92,6 +92,8 @@ function test(name, run) {
 
 const store = new Map()
 
+const sessionStore = new Map()
+
 globalThis.chrome = {
   storage: {
     local: {
@@ -106,12 +108,29 @@ globalThis.chrome = {
       async remove(key) {
         store.delete(key)
       }
+    },
+    // The account session lives in chrome.storage.session (see storage.ts),
+    // not .local, so content scripts can't read it - kept as a separate map
+    // here to mirror that real separation.
+    session: {
+      async get(key) {
+        return { [key]: sessionStore.get(key) }
+      },
+      async set(values) {
+        Object.entries(values).forEach(([key, value]) => {
+          sessionStore.set(key, value)
+        })
+      },
+      async remove(key) {
+        sessionStore.delete(key)
+      }
     }
   }
 }
 
 function resetStorage() {
   store.clear()
+  sessionStore.clear()
 }
 
 test("splits a full name into first and last name", () => {
@@ -1138,6 +1157,29 @@ test("saves and clears account session", async () => {
   assert.equal(await getAccountSession(), null)
 })
 
+test("account session lives in chrome.storage.session, not .local - content scripts can't read it", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "supabase-token",
+    refreshToken: "supabase-refresh-token",
+    expiresAt: 1893456000000,
+    email: "user@example.com",
+    plan: "pro",
+    provider: "github"
+  })
+
+  const local = await chrome.storage.local.get("account-session")
+  assert.equal(local["account-session"], undefined)
+
+  const session = await chrome.storage.session.get("account-session")
+  assert.equal(session["account-session"].authToken, "supabase-token")
+
+  await clearAccountSession()
+  const cleared = await chrome.storage.session.get("account-session")
+  assert.equal(cleared["account-session"], undefined)
+})
+
 test("normalizes a legacy account session saved before refresh tokens existed", async () => {
   resetStorage()
 
@@ -1977,6 +2019,52 @@ test("exports applications to csv", () => {
       '"Title","Role Title","Company","URL","Source","Created At","Status","Next Action","Next Action Date","Notes","Content Snapshot Saved At","Snapshot Cover Letter","Snapshot Profile Summary","Snapshot Motivation Answer","Snapshot Strengths Answer","Snapshot Availability Answer"',
       '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","Applied","Follow up","2026-04-10","Remote, EU role","2026-04-01T12:00:00.000Z","Tailored cover letter.","Analyst profile summary.","Motivation answer.","Strengths answer.","Available in one month."'
     ].join("\n")
+  )
+})
+
+test("neutralizes CSV/formula injection payloads scraped from job postings", () => {
+  const csv = applicationsToCsv([
+    {
+      id: "application",
+      title: "=HYPERLINK(\"http://evil.example\",\"click me\")",
+      roleTitle: "+cmd|'/c calc'!A1",
+      company: "-2+3",
+      source: "example.com",
+      url: "https://example.com/jobs/frontend",
+      nextAction: "@SUM(A1:A9)",
+      nextActionDate: "2026-04-10",
+      notes: "Senior Engineer",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "Applied"
+    }
+  ])
+
+  const rows = csv.split("\n")
+  const dataRow = rows[1]
+
+  // Dangerous leading characters (=, +, -, @) are neutralized with a
+  // leading single quote so spreadsheet apps treat the value as literal
+  // text instead of evaluating it as a formula.
+  assert.equal(
+    dataRow,
+    [
+      '"\'=HYPERLINK(""http://evil.example"",""click me"")"',
+      '"\'+cmd|\'/c calc\'!A1"',
+      '"\'-2+3"',
+      '"https://example.com/jobs/frontend"',
+      '"example.com"',
+      '"2026-04-01T00:00:00.000Z"',
+      '"Applied"',
+      '"\'@SUM(A1:A9)"',
+      '"2026-04-10"',
+      '"Senior Engineer"',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""'
+    ].join(",")
   )
 })
 

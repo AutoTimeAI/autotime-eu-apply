@@ -168,3 +168,40 @@ export async function syncApplicationsToDashboard({
 
   return parseSyncResponse<DashboardSyncResponse>(writeResponse)
 }
+
+export type JobMatchPayload = {
+  url?: string
+  title?: string
+  description?: string
+}
+
+export type JobMatchScore = {
+  matched: boolean
+  title?: string
+  matchedCount?: number
+  totalEssentialSkills?: number
+  matchedSkills?: string[]
+  missingSkills?: string[]
+}
+
+// Only ever called from the background worker (see AUTOTIME_SCORE_JOB in
+// entrypoints/background/index.ts) - the content script that wants an ESCO
+// match score sends a message instead of fetching directly, so the raw
+// authToken never has to leave this trusted context.
+export async function scoreJobFromDashboard(
+  session: AccountSession,
+  payload: JobMatchPayload
+) {
+  const response = await fetch(`${appUrl}/api/esco/score-job`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.authToken}`,
+      "Content-Type": "application/json",
+      "x-autotime-source": "extension"
+    },
+    body: JSON.stringify(payload),
+    signal: withTimeoutSignal()
+  })
+
+  return parseSyncResponse<JobMatchScore>(response)
+}

@@ -1,5 +1,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Constant-time comparison for the cron secret - a plain !== leaks a timing
+// signal proportional to the matching prefix length, which a remote
+// attacker could in principle use to recover CRON_SECRET one character at a
+// time. Written portably (no node:crypto dependency) rather than relying on
+// Deno's Node-compat layer for a security-sensitive primitive.
+function safeEqual(a: string, b: string): boolean {
+  const bufferA = new TextEncoder().encode(a);
+  const bufferB = new TextEncoder().encode(b);
+  if (bufferA.length !== bufferB.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < bufferA.length; i += 1) mismatch |= bufferA[i] ^ bufferB[i];
+  return mismatch === 0;
+}
+
 type AlertFrequency = "daily" | "weekly";
 type AlertProfile = {
   alert_frequency: AlertFrequency | "off";
@@ -84,7 +98,7 @@ async function sendEmail(
 
 Deno.serve(async (request) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
-  if (!cronSecret || request.headers.get("x-cron-secret") !== cronSecret) {
+  if (!cronSecret || !safeEqual(request.headers.get("x-cron-secret") ?? "", cronSecret)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

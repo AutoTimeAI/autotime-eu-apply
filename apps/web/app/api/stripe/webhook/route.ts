@@ -12,6 +12,7 @@ import {
 } from "../../../../lib/env.server"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import type {
+  Json,
   SubscriptionPlan,
   SubscriptionStatus,
 } from "../../../../lib/supabase/types"
@@ -53,6 +54,14 @@ function isStripeCheckoutSession(
   value: unknown,
 ): value is Stripe.Checkout.Session {
   return isRecord(value) && value.object === "checkout.session"
+}
+
+function isStripeCharge(value: unknown): value is Stripe.Charge {
+  return isRecord(value) && value.object === "charge"
+}
+
+function isStripeDispute(value: unknown): value is Stripe.Dispute {
+  return isRecord(value) && value.object === "dispute"
 }
 
 function getSubscriptionPlan(): SubscriptionPlan {
@@ -212,6 +221,123 @@ async function markSubscriptionCancelled(
   }
 }
 
+function getChargeCustomerId(charge: Stripe.Charge): string | null {
+  if (!charge.customer) {
+    return null
+  }
+
+  return typeof charge.customer === "string"
+    ? charge.customer
+    : charge.customer.id
+}
+
+async function resolveUserIdByCustomerId(
+  customerId: string | null,
+): Promise<string | null> {
+  if (!customerId) {
+    return null
+  }
+
+  const { data } = await createAdminClient()
+    .from("subscriptions")
+    .select("user_id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle()
+
+  return data?.user_id ?? null
+}
+
+// Founder-approved policy for #139's flagged refund/dispute gap: log for
+// manual review, take no automatic account action. This does not yet
+// surface in the admin UI as its own section - reviewing today means
+// querying operational_logs where area = 'stripe' directly. Adding a
+// dedicated admin view is a natural follow-up if this proves worth
+// surfacing there, not something to build speculatively here.
+async function logStripeReviewEvent({
+  code,
+  level,
+  message,
+  metadata,
+  userId,
+}: {
+  code: string
+  level: "warn" | "info"
+  message: string
+  metadata: Record<string, unknown>
+  userId: string | null
+}): Promise<void> {
+  try {
+    await createAdminClient()
+      .from("operational_logs")
+      .insert({
+        area: "stripe",
+        code,
+        level,
+        message,
+        metadata: JSON.parse(JSON.stringify(metadata)) as Json,
+        user_id: userId,
+      })
+  } catch {
+    // Best-effort audit trail only - never let a logging failure surface as
+    // a webhook processing error (Stripe would otherwise retry forever).
+  }
+}
+
+async function handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
+  const customerId = getChargeCustomerId(charge)
+  const userId = await resolveUserIdByCustomerId(customerId)
+
+  await logStripeReviewEvent({
+    code: "stripe.charge.refunded",
+    level: "info",
+    message: "A Stripe charge was refunded - review for AI credit clawback.",
+    metadata: {
+      amountRefunded: charge.amount_refunded,
+      chargeId: charge.id,
+      currency: charge.currency,
+      customerId,
+    },
+    userId,
+  })
+}
+
+async function handleDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
+  const chargeId =
+    typeof dispute.charge === "string" ? dispute.charge : dispute.charge.id
+  let customerId: string | null =
+    typeof dispute.charge === "string"
+      ? null
+      : getChargeCustomerId(dispute.charge)
+
+  if (!customerId) {
+    try {
+      const charge = await getWebhookStripeClient().charges.retrieve(chargeId)
+      customerId = getChargeCustomerId(charge)
+    } catch {
+      customerId = null
+    }
+  }
+
+  const userId = await resolveUserIdByCustomerId(customerId)
+
+  await logStripeReviewEvent({
+    code: "stripe.dispute.created",
+    level: "warn",
+    message:
+      "A Stripe dispute was opened - review for AI credit clawback or account action.",
+    metadata: {
+      amount: dispute.amount,
+      chargeId,
+      currency: dispute.currency,
+      customerId,
+      disputeId: dispute.id,
+      reason: dispute.reason,
+      status: dispute.status,
+    },
+    userId,
+  })
+}
+
 async function markInvoicePaymentFailed(
   invoice: Stripe.Invoice,
 ): Promise<void> {
@@ -316,6 +442,19 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       isStripeInvoice(eventObject)
     ) {
       await markInvoicePaymentFailed(eventObject)
+      return
+    }
+
+    if (event.type === "charge.refunded" && isStripeCharge(eventObject)) {
+      await handleChargeRefunded(eventObject)
+      return
+    }
+
+    if (
+      event.type === "charge.dispute.created" &&
+      isStripeDispute(eventObject)
+    ) {
+      await handleDisputeCreated(eventObject)
     }
   } catch (error: unknown) {
     const message =

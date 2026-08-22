@@ -100,9 +100,23 @@ export function mergeDashboardApplications(
   })
 }
 
-function escapeCsvValue(value: string | undefined) {
+// Leading =, +, -, or @ (and leading tab/CR) can make a spreadsheet
+// application (Excel, Google Sheets, LibreOffice) interpret an otherwise
+// inert cell value as a formula when the exported CSV is opened - a class of
+// vulnerability known as CSV/formula injection. Application fields such as
+// title, roleTitle, company, and notes can originate from scraped job
+// posting pages (untrusted third-party content), so any field starting with
+// one of these characters is neutralized by prefixing a single quote before
+// the value is quoted, which forces spreadsheet apps to treat it as literal
+// text instead of evaluating it.
+const FORMULA_INJECTION_LEADING_CHARS = /^[=+\-@\t\r]/
+
+function sanitizeCsvCell(value: string | undefined) {
   const text = value ?? ""
-  return `"${text.replace(/"/g, '""')}"`
+  const neutralized = FORMULA_INJECTION_LEADING_CHARS.test(text)
+    ? `'${text}`
+    : text
+  return `"${neutralized.replace(/"/g, '""')}"`
 }
 
 export function applicationsToCsv(applications: ApplicationRecord[]) {
@@ -145,7 +159,7 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
   ])
 
   return [headers, ...rows]
-    .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
+    .map((row) => row.map((value) => sanitizeCsvCell(value)).join(","))
     .join("\n")
 }
 
@@ -189,7 +203,7 @@ export function validationMetricsToCsv(metrics: ApplicationValidationMetrics) {
   return [summaryRows, statusRows, sourceRows]
     .map((sectionRows) =>
       sectionRows
-        .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
+        .map((row) => row.map((value) => sanitizeCsvCell(value)).join(","))
         .join("\n")
     )
     .join("\n\n")
