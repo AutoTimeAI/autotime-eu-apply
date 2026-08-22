@@ -803,6 +803,23 @@ test("account deletion also cleans up the user's profile-photo storage objects, 
   assert.match(cleanupBody, /\.remove\(paths\)/)
 })
 
+test("classify_job_listings_esco has an explicit grant, matching every sibling RPC", () => {
+  // Both migrations that ever defined this function only ran
+  // `revoke all ... from public, anon, authenticated`, with no matching
+  // `grant execute ... to service_role` - since that revoke removes the
+  // function's only privilege (the default PUBLIC grant every new function
+  // gets on creation), no role could ever call it, so ESCO classification
+  // of aggregated job listings silently failed on every cron run.
+  const migration = read(
+    "supabase/migrations/20260822130000_grant_classify_job_listings_esco.sql",
+  )
+
+  assert.match(
+    migration,
+    /grant execute on function public\.classify_job_listings_esco\(integer\) to service_role;/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
