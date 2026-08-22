@@ -1,6 +1,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// Constant-time comparison for the cron secret - a plain !== leaks a timing
+// signal proportional to the matching prefix length, which a remote
+// attacker could in principle use to recover CRON_SECRET one character at a
+// time. Written portably (no node:crypto dependency) rather than relying on
+// Deno's Node-compat layer for a security-sensitive primitive.
+function safeEqual(a: string, b: string): boolean {
+  const bufferA = new TextEncoder().encode(a);
+  const bufferB = new TextEncoder().encode(b);
+  if (bufferA.length !== bufferB.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < bufferA.length; i += 1) mismatch |= bufferA[i] ^ bufferB[i];
+  return mismatch === 0;
+}
 const clean = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const normalise = (value: string) => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "");
 async function hash(value: string) { const data = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return [...new Uint8Array(data)].map((v) => v.toString(16).padStart(2, "0")).join(""); }
@@ -21,7 +34,7 @@ async function requestPage(page: number) {
 
 Deno.serve(async (request) => {
   const cronSecret = Deno.env.get("CRON_SECRET");
-  if (!cronSecret || request.headers.get("x-cron-secret") !== cronSecret) return new Response("Unauthorized", { status: 401 });
+  if (!cronSecret || !safeEqual(request.headers.get("x-cron-secret") ?? "", cronSecret)) return new Response("Unauthorized", { status: 401 });
   if (!Deno.env.get("EURES_PARTNER_API_URL") || !Deno.env.get("EURES_PARTNER_API_TOKEN")) {
     return Response.json({ synced: 0, status: "disabled_missing_authorized_partner_access" }, { status: 503 });
   }

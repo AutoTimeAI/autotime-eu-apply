@@ -196,3 +196,28 @@ test("matched-job alerts are explainable, user-controlled, and advance only afte
   assert.match(cron, /sync-job-alerts/);
   assert.match(cron, /x-cron-secret/);
 });
+
+test("every cron-triggered edge function compares its secret in constant time", async () => {
+  const files = [
+    "../supabase/functions/sync-eures/index.ts",
+    "../supabase/functions/sync-job-alerts/index.ts",
+    "../supabase/functions/sync-job-sources/index.ts",
+  ];
+  const sources = await Promise.all(
+    files.map((path) => readFile(new URL(path, import.meta.url), "utf8")),
+  );
+
+  for (const [index, source] of sources.entries()) {
+    assert.match(source, /function safeEqual/, files[index]);
+    assert.match(
+      source,
+      /!safeEqual\(request\.headers\.get\("x-cron-secret"\)\s*\?\?\s*""\s*,\s*cronSecret\)/,
+      files[index],
+    );
+    assert.doesNotMatch(
+      source,
+      /request\.headers\.get\("x-cron-secret"\)\s*!==\s*cronSecret/,
+      files[index],
+    );
+  }
+});
