@@ -12,7 +12,13 @@ import {
   type ApplicationRecord
 } from "../../lib/storage"
 import { getActiveSession, withFreshSession } from "../../lib/session"
-import { syncApplicationsToDashboard } from "../../lib/cloud-sync"
+import {
+  scoreJobFromDashboard,
+  syncApplicationsToDashboard,
+  type JobMatchPayload,
+  type JobMatchScore
+} from "../../lib/cloud-sync"
+import { toConnectionState, type ConnectionState } from "../../lib/connection-state"
 
 type ExternalMessage = {
   authToken?: unknown
@@ -34,15 +40,18 @@ type ExternalResponse = {
 
 type InternalMessage = {
   applications?: unknown
+  payload?: unknown
   resurrectUrlKeys?: unknown
   type?: unknown
 }
 
 type InternalResponse = {
   connected?: boolean
+  data?: JobMatchScore
   error?: string
   ok: boolean
   reason?: string
+  state?: ConnectionState
   synced?: boolean
 }
 
@@ -218,7 +227,7 @@ async function retryPendingApplicationSync(reason: "installed" | "startup") {
   }
 }
 
-async function broadcastAccountConnected() {
+async function broadcastConnectionState(state: ConnectionState) {
   try {
     const tabs = await chrome.tabs.query({})
 
@@ -227,7 +236,8 @@ async function broadcastAccountConnected() {
         .filter((tab) => tab.id)
         .map((tab) =>
           chrome.tabs.sendMessage(tab.id as number, {
-            type: "AUTOTIME_ACCOUNT_CONNECTED"
+            type: "AUTOTIME_ACCOUNT_CONNECTED",
+            state
           })
         )
     )
@@ -278,6 +288,31 @@ export default defineBackground(() => {
       _sender,
       sendResponse: (response: InternalResponse) => void
     ) => {
+      if (message?.type === "AUTOTIME_GET_CONNECTION_STATE") {
+        void getAccountSession().then((session) => {
+          sendResponse({ ok: true, state: toConnectionState(session) })
+        })
+        return true
+      }
+
+      if (message?.type === "AUTOTIME_SCORE_JOB") {
+        void (async () => {
+          const { result, error } = await withFreshSession((session) =>
+            scoreJobFromDashboard(session, (message.payload ?? {}) as JobMatchPayload)
+          )
+
+          if (!result) {
+            sendResponse({ error, ok: false })
+            return
+          }
+
+          sendResponse({ data: result, ok: true })
+        })().catch((error: unknown) => {
+          sendResponse({ error: getErrorMessage(error), ok: false })
+        })
+        return true
+      }
+
       if (message?.type !== "AUTOTIME_SYNC_APPLICATIONS") {
         return false
       }
@@ -354,9 +389,14 @@ export default defineBackground(() => {
   })
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && changes["account-session"]) {
-      void retryPendingApplicationSync("startup")
+    if (areaName !== "session" || !changes["account-session"]) {
+      return
     }
+
+    void retryPendingApplicationSync("startup")
+    void getAccountSession().then((session) => {
+      void broadcastConnectionState(toConnectionState(session))
+    })
   })
 
   chrome.runtime.onMessageExternal.addListener(
@@ -434,7 +474,7 @@ export default defineBackground(() => {
             startedEvent: "connect-sync-started"
           })
 
-          await broadcastAccountConnected()
+          await broadcastConnectionState(toConnectionState(session))
           await logDiagnosticEvent({
             area: "connect",
             event: "account-connected-broadcast",

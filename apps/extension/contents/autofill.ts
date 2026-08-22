@@ -1,5 +1,4 @@
 import {
-  getAccountSession,
   getApplicationContentDraft,
   getApplications,
   logDiagnosticEvent,
@@ -7,9 +6,13 @@ import {
   getReusableAnswers,
   saveApplication,
   saveJobReference,
-  type AccountSession,
   type ApplicationRecord
 } from "../lib/storage"
+import {
+  DISCONNECTED_STATE,
+  getConnectionState,
+  type ConnectionState
+} from "../lib/connection-state"
 import {
   extractJobPostingFromJsonLd,
   formatJobPageNotes,
@@ -375,7 +378,7 @@ async function syncTrackedApplicationsToDashboard(
   applications: ApplicationRecord[],
   resurrectUrlKeys?: string[]
 ) {
-  const session = await getAccountSession()
+  const state = await getConnectionState()
   void logDiagnosticEvent({
     area: "sync",
     event: "track-job-sync-requested",
@@ -384,7 +387,7 @@ async function syncTrackedApplicationsToDashboard(
     details: { applicationCount: applications.length }
   })
 
-  if (!session?.authToken.trim()) {
+  if (!state.connected) {
     return {
       reason: "Click Connect to sync to dashboard",
       synced: false
@@ -399,7 +402,7 @@ async function syncTrackedApplicationsToDashboard(
 
     if (!response.synced) {
       return {
-        connected: response.connected ?? Boolean(session?.authToken.trim()),
+        connected: response.connected ?? state.connected,
         reason:
           response.reason ??
           response.error ??
@@ -426,7 +429,7 @@ async function syncTrackedApplicationsToDashboard(
       details: { applicationCount: applications.length }
     })
     return {
-      connected: Boolean(session?.authToken.trim()),
+      connected: state.connected,
       reason,
       synced: false
     }
@@ -1392,12 +1395,12 @@ function getWidgetMarkup({
   details,
   status
 }: {
-  accountSession: AccountSession | null
+  accountSession: ConnectionState
   details: JobPageResponse | null
   status: string
 }) {
-  const isProCustomer = accountSession?.plan === "pro"
-  const isDashboardConnected = Boolean(accountSession?.authToken.trim())
+  const isProCustomer = accountSession.plan === "pro"
+  const isDashboardConnected = accountSession.connected
   const dashboardUrl = isDashboardConnected
     ? `${appUrl}/dashboard`
     : `${appUrl}/extension/connect?extensionId=${encodeURIComponent(
@@ -1908,7 +1911,7 @@ function getWidgetMarkup({
         <div class="account-identity ${isDashboardConnected ? "account-identity-connected" : "account-identity-disconnected"}">
           <span class="account-identity-dot" aria-hidden="true"></span>
           ${
-            isDashboardConnected && accountSession
+            isDashboardConnected
               ? `Signed in as ${escapeHtml(accountSession.email)} via ${escapeHtml(formatProviderLabel(accountSession.provider))}`
               : "Not connected - tracked jobs save locally only"
           }
@@ -2113,13 +2116,14 @@ function startJobWidgetAutoShowMonitor() {
 }
 
 function accountSessionsMatch(
-  current: AccountSession | null,
-  next: AccountSession | null
+  current: ConnectionState,
+  next: ConnectionState
 ) {
   return (
-    (current?.authToken ?? "") === (next?.authToken ?? "") &&
-    (current?.email ?? "") === (next?.email ?? "") &&
-    (current?.plan ?? "free") === (next?.plan ?? "free")
+    current.connected === next.connected &&
+    current.email === next.email &&
+    current.plan === next.plan &&
+    current.provider === next.provider
   )
 }
 
@@ -2155,7 +2159,7 @@ function initializeMovableJobWidget() {
   document.documentElement.append(host)
 
   let details = detectJobPage()
-  let accountSession: AccountSession | null = null
+  let accountSession: ConnectionState = DISCONNECTED_STATE
   let isMinimized = false
   let isClosed = storedPosition?.closed === true
   let status = ""
@@ -2260,9 +2264,9 @@ function initializeMovableJobWidget() {
       shouldRender = true
     }
 
-    void getAccountSession().then((nextSession) => {
-      if (!accountSessionsMatch(accountSession, nextSession)) {
-        accountSession = nextSession
+    void getConnectionState().then((nextState) => {
+      if (!accountSessionsMatch(accountSession, nextState)) {
+        accountSession = nextState
         render()
       }
     })
@@ -2281,46 +2285,27 @@ function initializeMovableJobWidget() {
     saveWidgetPlacement({ closed: isClosed })
   })
 
-  const handleStorageChange = (
-    changes: Record<string, chrome.storage.StorageChange>,
-    areaName: string
-  ) => {
-    if (areaName !== "local" || !changes["account-session"]) {
-      return
-    }
-
-    void getAccountSession().then((session) => {
-      if (!accountSessionsMatch(accountSession, session)) {
-        accountSession = session
-        render()
-      }
-    })
-  }
-
-  chrome.storage.onChanged.addListener(handleStorageChange)
-
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type !== "AUTOTIME_ACCOUNT_CONNECTED") {
       return false
     }
 
-    void getAccountSession().then((session) => {
-      accountSession = session
-      void logDiagnosticEvent({
-        area: "widget",
-        event: "account-connected-received",
-        message: "Widget received account connected broadcast.",
-        status: session?.authToken.trim() ? "success" : "warning"
-      })
-      render()
-      sendResponse({ ok: true })
+    const state: ConnectionState =
+      (message as { state?: ConnectionState }).state ?? DISCONNECTED_STATE
+    accountSession = state
+    void logDiagnosticEvent({
+      area: "widget",
+      event: "account-connected-received",
+      message: "Widget received account connected broadcast.",
+      status: state.connected ? "success" : "warning"
     })
-
+    render()
+    sendResponse({ ok: true })
     return true
   })
 
-  void getAccountSession().then((session) => {
-    accountSession = session
+  void getConnectionState().then((state) => {
+    accountSession = state
     render()
   })
 

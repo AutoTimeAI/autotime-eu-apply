@@ -92,6 +92,8 @@ function test(name, run) {
 
 const store = new Map()
 
+const sessionStore = new Map()
+
 globalThis.chrome = {
   storage: {
     local: {
@@ -106,12 +108,29 @@ globalThis.chrome = {
       async remove(key) {
         store.delete(key)
       }
+    },
+    // The account session lives in chrome.storage.session (see storage.ts),
+    // not .local, so content scripts can't read it - kept as a separate map
+    // here to mirror that real separation.
+    session: {
+      async get(key) {
+        return { [key]: sessionStore.get(key) }
+      },
+      async set(values) {
+        Object.entries(values).forEach(([key, value]) => {
+          sessionStore.set(key, value)
+        })
+      },
+      async remove(key) {
+        sessionStore.delete(key)
+      }
     }
   }
 }
 
 function resetStorage() {
   store.clear()
+  sessionStore.clear()
 }
 
 test("splits a full name into first and last name", () => {
@@ -1136,6 +1155,29 @@ test("saves and clears account session", async () => {
   await clearAccountSession()
 
   assert.equal(await getAccountSession(), null)
+})
+
+test("account session lives in chrome.storage.session, not .local - content scripts can't read it", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "supabase-token",
+    refreshToken: "supabase-refresh-token",
+    expiresAt: 1893456000000,
+    email: "user@example.com",
+    plan: "pro",
+    provider: "github"
+  })
+
+  const local = await chrome.storage.local.get("account-session")
+  assert.equal(local["account-session"], undefined)
+
+  const session = await chrome.storage.session.get("account-session")
+  assert.equal(session["account-session"].authToken, "supabase-token")
+
+  await clearAccountSession()
+  const cleared = await chrome.storage.session.get("account-session")
+  assert.equal(cleared["account-session"], undefined)
 })
 
 test("normalizes a legacy account session saved before refresh tokens existed", async () => {

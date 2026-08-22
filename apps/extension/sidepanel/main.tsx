@@ -374,7 +374,7 @@ function SidePanelApp() {
       changes: Record<string, chrome.storage.StorageChange>,
       areaName: string
     ) => {
-      if (areaName === "local" && changes["account-session"]) {
+      if (areaName === "session" && changes["account-session"]) {
         refreshAccountSession()
       }
 
