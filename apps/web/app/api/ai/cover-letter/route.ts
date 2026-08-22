@@ -16,7 +16,13 @@ export async function POST(request:NextRequest){
     let result;try{result=await tailorCoverLetterWithOpenAI(body);}catch(error){await releaseAiCall(reservationId);throw error;}
     await finalizeAiCall(reservationId,{feature:"cover-letter",model:result.model,promptTokens:result.promptTokens,completionTokens:result.completionTokens,costUsd:result.costUsd});
     let letter={id:null as string|null,version:null as number|null,content:result.value};
-    if(body.jobId){const db=createAdminClient();const latest=await db.from("cover_letters").select("version").eq("user_id",user.id).eq("job_id",body.jobId).order("version",{ascending:false}).limit(1).maybeSingle();if(latest.error)throw latest.error;const inserted=await db.from("cover_letters").insert({user_id:user.id,job_id:body.jobId,company_name:body.companyName,job_title:body.jobTitle,version:(latest.data?.version??0)+1,content:result.value}).select("id,version,content").single();if(inserted.error)throw inserted.error;letter=inserted.data;}
+    if(body.jobId){const db=createAdminClient();
+      // applications(id) only has to exist somewhere for the FK - it doesn't
+      // check ownership, and this table's on delete cascade means an
+      // unverified job_id here would let another user's application deletion
+      // silently delete this cover letter. Verify it belongs to this user first.
+      const ownedApplication=await db.from("applications").select("id").eq("id",body.jobId).eq("user_id",user.id).maybeSingle();if(ownedApplication.error)throw ownedApplication.error;if(!ownedApplication.data)throw new Error("Referenced job does not belong to this account.");
+      const latest=await db.from("cover_letters").select("version").eq("user_id",user.id).eq("job_id",body.jobId).order("version",{ascending:false}).limit(1).maybeSingle();if(latest.error)throw latest.error;const inserted=await db.from("cover_letters").insert({user_id:user.id,job_id:body.jobId,company_name:body.companyName,job_title:body.jobTitle,version:(latest.data?.version??0)+1,content:result.value}).select("id,version,content").single();if(inserted.error)throw inserted.error;letter=inserted.data;}
     return NextResponse.json({data:{letter},error:null});
   }catch(error){const status=error instanceof z.ZodError?400:error instanceof FeatureGateError?402:error instanceof RateLimitError?429:500;return NextResponse.json({data:null,error:error instanceof Error?error.message:"Cover-letter generation failed"},{status});}
 }
