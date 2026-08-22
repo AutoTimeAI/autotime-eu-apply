@@ -565,6 +565,21 @@ test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, 
   )
 })
 
+test("job workflow jobs and applications gain a nullable deleted_at tombstone column", () => {
+  const migration = read(
+    "supabase/migrations/20260822120000_job_workflow_soft_delete.sql",
+  )
+
+  assert.match(
+    migration,
+    /alter table public\.job_workflow_jobs add column deleted_at timestamptz;/,
+  )
+  assert.match(
+    migration,
+    /alter table public\.job_workflow_applications add column deleted_at timestamptz;/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
