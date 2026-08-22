@@ -809,6 +809,28 @@ stays the single evidenced record of what has and hasn't been checked.
   the actual high-entropy secret, at which point rate limiting the
   resulting magic-link generation is a smaller concern than the secret
   itself being compromised. **No fix needed.**
+- **CSRF defenses on session-cookie-authenticated routes** (2026-08-22):
+  `getRequestUser`/`requireAdminRequest` authenticate primarily via a
+  Supabase session cookie (`getCookieUser`, tried before the `Authorization`
+  bearer-token fallback used by the extension), which makes every such
+  route a classic CSRF target unless something blocks a forged cross-site
+  request from carrying that cookie. Traced two independent layers: (1)
+  neither this app nor `@supabase/ssr` sets an explicit `SameSite`
+  attribute on the auth cookie anywhere in the codebase (grepped for
+  `sameSite` - no match), which means it inherits the browser's own
+  default - every current major browser (Chrome, Firefox, Edge, Safari)
+  treats a cookie with no explicit `SameSite` as `Lax`, which already
+  blocks a forged cross-site POST/PUT/DELETE from carrying the cookie at
+  all; (2) `isSameOriginMutation()` (`lib/admin-authorization.ts`) is
+  additionally applied as defense-in-depth on the four highest-value admin
+  mutation routes (`admin/feature-flags`, `admin/market-data/refresh`,
+  `admin/users/[userId]/beta-access`, `operations/workflow-events`).
+  Audited that function itself line by line for a bypass: it correctly
+  rejects a same-*site*-but-different-*origin* request (checking
+  `sec-fetch-site === "same-origin"`, not the weaker `"same-site"`, so a
+  compromised subdomain can't use it either), and a malformed/`"null"`
+  `Origin` header fails safe via the try/catch rather than being treated
+  as trusted. No bypass found in either layer. **No fix needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
