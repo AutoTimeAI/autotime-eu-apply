@@ -793,6 +793,22 @@ stays the single evidenced record of what has and hasn't been checked.
   founder's awareness rather than changing the scoring formula
   unilaterally, since the intended precision/recall balance for this
   feature isn't something to guess at.
+- **Rate-limit coverage across every API route, and the QA session
+  bootstrap specifically** (2026-08-22, alongside #139): swept all 47
+  `route.ts` files for rate-limit coverage; most gaps are low-priority by
+  construction (admin-gated, authenticated-and-scoped-to-caller, or
+  Stripe/signature-verified) - `/api/sync/refresh` was the one genuine gap,
+  fixed as #139. Separately audited `/api/qa/session` (the QA test-account
+  bootstrap, gated by `QA_SESSION_BOOTSTRAP_SECRET`) for the same
+  free-for-anyone cost-amplification shape sync/refresh had, since it's
+  also unauthenticated by design. It doesn't have that shape: the
+  `timingSafeEqual` secret check runs *before* any Supabase Auth call or DB
+  write, and a wrong secret returns 404 immediately with zero backend
+  cost - unlike sync/refresh, where even a garbage input reached the real
+  Supabase Auth API before failing. A right guess requires already having
+  the actual high-entropy secret, at which point rate limiting the
+  resulting magic-link generation is a smaller concern than the secret
+  itself being compromised. **No fix needed.**
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
