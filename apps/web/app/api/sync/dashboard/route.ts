@@ -55,6 +55,21 @@ type DashboardReadData = {
 type SourceSurface =
   Database["public"]["Tables"]["sync_events"]["Insert"]["source_surface"]
 
+// Defensive ceiling, not a pagination redesign: this GET previously had no
+// limit at all on any of the four per-user tables, so cost scaled with a
+// single user's entire lifetime history on every dashboard load. This is
+// deliberately far above any real user's realistic row count (even a very
+// active multi-year job search) - it only ever bites in a pathological
+// case, not real usage - so it closes the "zero ceiling" defect without
+// truncating anyone's actual data. All four queries already order by
+// recency descending, so a cap (if it were ever hit) would drop only the
+// oldest rows, never active/recent ones. A real fix for the underlying
+// "resync cost grows with total history" concern is incremental
+// (updated_at-cursor) sync, which is a genuinely different, much larger
+// change to this local-first architecture's data model - out of scope
+// here.
+const MAX_SYNCED_ROWS_PER_TABLE = 20_000
+
 const dashboardWorkflowSchema = companionDashboardStateSchema
   .pick({
     reusableAnswers: true,
@@ -536,22 +551,26 @@ export async function GET(
         .from("applications")
         .select("*")
         .eq("user_id", auth.user.id)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(MAX_SYNCED_ROWS_PER_TABLE),
       supabase
         .from("evidence_records")
         .select("*")
         .eq("user_id", auth.user.id)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(MAX_SYNCED_ROWS_PER_TABLE),
       supabase
         .from("outcome_records")
         .select("*")
         .eq("user_id", auth.user.id)
-        .order("updated_at", { ascending: false }),
+        .order("updated_at", { ascending: false })
+        .limit(MAX_SYNCED_ROWS_PER_TABLE),
       supabase
         .from("interview_prep_packs")
         .select("*")
         .eq("user_id", auth.user.id)
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(MAX_SYNCED_ROWS_PER_TABLE),
     ])
 
     const firstError = [
