@@ -820,6 +820,44 @@ test("classify_job_listings_esco has an explicit grant, matching every sibling R
   )
 })
 
+test("every admin page catches its own authorization failure instead of letting it hit the generic error boundary", () => {
+  // requireAdminPrincipal throws a plain AdminAuthorizationError - Next.js
+  // does not let a parent layout's try/catch catch an exception thrown
+  // during a child page's own separate async render, so a page calling
+  // requireAdminPrincipal directly (instead of the wrapped
+  // requireAdminPageAccess) would have a permission failure escape past
+  // the /admin layout's redirect logic and hit the app's generic root
+  // error.tsx - a confusing message plus a spurious Sentry report for what
+  // is really just an expected authorization boundary. Every admin page
+  // must use the wrapper, which redirects the same way the layout does.
+  const pages = [
+    "apps/web/app/admin/page.tsx",
+    "apps/web/app/admin/users/page.tsx",
+    "apps/web/app/admin/feedback/page.tsx",
+    "apps/web/app/admin/ai-operations/page.tsx",
+    "apps/web/app/admin/market-data/page.tsx",
+    "apps/web/app/admin/feature-flags/page.tsx",
+    "apps/web/app/admin/audit-log/page.tsx",
+  ]
+
+  for (const pagePath of pages) {
+    const page = read(pagePath)
+    assert.match(page, /requireAdminPageAccess\(/, pagePath)
+    assert.doesNotMatch(page, /requireAdminPrincipal\(/, pagePath)
+  }
+
+  const lib = read("apps/web/lib/admin-authorization.ts")
+  assert.match(
+    lib,
+    /export async function requireAdminPageAccess\(/,
+  )
+  assert.match(lib, /error instanceof AdminAuthorizationError/)
+  assert.match(
+    lib,
+    /redirect\(\s*error\.status === 401 \? "\/admin\/login" : "\/admin\/login\?adminDenied=1",?\s*\)/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

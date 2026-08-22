@@ -1,9 +1,9 @@
-import { requireAdminPrincipal } from "../../../lib/admin-authorization"
+import { requireAdminPageAccess } from "../../../lib/admin-authorization"
 import { getAdminAuditLog } from "../../../lib/admin-audit"
 import { AdminAuditLogTable } from "./AdminAuditLogTable"
 
 export default async function Page() {
-  await requireAdminPrincipal("audit:read")
+  await requireAdminPageAccess("audit:read")
   const events = await getAdminAuditLog()
 
   return (

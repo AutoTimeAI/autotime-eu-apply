@@ -1,12 +1,12 @@
 import {
   hasAdminPermission,
-  requireAdminPrincipal,
+  requireAdminPageAccess,
 } from "../../../lib/admin-authorization"
 import { getAdminFeatureFlagsOverview } from "../../../lib/admin-feature-flags"
 import { AdminFeatureFlagsGrid } from "./AdminFeatureFlagsGrid"
 
 export default async function Page() {
-  const principal = await requireAdminPrincipal("feature_flags:read")
+  const principal = await requireAdminPageAccess("feature_flags:read")
   const canWrite = hasAdminPermission(principal.membership, "feature_flags:write")
   const { defaults, overrides } = await getAdminFeatureFlagsOverview()
 

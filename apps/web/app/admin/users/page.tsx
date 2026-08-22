@@ -1,6 +1,6 @@
 import {
   hasAdminPermission,
-  requireAdminPrincipal,
+  requireAdminPageAccess,
 } from "../../../lib/admin-authorization"
 import { getAdminUsersOverview } from "../../../lib/admin-users"
 import { AdminUsersTable } from "./AdminUsersTable"
@@ -10,7 +10,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<{ page?: string }>
 }) {
-  const principal = await requireAdminPrincipal("users:read")
+  const principal = await requireAdminPageAccess("users:read")
   const includeEmail = hasAdminPermission(
     principal.membership,
     "users:read_email",

@@ -1,9 +1,9 @@
-import { requireAdminPrincipal } from "../../../lib/admin-authorization"
+import { requireAdminPageAccess } from "../../../lib/admin-authorization"
 import { getAdminFeedbackOverview } from "../../../lib/admin-feedback"
 import { AdminFeedbackTable } from "./AdminFeedbackTable"
 
 export default async function Page() {
-  await requireAdminPrincipal("feedback:read")
+  await requireAdminPageAccess("feedback:read")
   const feedback = await getAdminFeedbackOverview()
 
   return (

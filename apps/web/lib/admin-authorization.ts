@@ -1,10 +1,12 @@
 import "server-only";
+import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "./supabase/admin";
 import { createServerClient } from "./supabase/server";
 import { isConfigurationUnavailableError } from "./configuration-error";
 import { getTestAuthUser, isTestAuthUserId } from "./test-auth";
 import {
+  AdminAuthorizationError,
   authorizeAdminPrincipal,
 } from "./admin-authorization-policy";
 export {
@@ -88,6 +90,32 @@ export async function requireAdminRequest(
   permission: AdminPermission,
 ) {
   return requireAdminPrincipal(permission);
+}
+// Every admin page (not just the layout) needs its own permission check,
+// since the layout's own check only covers the blanket "overview:read"
+// gate - a role missing one specific section's permission (e.g. "analyst",
+// which lacks users:read/audit:read) is still correctly blocked by the
+// page's own requireAdminPrincipal call, but that call's
+// AdminAuthorizationError was previously left to propagate uncaught past
+// the layout (whose try/catch only wraps its own synchronous body, not a
+// child page's separate async render) up to the app's generic root
+// error.tsx - a confusing "This view needs a refresh" message plus a
+// spurious Sentry report, for what is really just an expected
+// authorization boundary, not a crash. Pages should call this instead of
+// requireAdminPrincipal directly, mirroring the layout's own redirect.
+export async function requireAdminPageAccess(
+  permission: AdminPermission,
+): Promise<AdminPrincipal> {
+  try {
+    return await requireAdminPrincipal(permission);
+  } catch (error) {
+    if (error instanceof AdminAuthorizationError) {
+      redirect(
+        error.status === 401 ? "/admin/login" : "/admin/login?adminDenied=1",
+      );
+    }
+    throw error;
+  }
 }
 export function isSameOriginMutation(request: Request) {
   const origin = request.headers.get("origin");
