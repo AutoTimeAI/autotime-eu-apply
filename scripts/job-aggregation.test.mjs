@@ -49,6 +49,17 @@ test("normalises Personio XML", async () => {
   const fetchXml = async () => new Response("<workzag-jobs><position><id>1</id><name>Developer</name><office>Berlin</office></position></workzag-jobs>");
   const jobs = await new PersonioFeed(fetchXml).fetchJobs("acme"); assert.equal(jobs[0].title, "Developer"); assert.equal(jobs[0].atsPlatform, "personio");
 });
+test("caps an oversized Personio feed before regex-scanning it, instead of scanning it unbounded", async () => {
+  const padding = "x".repeat(6_000_000);
+  const fetchXml = async () => new Response(`<workzag-jobs><!--${padding}--><position><id>1</id><name>Developer</name><office>Berlin</office></position></workzag-jobs>`);
+  const start = Date.now();
+  const jobs = await new PersonioFeed(fetchXml).fetchJobs("acme");
+  assert.ok(Date.now() - start < 2000);
+  // The padding comment pushes the real <position> past the 5,000,000
+  // character cap, so it's truncated away rather than scanned - this
+  // asserts the cap actually applies, not just that scanning is fast.
+  assert.equal(jobs.length, 0);
+});
 test("normalises Recruitee public careers offers and drops incomplete entries", async () => {
   const jobs = await new RecruiteeFeed(json({ offers: [{ title: "Engineer", careers_url: "https://acme.recruitee.com/o/engineer", city: "Dublin", country: "Ireland", created_at: "2026-08-18T10:00:00Z", description: "Build reliable systems" }, { title: "Missing URL" }] })).fetchJobs("acme");
   assert.deepEqual(jobs, [{ title: "Engineer", company: "acme", location: "Dublin, Ireland", url: "https://acme.recruitee.com/o/engineer", postedDate: "2026-08-18T10:00:00Z", atsPlatform: "recruitee", descriptionRaw: "Build reliable systems" }]);
@@ -220,4 +231,14 @@ test("every cron-triggered edge function compares its secret in constant time", 
       files[index],
     );
   }
+});
+
+test("the sync-job-sources cron caps an oversized Personio feed before regex-scanning it", async () => {
+  const source = await readFile(
+    new URL("../supabase/functions/sync-job-sources/index.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const MAX_PERSONIO_XML_LENGTH = 5_000_000;/);
+  assert.match(source, /\.slice\(0,MAX_PERSONIO_XML_LENGTH\)/);
 });
