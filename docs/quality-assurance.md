@@ -756,6 +756,24 @@ stays the single evidenced record of what has and hasn't been checked.
   local pure-function state machine at all; `packages/shared/src` has no
   transition-guard pattern anywhere. **No fix needed** - #132 and #133 are
   the complete set for this bug class.
+- **ESCO job-classification scoring** (2026-08-22): read
+  `classifyJobToEsco` (`lib/esco/classify-job.ts`) and `score-job`'s
+  matched/missing-skill computation in full. No clear-cut logic bug -
+  the exact-match path, `words()`'s Unicode-normalization for accent
+  insensitivity, and the matched/missing skill split (essential skills
+  cross-referenced against confirmed `user_skill_profile` entries) are all
+  sound. **Judgment call for the founder, not changed**: the token-overlap
+  confidence score is normalized by the *occupation's* own token count
+  (`overlap = matchingTokens / occupationTokenCount`), not the job
+  description's - this systematically inflates confidence for occupations
+  with short preferred-label/description text relative to occupations
+  with long, detailed ones, since a short label needs fewer matching
+  tokens to reach a high overlap ratio. This is a modeling/tuning
+  characteristic of a deliberately simple bag-of-words classifier, not an
+  implementation error with an obviously "correct" fix - flagging for the
+  founder's awareness rather than changing the scoring formula
+  unilaterally, since the intended precision/recall balance for this
+  feature isn't something to guess at.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
