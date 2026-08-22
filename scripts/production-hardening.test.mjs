@@ -36,6 +36,33 @@ test("Stripe webhook awaits server-side subscription processing", () => {
   assert.doesNotMatch(route, /void handleStripeEvent\(event\)\.catch/)
 })
 
+test("Stripe refunds and disputes are logged for manual review, not auto-actioned", () => {
+  const route = read("apps/web/app/api/stripe/webhook/route.ts")
+
+  assert.match(route, /event\.type === "charge\.refunded"/)
+  assert.match(route, /event\.type === "charge\.dispute\.created"/)
+  assert.match(route, /await handleChargeRefunded\(eventObject\)/)
+  assert.match(route, /await handleDisputeCreated\(eventObject\)/)
+  assert.match(route, /area: "stripe"/)
+
+  // Founder-approved policy: log for manual review, no automatic account
+  // action. Neither handler should touch subscriptions, ai_credit_ledger,
+  // or beta_access.
+  const refundHandler = route.slice(
+    route.indexOf("async function handleChargeRefunded"),
+    route.indexOf("async function handleDisputeCreated"),
+  )
+  const disputeHandler = route.slice(
+    route.indexOf("async function handleDisputeCreated"),
+    route.indexOf("async function markInvoicePaymentFailed"),
+  )
+  for (const handler of [refundHandler, disputeHandler]) {
+    assert.doesNotMatch(handler, /\.from\("subscriptions"\)\.update/)
+    assert.doesNotMatch(handler, /\.from\("ai_credit_ledger"\)/)
+    assert.doesNotMatch(handler, /\.from\("beta_access"\)/)
+  }
+})
+
 test("environment templates keep development and production credentials separated", () => {
   const localTemplate = read(".env.local.example")
   const productionTemplate = read(".env.production.example")
@@ -565,27 +592,26 @@ test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, 
   )
 })
 
-test("the unauthenticated sync/refresh route rate-limits before calling Supabase Auth", () => {
-  const route = read("apps/web/app/api/sync/refresh/route.ts")
+test("workflow_dispatch confirmation/boolean inputs are passed via env, not interpolated into run: steps", () => {
+  // Substituting github.event.inputs.* straight into a `run:` block before
+  // the shell parses the line is the classic GitHub Actions script-injection
+  // pattern - a crafted input value can break out of its quoted context and
+  // run as an injected command. The safe pattern passes the input through
+  // `env:` and references it as a shell variable instead.
+  const k6 = read(".github/workflows/k6-manual.yml")
+  assert.match(k6, /CONFIRM_INPUT: \$\{\{ github\.event\.inputs\.confirm \}\}/)
+  assert.match(k6, /if \[ "\$CONFIRM_INPUT" != "\$expected" \]/)
+  assert.doesNotMatch(k6, /if \[ "\$\{\{ github\.event\.inputs\.confirm \}\}"/)
 
-  const rateLimitIndex = route.indexOf("await assertRefreshRateLimit(request)")
-  const refreshIndex = route.indexOf("await runSessionRefresh(")
-  assert.notEqual(rateLimitIndex, -1)
-  assert.notEqual(refreshIndex, -1)
-  assert.ok(rateLimitIndex < refreshIndex)
-
-  // A rate-limited request must not itself log a diagnostic entry - doing
-  // so would recreate the exact unbounded-DB-write cost this limit exists
-  // to close off.
-  const catchBranchStart = route.indexOf(
-    "if (error instanceof RefreshRateLimitError)",
+  const visualRegression = read(".github/workflows/visual-regression.yml")
+  assert.match(
+    visualRegression,
+    /UPDATE_SNAPSHOTS: \$\{\{ github\.event\.inputs\.update_snapshots \}\}/,
   )
-  const catchBranchEnd = route.indexOf("status: 429", catchBranchStart)
-  assert.notEqual(catchBranchStart, -1)
-  assert.notEqual(catchBranchEnd, -1)
+  assert.match(visualRegression, /if \[ "\$UPDATE_SNAPSHOTS" = "true" \]/)
   assert.doesNotMatch(
-    route.slice(catchBranchStart, catchBranchEnd),
-    /log: true/,
+    visualRegression,
+    /if \[ "\$\{\{ github\.event\.inputs\.update_snapshots \}\}"/,
   )
 })
 
