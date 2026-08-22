@@ -173,6 +173,32 @@ export async function upsertInterview(
     created_at: interview.createdAt,
   };
 
+  // application_id and job_id only have to reference existing rows
+  // somewhere (the FKs don't check ownership), so without this a caller
+  // could link their own interview to another user's application/job -
+  // not a read leak (readInterviewWorkflow still scopes by user_id), but
+  // both FKs are "on delete cascade": the real owner deleting their own
+  // application or job would then silently delete this unrelated interview
+  // (and its questions/preparation snapshots, which cascade off it in turn).
+  const [{ data: referencedApplication }, { data: referencedJob }] = await Promise.all([
+    client
+      .from("job_workflow_applications")
+      .select("id")
+      .eq("id", interview.applicationId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+    client
+      .from("job_workflow_jobs")
+      .select("id")
+      .eq("id", interview.jobId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+
+  if (!referencedApplication || !referencedJob) {
+    throw new Error("Referenced application or job does not belong to this account.");
+  }
+
   const { data: existing } = await client
     .from("interview_records")
     .select("updated_at")
