@@ -1,5 +1,13 @@
 import { inflateRawSync } from "node:zlib"
 
+// The overall upload is capped at 5MB, but that only bounds the compressed
+// size of this one zip entry - deflate's compression ratio can exceed
+// 1000:1 on crafted repetitive input, so an attacker-controlled
+// document.xml entry could otherwise decompress to several GB and OOM the
+// function. Any real CV's document.xml is a small fraction of a 5MB file;
+// this caps decompression far above that while still bounding the worst case.
+const maxDecompressedEntryBytes = 50 * 1024 * 1024
+
 type ZipEntry = {
   compressedSize: number
   compressionMethod: number
@@ -80,19 +88,32 @@ function readZipEntry(buffer: Buffer, entry: ZipEntry): Buffer {
   }
 
   if (entry.compressionMethod === 8) {
-    return inflateRawSync(compressed)
+    try {
+      return inflateRawSync(compressed, { maxOutputLength: maxDecompressedEntryBytes })
+    } catch {
+      throw new Error("DOCX file content is too large to read.")
+    }
   }
 
   throw new Error("DOCX compression type is not supported.")
 }
 
+const xmlEntities: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&apos;": "'"
+}
+
+// Decoding &amp; in a separate pass before &lt;/&gt;/etc. is a classic
+// double-escaping bug: text that was legitimately double-escaped (the
+// literal two characters "&lt;", written in the source XML as
+// "&amp;lt;") would decode in two steps into a raw "<" instead of staying
+// "&lt;". Matching every entity in one pass avoids re-scanning content a
+// prior replacement already produced.
 function decodeXmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
+  return value.replace(/&amp;|&lt;|&gt;|&quot;|&apos;/g, (match) => xmlEntities[match])
 }
 
 function documentXmlToText(xml: string): string {
