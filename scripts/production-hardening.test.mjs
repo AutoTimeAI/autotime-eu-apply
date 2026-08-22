@@ -565,6 +565,30 @@ test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, 
   )
 })
 
+test("the unauthenticated sync/refresh route rate-limits before calling Supabase Auth", () => {
+  const route = read("apps/web/app/api/sync/refresh/route.ts")
+
+  const rateLimitIndex = route.indexOf("await assertRefreshRateLimit(request)")
+  const refreshIndex = route.indexOf("await runSessionRefresh(")
+  assert.notEqual(rateLimitIndex, -1)
+  assert.notEqual(refreshIndex, -1)
+  assert.ok(rateLimitIndex < refreshIndex)
+
+  // A rate-limited request must not itself log a diagnostic entry - doing
+  // so would recreate the exact unbounded-DB-write cost this limit exists
+  // to close off.
+  const catchBranchStart = route.indexOf(
+    "if (error instanceof RefreshRateLimitError)",
+  )
+  const catchBranchEnd = route.indexOf("status: 429", catchBranchStart)
+  assert.notEqual(catchBranchStart, -1)
+  assert.notEqual(catchBranchEnd, -1)
+  assert.doesNotMatch(
+    route.slice(catchBranchStart, catchBranchEnd),
+    /log: true/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
