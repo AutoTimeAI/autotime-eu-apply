@@ -88,8 +88,16 @@ export async function readJobWorkflow(
   userId: string,
 ): Promise<{ jobs: JobRecord[]; applications: ApplicationWorkspace[] }> {
   const [jobsResult, applicationsResult, snapshotsResult] = await Promise.all([
-    client.from("job_workflow_jobs").select("*").eq("user_id", userId),
-    client.from("job_workflow_applications").select("*").eq("user_id", userId),
+    client
+      .from("job_workflow_jobs")
+      .select("*")
+      .eq("user_id", userId)
+      .is("deleted_at", null),
+    client
+      .from("job_workflow_applications")
+      .select("*")
+      .eq("user_id", userId)
+      .is("deleted_at", null),
     client
       .from("job_workflow_analysis_snapshots")
       .select("*")
@@ -148,6 +156,7 @@ export async function upsertJob(
     .select("updated_at")
     .eq("id", job.id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (existing && existing.updated_at !== expectedUpdatedAt)
@@ -243,6 +252,7 @@ export async function upsertApplication(
     .select("updated_at")
     .eq("id", application.id)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (existing && existing.updated_at !== expectedUpdatedAt)
@@ -264,4 +274,72 @@ export async function upsertApplication(
     throw new JobWorkflowConflictError("application", application.id);
   if (error || !data) throw new Error("Application could not be saved.");
   return applicationFromRow(data);
+}
+
+// Soft delete, not a real SQL delete: readJobWorkflow filters out rows with
+// deleted_at set, so this leaves a tombstone rather than removing the row,
+// which is what lets reconciliation on other devices/tabs learn the item is
+// gone instead of silently re-adopting it from the server on the next sync.
+// Deleting a job cascades the tombstone onto its own application (mirroring
+// the real FK's `on delete cascade`), since an application whose job no
+// longer exists locally isn't a state any client can meaningfully show.
+export async function softDeleteJobWorkflowItems(
+  client: SupabaseClient<Database>,
+  userId: string,
+  jobIds: string[],
+  applicationIds: string[],
+): Promise<{ deletedJobIds: string[]; deletedApplicationIds: string[] }> {
+  const deletedAt = new Date().toISOString();
+  const deletedJobIds: string[] = [];
+  const deletedApplicationIds: string[] = [];
+
+  if (jobIds.length) {
+    const { data: cascaded } = await client
+      .from("job_workflow_applications")
+      .select("id")
+      .eq("user_id", userId)
+      .in("job_id", jobIds)
+      .is("deleted_at", null);
+
+    const { data: deletedJobs, error: jobError } = await client
+      .from("job_workflow_jobs")
+      .update({ deleted_at: deletedAt })
+      .eq("user_id", userId)
+      .in("id", jobIds)
+      .is("deleted_at", null)
+      .select("id");
+    if (jobError) throw new Error("Jobs could not be deleted.");
+    deletedJobIds.push(...(deletedJobs ?? []).map((row) => row.id));
+
+    const cascadedIds = (cascaded ?? []).map((row) => row.id);
+    if (cascadedIds.length) {
+      const { data: cascadedApplications, error: cascadeError } = await client
+        .from("job_workflow_applications")
+        .update({ deleted_at: deletedAt })
+        .eq("user_id", userId)
+        .in("id", cascadedIds)
+        .select("id");
+      if (cascadeError) throw new Error("Applications could not be deleted.");
+      deletedApplicationIds.push(
+        ...(cascadedApplications ?? []).map((row) => row.id),
+      );
+    }
+  }
+
+  const remainingApplicationIds = applicationIds.filter(
+    (id) => !deletedApplicationIds.includes(id),
+  );
+  if (remainingApplicationIds.length) {
+    const { data, error } = await client
+      .from("job_workflow_applications")
+      .update({ deleted_at: deletedAt })
+      .eq("user_id", userId)
+      .in("id", remainingApplicationIds)
+      .is("deleted_at", null)
+      .select("id");
+    if (error) throw new Error("Applications could not be deleted.");
+    deletedApplicationIds.push(...(data ?? []).map((row) => row.id));
+  }
+
+  return { deletedJobIds, deletedApplicationIds };
 }

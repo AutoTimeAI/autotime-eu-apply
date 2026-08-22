@@ -146,6 +146,42 @@ test("applications reconcile independently of jobs using the same rules", () => 
   );
 });
 
+test("a job pending deletion is not resurrected even though the server still has it", () => {
+  const result = reconcileJobWorkflow({
+    localJobs: [],
+    localApplications: [],
+    server: { jobs: [job("job-1", "2026-01-01T00:00:00.000Z")], applications: [] },
+    pendingDeletedJobIds: ["job-1"],
+  });
+  assert.equal(result.jobs.length, 0);
+  assert.equal(result.jobsToUpload.length, 0);
+});
+
+test("an application pending deletion is not resurrected even though the server still has it", () => {
+  const result = reconcileJobWorkflow({
+    localJobs: [],
+    localApplications: [],
+    server: {
+      jobs: [],
+      applications: [application("app-1", "job-1", "2026-01-01T00:00:00.000Z")],
+    },
+    pendingDeletedApplicationIds: ["app-1"],
+  });
+  assert.equal(result.applications.length, 0);
+  assert.equal(result.applicationsToUpload.length, 0);
+});
+
+test("pending deletion also suppresses a still-present local copy, not just the server's", () => {
+  const result = reconcileJobWorkflow({
+    localJobs: [job("job-1", "2026-01-01T00:00:00.000Z")],
+    localApplications: [],
+    server: null,
+    pendingDeletedJobIds: ["job-1"],
+  });
+  assert.equal(result.jobs.length, 0);
+  assert.equal(result.jobsToUpload.length, 0);
+});
+
 test("empty local and empty server reconcile to nothing", () => {
   const result = reconcileJobWorkflow({
     localJobs: [],

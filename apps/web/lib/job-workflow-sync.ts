@@ -163,6 +163,11 @@ export const jobWorkflowUploadRequestSchema = z.object({
   ),
 });
 
+export const jobWorkflowDeleteRequestSchema = z.object({
+  jobIds: z.array(z.string()).default([]),
+  applicationIds: z.array(z.string()).default([]),
+});
+
 function laterOf(a: string, b: string): "a" | "b" {
   return new Date(a).getTime() >= new Date(b).getTime() ? "a" : "b";
 }
@@ -180,14 +185,27 @@ export type JobWorkflowReconciliation = {
 // Per-record reconciliation by id, last-write-wins by updatedAt - not a
 // single-object compare like reconcileMobilityProfiles, since this feature
 // is many-rows-per-user (see the note in the module comment above).
+//
+// pendingDeletedJobIds/pendingDeletedApplicationIds are ids the caller
+// already knows it deleted locally but hasn't (yet, or successfully)
+// confirmed with a DELETE call to the server - e.g. the browser closed
+// mid-request, or the call failed while offline. Without this, an
+// "exists on the server, not present locally" row is indistinguishable
+// from a genuinely new server-only row (the correct case for a device that
+// has never synced before), so it would otherwise be silently resurrected
+// on every reconciliation until the delete call finally succeeds.
 export function reconcileJobWorkflow({
   localJobs,
   localApplications,
   server,
+  pendingDeletedJobIds = [],
+  pendingDeletedApplicationIds = [],
 }: {
   localJobs: JobRecord[];
   localApplications: ApplicationWorkspace[];
   server: JobWorkflowServerState | null;
+  pendingDeletedJobIds?: string[];
+  pendingDeletedApplicationIds?: string[];
 }): JobWorkflowReconciliation {
   const serverJobsById = new Map((server?.jobs ?? []).map((job) => [job.id, job]));
   const serverApplicationsById = new Map(
@@ -197,11 +215,14 @@ export function reconcileJobWorkflow({
   const localApplicationsById = new Map(
     localApplications.map((application) => [application.id, application]),
   );
+  const pendingDeletedJobIdSet = new Set(pendingDeletedJobIds);
+  const pendingDeletedApplicationIdSet = new Set(pendingDeletedApplicationIds);
 
   const jobs: JobRecord[] = [];
   const jobsToUpload: JobWorkflowReconciliation["jobsToUpload"] = [];
   const allJobIds = new Set([...localJobsById.keys(), ...serverJobsById.keys()]);
   for (const id of allJobIds) {
+    if (pendingDeletedJobIdSet.has(id)) continue;
     const local = localJobsById.get(id);
     const remote = serverJobsById.get(id);
     if (local && !remote) {
@@ -227,6 +248,7 @@ export function reconcileJobWorkflow({
     ...serverApplicationsById.keys(),
   ]);
   for (const id of allApplicationIds) {
+    if (pendingDeletedApplicationIdSet.has(id)) continue;
     const local = localApplicationsById.get(id);
     const remote = serverApplicationsById.get(id);
     if (local && !remote) {
