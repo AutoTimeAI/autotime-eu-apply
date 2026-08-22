@@ -294,6 +294,7 @@ stays the single evidenced record of what has and hasn't been checked.
 | #127 | **Two Sentry fields left out of an existing redaction pass**: `filterSentryEvent` already redacts a secret-bearing URL embedded in free text for `event.request.url` and breadcrumb `message` (specifically built to stop the QA session-bootstrap URL's `?secret=...` from reaching Sentry verbatim), but two structurally identical free-text fields were never covered: `event.exception.values[].value` (the thrown Error's own message text) and the top-level `event.message` (used for `Sentry.captureMessage` calls). Checked directly for a live instance - grepped every interpolated `throw new Error(\`...\`)` in the app - and found none that embed a secret-bearing URL today (only HTTP status codes and a non-secret Stripe lookup key), so this isn't closing an active leak. Same defense-in-depth reasoning as #125: two fields identical in risk to already-covered ones, left uncovered only because nothing happened to write a secret through them yet. Fixed by running the same redaction pass over both fields | `lib/sentry-privacy.ts` |
 | #129 | **Concurrent-refresh race in the extension's session logic**: found while auditing how the extension stores and accesses its dashboard auth token (see also the judgment call below). `lib/session.ts`'s `refreshSession()` had no lock around the refresh HTTP call - if two call sites both saw an expiring session at roughly the same time, both would POST the same stale `refreshToken` to `/api/sync/refresh` concurrently. Supabase refresh tokens are single-use/rotating, so only one concurrent request can succeed, but the code treated any non-ok/error response as a fully invalid session and called `clearAccountSession()`, signing the user out even when a sibling call had just obtained a perfectly good new token moments earlier - a real, accidentally-triggerable bug. Fixed by sharing a single in-flight refresh promise so every concurrent caller awaits the one real attempt instead of racing separate HTTP calls against the same single-use token. Also fixed a pre-existing extensionless relative import in `session.ts` that made it untestable directly from the plain-node test harness | `apps/extension/lib/session.ts` |
 | #130 | **Unbounded regex scan on untrusted page text**: audited every regex in the extension's page-parsing code for ReDoS (the content script runs regex against arbitrary-length text from any website, injected on every page by design). No genuinely exploitable catastrophic-backtracking pattern exists anywhere - every regex here uses single-level quantifiers or negated-character-class matching, never the nested-quantifier shapes (`(a+)+`, `(.*)+`) that cause exponential blowup. One real inconsistency, not exponential but still unbounded: `inferLocationSignalFromText` ran 9 unanchored regex patterns directly against the full, uncapped job description, unlike its siblings in the same file (`isLikelyShortFieldValue`, `isLikelyLocationValue`), which check length before running their own regexes - an unanchored pattern re-attempts from every position, so scan cost scales with input length with nothing bounding it. Fixed by capping the scanned text at 20,000 characters (far beyond any real job description) before the pattern loop, matching the length-then-regex discipline already used by its siblings. New test guards against this scan ever going unbounded again (a 500,000-character padded description now resolves in well under a second) | `apps/extension/lib/job-page.ts` |
+| #131 | **Inconsistent friction-penalty clamping in relocation-fit scoring**: audited the core Decision Index / fit-scoring engine (`packages/shared/src/fit-model.ts`) for business-logic correctness - the "Apply now/Stretch/Skip" math real users rely on for real decisions, not just a security surface. `getRelocationFit()` computes a `frictionPenalty` from the target country's `relocationFriction` (high=8, low=-5, medium=0); two of its three scoring branches clamp it with `Math.max(frictionPenalty, 0)` before subtracting (so "low" friction never adds a bonus, only avoids the high-friction penalty), but the third branch (onsite job, unclear relocation willingness) subtracted the raw unclamped value, letting a "low" friction country score a +5 bonus the other two branches deliberately withhold. Not reachable with live data today (every country in `country-rules.ts` is currently "high" or "medium", none "low"), but "low" is a real, documented `RelocationFriction` value and the two sibling branches already establish the intended behavior in this exact function - would silently misscore the moment a "low" friction country is added. Fixed by applying the same clamp to the third branch. Verified via the full existing test suite (unchanged, since no live country data exercises the "low" branch either way) plus manual arithmetic tracing against the two sibling cases; did not export the internal `getRelocationFit` function just to add a direct unit test, since only `evaluate*` functions are part of the shared package's public API | `packages/shared/src/fit-model.ts` |
 
 ### Verified, not just assumed
 
@@ -684,6 +685,28 @@ stays the single evidenced record of what has and hasn't been checked.
   before untrusted input ever reaches code that uses these shared types,
   confirmed by cross-referencing several already-audited routes. **No fix
   needed anywhere in this pass.**
+- **Decision Index / fit-scoring engine, broader correctness sweep**
+  (2026-08-22, alongside #131): read `fit-model.ts`, `country-rules.ts`,
+  and the international assessment/migration/orchestration modules in
+  full and hand-traced worked examples through the most complex scoring
+  functions, not just pattern-matched for suspicious-looking code. `evaluateAutoTimeFitScore`'s
+  score-breakdown `maxPoints` sum to exactly 100 as documented; every
+  sub-score is clamped to its own max; label/threshold ladders
+  (`getStatus` 35/55/75, `getFitLabel` 50/65/80, `getApplicationPriority`
+  50/65/80, `orchestration.ts`'s `fitDecision` 50/65) are all
+  non-overlapping and consistently `>=`-based with no gaps between them;
+  `evaluateCountryFit`'s `overallScore` averages a fixed 6-component
+  array, so no divide-by-zero risk; `getLanguageBarrierScore`'s
+  low-is-easier orientation was checked against its actual UI consumer
+  and is correctly signed; `orchestrateJobDecision`'s branch order only
+  ever escalates caution (nothing overrides toward "Apply"), the safe
+  direction for this product. The one real bug found is #131 above.
+  **Judgment call for the founder, not changed**: `getConfidence` returns
+  `"High"` confidence whenever a hard blocker is present - i.e. it
+  measures certainty-of-verdict, not positivity-of-outcome. Plausible
+  intentional design ("we're confident this should be skipped"), but
+  worth confirming that's the intended reading, since "High confidence"
+  displayed next to a rejection could read as counterintuitive in the UI.
 
 Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
