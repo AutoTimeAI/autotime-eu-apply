@@ -1,0 +1,13 @@
+-- get_monthly_ai_calls (20260507100000_billing.sql) has never had an
+-- explicit grant/revoke statement, unlike every sibling read-only RPC in
+-- this codebase (e.g. get_ai_credit_balance in
+-- 20260815130000_ai_credit_ledger.sql). It is safe today only because it
+-- is `security invoker` and reads public.ai_usage, which has an RLS policy
+-- scoping every row to `auth.uid() = user_id` - so a spoofed p_user_id
+-- argument simply returns nothing, regardless of caller. That safety comes
+-- from RLS, not from an explicit grant decision, and it's the only RPC in
+-- this codebase left that way. This migration makes the grant explicit and
+-- intentional, matching get_ai_credit_balance's already-established
+-- pattern, with no change in actual behaviour (Postgres's default PUBLIC
+-- grant already allowed this).
+grant execute on function public.get_monthly_ai_calls(uuid) to authenticated;

@@ -539,6 +539,17 @@ test("the AI-call reservation RPC is atomic per user and refunds a consumed cred
   )
 })
 
+test("get_monthly_ai_calls has an explicit grant, matching every sibling RPC", () => {
+  const migration = read(
+    "supabase/migrations/20260822100000_pin_get_monthly_ai_calls_grant.sql",
+  )
+
+  assert.match(
+    migration,
+    /grant execute on function public\.get_monthly_ai_calls\(uuid\) to authenticated;/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
