@@ -10,7 +10,7 @@ const sensitiveKeyPattern =
 // exception message, or the top-level event.message - gets its value
 // scrubbed even though the field carrying that string isn't itself named
 // "secret" or "token" (e.g. request.url, breadcrumb.message).
-function redactSensitiveUrlText(value: string): string {
+export function redactSensitiveUrlText(value: string): string {
   return value.replace(
     /([?&]?)([a-zA-Z0-9_.-]+)=([^&\s"']*)/g,
     (match, separator: string, key: string, urlValue: string) =>
@@ -42,7 +42,7 @@ export function isSentryProductionEnvironment(): boolean {
   return getSentryEnvironment() === "production"
 }
 
-function redactSensitiveValue(value: unknown): unknown {
+export function redactSensitiveValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(redactSensitiveValue)
   }
