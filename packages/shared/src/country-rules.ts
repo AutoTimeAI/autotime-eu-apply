@@ -192,6 +192,28 @@ export const countryRules: CountryRule[] = [
   }
 ]
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+// A bare `.includes()` check lets a short alias like "uk" match inside an
+// unrelated word that happens to start the same way (e.g. "ukraine"),
+// silently returning the wrong country's rules. Require the shorter string
+// to appear as a whole word (bounded by the string edge or a non-alphanumeric
+// character) inside the longer one.
+function containsWholeWord(haystack: string, needle: string): boolean {
+  if (!needle) {
+    return false
+  }
+  const boundary = "(?:^|[^a-z0-9])"
+  const boundaryEnd = "(?:[^a-z0-9]|$)"
+  return new RegExp(`${boundary}${escapeRegExp(needle)}${boundaryEnd}`).test(haystack)
+}
+
+function matchesAlias(target: string, alias: string): boolean {
+  return containsWholeWord(target, alias) || containsWholeWord(alias, target)
+}
+
 export function getCountryRule(targetCountry: string) {
   const target = targetCountry.trim().toLowerCase()
 
@@ -201,7 +223,7 @@ export function getCountryRule(targetCountry: string) {
 
   return (
     countryRules.find((rule) =>
-      rule.aliases.some((alias) => target.includes(alias) || alias.includes(target))
+      rule.aliases.some((alias) => matchesAlias(target, alias))
     ) ?? countryRules[countryRules.length - 1]
   )
 }
