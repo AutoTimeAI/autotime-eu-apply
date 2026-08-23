@@ -7,6 +7,15 @@ export function getStatusTone(message: string | null | undefined): StatusTone {
     return "info"
   }
 
+  // "session expired" is listed below as an intentional warning (a routine
+  // re-auth prompt, not a failure), but the generic \bexpired\b in the error
+  // list below matches first as a substring of that same phrase - checking
+  // it here, before the generic error classification, is what actually
+  // lets that intent take effect.
+  if (value.includes("session expired")) {
+    return "warning"
+  }
+
   if (
     /\b(failed|failure|error|could not|unable|unavailable|blocked|declined|invalid|unauthori[sz]ed|expired|missing|not found)\b/.test(
       value
