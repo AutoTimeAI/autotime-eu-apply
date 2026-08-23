@@ -168,6 +168,15 @@ test("detects obvious application form fields", () => {
   assert.equal(detectFieldFromText("email", ""), "email")
   assert.equal(detectFieldFromText("tel", ""), "phone")
   assert.equal(detectFieldFromText("text", "mobile number"), "phone")
+  assert.equal(detectFieldFromText("text", "phone-number"), "phone")
+  assert.equal(detectFieldFromText("text", "Tel:"), "phone")
+})
+
+test("does not treat an unrelated word containing 'tel'/'phone'/'mobile' as a phone field", () => {
+  assert.equal(detectFieldFromText("text", "hotel preference"), null)
+  assert.equal(detectFieldFromText("text", "intel briefing"), null)
+  assert.equal(detectFieldFromText("text", "confirm you have a working microphone"), null)
+  assert.equal(detectFieldFromText("text", "automobile allowance"), null)
 })
 
 test("maps reusable answers to autofill fields", () => {

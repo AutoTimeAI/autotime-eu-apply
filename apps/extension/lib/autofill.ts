@@ -86,6 +86,20 @@ export function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term))
 }
 
+// A bare substring check matches "tel"/"phone"/"mobile" inside unrelated
+// words - "hotel", "intel", "cartel", "satellite", "microphone",
+// "automobile" - and silently fills the candidate's phone number into a
+// field that has nothing to do with a phone number. Require the term to
+// appear as a whole word, bounded by the string edge or a non-alphanumeric
+// character, so "phone-number"/"mobile_number"/"Tel:" still match.
+function includesAnyWholeWord(text: string, terms: string[]) {
+  const boundary = "(?:^|[^a-z0-9])"
+  const boundaryEnd = "(?:[^a-z0-9]|$)"
+  return terms.some((term) =>
+    new RegExp(`${boundary}${term}${boundaryEnd}`).test(text)
+  )
+}
+
 export function detectFieldFromText(
   inputType: string,
   inputText: string
@@ -98,7 +112,7 @@ export function detectFieldFromText(
 
   if (
     inputType === "tel" ||
-    includesAny(text, ["phone", "mobile", "telephone", "tel"])
+    includesAnyWholeWord(text, ["phone", "mobile", "telephone", "tel"])
   ) {
     return "phone"
   }
