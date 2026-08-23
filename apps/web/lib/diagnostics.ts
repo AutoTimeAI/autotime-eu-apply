@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { NextResponse, type NextRequest } from "next/server"
 import loggingConfig from "../../../config/monitoring/logging.json"
 import { getRequestIp } from "./request-ip"
+import { redactSensitiveUrlText, redactSensitiveValue } from "./sentry-privacy"
 import { createAdminClient } from "./supabase/admin"
 
 export type DiagnosticLevel = "severe" | "warn" | "info"
@@ -65,6 +66,16 @@ function getDiagnosticLevel(status: number | undefined): DiagnosticLevel {
   return loggingConfig.rules.httpStatus["200-399"] as DiagnosticLevel
 }
 
+// Layers two mechanisms rather than picking one: the config-driven
+// doNotLog list is this app's own explicit blocklist (e.g. "service_role",
+// which the broader pattern below doesn't cover) and is kept so nothing
+// currently relying on it silently loses coverage; sentry-privacy's
+// redactSensitiveValue adds the same recursive, regex-based key matching
+// (apikey/cookie/cv/phone/token/etc.) and free-text key=value scanning
+// already used for the Sentry pipeline, since this shallower,
+// exact-key-only check previously had no equivalent for common spellings
+// like "token", "cv", "resume", "jobDescription", or "phone", and never
+// looked past the top level of a nested object.
 function sanitizeDetails(details: Record<string, unknown> | undefined) {
   if (!details) {
     return undefined
@@ -72,12 +83,14 @@ function sanitizeDetails(details: Record<string, unknown> | undefined) {
 
   const blocked = new Set(loggingConfig.privacy.doNotLog.map((item) => item.toLowerCase()))
 
-  return Object.fromEntries(
+  const configRedacted = Object.fromEntries(
     Object.entries(details).map(([key, value]) => [
       key,
       blocked.has(key.toLowerCase()) ? "[redacted]" : value
     ])
   )
+
+  return redactSensitiveValue(configRedacted) as Record<string, unknown>
 }
 
 export function createDiagnosticId(): string {
@@ -146,24 +159,35 @@ export function logDiagnostic(
   details?: Record<string, unknown>
 ): void {
   const sanitizedDetails = sanitizeDetails(details)
-  const payload = {
+  // diagnostic.message was previously never redacted at all - only the
+  // separate `details` argument was. /api/diagnostics/client is a public,
+  // optionally-unauthenticated endpoint that accepts an arbitrary
+  // client-supplied message string, persisted verbatim into
+  // operational_logs (later readable through the admin monitoring UI) and
+  // logged to console. Redact it the same way free-text values are
+  // scanned for embedded secrets elsewhere in this codebase.
+  const sanitizedDiagnostic: DiagnosticPayload = {
     ...diagnostic,
+    message: redactSensitiveUrlText(diagnostic.message)
+  }
+  const payload = {
+    ...sanitizedDiagnostic,
     details: sanitizedDetails,
     diagnosticId: diagnostic.id
   }
 
   if (process.env.NEXT_RUNTIME !== "edge") {
     void import("./operational-logs").then(({ persistOperationalLog }) =>
-      persistOperationalLog({ details: sanitizedDetails, diagnostic })
+      persistOperationalLog({ details: sanitizedDetails, diagnostic: sanitizedDiagnostic })
     ).catch(() => undefined)
   }
 
-  if (diagnostic.level === "severe") {
+  if (sanitizedDiagnostic.level === "severe") {
     console.error("autotime_diagnostic", payload)
     return
   }
 
-  if (diagnostic.level === "warn") {
+  if (sanitizedDiagnostic.level === "warn") {
     console.warn("autotime_diagnostic", payload)
     return
   }

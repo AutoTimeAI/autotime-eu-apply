@@ -1029,6 +1029,42 @@ test("outreach route only refunds the AI credit reservation if the OpenAI call i
   )
 })
 
+test("diagnostics.ts reuses the Sentry pipeline's broader, recursive redaction instead of its own shallow, exact-key-only list", () => {
+  // sanitizeDetails previously only redacted a top-level, exact-match
+  // config list (email, access_token, refresh_token, authorization,
+  // password, secret, service_role) - common spellings like "token", "cv",
+  // "resume", "jobDescription" and "phone" were never redacted, nested
+  // objects were never scanned, and diagnostic.message (a public,
+  // optionally-unauthenticated endpoint accepts an arbitrary client-
+  // supplied message string, persisted into operational_logs and later
+  // readable through the admin monitoring UI) was never redacted at all.
+  const diagnostics = read("apps/web/lib/diagnostics.ts")
+  const sentryPrivacy = read("apps/web/lib/sentry-privacy.ts")
+
+  assert.match(
+    diagnostics,
+    /import \{ redactSensitiveUrlText, redactSensitiveValue \} from "\.\/sentry-privacy"/,
+  )
+  assert.match(diagnostics, /redactSensitiveValue\(configRedacted\)/)
+  assert.match(diagnostics, /message: redactSensitiveUrlText\(diagnostic\.message\)/)
+
+  const persistIndex = diagnostics.indexOf("persistOperationalLog(")
+  const sanitizedDiagnosticDefinitionIndex = diagnostics.indexOf(
+    "const sanitizedDiagnostic",
+  )
+  assert.notEqual(persistIndex, -1)
+  assert.notEqual(sanitizedDiagnosticDefinitionIndex, -1)
+  assert.ok(
+    sanitizedDiagnosticDefinitionIndex < persistIndex,
+    "the redacted diagnostic, not the original, must be what's persisted",
+  )
+
+  // The two redaction helpers must actually be exported for diagnostics.ts
+  // to reuse rather than reimplement them.
+  assert.match(sentryPrivacy, /export function redactSensitiveUrlText/)
+  assert.match(sentryPrivacy, /export function redactSensitiveValue/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
