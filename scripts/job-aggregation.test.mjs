@@ -8,7 +8,7 @@ import { AshbyFeed } from "../apps/web/lib/ats-feeds/ashby.ts";
 import { PersonioFeed } from "../apps/web/lib/ats-feeds/personio.ts";
 import { SmartRecruitersFeed } from "../apps/web/lib/ats-feeds/smartrecruiters.ts";
 import { RecruiteeFeed } from "../apps/web/lib/ats-feeds/recruitee.ts";
-import { buildOutreachPrompt } from "../apps/web/lib/outreach-drafter.ts";
+import { buildOutreachInstructions } from "../apps/web/lib/outreach-drafter.ts";
 import { classifyJobToEsco } from "../apps/web/lib/esco/classify-job.ts";
 import { buildQuestionnaireContext } from "../apps/web/lib/esco/questionnaire-context.ts";
 import { applicationRecordSchema } from "../packages/shared/src/schemas.ts";
@@ -65,12 +65,17 @@ test("normalises Recruitee public careers offers and drops incomplete entries", 
   assert.deepEqual(jobs, [{ title: "Engineer", company: "acme", location: "Dublin, Ireland", url: "https://acme.recruitee.com/o/engineer", postedDate: "2026-08-18T10:00:00Z", atsPlatform: "recruitee", descriptionRaw: "Build reliable systems" }]);
 });
 test("outreach prompt retains human-sent constraints", () => {
-  const prompt = buildOutreachPrompt({ jobTitle: "Engineer", companyName: "Acme", jobDescription: "Build secure APIs", recruiterName: "Sam", recruiterRole: "Recruiter", candidateSummary: "API engineer", candidateKeyStrengths: ["security"], channel: "linkedin_note", contactType: "recruiter" });
+  const prompt = buildOutreachInstructions({ channel: "linkedin_note", contactType: "recruiter" });
   assert.match(prompt, /Maximum 300 characters/); assert.match(prompt, /Do not invent facts/);
 });
 test("peer outreach is informational and does not ask about an application", () => {
-  const prompt = buildOutreachPrompt({ jobTitle: "Engineer", companyName: "Acme", jobDescription: "Build secure APIs", recruiterName: "Sam", recruiterRole: "Engineer", candidateSummary: "API engineer", candidateKeyStrengths: ["security"], channel: "email", contactType: "peer_target_role" });
+  const prompt = buildOutreachInstructions({ channel: "email", contactType: "peer_target_role" });
   assert.match(prompt, /informational networking/i); assert.match(prompt, /15-minute/i); assert.match(prompt, /Do not ask about an application/i); assert.match(prompt, /referral/i);
+});
+test("outreach instructions never embed caller-supplied free text, only the closed channel/contactType enums", () => {
+  const prompt = buildOutreachInstructions({ channel: "email", contactType: "recruiter" });
+  assert.doesNotMatch(prompt, /Build secure APIs/);
+  assert.doesNotMatch(prompt, /Acme/);
 });
 test("ATS CV renderer stays single-column and produces a non-empty text PDF", async () => {
   const source = await readFile(new URL("../apps/web/components/cv/CVRenderer.tsx", import.meta.url), "utf8");

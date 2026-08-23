@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
 import { getOpenAIEnv } from "./env.server"
 import type { CVData } from "./cv/types"
-import { buildOutreachPrompt, type OutreachContext } from "./outreach-drafter"
+import { buildOutreachInstructions, type OutreachContext } from "./outreach-drafter"
 import { buildQuestionnaireContext, type AccumulatedSkill } from "./esco/questionnaire-context"
 import {
   assertInterviewPrepReady,
@@ -873,7 +873,7 @@ export async function extractCvEnrichmentWithOpenAI({ content, sourceLabel }: { 
 
 const outreachDraftSchema = z.object({ subject: z.string().nullable(), body: z.string() })
 export async function draftOutreachWithOpenAI(context: OutreachContext) {
-  const result = await createJsonResponse({ instructions: `${buildOutreachPrompt(context)} ${UNTRUSTED_CONTENT_GUARD}`, input: context, schema: outreachDraftSchema })
+  const result = await createJsonResponse({ instructions: `${buildOutreachInstructions(context)}\n${UNTRUSTED_CONTENT_GUARD}`, input: context, schema: outreachDraftSchema })
   const wordCount = result.value.body.trim().split(/\s+/).filter(Boolean).length
   if (context.channel === "linkedin_note" && result.value.body.length > 300) throw new Error("LinkedIn note exceeds 300 characters")
   if (context.channel !== "linkedin_note" && wordCount > 150) throw new Error("Outreach draft exceeds 150 words")
