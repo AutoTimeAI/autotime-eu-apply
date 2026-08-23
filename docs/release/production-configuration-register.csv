@@ -1,0 +1,28 @@
+Configuration ID,Service,Variable/Control,Required,Environment,Presence Verified,Value Validated Safely,Owner,Evidence,Status,Notes
+CFG-001,App,NEXT_PUBLIC_AUTOTIME_ENV,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,No Vercel access from this assessment
+CFG-002,App,NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,Feature flag - confirm intended value for beta cohort
+CFG-003,App,AUTOTIME_JOB_WORKFLOW_SERVER_SYNC_ENABLED,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,Feature flag
+CFG-004,App,AUTOTIME_INTERVIEW_WORKFLOW_SERVER_SYNC_ENABLED,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,Feature flag
+CFG-005,Supabase,NEXT_PUBLIC_SUPABASE_URL,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,Must point to the production project, not dev
+CFG-006,Supabase,NEXT_PUBLIC_SUPABASE_ANON_KEY,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,Public key - low risk if exposed, but must match the URL above
+CFG-007,Supabase,SUPABASE_SERVICE_ROLE_KEY,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,CRITICAL secret - never requested or transmitted by this assessment
+CFG-008,Stripe,NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,Conditional (if paid beta),Production,Unverified,N/A,Founder,None,BLOCKED,Must be pk_live_ not pk_test_ in production per docs/environment-strategy.md
+CFG-009,Stripe,STRIPE_SECRET_KEY,Conditional,Production,Unverified,N/A,Founder,None,BLOCKED,CRITICAL secret - live vs test mode unverified from this seat
+CFG-010,Stripe,STRIPE_WEBHOOK_SECRET,Conditional,Production,Unverified,N/A,Founder,None,BLOCKED,Required for PAY-002 signature verification to function at all
+CFG-011,Stripe,STRIPE_PRO_MONTHLY_PRICE_ID,Conditional,Production,Unverified,N/A,Founder,None,BLOCKED,Must be a live price ID if paid beta is enabled
+CFG-012,Stripe,STRIPE_PRO_QUARTERLY_PRICE_ID,Conditional,Production,Unverified,N/A,Founder,None,BLOCKED,Same as above
+CFG-013,Stripe,STRIPE_AI_CREDIT_PACK_PRICE_ID,Conditional,Production,Unverified,N/A,Founder,None,BLOCKED,Same as above
+CFG-014,App,NEXT_PUBLIC_APP_URL,Yes,Production,Verified,Yes (format),This assessment,Confirmed https://autotime-eu-apply.vercel.app in .env.production.example,Presence and format verified,Actual deployed value not independently confirmed against Vercel
+CFG-015,AI,OPENAI_API_KEY,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,CRITICAL secret - real AI functionality depends on this
+CFG-016,Email,RESEND_API_KEY,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,CRITICAL secret
+CFG-017,Analytics,ANALYTICS_INTERNAL_SECRET,Yes,Production,Unverified,N/A,Founder,None,BLOCKED,Shared secret between apps/web and apps/analytics
+CFG-018,QA,QA_SESSION_BOOTSTRAP_SECRET,Yes (for this assessment's production smoke),Production,Unverified,N/A,Founder,None,BLOCKED,Needed to unblock UAT-003/production Playwright/Lighthouse-dashboard - highest-value item to close
+CFG-019,QA,QA_TEST_ACCOUNT_USER_ID,Yes (paired with above),Production,Unverified,N/A,Founder,None,BLOCKED,Same as above
+CFG-020,PostHog,NEXT_PUBLIC_POSTHOG_KEY,Optional,Production,Unverified,N/A,Founder,None,BLOCKED,Optional per .env.production.example comments
+CFG-021,PostHog,NEXT_PUBLIC_POSTHOG_HOST,Optional,Production,Unverified,N/A,Founder,None,BLOCKED,Optional
+CFG-022,Sentry,NEXT_PUBLIC_SENTRY_DSN,Optional but strongly recommended,Production,Unverified,N/A,Founder,None,BLOCKED,MON-### gates depend on this being set
+CFG-023,Sentry,SENTRY_DSN,Optional but strongly recommended,Production,Unverified,N/A,Founder,None,BLOCKED,Server-side DSN
+CFG-024,Sentry,SENTRY_AUTH_TOKEN,Optional (build-time source maps),Production,Unverified,N/A,Founder,None,BLOCKED,Not required for runtime redaction to work
+CFG-025,Sentry,SENTRY_ORG,Optional,Production,Unverified,N/A,Founder,None,BLOCKED,
+CFG-026,Sentry,SENTRY_PROJECT,Optional,Production,Unverified,N/A,Founder,None,BLOCKED,
+CFG-027,Checkly,CHECKLY_API_KEY / CHECKLY_ACCOUNT_ID,Optional (only if Checkly is deployed),Production,Unverified,N/A,Founder,None,BLOCKED,Not in .env.production.example - would need to be added if Checkly deployment proceeds
