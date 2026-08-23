@@ -1000,6 +1000,35 @@ test("saveCurrentTabAsApplication does not clobber a fresh deletion-aware applic
   assert.match(functionBody, /resurrectUrlKey: normalizeApplicationUrlKey\(details\.url\)/)
 })
 
+test("outreach route only refunds the AI credit reservation if the OpenAI call itself fails, not a later DB write", () => {
+  // cover-letter and tailor-cv routes only wrap the OpenAI call itself in
+  // the release-on-failure try/catch, then finalize (charge) the
+  // reservation before doing any DB persistence - a later DB failure after
+  // a successful, already-charged generation is not refunded. The outreach
+  // route previously wrapped both the OpenAI call AND the outreach_messages
+  // insert in one try/catch, so a transient DB failure right after a
+  // successful (and real-money) OpenAI call would call releaseAiCall,
+  // silently refunding a credit for a generation that had already
+  // succeeded and been paid for.
+  const route = read("apps/web/app/api/outreach/route.ts")
+
+  const releaseIndex = route.indexOf("releaseAiCall(reservationId)")
+  const finalizeIndex = route.indexOf("finalizeAiCall(reservationId")
+  const insertIndex = route.indexOf('.from("outreach_messages").insert(')
+
+  assert.notEqual(releaseIndex, -1)
+  assert.notEqual(finalizeIndex, -1)
+  assert.notEqual(insertIndex, -1)
+  assert.ok(
+    releaseIndex < finalizeIndex,
+    "release-on-failure must be scoped to the AI call, resolved before finalize runs",
+  )
+  assert.ok(
+    finalizeIndex < insertIndex,
+    "the DB insert must happen after the credit is finalized, so its own failure can't trigger a refund of an already-incurred cost",
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
