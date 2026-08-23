@@ -512,3 +512,25 @@ test("editing a reviewed answer invalidates final review and Ready", () => {
   assert.equal(value.status, "preparing");
   assert.throws(() => transitionInterview(value, "ready"));
 });
+test("readiness areas only report on categories this stage actually generates questions for", () => {
+  // A recruiter_screen interview's coverage never generates technical,
+  // scenario or job_risk questions - Array.every() on the empty filtered
+  // list used to vacuously report those areas "Complete" with zero prep
+  // work done, before a single question had even been looked at.
+  const value = createInterview({
+    userId,
+    application,
+    job,
+    stage: "recruiter_screen",
+    format: "phone",
+  });
+  const readiness = getInterviewReadiness(value);
+  const labels = readiness.areas.map((area) => area.label);
+
+  assert.ok(!labels.includes("Essential technical coverage"));
+  assert.ok(!labels.includes("Domain preparation"));
+  assert.ok(labels.includes("Role understanding"));
+  for (const area of readiness.areas) {
+    if (area.label === "Role understanding") assert.equal(area.complete, false);
+  }
+});

@@ -481,45 +481,59 @@ export function getInterviewReadiness(interview: InterviewRecord): {
 }
 
 function readinessAreas(interview: InterviewRecord) {
+  const relevantQuestions = (categories: InterviewQuestionCategory[]) =>
+    interview.questions.filter((item) => categories.includes(item.category));
+  // Array.every() vacuously returns true on an empty array. A stage's
+  // coverage map (see `coverage` above) only generates certain question
+  // categories - e.g. a recruiter_screen interview never generates
+  // "technical"/"scenario"/"job_risk" questions - so filtering to a
+  // category list a given stage never populates previously made that area
+  // silently report "Complete" with zero prep work done. Only report an
+  // area at all when it actually has relevant questions for this stage.
   const complete = (categories: InterviewQuestionCategory[]) =>
-    interview.questions
-      .filter((item) => categories.includes(item.category))
-      .every(
-        (item) =>
-          item.importance !== "high" ||
-          Boolean(
-            item.answerDraft?.confirmed &&
-            !item.answerDraft.unsupportedClaims.length,
-          ),
-      );
+    relevantQuestions(categories).every(
+      (item) =>
+        item.importance !== "high" ||
+        Boolean(
+          item.answerDraft?.confirmed &&
+          !item.answerDraft.unsupportedClaims.length,
+        ),
+    );
   return [
     {
       label: "Role understanding",
-      complete: complete(["motivation", "experience"]),
+      categories: ["motivation", "experience"] as InterviewQuestionCategory[],
     },
     {
       label: "Essential technical coverage",
-      complete: complete(["technical", "scenario", "job_risk"]),
+      categories: ["technical", "scenario", "job_risk"] as InterviewQuestionCategory[],
     },
     {
       label: "Behavioural evidence",
-      complete: complete(["behavioural", "stakeholder"]),
-    },
-    { label: "Domain preparation", complete: complete(["scenario"]) },
-    {
-      label: "Questions for interviewer",
-      complete: interview.questions.some(
-        (item) =>
-          item.category === "employer_questions" && item.answerDraft?.confirmed,
-      ),
+      categories: ["behavioural", "stakeholder"] as InterviewQuestionCategory[],
     },
     {
-      label: "Unresolved evidence warnings",
-      complete: !interview.questions.some(
-        (item) => item.answerDraft?.unsupportedClaims.length,
-      ),
+      label: "Domain preparation",
+      categories: ["scenario"] as InterviewQuestionCategory[],
     },
-  ];
+  ]
+    .filter((area) => relevantQuestions(area.categories).length > 0)
+    .map((area) => ({ label: area.label, complete: complete(area.categories) }))
+    .concat([
+      {
+        label: "Questions for interviewer",
+        complete: interview.questions.some(
+          (item) =>
+            item.category === "employer_questions" && item.answerDraft?.confirmed,
+        ),
+      },
+      {
+        label: "Unresolved evidence warnings",
+        complete: !interview.questions.some(
+          (item) => item.answerDraft?.unsupportedClaims.length,
+        ),
+      },
+    ]);
 }
 
 export function saveInterviewAnswer(
