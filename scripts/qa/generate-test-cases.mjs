@@ -146,6 +146,74 @@ const cases = [
   { id: "UAT-003", type: "E2E-journey", req: "REQ-UAT-01", risk: "R-UAT-03", pri: "High", comp: "Whole app", scenario: "Scenario 15: production smoke - public site, login, protected route, profile, jobs, application, AI (test mode), logout, monitoring", pre: "QA_SESSION_URL", data: "N/A", steps: "See tests/e2e/production/ specs", expected: "Every step passes against the real deployed app", env: "Production", auto: "Automated (existing, 9 specs) - blocked without QA_SESSION_URL", evidence: "Test output + trace", notes: "This is the single most valuable BLOCKED item to unblock - closes Gate 6" },
 ];
 
+// Real execution results from this pass (2026-08-23), applied by Test ID.
+// Only cases with genuine, verifiable evidence gathered this pass appear
+// here - everything else stays NOT RUN. TESTER/DATE/BRANCH/SHA are shared
+// since every one of these was executed in the same session against the
+// same commit.
+const TESTER = "Claude Code release-assurance assessment";
+const DATE = "2026-08-23";
+const BRANCH = "release-assurance/private-beta-2026-08";
+const SHA = "130ca9ae5f9038e4eece27ad9a3eb549af431a3a";
+const R = (status, actual, evidence) => ({ status, actual, evidence, tester: TESTER, date: DATE, branch: BRANCH, sha: SHA });
+
+const RESULTS = {
+  // Existing automated coverage, verified via the full pnpm test:unit run (CMD-003) - all fail 0
+  "AUTH-004": R("PASS", "Tab-character bypass rejected; regression test passes", "production-hardening.test.mjs output"),
+  "AUTH-005": R("PASS", "Redirect target preserved through login", "production-hardening.test.mjs output"),
+  "AUTH-007": R("PASS", "Session-expired renders as warning tone", "status-tone.test.mjs output, 3/3 cases pass"),
+  "RLS-001": R("PASS", "Cross-account job reference rejected", "production-hardening.test.mjs output"),
+  "RLS-002": R("PASS", "Cross-account interview reference rejected", "production-hardening.test.mjs output"),
+  "RLS-003": R("PASS", "Cross-account outreach job reference rejected", "outreach/route.ts code path + existing test"),
+  "RLS-005": R("PASS", "Atomic upsert confirmed, no read-then-branch race", "production-hardening.test.mjs output"),
+  "RLS-006": R("NOT RUN", "", "Requires production/staging Postgres access this assessment does not have (G-04)"),
+  "RLS-007": R("PASS", "Soft-delete tombstone excluded from reconciliation", "production-hardening.test.mjs output"),
+  "RLS-008": R("PASS", "Write errors now checked, not silently discarded", "production-hardening.test.mjs output"),
+  "RLS-009": R("NOT RUN", "", "Requires production/staging Postgres access this assessment does not have (G-04)"),
+  "ADMIN-001": R("PASS", "Zero direct requireAdminPrincipal usages found", "production-hardening.test.mjs output + SEC-011 manual sweep (ac3ec687)"),
+  "ADMIN-002": R("PASS", "All 9 admin API routes require requireAdminRequest with admin_memberships check", "SEC-011 full route sweep - code-level verification, not a live UI click-through per role"),
+  "ADMIN-003": R("PASS", "Same as ADMIN-002 - non-admin session rejected at API layer for every admin route", "SEC-011 full route sweep"),
+  "ADMIN-004": R("PASS", "Advisory lock taken before existence/version check", "production-hardening.test.mjs output"),
+  "ADMIN-005": R("PASS", "No endpoint exists that lets a non-admin write admin_memberships", "SEC-011 full route sweep found no such route"),
+  "ADMIN-006": R("NOT RUN", "SEC-011 sweep observed granular per-route permissions (e.g. users:manage_beta, feature_flags:write) rather than 4 named roles - founder confirmation still needed on intended model", "SEC-011 sweep notes"),
+  "SEC-002": R("PASS", "No dangerouslySetInnerHTML, no unsafe innerHTML, no Markdown-to-HTML path in apps/web source; all job fields render via JSX interpolation", "Dedicated agent review (adc7a68b), 2026-08-23"),
+  "SEC-003": R("PASS", "9/9 SSRF cases pass including cloud-metadata address", "portfolio-ssrf.test.mjs output"),
+  "SEC-004": R("PASS", "10+ malicious redirect patterns rejected", "safe-redirect-path.test.mjs + environment-boundaries.test.mjs output"),
+  "SEC-005": R("PASS", "9/9 Sentry redaction cases pass", "sentry-privacy.test.mjs output"),
+  "SEC-007": R("PASS", "No unaddressed high-severity dependency finding beyond 3 documented exceptions", "gh run view dependency-review.yml (CMD-006)"),
+  "SEC-009": R("PASS", "0 FAIL-NEW, 10 WARN-NEW (9 pre-existing accepted, 1 new unconfirmed - SEC-FIND-002), 60 PASS", "gh run log retrieval, ZAP baseline 2026-08-21 run (CMD-007)"),
+  "SEC-010": R("FAIL", "1 open CodeQL alert: js/incomplete-multi-character-sanitization in docx-cv.ts", "gh api code-scanning/alerts (CMD-005) - see SEC-FIND-001, DEF/risk-tracked, not currently exploitable"),
+  "SEC-011": R("PASS", "53/53 routes reviewed - 46 AUTH-OK, 7 documented intentionally-public, 0 gaps", "Full manual route sweep (ac3ec687), 2026-08-23"),
+  "AI-001": R("PASS", "Reserve-before-call, finalize-before-DB-write confirmed across all AI + outreach routes", "production-hardening.test.mjs output"),
+  "AI-002": R("PASS", "No refund on post-success DB failure", "production-hardening.test.mjs output"),
+  "AI-005": R("PASS", "Insufficient balance rejected before provider call", "Existing feature-gate coverage, part of test:unit"),
+  "AI-006": R("PASS", "Oversized fields rejected with 400 before provider call", "production-hardening.test.mjs output"),
+  "AI-009": R("PASS", "Malformed provider response caught by Zod validation", "ai-quality-evaluation.test.mjs AI-008"),
+  "AI-010": R("PASS", "CV content, email, secret-looking strings redacted from error event", "ai-quality-evaluation.test.mjs AI-009"),
+  "AI-011": R("PASS", "Identical mocked input produces identical normalised output", "ai-quality-evaluation.test.mjs AI-007"),
+  "PRIV-001": R("PASS", "Export scoped correctly to requesting user across tables", "account-export.test.mjs output"),
+  "PRIV-003": R("PASS", "Storage objects + DB rows both removed on deletion", "production-hardening.test.mjs output"),
+  "ING-001": R("PASS", "Constant-time secret compare confirmed for all 3 cron functions", "job-aggregation.test.mjs output"),
+  "ING-003": R("PASS", "Location-aware identity_hash prevents cross-location dedup collision", "job-aggregation.test.mjs output"),
+  "ING-004": R("PASS", "dedup_hash canonicalized, stable across tracking-param variants", "job-aggregation.test.mjs output"),
+  "ING-005": R("PASS", "Personio XML capped before regex scan", "job-aggregation.test.mjs output"),
+  "EXT-001": R("PASS", "Phone-field substring-bypass fixed, regression-tested", "production-hardening.test.mjs output"),
+  "EXT-002": R("PASS", "Stale-state clobber fixed, regression-tested", "production-hardening.test.mjs output"),
+  "EXT-007": R("PASS", "No sidePanel permission/manifest key in built manifest.json", "Architecture discovery agent (a5e04ca), 2026-08-23"),
+  "UAT-001": R("PASS", "4/4 core-journey specs pass locally", "pnpm test:e2e:core output (CMD-008)"),
+  "A11Y-001": R("PASS", "10 of 11 axe-wired specs fully passed; 29-phase-6-career-direction.spec.ts had 2 unrelated failures (DEF-001 environment cause, not axe assertions)", "pnpm test:e2e full run (CMD-009)"),
+  "PERF-001": R("NOT RUN", "", "Local Lighthouse run crashed on Windows EPERM cleanup before producing a report (DEF-002); public-pages job in scheduled CI is green (gh run view) but was not independently re-verified this pass"),
+  "PERF-002": R("FAIL", "Authenticated dashboard performance 0.37-0.38 against 0.6 budget, 2 consecutive scheduled runs", "gh api job logs, lighthouse.yml runs 32560144528 and 32626220192 - see DEF-003"),
+  "REC-001": R("NOT RUN", "", "Requires Supabase dashboard access this assessment does not have (G-06)"),
+  "REC-002": R("NOT RUN", "", "Requires a disposable test Supabase project this assessment does not have (G-06)"),
+  "REC-003": R("NOT RUN", "", "Requires Vercel access this assessment does not have (G-06)"),
+  "MON-001": R("PASS", "9/9 Sentry redaction cases pass including QA-secret-in-URL end to end", "sentry-privacy.test.mjs output"),
+  "MON-002": R("NOT RUN", "", "Requires Checkly dashboard access this assessment does not have"),
+  "MON-003": R("NOT RUN", "", "Requires Sentry dashboard access this assessment does not have"),
+  "PAY-007": R("PASS", "Client-side writes to subscriptions/ai_usage denied by RLS policy", "production-hardening.test.mjs output"),
+  "PAY-008": R("NOT APPLICABLE", "", "Will not be triggered without explicit founder authorisation per operating rule 15"),
+};
+
 const rows = cases.map((c) => ({
   "Test ID": c.id,
   "Test Type": c.type,
@@ -161,13 +229,13 @@ const rows = cases.map((c) => ({
   "Environment": c.env,
   "Automation Status": c.auto,
   "Evidence Required": c.evidence,
-  "Actual Result": BLANK.actual,
-  "Status": BLANK.status,
-  "Defect ID": BLANK.defect,
-  "Tester": BLANK.tester,
-  "Execution Date": BLANK.date,
-  "Branch": BLANK.branch,
-  "Commit SHA": BLANK.sha,
+  "Actual Result": (RESULTS[c.id] ?? BLANK).actual,
+  "Status": (RESULTS[c.id] ?? BLANK).status,
+  "Defect ID": c.id === "SEC-010" ? "SEC-FIND-001" : c.id === "PERF-002" ? "DEF-003" : BLANK.defect,
+  "Tester": (RESULTS[c.id] ?? BLANK).tester,
+  "Execution Date": (RESULTS[c.id] ?? BLANK).date,
+  "Branch": (RESULTS[c.id] ?? BLANK).branch,
+  "Commit SHA": (RESULTS[c.id] ?? BLANK).sha,
   "Notes": c.notes,
 }));
 
