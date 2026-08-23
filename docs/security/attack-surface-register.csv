@@ -1,0 +1,31 @@
+Surface ID,Component,Boundary,Entry Point,Trust Level,Data Sensitivity,Known Mitigations,Test ID Prefix,Status
+ATK-001,apps/web/app/api/account,Browser -> API,GET/POST/DELETE /api/account*,Untrusted external,Personal (export/deletion),Ownership check via user_id; storage-object cleanup fixed PR#147,PRIV-###,Partially verified
+ATK-002,apps/web/app/api/admin,Browser -> API,All /api/admin/* routes,Untrusted external (privileged),Admin-only operational data,admin_memberships gate; requireAdminPageAccess wrapper fixed PR#154/#164/#168,ADMIN-###,Partially verified
+ATK-003,apps/web/app/api/ai,Browser -> API -> OpenAI,All /api/ai/* routes (9 routes),Untrusted external,Personal (CV/profile) + cost-bearing,Reserve/confirm/release atomicity; untrusted-content guard,AI-###,Partially verified
+ATK-004,apps/web/app/api/analytics,Browser -> API -> apps/analytics (Python),Untrusted external,Aggregated/anonymised (claimed),ANALYTICS_INTERNAL_SECRET shared header,SEC-###,Not verified this pass
+ATK-005,apps/web/app/api/compatibility,Browser -> API,Untrusted external,Low,none identified,SEC-###,Not reviewed
+ATK-006,apps/web/app/api/cv,Browser -> API,Untrusted external,Personal (CV upload/parsing),docx-cv.test.mjs covers decompression-bomb cap,SEC-###,Partially verified
+ATK-007,apps/web/app/api/diagnostics,Browser -> API,Untrusted external (rate-limited),Operational/error data,Rate-limit before logging (production-hardening.test.mjs),SEC-###,Partially verified
+ATK-008,apps/web/app/api/esco,Browser -> API,Untrusted external,Low (job classification),token-overlap normalization fixed PR#163,API-###,Partially verified
+ATK-009,apps/web/app/api/og,Browser -> API,Untrusted external,Low (OG image generation),none identified,SEC-###,Not reviewed
+ATK-010,apps/web/app/api/operations,Browser -> API,Untrusted external,Operational,none identified,SEC-###,Not reviewed
+ATK-011,apps/web/app/api/outreach,Browser -> API -> OpenAI,Untrusted external,Personal (recruiter contact data) + cost-bearing,Job-ownership check; credit-refund-after-success bug fixed PR#167; field-size bounds fixed PR#161,AI-### RLS-###,Partially verified
+ATK-012,apps/web/app/api/profile,Browser -> API,Untrusted external,Personal (full profile),onboarding TOCTOU race fixed PR#171,RLS-###,Partially verified
+ATK-013,apps/web/app/api/qa,Browser -> API (secret-gated),Untrusted external (secret-gated),Credential-equivalent (session bootstrap),Timing-safe secret compare; 404 on mismatch; audit log write,SEC-###,Partially verified
+ATK-014,apps/web/app/api/role-pathways,Browser -> API -> OpenAI,Untrusted external,Personal + cost-bearing,none identified beyond general AI-route pattern,AI-###,Not reviewed
+ATK-015,apps/web/app/api/sentry-test,Browser -> API,Untrusted external,Low (test route),should not exist/be reachable in production - verify,SEC-###,Not reviewed - verify prod reachability
+ATK-016,apps/web/app/api/stripe/checkout,Browser -> API -> Stripe,Untrusted external,Financial,QA-account hard-block (403) confirmed in docs/qa-test-account.md,PAY-###,Partially verified
+ATK-017,apps/web/app/api/stripe/webhook,Stripe -> API (signature-verified),External signed webhook,Financial,Signature verification; idempotency migration 20260821170000,PAY-###,Gap - no structured test catalogue yet
+ATK-018,apps/web/app/api/stripe/portal,Browser -> API -> Stripe,Untrusted external,Financial,none identified beyond checkout pattern,PAY-###,Not reviewed
+ATK-019,apps/web/app/api/sync,Browser/extension -> API,Untrusted external,Personal (job/interview workflow state),Write-error checking fixed PR#173; soft-delete tombstones,RLS-### ING-###,Partially verified
+ATK-020,supabase/functions/sync-eures,GitHub Actions cron -> Edge function -> Postgres,External cron trigger,Public job data,Constant-time secret compare; identity+dedup hash canonicalization PR#151/#174,ING-###,Partially verified
+ATK-021,supabase/functions/sync-job-sources,GitHub Actions cron -> Edge function -> Postgres,External cron trigger,Public job data,Same as ATK-020; Personio XML size cap,ING-###,Partially verified
+ATK-022,supabase/functions/sync-job-alerts,GitHub Actions cron -> Edge function -> Postgres/Resend,External cron trigger,Personal (email delivery),Not inspected this pass,ING-###,Not reviewed
+ATK-023,apps/extension/entrypoints/autotime.content.ts,Untrusted job-site DOM -> content script,Untrusted external,Personal (extracted CV/profile-adjacent data),Phone-field substring-bypass fixed PR#166,EXT-###,Partially verified
+ATK-024,apps/extension externally_connectable,Extension <-> production app domain,Semi-trusted,Session/sync data,Not independently verified this pass - message origin validation unconfirmed,EXT-###,Gap
+ATK-025,apps/web service-role Supabase queries (all routes using createAdminClient),API -> Postgres (RLS bypassed by design),Trusted app -> trusted data (ownership enforced in app code only),Personal (all user-owned tables),Multiple ownership-check fixes this session (see ATK-011/012/019),RLS-###,Highest-priority ongoing review - partially verified
+ATK-026,apps/web/app/(admin-auth)/admin/login,Browser -> page (unauthenticated),Untrusted external,Credential-equivalent (redirect target),Open-redirect tab-bypass fixed PR#172; redirect-target-discard fixed PR#154,AUTH-### SEC-###,Fixed and regression-tested this session
+ATK-027,apps/web Sentry event pipeline,App -> Sentry (3rd party),Trusted app -> external monitoring,Must not contain secrets/PII,Redaction pipeline extended to diagnostics.ts PR#169; 9 passing test cases,MON-###,Verified
+ATK-028,apps/web PostHog integration,App -> PostHog (3rd party),Trusted app -> external analytics,Should be anonymised,Not independently verified this pass,MON-###,Not reviewed
+ATK-029,Checkly synthetic checks,External monitor -> production app,N/A (monitoring, not attack surface per se),N/A,Deployment status unverified (known pre-existing risk),MON-###,Gap - deployment unconfirmed
+ATK-030,.github/workflows secrets usage,CI -> production secrets,Trusted CI -> credential-equivalent,Credential-equivalent,workflow_dispatch confirmation inputs passed via env not interpolated (verified in production-hardening.test.mjs),SEC-###,Verified
