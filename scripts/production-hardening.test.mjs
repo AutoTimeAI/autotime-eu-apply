@@ -758,6 +758,30 @@ test("job workflow sync distinguishes a disabled server from a real upload failu
   assert.match(uploadBody, /setState\("server-disabled"\)/)
 })
 
+test("interview upserts verify the referenced application and job belong to the same account before writing", () => {
+  const repository = read("apps/web/lib/interview-workflow-repository.ts")
+  const upsertInterviewBody = repository.slice(
+    repository.indexOf("export async function upsertInterview"),
+  )
+
+  const applicationCheckIndex = upsertInterviewBody.indexOf(
+    'from("job_workflow_applications")',
+  )
+  const jobCheckIndex = upsertInterviewBody.indexOf('from("job_workflow_jobs")')
+  const existingLookupIndex = upsertInterviewBody.indexOf(
+    'select("updated_at")',
+  )
+
+  assert.notEqual(applicationCheckIndex, -1)
+  assert.notEqual(jobCheckIndex, -1)
+  assert.match(
+    upsertInterviewBody.slice(0, existingLookupIndex),
+    /if \(!referencedApplication \|\| !referencedJob\) \{\s*throw new Error/,
+  )
+  assert.ok(applicationCheckIndex < existingLookupIndex)
+  assert.ok(jobCheckIndex < existingLookupIndex)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
