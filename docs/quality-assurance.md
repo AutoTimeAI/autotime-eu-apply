@@ -1104,3 +1104,17 @@ Documented honestly rather than silently glossed over:
   redesign, not a narrow bug fix - flagging honestly rather than either
   leaving it silently undocumented or bolting on a partial fix that still
   wouldn't make the number mean what it claims to mean.
+- **`GET /api/account/export` silently swallows a per-table query error
+  into an empty array**, with no logging. Found alongside #175/#176 by
+  the same batch's scripts/account-export agent. Every table in
+  `exportedTables` currently has a `user_id` column matching the
+  `.eq("user_id", user.id)` filter (checked against the migrations), and
+  scoping to the requesting user is correct, so no export category is
+  silently dropped today. But because failures aren't logged, a future
+  schema rename or transient DB error would silently produce an
+  incomplete GDPR-style data export with no error signal to the user or
+  an operator - a latent robustness gap, not a currently-active one. Not
+  fixed here since there's nothing concretely broken to reproduce a
+  regression test against; flagged for whoever next touches this route
+  to add error logging (e.g. `reportClientDiagnostic`/`console.error`
+  per failed table) rather than silently substituting `[]`.
