@@ -963,6 +963,49 @@ Everything above was independently re-run after its fix merged to confirm
 the fix actually worked in the live environment, not just that CI was
 green on the PR.
 
+## Merge-queue closure - 2026-08-23
+
+All 28 fix PRs opened during this audit sprint (#111 through #175) merged
+into `main` sequentially, one at a time. Each merge was gated on: `git
+merge-tree --write-tree origin/main "origin/<branch>"` for ground-truth
+conflict detection (GitHub's own `mergeStateStatus`/`mergeable` fields lag
+badly after a force-push and cannot be trusted alone); a rebase onto the
+latest `main` when a real conflict existed; the PR's own test(s) plus
+`pnpm --filter web typecheck` (and `pnpm --filter extension typecheck` for
+extension-touching branches) passing on the rebased branch; then a push
+and merge. `gh pr merge` intermittently reported stale
+`DIRTY`/`CONFLICTING` status immediately after a force-push even when a
+local `git merge origin/main` proved the branch was already conflict-free
+- worked around by calling the GitHub REST API directly
+(`pulls/<n>/merge`), occasionally with a short wait-and-retry for the
+server-side mergeability cache to catch up.
+
+`scripts/production-hardening.test.mjs` was the conflict site in 10 of the
+15 rebases this required (every independent branch appends a new `test()`
+block at the same insertion point, immediately before the file's trailing
+`let failed = 0`); `package.json`'s `test:unit` script chain conflicted
+once (two branches each appending a different `test:web:*` entry).
+Resolution in every case was to concatenate both sides rather than choose
+one - never dropping a test or script entry silently. One rebase (#174)
+additionally conflicted in the two Deno job-ingestion edge functions
+themselves (`sync-eures`, `sync-job-sources`) because an already-merged
+sibling fix (#151, location-aware `identity_hash`) and this PR's own fix
+(canonicalized `dedup_hash`) touched the same lines; resolved by combining
+both changes rather than picking one, verified by all 27
+`test:job-aggregation` assertions passing afterward, including both
+fixes' own regression tests.
+
+After the last merge, confirmed `gh pr list --state open` returns zero
+rows, then ran a full integration pass directly on `main` (not just each
+PR's own branch in isolation): `pnpm --filter web typecheck`, `pnpm
+--filter extension typecheck`, and the complete `pnpm test:unit` chain
+(every script listed in `package.json`'s `test:unit`, covering the
+extension test suite plus every `scripts/*.test.mjs` and
+`apps/web/tests/*.test.mjs` file) - all green, `fail 0` on every
+sub-suite, confirming the 28 independently-developed fixes compose
+correctly together and not just individually against `main` at the time
+each was branched.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
