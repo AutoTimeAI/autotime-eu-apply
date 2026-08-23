@@ -980,6 +980,19 @@ Documented honestly rather than silently glossed over:
   design already built for job-workflow sync (#137), applied to a
   different table shape, not a one-line change - a real architecture
   decision, surfaced rather than guessed at.
+  **Independently re-confirmed** by a later parallel-agent sweep of the
+  sync API routes, which also identified every column upserted
+  unconditionally (`reusable_answers`, `applications`, `evidence_records`,
+  `outcome_records`, `interview_prep_packs`) and traced the concrete lost-
+  update scenario through `cloud-sync.ts`'s `syncDashboardStateToCloud`
+  (sends the entire local `applications` array on every mutation, not a
+  diff), plus a related TOCTOU nuance: the route's deletion-tombstone
+  check runs once, early in the handler, with no re-check immediately
+  before the `applications` upsert - a concurrent `DELETE` for the same
+  application landing in that window could have its tombstone missed and
+  the just-deleted application resurrected by this POST's insert. Same
+  underlying architecture fix (proper CAS/tombstone design for this
+  table) would close both; still not attempted here for the same reason.
 - **Two accepted dependency-review exceptions**, both allow-listed in
   `dependency-review.yml` with justification recorded in the workflow
   itself, not silently ignored - revisit each if/when an upstream fix
