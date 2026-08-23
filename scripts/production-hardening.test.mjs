@@ -858,6 +858,27 @@ test("every admin page catches its own authorization failure instead of letting 
   )
 })
 
+test("interview outcome learningSignals condition is not a dead no-op ternary", () => {
+  // Found by an independent review pass over this PR before merge: the
+  // logic fix itself only had pnpm typecheck as its test plan, with no
+  // assertion that would catch a regression back to the dead-ternary
+  // shape (or a wrong condition). This component embeds the fix inline in
+  // a JSX onClick handler with no extracted, directly-importable function,
+  // so a static-inspection check matches the convention already used
+  // elsewhere in this file for component-level logic fixes.
+  const workspace = read("apps/web/components/InterviewsWorkspace.tsx")
+
+  assert.doesNotMatch(
+    workspace,
+    /employerReason \|\| interpretation\s*\n?\s*\?\s*\["unknown"\]\s*\n?\s*:\s*\["unknown"\]/,
+    "both ternary branches must not return the same literal",
+  )
+  assert.match(
+    workspace,
+    /learningSignals:\s*\n?\s*employerReason \|\| interpretation \? \["unknown"\] : \[\]/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
