@@ -160,10 +160,19 @@ const skillsTaxonomy = [
   "AWS", "GCP", "Azure", "Kubernetes", "Docker", "Terraform", "Ansible",
   "Jenkins", "CI/CD", "GraphQL", "REST", "gRPC", "Microservices",
 ] as const;
+// Escapes every regex metacharacter, not just the ones skillsTaxonomy's
+// current entries happen to contain - a partial escape (e.g. only .+#)
+// would silently misinterpret an unescaped backslash or bracket as a regex
+// metacharacter instead of a literal character the moment a future skill
+// name needs one (CodeQL: js/incomplete-sanitization). skillsTaxonomy is a
+// hardcoded constant, never user input, so this had no live exploit path -
+// fixed for correctness and to close the flagged sanitizer-completeness gap.
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Custom (rather than \b) boundaries: several entries (".NET", "C++", "C#")
 // start or end with a non-word character, which \b cannot bound correctly.
 const skillsPattern = new RegExp(
-  `(?<![A-Za-z0-9])(${skillsTaxonomy.map((skill) => skill.replace(/[.+#]/g, "\\$&")).join("|")})(?![A-Za-z0-9])`,
+  `(?<![A-Za-z0-9])(${skillsTaxonomy.map((skill) => escapeRegExp(skill)).join("|")})(?![A-Za-z0-9])`,
   "gi",
 );
 const extractSkills = (description: string): string => {
