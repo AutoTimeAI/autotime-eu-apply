@@ -879,6 +879,34 @@ test("interview outcome learningSignals condition is not a dead no-op ternary", 
   )
 })
 
+test("AI route CV and outreach free-text fields have upper size bounds, not just a lower one", () => {
+  // cv/outreach fields previously had no .max() at all, so a client could
+  // submit an arbitrarily large payload (thousands of experience entries
+  // with megabyte-long bullets) and inflate OpenAI token cost per call -
+  // unlike jobDescription in the same schemas, which was already capped.
+  const tailorCv = read("apps/web/app/api/ai/tailor-cv/route.ts")
+  const coverLetter = read("apps/web/app/api/ai/cover-letter/route.ts")
+  const outreach = read("apps/web/app/api/outreach/route.ts")
+
+  assert.match(tailorCv, /summary: z\.string\(\)\.max\(4000\)/)
+  assert.match(tailorCv, /bullets: z\.array\(z\.string\(\)\.max\(1000\)\)\.max\(40\)/)
+  assert.match(tailorCv, /skills: z\.array\(z\.string\(\)\.max\(100\)\)\.max\(200\)/)
+
+  assert.match(coverLetter, /summary:z\.string\(\)\.max\(4000\)/)
+  assert.match(coverLetter, /skills:z\.array\(z\.string\(\)\.max\(100\)\)\.max\(200\)/)
+
+  assert.match(outreach, /candidateSummary: z\.string\(\)\.trim\(\)\.min\(20\)\.max\(5000\)/)
+  assert.match(
+    outreach,
+    /candidateKeyStrengths: z\.array\(z\.string\(\)\.trim\(\)\.min\(1\)\.max\(200\)\)\.min\(1\)\.max\(20\)/,
+  )
+  // recruiterEmail was missed in the initial pass - z.string().email() has
+  // no length cap of its own, so an "email-shaped" string with a huge
+  // local-part (e.g. 100k "a" characters before the @) could still inflate
+  // the OpenAI prompt this field flows into via draftOutreachWithOpenAI.
+  assert.match(outreach, /recruiterEmail: z\.string\(\)\.trim\(\)\.email\(\)\.max\(254\)/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {

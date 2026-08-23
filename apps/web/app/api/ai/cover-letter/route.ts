@@ -5,7 +5,7 @@ import { assertAiRouteRateLimit, RateLimitError, tailorCoverLetterWithOpenAI } f
 import { reserveAiCall, releaseAiCall, FeatureGateError, finalizeAiCall } from "../../../../lib/feature-gate";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
-const cvSchema = z.object({ contact:z.object({name:z.string(),email:z.string(),phone:z.string(),location:z.string(),linkedin:z.string().optional()}),summary:z.string(),experience:z.array(z.object({title:z.string(),company:z.string(),dates:z.string(),bullets:z.array(z.string())})),education:z.array(z.object({degree:z.string(),institution:z.string(),dates:z.string()})),skills:z.array(z.string()) });
+const cvSchema = z.object({ contact:z.object({name:z.string().max(200),email:z.string().max(200),phone:z.string().max(50),location:z.string().max(200),linkedin:z.string().max(300).optional()}),summary:z.string().max(4000),experience:z.array(z.object({title:z.string().max(200),company:z.string().max(200),dates:z.string().max(100),bullets:z.array(z.string().max(1000)).max(40)})).max(40),education:z.array(z.object({degree:z.string().max(200),institution:z.string().max(200),dates:z.string().max(100)})).max(20),skills:z.array(z.string().max(100)).max(200) });
 const createSchema = z.object({ cv:cvSchema, jobId:z.string().uuid().optional(), jobTitle:z.string().trim().min(2).max(200), companyName:z.string().trim().min(2).max(200), jobDescription:z.string().trim().min(80).max(50000) });
 const updateSchema = z.object({ id:z.string().uuid(), content:z.string().trim().min(100).max(20000) });
 
