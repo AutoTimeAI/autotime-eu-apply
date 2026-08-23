@@ -84,6 +84,12 @@ test("classifies jobs against ESCO labels without a predictive model", () => {
   assert.deepEqual(classifyJobToEsco("Software Developer", "Build APIs", occupations), { occupationId: "esco:software-developer", confidence: 1, method: "exact" });
   const unmatched = classifyJobToEsco("Office Manager", "Coordinate facilities", occupations); assert.equal(unmatched.method, "unmatched"); assert.equal(unmatched.occupationId, null);
 });
+test("token-overlap confidence does not max out just because an occupation's own vocabulary is tiny", () => {
+  const occupations = [{ id: "esco:chef", preferredLabel: "Chef", description: null }];
+  const result = classifyJobToEsco("Software Developer", "This role builds backend systems and APIs for the engineering team. The office chef prepares lunch every Friday, which the whole department enjoys.", occupations);
+  assert.notEqual(result.occupationId, "esco:chef");
+  assert.equal(result.method, "unmatched");
+});
 test("questionnaire context changes with accumulated skill confidence", () => {
   const base = { question: "What did you deliver?", answer: "I built an API", answeredSoFar: [], candidateSkills: [{ id: "api", preferredLabel: "API development", skillType: "skill" }], round: 2 };
   const low = buildQuestionnaireContext({ ...base, currentSkillProfile: [{ escoSkillId: "api", confidence: 0.4, source: "inferred" }] });

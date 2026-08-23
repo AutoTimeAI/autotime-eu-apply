@@ -34,9 +34,16 @@ export function classifyJobToEsco(
     const tokens = words(
       `${occupation.preferredLabel} ${occupation.description ?? ""}`,
     );
+    // Normalizing by the occupation's own vocabulary size alone lets a
+    // short/sparse occupation label (e.g. a preferredLabel with no
+    // description) reach confidence 1 from a single incidental word
+    // shared with the job text, indistinguishable from a real exact
+    // match. Normalize by the larger of the two vocabularies instead, so
+    // a tiny occupation-token set can't trivially max out against a much
+    // larger job-description vocabulary.
     const overlap =
       [...tokens].filter((token) => jobWords.has(token)).length /
-      Math.max(tokens.size, 1);
+      Math.max(tokens.size, jobWords.size, 1);
     if (overlap > bestScore) {
       best = occupation;
       bestScore = overlap;
