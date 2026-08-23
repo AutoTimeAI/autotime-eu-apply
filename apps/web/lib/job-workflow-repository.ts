@@ -200,7 +200,7 @@ async function syncAnalysisSnapshots(
   );
   if (!missing.length) return;
 
-  await client.from("job_workflow_analysis_snapshots").insert(
+  const { error } = await client.from("job_workflow_analysis_snapshots").insert(
     missing.map((analysis) => ({
       id: analysis.id,
       user_id: userId,
@@ -218,6 +218,13 @@ async function syncAnalysisSnapshots(
       created_at: analysis.createdAt,
     })),
   );
+  // Supabase-js does not throw on a write failure by default - an
+  // unchecked insert here would let the outer upsertJob() report success
+  // to the client while this analysis snapshot silently never persisted
+  // (e.g. two overlapping syncs racing on the unique(job_id, version)
+  // constraint), leaving the server's history permanently missing a
+  // version the client believes it saved.
+  if (error) throw new Error("Job analysis snapshot could not be saved.");
 }
 
 export async function upsertApplication(

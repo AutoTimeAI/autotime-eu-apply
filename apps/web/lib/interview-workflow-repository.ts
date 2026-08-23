@@ -253,22 +253,30 @@ async function syncQuestions(
     .map((row) => row.id)
     .filter((id) => !currentIds.has(id));
 
+  // Supabase-js does not throw on a write failure by default - an
+  // unchecked delete/upsert here would let the outer upsertInterview()
+  // report success while the question rows silently drift out of sync
+  // with interview_records.updated_at, the sole CAS token for the whole
+  // interview (see the module comment above), with no way for the client
+  // to detect the mismatch.
   if (staleIds.length) {
-    await client
+    const { error } = await client
       .from("interview_questions")
       .delete()
       .eq("interview_id", interview.id)
       .eq("user_id", userId)
       .in("id", staleIds);
+    if (error) throw new Error("Stale interview questions could not be removed.");
   }
 
   if (!interview.questions.length) return;
 
-  await client
+  const { error } = await client
     .from("interview_questions")
     .upsert(
       interview.questions.map((question) => questionToRow(question, userId, interview.id)),
     );
+  if (error) throw new Error("Interview questions could not be saved.");
 }
 
 async function syncPreparationSnapshots(
@@ -288,7 +296,7 @@ async function syncPreparationSnapshots(
   );
   if (!missing.length) return;
 
-  await client.from("interview_preparation_snapshots").insert(
+  const { error } = await client.from("interview_preparation_snapshots").insert(
     missing.map((snapshot) => ({
       id: crypto.randomUUID(),
       user_id: userId,
@@ -298,4 +306,5 @@ async function syncPreparationSnapshots(
       created_at: snapshot.createdAt,
     })),
   );
+  if (error) throw new Error("Interview preparation snapshot could not be saved.");
 }
