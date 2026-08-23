@@ -3551,6 +3551,7 @@ export default function HomePage({
     null
   )
   const hasUnsyncedDashboardChangesRef = useRef(false)
+  const hasUnsyncedProfileChangesRef = useRef(false)
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
     useState<OnlineAnalyticsReport | null>(null)
   const [onlineAnalyticsStatus, setOnlineAnalyticsStatus] = useState("")
@@ -4352,6 +4353,10 @@ export default function HomePage({
         return false
       }
 
+      if (silent && hasUnsyncedProfileChangesRef.current) {
+        return false
+      }
+
       try {
         const response = await fetch("/api/sync/profile", {
           cache: "no-store"
@@ -4551,7 +4556,12 @@ export default function HomePage({
     }
 
     const refreshSyncedWorkflow = () => {
-      void loadDashboardSnapshot({ force: true, silent: true })
+      // This runs on a recurring 3s interval plus focus/visibility events
+      // throughout an active session, not just once at mount - force: true
+      // here would bypass hasUnsyncedDashboardChangesRef and let a poll that
+      // lands mid-debounce (or while a write is still in flight) overwrite
+      // an edit the user just made with the older server snapshot.
+      void loadDashboardSnapshot({ silent: true })
       void loadProfileSnapshot({ silent: true })
     }
     const refreshWhenVisible = () => {
@@ -4774,6 +4784,8 @@ export default function HomePage({
       return
     }
 
+    hasUnsyncedProfileChangesRef.current = true
+
     if (profileSyncTimeoutRef.current) {
       clearTimeout(profileSyncTimeoutRef.current)
     }
@@ -4783,6 +4795,8 @@ export default function HomePage({
       void syncProfileStateToCloud(profile, {
         failureMessage: "Profile saved locally. Dashboard sync failed",
         successMessage: "Profile saved and synced to dashboard"
+      }).then((synced) => {
+        hasUnsyncedProfileChangesRef.current = !synced
       })
     }, 1200)
   }

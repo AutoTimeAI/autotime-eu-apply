@@ -907,6 +907,41 @@ test("AI route CV and outreach free-text fields have upper size bounds, not just
   assert.match(outreach, /recruiterEmail: z\.string\(\)\.trim\(\)\.email\(\)\.max\(254\)/)
 })
 
+test("cloud-sync polling cannot silently overwrite a profile or dashboard edit still in flight", () => {
+  // hasUnsyncedDashboardChangesRef already guarded loadDashboardSnapshot
+  // against a silent background poll overwriting a debounced-but-not-yet-
+  // synced write, but the recurring focus/visibility/3s-interval poll
+  // passed force: true, which unconditionally bypassed that guard - and
+  // loadProfileSnapshot had no equivalent guard or ref at all, so any
+  // profile edit typed during its 1200ms sync debounce (or while the sync
+  // request was still in flight) could be silently discarded by the next
+  // poll's server response landing first.
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.match(dashboard, /const hasUnsyncedProfileChangesRef = useRef\(false\)/)
+  assert.match(
+    dashboard,
+    /if \(silent && hasUnsyncedProfileChangesRef\.current\) \{\s*return false\s*\}/,
+  )
+  assert.match(dashboard, /hasUnsyncedProfileChangesRef\.current = true/)
+  assert.match(dashboard, /hasUnsyncedProfileChangesRef\.current = !synced/)
+
+  const refreshSyncedWorkflowIndex = dashboard.indexOf(
+    "const refreshSyncedWorkflow = () => {",
+  )
+  const refreshSyncedWorkflowBody = dashboard.slice(
+    refreshSyncedWorkflowIndex,
+    refreshSyncedWorkflowIndex + 700,
+  )
+  assert.notEqual(refreshSyncedWorkflowIndex, -1)
+  assert.doesNotMatch(
+    refreshSyncedWorkflowBody,
+    /loadDashboardSnapshot\(\{ force: true/,
+    "the recurring poll must not force past the unsynced-changes guard",
+  )
+  assert.match(refreshSyncedWorkflowBody, /loadDashboardSnapshot\(\{ silent: true \}\)/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
