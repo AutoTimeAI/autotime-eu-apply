@@ -6,8 +6,45 @@ import {
 } from "../../../lib/configuration-error"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
-import { diagnosticJson } from "../../../lib/diagnostics"
+import { createDiagnosticId, diagnosticJson, logDiagnostic } from "../../../lib/diagnostics"
 import { isTestAuthUserId } from "../../../lib/test-auth"
+
+// Supabase Storage objects have no foreign key to auth.users - only an RLS
+// policy scoping them by folder name to auth.uid() - so ON DELETE CASCADE
+// never reaches them. Without this, deleting an account leaves the user's
+// profile photo (a real personal image) permanently orphaned in the
+// "profile-photos" bucket, which is itself a GDPR Article 17 completeness
+// gap. Best-effort and non-blocking: a storage hiccup shouldn't prevent a
+// user from deleting their account outright, so a failure here is logged
+// for manual cleanup rather than surfaced as a deletion failure.
+async function deleteProfilePhotos(
+  client: ReturnType<typeof createAdminClient>,
+  userId: string,
+) {
+  try {
+    const { data: objects, error: listError } = await client.storage
+      .from("profile-photos")
+      .list(userId)
+    if (listError || !objects?.length) return
+    const paths = objects.map((object) => `${userId}/${object.name}`)
+    const { error: removeError } = await client.storage
+      .from("profile-photos")
+      .remove(paths)
+    if (removeError) throw removeError
+  } catch (error: unknown) {
+    logDiagnostic(
+      {
+        area: "account",
+        code: "account.delete.profile-photo-cleanup-failed",
+        id: createDiagnosticId(),
+        level: "warn",
+        message: "Account deleted, but profile photo storage cleanup failed.",
+        timestamp: new Date().toISOString(),
+      },
+      { userId, error: error instanceof Error ? error.message : String(error) },
+    )
+  }
+}
 
 type AccountDeleteRouteData = {
   deleted: true
@@ -36,6 +73,9 @@ function deleteJsonResponse(
 // DELETE RESTRICT for actor/requester columns, so an admin account with
 // audit history cannot self-delete here — that is a deliberate audit
 // integrity safeguard, not a bug; it requires manual offboarding.
+// Supabase Storage objects (the profile-photos bucket) have no FK to
+// auth.users, so cascade never reaches them - deleteProfilePhotos handles
+// that separately, best-effort, before the auth user is removed.
 export async function DELETE(
   request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AccountDeleteRouteData>>> {
@@ -64,7 +104,9 @@ export async function DELETE(
       })
     }
 
-    const { error: deleteError } = await createAdminClient().auth.admin.deleteUser(
+    const adminClient = createAdminClient()
+    await deleteProfilePhotos(adminClient, user.id)
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(
       user.id,
     )
 

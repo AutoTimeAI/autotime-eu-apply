@@ -782,6 +782,27 @@ test("interview upserts verify the referenced application and job belong to the 
   assert.ok(jobCheckIndex < existingLookupIndex)
 })
 
+test("account deletion also cleans up the user's profile-photo storage objects, not just DB rows", () => {
+  const route = read("apps/web/app/api/account/route.ts")
+
+  // Supabase Storage objects have no FK to auth.users - only an RLS policy
+  // scoping them by folder name to auth.uid() - so ON DELETE CASCADE never
+  // reaches them. Without an explicit cleanup step, a deleted account
+  // leaves its profile photo (a real personal image) orphaned forever.
+  const cleanupIndex = route.indexOf("async function deleteProfilePhotos")
+  const deleteUserIndex = route.indexOf("auth.admin.deleteUser")
+  const callSiteIndex = route.indexOf("await deleteProfilePhotos(")
+
+  assert.notEqual(cleanupIndex, -1)
+  assert.notEqual(callSiteIndex, -1)
+  assert.ok(callSiteIndex < deleteUserIndex)
+
+  const cleanupBody = route.slice(cleanupIndex)
+  assert.match(cleanupBody, /\.storage\s*\n?\s*\.from\("profile-photos"\)/)
+  assert.match(cleanupBody, /\.list\(userId\)/)
+  assert.match(cleanupBody, /\.remove\(paths\)/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
