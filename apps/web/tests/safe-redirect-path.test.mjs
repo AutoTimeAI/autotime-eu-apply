@@ -71,6 +71,26 @@ test("getClientSafeRedirectPath falls back for a backslash host-takeover value",
   assert.equal(getClientSafeRedirectPath("/\\evil.example"), "/dashboard")
 })
 
+test("getClientSafeRedirectPath falls back for a tab-character host-takeover value", () => {
+  // The URL parser strips ASCII tab/CR/LF as its very first parsing step,
+  // before any other processing - "/\t/evil.example" (a literal tab, not
+  // the two-character backslash-t escape) collapses to "//evil.example",
+  // a protocol-relative value that resolves to https://evil.example/. A
+  // hand-rolled startsWith("/")/startsWith("//")/includes("\\") check
+  // never sees the collapsed form, since it inspects the string before
+  // any URL-parsing normalization happens.
+  assert.equal(getClientSafeRedirectPath("/\t/evil.example"), "/dashboard")
+  assert.equal(getClientSafeRedirectPath("/\r/evil.example"), "/dashboard")
+  assert.equal(getClientSafeRedirectPath("/\n/evil.example"), "/dashboard")
+})
+
+test("getClientSafeRedirectPath preserves query and hash on a safe path", () => {
+  assert.equal(
+    getClientSafeRedirectPath("/dashboard/settings?ok=1#section"),
+    "/dashboard/settings?ok=1#section",
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
