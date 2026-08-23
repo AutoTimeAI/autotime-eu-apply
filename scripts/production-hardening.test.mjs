@@ -973,6 +973,33 @@ test("admin_update_feature_flag takes its lock unconditionally, even when creati
     "the advisory lock must be taken before the existence/version check, not after",
   )
 })
+
+test("saveCurrentTabAsApplication does not clobber a fresh deletion-aware application list with a stale one", () => {
+  // syncApplicationListToDashboard refreshes `applications` state itself
+  // (via getApplications()) whenever the sync response includes
+  // deletedApplicationIds - the backend can resurrect/merge a duplicate
+  // record via resurrectUrlKey, which is exactly the call path this
+  // function takes. It previously followed that call with
+  // setApplications(applications), re-applying the array captured in the
+  // outer closure *before* the sync ran - deterministically overwriting
+  // the fresh, deletion-aware state with a list that still contains the
+  // just-deleted duplicate record.
+  const sidepanel = read("apps/extension/sidepanel/main.tsx")
+
+  const functionIndex = sidepanel.indexOf(
+    "const saveCurrentTabAsApplication = async () => {",
+  )
+  const nextFunctionIndex = sidepanel.indexOf(
+    "\n  const ",
+    functionIndex + "const saveCurrentTabAsApplication = async () => {".length,
+  )
+  assert.notEqual(functionIndex, -1)
+  const functionBody = sidepanel.slice(functionIndex, nextFunctionIndex)
+
+  assert.doesNotMatch(functionBody, /setApplications\(applications\)/)
+  assert.match(functionBody, /resurrectUrlKey: normalizeApplicationUrlKey\(details\.url\)/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
