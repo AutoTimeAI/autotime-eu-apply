@@ -719,6 +719,45 @@ test("admin login preserves the post-login redirect target instead of always dis
   assert.match(page, /candidate\.includes\("\\\\"\)/)
 })
 
+test("job workflow application upserts verify the referenced job belongs to the same account before writing", () => {
+  const repository = read("apps/web/lib/job-workflow-repository.ts")
+  const upsertApplicationBody = repository.slice(
+    repository.indexOf("export async function upsertApplication"),
+  )
+
+  const referencedJobCheckIndex = upsertApplicationBody.indexOf(
+    'from("job_workflow_jobs")',
+  )
+  const existingLookupIndex = upsertApplicationBody.indexOf(
+    'select("updated_at")',
+  )
+
+  assert.notEqual(referencedJobCheckIndex, -1)
+  assert.match(
+    upsertApplicationBody.slice(0, existingLookupIndex),
+    /if \(!referencedJob\) \{\s*throw new Error/,
+  )
+  assert.ok(referencedJobCheckIndex < existingLookupIndex)
+})
+
+test("job workflow sync distinguishes a disabled server from a real upload failure", () => {
+  const hook = read("apps/web/lib/useJobWorkflowSync.ts")
+  const uploadBody = hook.slice(
+    hook.indexOf("const upload = useCallback"),
+    hook.indexOf("const sync = useCallback"),
+  )
+
+  const statusCheckIndex = uploadBody.indexOf('response.status === 404')
+  const genericThrowIndex = uploadBody.indexOf(
+    'throw new Error("Account sync could not be completed.")',
+  )
+
+  assert.notEqual(statusCheckIndex, -1)
+  assert.notEqual(genericThrowIndex, -1)
+  assert.ok(statusCheckIndex < genericThrowIndex)
+  assert.match(uploadBody, /setState\("server-disabled"\)/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
