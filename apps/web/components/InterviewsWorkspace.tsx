@@ -1255,10 +1255,19 @@ function InterviewOutcomePanel({
                       : "Review the outcome",
                   employerConfirmedReason: employerReason || undefined,
                   userInterpretation: interpretation || undefined,
+                  // Both branches of this conditional used to return the
+                  // identical ["unknown"] value - a dead check that
+                  // silently discarded whether any feedback was actually
+                  // given. No automatic text-to-category classifier exists
+                  // for employerReason/interpretation free text, so this
+                  // can't derive a specific signal (technical_gap,
+                  // salary_mismatch, etc.) - but it can at least honestly
+                  // distinguish "feedback was given, just not categorised"
+                  // from "no feedback was given at all", instead of
+                  // recording "unknown" even when the user left both
+                  // fields blank.
                   learningSignals:
-                    employerReason || interpretation
-                      ? ["unknown"]
-                      : ["unknown"],
+                    employerReason || interpretation ? ["unknown"] : [],
                 });
                 onSave(updated, outcome);
                 onStatus("Interview outcome recorded.");
