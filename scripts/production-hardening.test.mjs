@@ -942,6 +942,37 @@ test("cloud-sync polling cannot silently overwrite a profile or dashboard edit s
   assert.match(refreshSyncedWorkflowBody, /loadDashboardSnapshot\(\{ silent: true \}\)/)
 })
 
+test("admin_update_feature_flag takes its lock unconditionally, even when creating a brand-new flag", () => {
+  // The original definition only locked via "select ... for update" when a
+  // matching row already existed. Creating a new (key, environment) pair
+  // has no row to lock, so two concurrent creates could both pass the
+  // existence check unprotected and race on the "insert ... on conflict do
+  // update" - the second caller would silently bump another caller's
+  // just-created flag to version 2 without ever validating its version
+  // against the row that now exists.
+  const migration = read(
+    "supabase/migrations/20260823100000_admin_feature_flag_create_lock.sql",
+  )
+
+  assert.match(
+    migration,
+    /create or replace function public\.admin_update_feature_flag/,
+  )
+
+  const lockIndex = migration.indexOf(
+    "perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_key || ':' || p_environment, 0));",
+  )
+  const existenceCheckIndex = migration.indexOf(
+    "select * into v_row from public.admin_feature_flags f where f.key = p_key and f.environment = p_environment for update;",
+  )
+
+  assert.notEqual(lockIndex, -1)
+  assert.notEqual(existenceCheckIndex, -1)
+  assert.ok(
+    lockIndex < existenceCheckIndex,
+    "the advisory lock must be taken before the existence/version check, not after",
+  )
+})
 let failed = 0
 
 for (const { name, run } of tests) {
