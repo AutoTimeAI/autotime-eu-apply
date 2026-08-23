@@ -44,15 +44,30 @@ type StructuredJobPostingData = {
   salary: string
 }
 
+const namedEntities: Record<string, string> = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'"
+}
+
+// Decoding &amp; in a separate pass before &lt;/&gt;/etc. is a classic
+// double-escaping bug: text that was legitimately double-escaped in the
+// source page (e.g. a company name literally containing "&amp;", written
+// in the page's HTML as "&amp;amp;") would decode in two passes into a
+// bare "&" instead of staying "&amp;" - corrupting scraped job data (job
+// title, company, location) with no relation to any real HTML tag.
+// Matching every named entity in one pass avoids re-scanning content a
+// prior replacement already produced.
+function decodeNamedEntities(value: string): string {
+  return value.replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;|&apos;/gi, (match) => namedEntities[match.toLowerCase()] ?? match)
+}
+
 function cleanText(value = "") {
-  return value
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
+  return decodeNamedEntities(value.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim()
 }
