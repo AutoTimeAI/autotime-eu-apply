@@ -363,6 +363,27 @@ test("cleans job page descriptions and infers missing location", () => {
   )
 })
 
+test("decodes named entities in one pass without double-escaping", () => {
+  // A single &amp; decode pass before &lt;/&gt; decodes would turn a
+  // legitimately double-escaped source ("&amp;lt;", the literal two
+  // characters "&lt;") into a raw "<" instead of the correct "&lt;" -
+  // corrupting real scraped job data (e.g. a company name using "&amp;"
+  // as literal text) with no relation to any real HTML tag.
+  const details = inferJobPageDetails({
+    title: "Engineer at C&amp;A",
+    heading: "Engineer",
+    company: "C&amp;amp;A",
+    description: "We use &amp;lt;script&amp;gt; tags for templating, nothing more.",
+    url: "https://example.com/jobs/engineer"
+  })
+
+  assert.equal(details.company, "C&amp;A")
+  assert.equal(
+    details.jobDescription,
+    "We use &lt;script&gt; tags for templating, nothing more."
+  )
+})
+
 test("stops flattened location parsing at following job sections", () => {
   const details = inferJobPageDetails({
     title: "Founder's Associate",
