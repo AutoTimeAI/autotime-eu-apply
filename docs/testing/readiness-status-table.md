@@ -2,6 +2,14 @@
 
 Last updated: 2026-05-24
 
+> **Reconciliation note (2026-08-23)**: this table predates the
+> 2026-08-15 beta-readiness pass, the 2026-08-21 QA-documentation
+> generation, and a 65-PR audit-and-fix sprint (PRs #88-#176). It is
+> retained for history but is **not** the current source of truth.
+> See `docs/qa/09-release-readiness-report.md` and
+> `docs/qa/11-go-no-go-sign-off.md` for the current, evidence-backed
+> assessment.
+
 Required positioning:
 
 AutoTime EU Apply Private Beta v1 has completed internal technical readiness

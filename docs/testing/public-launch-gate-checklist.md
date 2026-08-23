@@ -2,6 +2,15 @@
 
 Last updated: 2026-05-24
 
+> **Reconciliation note (2026-08-23)**: this checklist predates the
+> 2026-08-15 beta-readiness pass, the 2026-08-21 QA-documentation
+> generation, and a 65-PR audit-and-fix sprint (PRs #88-#176). It is
+> retained for history but is **not** the current source of truth.
+> See `docs/qa/09-release-readiness-report.md` for the current,
+> evidence-backed assessment and its own (also not-ready) verdict —
+> the underlying reasons have changed substantially since May, even
+> though neither assessment currently recommends launch.
+
 This checklist decides whether AutoTime EU Apply can move beyond founder-led
 private beta. Passing internal technical checks is not enough for public launch.
 

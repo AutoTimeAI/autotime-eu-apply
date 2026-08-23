@@ -19,6 +19,16 @@ test-results/
 lighthouse-report/
 axe-report/
 k6-report/
+
+# Release-assurance evidence: potentially contains screenshots/traces with
+# personal data. Keep the structure (.gitkeep), index, and manifest tracked;
+# ignore everything else by default. Explicitly `git add -f` a specific file
+# only after confirming it contains no personal data.
+test-evidence/**/*
+!test-evidence/**/
+!test-evidence/**/.gitkeep
+!test-evidence/*/evidence-index.csv
+!test-evidence/*/execution-manifest.json
 *.log
 npm-debug.log*
 pnpm-debug.log*

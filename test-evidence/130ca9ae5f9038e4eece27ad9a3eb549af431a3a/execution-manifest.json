@@ -1,0 +1,43 @@
+{
+  "releaseSha": "130ca9ae5f9038e4eece27ad9a3eb549af431a3a",
+  "releaseBranch": "main",
+  "assessmentBranch": "release-assurance/private-beta-2026-08",
+  "deployedShaVerified": false,
+  "assessmentDate": "2026-08-23",
+  "tester": "Claude Code release-assurance assessment",
+  "testTotals": {
+    "pass": 41,
+    "fail": 2,
+    "notRunOrBlocked": 51,
+    "notApplicable": 1,
+    "total": 95
+  },
+  "findingsSummary": {
+    "critical": 0,
+    "high": 0,
+    "mediumHigh": 1,
+    "medium": 1,
+    "low": 3,
+    "informational": 1
+  },
+  "mandatoryGates": {
+    "met": 5,
+    "blocked": 7,
+    "partialOrNotVerified": 12,
+    "total": 24
+  },
+  "recommendation": "NO-GO (provisional)",
+  "notes": "See docs/qa/09-release-readiness-report.md and docs/qa/11-go-no-go-sign-off.md for full detail. This manifest is a machine-readable summary, not a substitute for the narrative reports.",
+  "sourceDocuments": {
+    "testExecutionReport": "docs/qa/06-test-execution-report.md",
+    "releaseReadinessReport": "docs/qa/09-release-readiness-report.md",
+    "goNoGoSignOff": "docs/qa/11-go-no-go-sign-off.md",
+    "founderActionList": "docs/qa/12-founder-action-list.md",
+    "testCasesCsv": "docs/qa/test-cases.csv",
+    "testCasesJson": "docs/qa/test-cases.json",
+    "defectRegister": "docs/qa/defect-register.csv",
+    "riskRegister": "docs/release/risk-register.csv",
+    "securityFindings": "docs/security/security-findings.csv",
+    "evidenceIndex": "test-evidence/130ca9ae5f9038e4eece27ad9a3eb549af431a3a/evidence-index.csv"
+  }
+}
