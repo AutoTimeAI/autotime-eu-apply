@@ -6455,7 +6455,11 @@ export default function HomePage({
       authenticated: Boolean(userId),
       evidence: {
         cv: Boolean(state.profile.baseCvText.trim()),
-        education: Boolean(state.profile.projectSummaries.trim()),
+        // CandidateProfile has no dedicated education field - baseCvText is
+        // the only place education credentials could actually appear, so
+        // this was a copy-paste of the "projects" line below rather than a
+        // genuine independent education signal.
+        education: Boolean(state.profile.baseCvText.trim()),
         experience: Boolean(state.profile.experienceHighlights.trim()),
         projects: Boolean(state.profile.projectSummaries.trim()),
         confirmedSkills: Boolean(state.jobAnalysis.skills?.length),
