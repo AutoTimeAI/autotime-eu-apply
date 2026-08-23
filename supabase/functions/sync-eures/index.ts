@@ -46,8 +46,14 @@ Deno.serve(async (request) => {
     if (!items.length) break;
     const rows = await Promise.all(items.map(async (item) => {
       const title = clean(item.title ?? item.positionTitle), company = clean(item.employer ?? item.organisationName), url = clean(item.url ?? item.redirectUrl);
-      const identityHash = await hash(`${normalise(title)}|${normalise(company)}`);
-      return { title, company, location: clean(item.location ?? item.locationName), url, posted_date: clean(item.postedDate ?? item.publicationDate).slice(0, 10) || null,
+      const location = clean(item.location ?? item.locationName);
+      // Location must be part of the identity, not just title+company - the
+      // same role advertised concurrently in two different cities is two
+      // genuinely distinct, still-open postings for an EU cross-country job
+      // search app, not one listing that "moved". Without this, the second
+      // one silently overwrites the first via the identity_hash upsert.
+      const identityHash = await hash(`${normalise(title)}|${normalise(company)}|${normalise(location)}`);
+      return { title, company, location, url, posted_date: clean(item.postedDate ?? item.publicationDate).slice(0, 10) || null,
         source: "eures", ats_platform: detectATS(url), description_raw: clean(item.description), dedup_hash: await hash(url || identityHash), identity_hash: identityHash };
     }));
     const valid = [...new Map(rows.filter((row) => row.title && row.company && row.url).map((row) => [row.identity_hash, row])).values()];
