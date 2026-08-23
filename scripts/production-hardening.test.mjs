@@ -1101,6 +1101,42 @@ test("profile onboarding save is a single atomic upsert, not a read-then-branch 
   assert.match(route, /\.from\("profiles"\)\.upsert\(payload,\{onConflict:"user_id"\}\)/)
 })
 
+test("job/interview workflow sync helpers check every write's error instead of firing and forgetting", () => {
+  // Supabase-js does not throw on a write failure by default. These
+  // helper functions previously called .insert()/.upsert()/.delete()
+  // without destructuring { error }, so a constraint violation (e.g. two
+  // overlapping syncs racing on a unique(job_id, version) constraint) was
+  // silently discarded - the outer upsertJob()/upsertInterview() reported
+  // success to the client even though the write never actually landed.
+  const jobWorkflow = read("apps/web/lib/job-workflow-repository.ts")
+  const interviewWorkflow = read("apps/web/lib/interview-workflow-repository.ts")
+
+  assert.match(
+    jobWorkflow,
+    /const \{ error \} = await client\.from\("job_workflow_analysis_snapshots"\)\.insert\(/,
+  )
+  assert.match(jobWorkflow, /if \(error\) throw new Error\("Job analysis snapshot could not be saved\."\)/)
+
+  assert.match(
+    interviewWorkflow,
+    /const \{ error \} = await client\s*\.from\("interview_questions"\)\s*\.delete\(\)/,
+  )
+  assert.match(interviewWorkflow, /if \(error\) throw new Error\("Stale interview questions could not be removed\."\)/)
+  assert.match(
+    interviewWorkflow,
+    /const \{ error \} = await client\s*\.from\("interview_questions"\)\s*\.upsert\(/,
+  )
+  assert.match(interviewWorkflow, /if \(error\) throw new Error\("Interview questions could not be saved\."\)/)
+  assert.match(
+    interviewWorkflow,
+    /const \{ error \} = await client\.from\("interview_preparation_snapshots"\)\.insert\(/,
+  )
+  assert.match(
+    interviewWorkflow,
+    /if \(error\) throw new Error\("Interview preparation snapshot could not be saved\."\)/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
