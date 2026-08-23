@@ -90,6 +90,28 @@ test("token-overlap confidence does not max out just because an occupation's own
   assert.notEqual(result.occupationId, "esco:chef");
   assert.equal(result.method, "unmatched");
 });
+test("token-overlap still matches a realistic job description against an occupation with a real, substantive vocabulary", () => {
+  // A normalization fix for the tiny-vocab exploit above must not also
+  // punish the normal case where a real occupation entry (label +
+  // description) is naturally much shorter than a full job posting - that
+  // size gap is expected, not a sign of a bad match.
+  const occupations = [
+    {
+      id: "esco:backend-developer",
+      preferredLabel: "Backend Software Developer",
+      description:
+        "Designs, builds and maintains server-side application logic, APIs and databases, working with backend frameworks and cloud infrastructure.",
+    },
+  ];
+  const result = classifyJobToEsco(
+    "Senior Backend Engineer",
+    "We are hiring a Senior Backend Engineer to join our platform team in Berlin. You will design, build and maintain server-side application logic and APIs, working closely with our infrastructure team on cloud deployments. The ideal candidate has strong experience with backend frameworks, databases, and distributed systems. This is a hybrid role with flexible working hours and a competitive salary. You'll collaborate with product managers and designers to ship reliable, well-tested software, and mentor junior engineers on the team.",
+    occupations,
+  );
+  assert.equal(result.occupationId, "esco:backend-developer");
+  assert.equal(result.method, "token-overlap");
+  assert.ok(result.confidence >= 0.3);
+});
 test("questionnaire context changes with accumulated skill confidence", () => {
   const base = { question: "What did you deliver?", answer: "I built an API", answeredSoFar: [], candidateSkills: [{ id: "api", preferredLabel: "API development", skillType: "skill" }], round: 2 };
   const low = buildQuestionnaireContext({ ...base, currentSkillProfile: [{ escoSkillId: "api", confidence: 0.4, source: "inferred" }] });
