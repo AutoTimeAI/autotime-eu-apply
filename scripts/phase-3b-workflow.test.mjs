@@ -33,6 +33,19 @@ assert.equal(job.facts.salary.sourceText, "€75,000 - €90,000");
 assert.equal(job.facts.country.value, "Ireland");
 assert.equal(job.facts.education.state, "missing");
 
+// Exercises the skills-pattern regex-escaping fix (CodeQL
+// js/incomplete-sanitization): "C++", "C#", and ".NET" all contain
+// characters that are regex metacharacters unless escaped, and the
+// custom (?<![A-Za-z0-9])...(?![A-Za-z0-9]) boundary must still match
+// each of them correctly.
+const specialCharSkillsJob = extractJob({
+  description:
+    "We need a senior backend engineer with deep C++ and C# experience, plus .NET and SQL knowledge required.",
+});
+assert.match(specialCharSkillsJob.facts.skills.value, /C\+\+/);
+assert.match(specialCharSkillsJob.facts.skills.value, /C#/);
+assert.match(specialCharSkillsJob.facts.skills.value, /\.NET/);
+
 const spelledYearsVacancy = `Job title: Backend Engineer
 Company: Example Payments
 Location: Dublin, Ireland
