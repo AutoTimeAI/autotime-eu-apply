@@ -900,6 +900,11 @@ test("AI route CV and outreach free-text fields have upper size bounds, not just
     outreach,
     /candidateKeyStrengths: z\.array\(z\.string\(\)\.trim\(\)\.min\(1\)\.max\(200\)\)\.min\(1\)\.max\(20\)/,
   )
+  // recruiterEmail was missed in the initial pass - z.string().email() has
+  // no length cap of its own, so an "email-shaped" string with a huge
+  // local-part (e.g. 100k "a" characters before the @) could still inflate
+  // the OpenAI prompt this field flows into via draftOutreachWithOpenAI.
+  assert.match(outreach, /recruiterEmail: z\.string\(\)\.trim\(\)\.email\(\)\.max\(254\)/)
 })
 
 let failed = 0
