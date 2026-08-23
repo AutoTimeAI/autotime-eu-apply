@@ -17,6 +17,27 @@ function safeEqual(a: string, b: string): boolean {
 const clean = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const normalise = (value: string) => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "");
 async function hash(value: string) { const data = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return [...new Uint8Array(data)].map((v) => v.toString(16).padStart(2, "0")).join(""); }
+// Mirrors apps/web/lib/dedup.ts's canonicalJobUrl - kept as a separate copy
+// since this Deno edge function can't import a Next.js workspace module.
+// Without this, dedup_hash was computed from the raw URL, so the same
+// posting re-fetched with a different utm_/ref tracking parameter hashed
+// differently every time.
+function canonicalJobUrl(value: string): string {
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(?:utm_|source$|ref$|referrer$)/i.test(key)) url.searchParams.delete(key);
+    }
+    url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    url.pathname = url.pathname.replace(/\/$/, "");
+    url.searchParams.sort();
+    return url.toString();
+  } catch {
+    return value.trim();
+  }
+}
 function detectATS(url: string) { const patterns: Array<[string, RegExp]> = [["greenhouse", /greenhouse\.io/i], ["lever", /jobs\.lever\.co/i], ["workday", /myworkdayjobs\.com/i], ["personio", /jobs\.personio\.(de|com)/i], ["ashby", /jobs\.ashbyhq\.com/i]]; return patterns.find(([, regex]) => regex.test(url))?.[0] ?? "unknown"; }
 
 async function requestPage(page: number) {
@@ -54,7 +75,7 @@ Deno.serve(async (request) => {
       // one silently overwrites the first via the identity_hash upsert.
       const identityHash = await hash(`${normalise(title)}|${normalise(company)}|${normalise(location)}`);
       return { title, company, location, url, posted_date: clean(item.postedDate ?? item.publicationDate).slice(0, 10) || null,
-        source: "eures", ats_platform: detectATS(url), description_raw: clean(item.description), dedup_hash: await hash(url || identityHash), identity_hash: identityHash };
+        source: "eures", ats_platform: detectATS(url), description_raw: clean(item.description), dedup_hash: await hash(canonicalJobUrl(url) || identityHash), identity_hash: identityHash };
     }));
     const valid = [...new Map(rows.filter((row) => row.title && row.company && row.url).map((row) => [row.identity_hash, row])).values()];
     const { error } = await supabase.from("job_listings").upsert(valid, { onConflict: "identity_hash" });

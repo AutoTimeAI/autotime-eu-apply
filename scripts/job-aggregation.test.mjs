@@ -297,4 +297,29 @@ test("job-aggregation identity hashes include location, not just title+company",
   for (const match of jobSourcesIdentityHashes) {
     assert.match(match[1], /\$\{norm\(j\.location\)\}/);
   }
+})
+
+test("job-ingestion edge functions canonicalize a URL before hashing it into dedup_hash", async () => {
+  // dedup_hash previously hashed the raw URL, so the same posting re-fetched
+  // with a different utm_/ref tracking parameter hashed differently every
+  // time - mirroring apps/web/lib/dedup.ts's canonicalJobUrl (stripping
+  // tracking params, www., trailing slash, and sorting query params) closes
+  // that gap without needing a cross-runtime shared module.
+  const eures = await readFile(
+    new URL("../supabase/functions/sync-eures/index.ts", import.meta.url),
+    "utf8",
+  );
+  const jobSources = await readFile(
+    new URL("../supabase/functions/sync-job-sources/index.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(eures, /function canonicalJobUrl\(value: string\): string \{/);
+  assert.match(eures, /dedup_hash: await hash\(canonicalJobUrl\(url\) \|\| identityHash\)/);
+  assert.doesNotMatch(eures, /dedup_hash: await hash\(url \|\| identityHash\)/);
+
+  assert.match(jobSources, /function canonicalJobUrl\(value: string\): string \{/);
+  const dedupHashCalls = jobSources.match(/dedup_hash:await hash\(canonicalJobUrl\(j\.url\)\)/g) ?? [];
+  assert.equal(dedupHashCalls.length, 2);
+  assert.doesNotMatch(jobSources, /dedup_hash:await hash\(j\.url\)/);
 });
