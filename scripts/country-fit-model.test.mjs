@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { evaluateCountryFit } from "../packages/shared/src/fit-model.ts"
+import { getCountryRule } from "../packages/shared/src/country-rules.ts"
 
 const baseProfile = {
   fullName: "Rajan Patel",
@@ -186,6 +187,20 @@ test("uses outcome history to become stricter on repeated blockers", () => {
 
   assert.ok(withHistory.overallScore < withoutHistory.overallScore)
   assert.ok(withHistory.learningPrompt.includes("Outcome history"))
+})
+
+test("does not match a country whose name merely starts with another country's short alias", () => {
+  const rule = getCountryRule("Ukraine")
+
+  assert.notEqual(rule.code, "GB")
+})
+
+test("still matches a genuine alias substring inside a longer country name", () => {
+  const exact = getCountryRule("uk")
+  const withWords = getCountryRule("United Kingdom")
+
+  assert.equal(exact.code, "GB")
+  assert.equal(withWords.code, "GB")
 })
 
 let failed = 0
