@@ -1065,6 +1065,24 @@ test("diagnostics.ts reuses the Sentry pipeline's broader, recursive redaction i
   assert.match(sentryPrivacy, /export function redactSensitiveValue/)
 })
 
+test("capability-readiness education evidence reads a real field, not a copy-pasted duplicate of projects", () => {
+  // CandidateProfile has no dedicated education field, so this was a
+  // copy-paste of the "projects" line - education evidence silently
+  // mirrored project-summary evidence instead of reflecting anything
+  // about education, inflating confirmedEvidenceCount whenever
+  // projectSummaries was filled in but nothing else was.
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.doesNotMatch(
+    dashboard,
+    /education: Boolean\(state\.profile\.projectSummaries\.trim\(\)\)/,
+  )
+  assert.match(
+    dashboard,
+    /education: Boolean\(state\.profile\.baseCvText\.trim\(\)\)/,
+  )
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
