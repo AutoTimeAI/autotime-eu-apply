@@ -1083,6 +1083,24 @@ test("capability-readiness education evidence reads a real field, not a copy-pas
   )
 })
 
+test("profile onboarding save is a single atomic upsert, not a read-then-branch insert/update race", () => {
+  // Reading whether a profiles row exists, then branching to insert or
+  // update, let two concurrent PATCHes for the same brand-new user (e.g. a
+  // double-clicked "Next" on the first onboarding step) both see no
+  // existing row and both attempt an insert - the loser hit the
+  // unique(user_id) constraint and surfaced as a generic 500, silently
+  // dropping that request's data.
+  const route = read("apps/web/app/api/profile/onboarding/route.ts")
+
+  assert.doesNotMatch(
+    route,
+    /const \{data:existing\}=await client\.from\("profiles"\)\.select/,
+    "must not read for existence before deciding insert vs update",
+  )
+  assert.match(route, /const payload=\{user_id:user\.id,\.\.\.changes\}/)
+  assert.match(route, /\.from\("profiles"\)\.upsert\(payload,\{onConflict:"user_id"\}\)/)
+})
+
 let failed = 0
 
 for (const { name, run } of tests) {
