@@ -34,6 +34,7 @@
 
 ## Remaining launch blockers / manual gates
 
+- User-content XSS/HTML/SQL-injection coverage is now automated and passed after adding backend CV/outreach bounds and defence-in-depth URL validation. See `docs/testing/user-content-injection-audit-2026-08-15.md`.
 - Add the actual ICO registration reference to the privacy policy after registration; the current policy explicitly marks it as pending.
 - Complete a real Chrome pre-publication extension pass on supported ATS pages and the one-time LinkedIn risk notice. Automated extension contracts pass, but this environment cannot install the unpacked extension into the user's normal Chrome profile.
 - Validate one real alert email to an address controlled by the owner. QA did not send mail to third parties.
