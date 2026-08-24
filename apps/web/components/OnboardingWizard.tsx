@@ -433,10 +433,18 @@ export function OnboardingWizard() {
   };
   return (
     <main className="onboarding-wizard-shell">
-      <div className="onboarding-wizard-progress" aria-hidden="true">
+      <div
+        className="onboarding-wizard-progress"
+        role="progressbar"
+        aria-label="Onboarding progress"
+        aria-valuemin={1}
+        aria-valuemax={6}
+        aria-valuenow={step + 1}
+        aria-valuetext={`Step ${step + 1} of 6: ${labels[step]}`}
+      >
         <span style={{ width: `${((step + 1) / 6) * 100}%` }} />
       </div>
-      <p className="eyebrow">
+      <p className="eyebrow" aria-live="polite">
         Step {step + 1} of 6 · {labels[step]}
       </p>
       <section className="onboarding-step" aria-labelledby="onboarding-title">

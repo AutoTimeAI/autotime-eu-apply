@@ -23,7 +23,11 @@ body:has(.dashboard-app-shell) {
 
 .dashboard-topbar,
 .dashboard-sidebar {
-  position: static;
+  position: relative;
+}
+
+.dashboard-topbar {
+  z-index: 80;
 }
 
 .dashboard-brand .brand-name,
@@ -123,7 +127,7 @@ body:has(.dashboard-app-shell) {
   }
 
   .dashboard-topbar {
-    position: static;
+    position: relative;
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: 60px;
     padding: 9px 14px;

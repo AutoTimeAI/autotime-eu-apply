@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
@@ -261,6 +262,9 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState({ right: 16, top: 72 });
   const planLabel = plan === "pro" ? "Pro" : "Free";
   const isPaid = plan !== "free";
   const menuId = "user-account-menu";
@@ -273,7 +277,8 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
     const closeOnOutsideInteraction = (event: MouseEvent | TouchEvent) => {
       if (
         event.target instanceof Node &&
-        !shellRef.current?.contains(event.target)
+        !shellRef.current?.contains(event.target) &&
+        !menuRef.current?.contains(event.target)
       ) {
         setIsOpen(false);
       }
@@ -388,16 +393,9 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   };
 
   return (
-    <div
-      className="user-nav-shell"
-      ref={shellRef}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          setIsOpen(false);
-        }
-      }}
-    >
+    <div className="user-nav-shell" ref={shellRef}>
       <button
+        ref={triggerRef}
         aria-controls={isOpen ? menuId : undefined}
         aria-expanded={isOpen}
         aria-haspopup="menu"
@@ -408,7 +406,16 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
             setIsOpen(false);
           }
         }}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => {
+          const rect = triggerRef.current?.getBoundingClientRect();
+          if (rect) {
+            setMenuPosition({
+              right: Math.max(10, window.innerWidth - rect.right),
+              top: rect.bottom + 8,
+            });
+          }
+          setIsOpen((current) => !current);
+        }}
       >
         <span aria-hidden="true" className="user-avatar">
           {getInitial(email)}
@@ -420,50 +427,59 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
           </strong>
         </span>
       </button>
-      {isOpen ? (
-        <div className="user-nav-menu" id={menuId} role="menu">
-          <a
-            className="secondary-button"
-            href="/dashboard/extension"
-            role="menuitem"
-          >
-            Extension
-          </a>
-          <a
-            className="secondary-button"
-            href="/dashboard/settings"
-            role="menuitem"
-          >
-            Settings
-          </a>
-          {isAdmin ? (
-            <a className="secondary-button" href="/admin" role="menuitem">
-              Admin panel
-            </a>
-          ) : null}
-          <button
-            className="secondary-button"
-            role="menuitem"
-            type="button"
-            onClick={openBillingPortal}
-          >
-            {isPaid ? "Billing & Plan" : "Upgrade plan"}
-          </button>
-          <button
-            className="secondary-button"
-            role="menuitem"
-            type="button"
-            onClick={signOut}
-          >
-            Sign out
-          </button>
-          {status ? (
-            <p className={`status-banner compact ${getStatusTone(status)}`}>
-              {status}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+      {isOpen
+        ? createPortal(
+            <div
+              className="user-nav-menu user-nav-menu-portal"
+              id={menuId}
+              ref={menuRef}
+              role="menu"
+              style={{ right: menuPosition.right, top: menuPosition.top }}
+            >
+              <a
+                className="secondary-button"
+                href="/dashboard/extension"
+                role="menuitem"
+              >
+                Extension
+              </a>
+              <a
+                className="secondary-button"
+                href="/dashboard/settings"
+                role="menuitem"
+              >
+                Settings
+              </a>
+              {isAdmin ? (
+                <a className="secondary-button" href="/admin" role="menuitem">
+                  Admin panel
+                </a>
+              ) : null}
+              <button
+                className="secondary-button"
+                role="menuitem"
+                type="button"
+                onClick={openBillingPortal}
+              >
+                {isPaid ? "Billing & Plan" : "Upgrade plan"}
+              </button>
+              <button
+                className="secondary-button"
+                role="menuitem"
+                type="button"
+                onClick={signOut}
+              >
+                Sign out
+              </button>
+              {status ? (
+                <p className={`status-banner compact ${getStatusTone(status)}`}>
+                  {status}
+                </p>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
