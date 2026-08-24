@@ -79,6 +79,12 @@ try {
     throw new Error(`Lighthouse thresholds failed:\n${failures.join("\n")}`);
   }
 } finally {
-  if (chrome) await chrome.kill().catch(() => undefined);
+  if (chrome) {
+    try {
+      await chrome.kill();
+    } catch {
+      // Chrome may already have exited; server cleanup must still continue.
+    }
+  }
   server.kill("SIGTERM");
 }
