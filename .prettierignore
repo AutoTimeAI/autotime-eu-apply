@@ -1,0 +1,10 @@
+# Dependency-manager and generated build/test artefacts
+pnpm-lock.yaml
+**/.next/
+**/.output/
+playwright-report/
+test-results/
+lighthouse-report/
+screenshots/
+test-evidence/
+

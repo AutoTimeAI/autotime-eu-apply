@@ -203,7 +203,10 @@ export function OnboardingWizard() {
     void fetch("/api/profile/onboarding")
       .then(async (response) => ({
         response,
-        payload: await response.json().catch(() => ({ data: null, error: "Profile service returned an invalid response." })),
+        payload: await response.json().catch(() => ({
+          data: null,
+          error: "Profile service returned an invalid response.",
+        })),
       }))
       .then(({ response, payload }) => {
         if (!response.ok) {
