@@ -1,3 +1,4 @@
+/** Creates redacted, consistently shaped diagnostics for API responses and operational logs. */
 import { NextResponse, type NextRequest } from "next/server"
 import loggingConfig from "../../../config/monitoring/logging.json"
 

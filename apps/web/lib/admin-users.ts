@@ -1,3 +1,4 @@
+/** Builds privacy-minimised beta-user rows for the operations console. */
 import "server-only";
 import { createAdminClient } from "./supabase/admin";
 
@@ -9,6 +10,7 @@ export type AdminUserRow = {
   lastActiveAt: string | null;
 };
 
+/** Lists the first admin user page and includes email only when authorised upstream. */
 export async function getAdminUsersOverview(
   includeEmail: boolean,
 ): Promise<AdminUserRow[]> {

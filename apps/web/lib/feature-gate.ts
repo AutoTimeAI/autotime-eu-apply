@@ -1,3 +1,4 @@
+/** Enforces plan entitlements, monthly AI allowances, and purchased-credit usage. */
 import { createAdminClient } from "./supabase/admin"
 import { createDiagnostic, logDiagnostic } from "./diagnostics"
 import type { SubscriptionPlan, SubscriptionStatus } from "./supabase/types"
@@ -30,6 +31,7 @@ function isEntitledStatus(status: SubscriptionStatus | null | undefined) {
   return status === "active" || status === "trialing"
 }
 
+/** Resolves the effective subscription plan for a user. */
 export async function getUserPlan(
   userId: string
 ): Promise<SubscriptionPlan> {
@@ -65,6 +67,7 @@ export async function getUserPlan(
   }
 }
 
+/** Returns whether the user's effective plan is Pro. */
 export async function isProUser(userId: string): Promise<boolean> {
   try {
     const plan = await getUserPlan(userId)
@@ -77,6 +80,7 @@ export async function isProUser(userId: string): Promise<boolean> {
   }
 }
 
+/** Counts unused purchased AI credits available to the user. */
 export async function getPurchasedAiCredits(userId: string): Promise<number> {
   if (isTestAuthUserId(userId)) {
     return 0
@@ -120,6 +124,7 @@ async function getMonthlyAiCallCount(userId: string): Promise<number> {
   }
 }
 
+/** Calculates the user's remaining included and purchased AI calls. */
 export async function getRemainingAiCalls(userId: string): Promise<number> {
   try {
     const [plan, monthlyCalls, purchasedCredits] = await Promise.all([
@@ -143,6 +148,7 @@ export async function getRemainingAiCalls(userId: string): Promise<number> {
   }
 }
 
+/** Records an AI call against the appropriate allowance or purchased credit. */
 export async function trackAiCall(
   userId: string,
   opts: {
@@ -208,6 +214,7 @@ export async function trackAiCall(
   }
 }
 
+/** Throws when the user has no remaining entitlement for an AI request. */
 export async function assertCanUseAi(userId: string): Promise<void> {
   try {
     const remainingCalls = await getRemainingAiCalls(userId)

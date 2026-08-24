@@ -1,3 +1,4 @@
+/** Owns deterministic job extraction, fit analysis, application state, and transitions. */
 import { detectATS } from "./ats-detector.ts";
 
 export type EvidenceState = "confirmed" | "partial" | "missing" | "conflicting";
@@ -129,6 +130,7 @@ const lineAfter = (text: string, label: RegExp) =>
     ?.replace(label, "")
     .trim() ?? "";
 
+/** Extracts a bounded job record and detected ATS metadata from raw input. */
 export function extractJob(input: {
   description: string;
   employer?: string;
@@ -233,6 +235,7 @@ const requirements = (description: string) =>
     )
     .slice(0, 12);
 
+/** Produces an evidence-led fit decision without inventing missing candidate facts. */
 export function analyseJob(
   job: JobRecord,
   candidateEvidence: string,
@@ -352,6 +355,7 @@ export function analyseJob(
   };
 }
 
+/** Creates the initial preparation workspace for a saved job. */
 export function createApplication(job: JobRecord): ApplicationWorkspace {
   if (!job.id) throw new Error("An owned job is required.");
   const now = new Date().toISOString();
@@ -373,6 +377,7 @@ export function createApplication(job: JobRecord): ApplicationWorkspace {
   };
 }
 
+/** Returns whether an application can advance and the remaining blockers. */
 export function getApplicationReadiness(
   application: ApplicationWorkspace,
   job: JobRecord,
@@ -387,6 +392,7 @@ export function getApplicationReadiness(
   return { blockers, ready: blockers.length === 0 };
 }
 
+/** Lists applications that still require user review. */
 export function getApplicationReviewQueue(state: JobWorkflowState) {
   return state.applications.flatMap((application) => {
     const job = state.jobs.find((item) => item.id === application.jobId);
@@ -398,6 +404,7 @@ export function getApplicationReviewQueue(state: JobWorkflowState) {
   });
 }
 
+/** Applies a valid application status transition. */
 export function transitionApplication(
   application: ApplicationWorkspace,
   next: ApplicationWorkspaceStatus,
@@ -442,6 +449,7 @@ export function transitionApplication(
   };
 }
 
+/** Mirrors an interview outcome into the linked application status. */
 export function applyInterviewOutcome(
   application: ApplicationWorkspace,
   outcome: "progressed" | "offer" | "rejected" | "withdrawn" | "no_response",
@@ -461,9 +469,11 @@ export function applyInterviewOutcome(
   return { ...application, status, updatedAt: new Date().toISOString() };
 }
 
+/** Identifies job URLs that should not be fetched or automated. */
 export function isRestrictedJobUrl(value: string) {
   return /https?:\/\/(?:[^/]+\.)?(linkedin|indeed)\./i.test(value);
 }
+/** Detects an existing job using canonical URL and identity signals. */
 export function duplicateJob(
   jobs: JobRecord[],
   candidate: Pick<JobRecord, "sourceUrl" | "title" | "employer">,

@@ -1,3 +1,4 @@
+/** Fetches bounded public portfolio text with DNS and network-address SSRF guards. */
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
@@ -5,6 +6,7 @@ function isPrivateAddress(address: string) {
   return /^(127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|fc|fd|fe80)/i.test(address);
 }
 
+/** Returns readable text from a public HTML portfolio URL after safety checks. */
 export async function fetchPortfolioText(rawUrl: string): Promise<{ text: string; url: string }> {
   const url = new URL(rawUrl);
   if (!(["http:", "https:"] as string[]).includes(url.protocol) || url.username || url.password) throw new Error("Enter a public HTTP or HTTPS portfolio URL.");

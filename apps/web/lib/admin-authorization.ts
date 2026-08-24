@@ -1,3 +1,4 @@
+/** Resolves server-side admin identities, memberships, permissions, and request-origin policy. */
 import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "./supabase/admin";
@@ -32,6 +33,7 @@ import {
 
 export type AdminPrincipal = { membership: AdminMembership; user: User };
 
+/** Loads and validates an active admin membership for a UUID user identifier. */
 export async function getAdminMembership(
   userId: string,
 ): Promise<AdminMembership | null> {
@@ -72,6 +74,7 @@ async function getSessionUser() {
   } = await supabase.auth.getUser();
   return error ? null : user;
 }
+/** Requires an authenticated principal holding the requested admin permission. */
 export async function requireAdminPrincipal(
   permission: AdminPermission,
 ): Promise<AdminPrincipal> {
@@ -83,12 +86,14 @@ export async function requireAdminPrincipal(
     testUser ? async () => null : getAdminMembership,
   );
 }
+/** Applies the admin-principal permission check to a route request. */
 export async function requireAdminRequest(
   _request: Request,
   permission: AdminPermission,
 ) {
   return requireAdminPrincipal(permission);
 }
+/** Accepts mutation requests only when browser origin metadata is same-origin. */
 export function isSameOriginMutation(request: Request) {
   const origin = request.headers.get("origin");
   if (origin) {

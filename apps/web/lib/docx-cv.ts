@@ -1,3 +1,4 @@
+/** Extracts readable CV text from DOCX archives without executing embedded content. */
 import { inflateRawSync } from "node:zlib"
 
 type ZipEntry = {
@@ -109,6 +110,7 @@ function documentXmlToText(xml: string): string {
     .join("\n")
 }
 
+/** Reads the main Word document XML and returns normalised plain text. */
 export function extractDocxText(buffer: Buffer): string {
   const documentEntry = readZipEntries(buffer).find(
     (entry) => entry.name === "word/document.xml"
