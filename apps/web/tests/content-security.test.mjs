@@ -5,7 +5,10 @@ import { boundedCvSchema, escapeHtml, safeHttpUrl } from "../lib/content-securit
 const payloads = ["<script>alert('xss')</script>", "<img src=x onerror=alert('xss')>", "**bold** <b># heading</b>", "'; DROP TABLE profiles; --"];
 for (const payload of payloads) {
   const escaped = escapeHtml(payload);
-  assert.equal(/<(script|img|b)[ >]/i.test(escaped), false);
+  const normalized = escaped.toLowerCase();
+  for (const tag of ["script", "img", "b"]) {
+    assert.equal(normalized.includes(`<${tag}`), false);
+  }
 }
 assert.equal(safeHttpUrl("javascript:alert('xss')"), null);
 assert.equal(safeHttpUrl("data:text/html,<script>alert(1)</script>"), null);
