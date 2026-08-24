@@ -28,7 +28,9 @@ async function disableDevelopmentToolbar(page: Page) {
 
 async function gotoRolePathways(page: Page) {
   await page.goto("/dashboard/role-pathways");
-  await expect(page.getByRole("heading", { name: "Role Pathways" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Role Pathways" }),
+  ).toBeVisible();
   // First visit to this route compiles on demand in dev; a Fast Refresh
   // mid-interaction can silently drop the next click. Settle first.
   await page.waitForLoadState("networkidle");
@@ -166,7 +168,14 @@ test("stepper active state uses shared blue, not the site teal default", async (
     name: "Extract evidence",
     exact: true,
   });
-  await expect(extractButton).toHaveCSS("background-color", "rgb(23, 78, 166)");
+  await page
+    .getByRole("textbox", { name: "CV, project and experience evidence" })
+    .fill(backendEvidence);
+  await expect(extractButton).toBeEnabled();
+  await expect(extractButton).toHaveCSS(
+    "background-image",
+    /rgb\(23, 78, 166\)/,
+  );
 });
 
 test("active step scrolls into view on mobile when advancing stages", async ({

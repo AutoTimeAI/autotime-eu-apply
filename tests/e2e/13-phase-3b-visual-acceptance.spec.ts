@@ -269,16 +269,16 @@ test("Skip is explained and legacy routes resolve without loops", async ({
     fullPage: true,
     path: `${screenshotDir}/skip-analysis-1440.png`,
   });
-  for (const route of [
-    "match-score",
-    "inbox",
-    "cv-tailor",
-    "application-answers",
-    "documents",
-    "follow-ups",
+  for (const [route, expectedPath] of [
+    ["match-score", "/dashboard/jobs"],
+    ["inbox", "/dashboard/jobs"],
+    ["cv-tailor", "/dashboard/cv-tailor"],
+    ["application-answers", "/dashboard/applications"],
+    ["documents", "/dashboard/applications"],
+    ["follow-ups", "/dashboard/follow-ups"],
   ]) {
     await page.goto(`/dashboard/${route}`, { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveURL(new RegExp(`/dashboard/(jobs|applications)$`));
+    await expect(page).toHaveURL(new RegExp(`${expectedPath}$`));
   }
 });
 

@@ -30,6 +30,7 @@ import {
   profileProtocolReadinessEvent,
 } from "./ProfileProtocolLock";
 import {
+  hasCompletedOnboarding,
   markOnboardingComplete,
 } from "./OnboardingWizard";
 import {
@@ -400,25 +401,37 @@ export default function HomeExperience({
       const storedDashboard = readDashboardState(userId);
 
       if (!onboardingVerified) {
-        let completedOnServer = false;
-        try {
-          const response = await fetch("/api/profile/onboarding", {
-            cache: "no-store",
-          });
-          const payload = await response.json();
-          completedOnServer = Boolean(
-            response.ok && payload.data?.onboarding_completed_at,
-          );
-        } catch {
-          completedOnServer = false;
+        if (
+          process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true" &&
+          hasCompletedOnboarding(userId)
+        ) {
+          onboardingVerified = true;
         }
 
-        if (completedOnServer) {
-          markOnboardingComplete(userId);
-          onboardingVerified = true;
+        if (onboardingVerified) {
+          // CI deliberately runs without Supabase. The local completion flag
+          // is seeded by the E2E fixture and is only trusted in local-only mode.
         } else {
-          router.replace("/dashboard/onboarding");
-          return;
+          let completedOnServer = false;
+          try {
+            const response = await fetch("/api/profile/onboarding", {
+              cache: "no-store",
+            });
+            const payload = await response.json();
+            completedOnServer = Boolean(
+              response.ok && payload.data?.onboarding_completed_at,
+            );
+          } catch {
+            completedOnServer = false;
+          }
+
+          if (completedOnServer) {
+            markOnboardingComplete(userId);
+            onboardingVerified = true;
+          } else {
+            router.replace("/dashboard/onboarding");
+            return;
+          }
         }
       }
 
@@ -575,7 +588,11 @@ export default function HomeExperience({
 
   if (!testMode && onboardingGate === "checking") {
     return (
-      <section className="home-onboarding-gate" role="status" aria-live="polite">
+      <section
+        className="home-onboarding-gate"
+        role="status"
+        aria-live="polite"
+      >
         <span className="home-onboarding-gate-mark" aria-hidden="true" />
         <strong>Checking your profile setup…</strong>
         <p>We’ll open your dashboard or resume the next required step.</p>
@@ -654,14 +671,10 @@ export default function HomeExperience({
       onboarding.currentStep !== "complete" ? (
         <div className="onboarding-shell">
           <OnboardingStep
-            hasCvEvidence={Boolean(
-              dashboardState?.profile.baseCvText.trim(),
-            )}
+            hasCvEvidence={Boolean(dashboardState?.profile.baseCvText.trim())}
             onChange={persist}
             onComplete={finishOnboarding}
-            onNeedsCvEvidence={() =>
-              router.push("/dashboard/autofill-profile")
-            }
+            onNeedsCvEvidence={() => router.push("/dashboard/autofill-profile")}
             state={onboarding}
           />
           <button
