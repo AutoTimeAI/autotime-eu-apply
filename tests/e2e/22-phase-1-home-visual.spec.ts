@@ -1,3 +1,4 @@
+// Protects the dashboard home layout and visual hierarchy across viewports.
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";

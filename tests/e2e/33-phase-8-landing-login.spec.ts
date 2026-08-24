@@ -1,3 +1,4 @@
+// Protects the public landing and authentication experience across viewports.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 

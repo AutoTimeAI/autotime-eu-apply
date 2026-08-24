@@ -1,3 +1,4 @@
+# Runs the Windows feature-verification checklist and reports each command outcome.
 $ErrorActionPreference = "Continue"
 $passed = 0
 $failed = 0

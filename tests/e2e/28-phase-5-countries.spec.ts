@@ -1,3 +1,4 @@
+// Exercises country-fit and mobility guidance with evidence and disclaimer checks.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { seedReadyDashboardProfile } from "./helpers";

@@ -1,3 +1,4 @@
+/** Runs the release-blocking static, unit, build, and smoke checks in order. */
 import { spawnSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"

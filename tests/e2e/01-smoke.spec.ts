@@ -1,3 +1,4 @@
+// Verifies that public entry points and the authenticated dashboard load successfully.
 import { expect, test } from "@playwright/test"
 
 test("homepage loads and shows the main CTA", async ({ page }) => {

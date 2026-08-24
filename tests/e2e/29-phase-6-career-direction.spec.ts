@@ -1,3 +1,4 @@
+// Exercises evidence-led career-direction recommendations and saved lane state.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 

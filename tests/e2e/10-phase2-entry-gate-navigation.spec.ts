@@ -1,3 +1,4 @@
+// Covers onboarding entry gates and navigation across authenticated product routes.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { seedReadyDashboardProfile } from "./helpers";
 

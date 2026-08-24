@@ -1,3 +1,4 @@
+// Provides shared authentication, fixture seeding, and navigation helpers for E2E tests.
 import type { Page } from "@playwright/test"
 import {
   sampleCandidateProfile,

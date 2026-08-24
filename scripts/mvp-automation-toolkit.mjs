@@ -1,3 +1,4 @@
+/** Orchestrates repeatable MVP checks and emits a redacted validation report. */
 import { spawnSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"

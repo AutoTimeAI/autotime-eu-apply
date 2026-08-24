@@ -1,3 +1,4 @@
+/** Enforces that MVP requirements remain represented in the automated test inventory. */
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"

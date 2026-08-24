@@ -1,3 +1,4 @@
+// Exercises interview preparation and its links to applications and outcomes.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 

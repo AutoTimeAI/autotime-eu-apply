@@ -1,3 +1,4 @@
+/** Creates a timestamped founder-validation report from automated check results. */
 import { spawnSync } from "node:child_process"
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"

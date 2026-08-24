@@ -1,3 +1,4 @@
+// Exercises profile evidence editing, persistence, privacy, and readiness feedback.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { seedReadyDashboardProfile } from "./helpers";

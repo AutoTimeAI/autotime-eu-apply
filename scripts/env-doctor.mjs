@@ -1,3 +1,4 @@
+/** Audits local or production environment readiness without printing secret values. */
 import fs from "node:fs"
 import path from "node:path"
 

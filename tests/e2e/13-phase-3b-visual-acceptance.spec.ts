@@ -1,3 +1,4 @@
+// Captures and checks the phase-3 job/application workflow at supported viewports.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 

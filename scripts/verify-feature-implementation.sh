@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Runs the Unix feature-verification checklist and reports each command outcome.
 # Repository-only verification for feature-spec phases 1-11.
 # Live APIs, credentials, deployed migrations, and browser checks remain manual.
 set -uo pipefail
