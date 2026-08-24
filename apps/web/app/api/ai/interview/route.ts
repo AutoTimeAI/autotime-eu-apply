@@ -15,9 +15,10 @@ import {
 } from "../../../../lib/openai-server"
 import { InterviewPrepGuardrailError } from "../../../../lib/interview-prep"
 import {
-  assertCanUseAi,
+  reserveAiCall,
+  releaseAiCall,
   FeatureGateError,
-  trackAiCall,
+  finalizeAiCall,
 } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
@@ -74,11 +75,17 @@ export async function POST(
     const body = requestSchema.parse(await request.json())
 
     await assertAiRouteRateLimit(user.id)
-    await assertCanUseAi(user.id)
+    const reservationId = await reserveAiCall(user.id)
 
-    const result = await generateInterviewPrepWithOpenAI(body)
+    let result
+    try {
+      result = await generateInterviewPrepWithOpenAI(body)
+    } catch (error: unknown) {
+      await releaseAiCall(reservationId)
+      throw error
+    }
 
-    await trackAiCall(user.id, {
+    await finalizeAiCall(reservationId, {
       feature: "interview-prep",
       model: result.model,
       promptTokens: result.promptTokens,

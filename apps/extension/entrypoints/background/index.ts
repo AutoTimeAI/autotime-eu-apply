@@ -1,20 +1,3 @@
-// MV3 background service worker. Raw account tokens live in
-// chrome.storage.session and are used only by trusted extension contexts;
-// content scripts receive non-secret connection state and proxy authenticated
-// scoring/sync operations through this worker.
-// Responsibilities:
-//   - toolbar icon click: sends AUTOTIME_SHOW_WIDGET to the active tab (via
-//     chrome.tabs.sendMessage, falling back to chrome.scripting.executeScript
-//     if no listener responds), and AUTOTIME_LINKEDIN_MATCH_REQUEST on
-//     LinkedIn job pages
-//   - AUTOTIME_SYNC_APPLICATIONS: internal message from the side panel or a
-//     content script to push local applications to the dashboard
-//   - onMessageExternal: the AUTOTIME_CONNECT_ACCOUNT / AUTOTIME_PING
-//     handshake the AutoTime web dashboard uses (via externally_connectable
-//     in wxt.config.ts) to hand the extension a signed-in session, answered
-//     with AUTOTIME_ACCOUNT_CONNECTED
-//   - onInstalled / onStartup / storage.onChanged: retries any
-//     applications that failed to sync to the dashboard earlier
 import { defineBackground } from "wxt/utils/define-background"
 import { appUrl } from "../../lib/openai"
 import {
@@ -29,7 +12,13 @@ import {
   type ApplicationRecord
 } from "../../lib/storage"
 import { getActiveSession, withFreshSession } from "../../lib/session"
-import { syncApplicationsToDashboard } from "../../lib/cloud-sync"
+import {
+  scoreJobFromDashboard,
+  syncApplicationsToDashboard,
+  type JobMatchPayload,
+  type JobMatchScore
+} from "../../lib/cloud-sync"
+import { toConnectionState, type ConnectionState } from "../../lib/connection-state"
 
 type ExternalMessage = {
   authToken?: unknown
@@ -58,13 +47,11 @@ type InternalMessage = {
 
 type InternalResponse = {
   connected?: boolean
-  data?: unknown
-  email?: string
+  data?: JobMatchScore
   error?: string
   ok: boolean
-  plan?: "free" | "pro"
-  provider?: AccountSession["provider"]
   reason?: string
+  state?: ConnectionState
   synced?: boolean
 }
 
@@ -105,7 +92,27 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Dashboard sync failed"
 }
 
-async function syncApplicationsWithState({
+// Three separate entry points (widget-triggered sync, the connect-account
+// flow, and the periodic retry) can each call this - a bare in-flight flag
+// on only one of them isn't enough. Queuing every call onto a single chain
+// means concurrent calls run one at a time, each with its own arguments
+// and its own result, instead of racing their GET-dashboard -> merge ->
+// POST cycles (and the local sync-state writes inside them) against each
+// other.
+let applicationSyncQueue: Promise<unknown> = Promise.resolve()
+
+function syncApplicationsWithState(
+  params: Parameters<typeof performApplicationSync>[0]
+) {
+  const run = applicationSyncQueue.then(() => performApplicationSync(params))
+  applicationSyncQueue = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
+}
+
+async function performApplicationSync({
   applications,
   completedEvent,
   failedEvent,
@@ -240,7 +247,7 @@ async function retryPendingApplicationSync(reason: "installed" | "startup") {
   }
 }
 
-async function broadcastAccountConnected() {
+async function broadcastConnectionState(state: ConnectionState) {
   try {
     const tabs = await chrome.tabs.query({})
 
@@ -249,7 +256,8 @@ async function broadcastAccountConnected() {
         .filter((tab) => tab.id)
         .map((tab) =>
           chrome.tabs.sendMessage(tab.id as number, {
-            type: "AUTOTIME_ACCOUNT_CONNECTED"
+            type: "AUTOTIME_ACCOUNT_CONNECTED",
+            state
           })
         )
     )
@@ -300,39 +308,28 @@ export default defineBackground(() => {
       _sender,
       sendResponse: (response: InternalResponse) => void
     ) => {
-      if (message?.type === "AUTOTIME_GET_ACCOUNT_STATE") {
-        void getActiveSession()
-          .then(({ session }) => sendResponse({
-            connected: Boolean(session?.authToken.trim()),
-            email: session?.email,
-            ok: true,
-            plan: session?.plan,
-            provider: session?.provider
-          }))
-          .catch(() => sendResponse({ connected: false, ok: true }))
+      if (message?.type === "AUTOTIME_GET_CONNECTION_STATE") {
+        void getAccountSession().then((session) => {
+          sendResponse({ ok: true, state: toConnectionState(session) })
+        })
         return true
       }
 
       if (message?.type === "AUTOTIME_SCORE_JOB") {
         void (async () => {
-          const { session } = await getActiveSession()
-          if (!session?.authToken.trim()) {
-            sendResponse({ connected: false, ok: false })
+          const { result, error } = await withFreshSession((session) =>
+            scoreJobFromDashboard(session, (message.payload ?? {}) as JobMatchPayload)
+          )
+
+          if (!result) {
+            sendResponse({ error, ok: false })
             return
           }
-          const response = await fetch(`${appUrl}/api/esco/score-job`, {
-            body: JSON.stringify(message.payload),
-            headers: {
-              Authorization: `Bearer ${session.authToken}`,
-              "Content-Type": "application/json",
-              "x-autotime-source": "extension"
-            },
-            method: "POST",
-            signal: AbortSignal.timeout(12_000)
-          })
-          const body = await response.json() as { data?: unknown }
-          sendResponse({ data: body.data, ok: response.ok })
-        })().catch(() => sendResponse({ ok: false }))
+
+          sendResponse({ data: result, ok: true })
+        })().catch((error: unknown) => {
+          sendResponse({ error: getErrorMessage(error), ok: false })
+        })
         return true
       }
 
@@ -412,9 +409,14 @@ export default defineBackground(() => {
   })
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "session" && changes["account-session"]) {
-      void retryPendingApplicationSync("startup")
+    if (areaName !== "session" || !changes["account-session"]) {
+      return
     }
+
+    void retryPendingApplicationSync("startup")
+    void getAccountSession().then((session) => {
+      void broadcastConnectionState(toConnectionState(session))
+    })
   })
 
   chrome.runtime.onMessageExternal.addListener(
@@ -492,7 +494,7 @@ export default defineBackground(() => {
             startedEvent: "connect-sync-started"
           })
 
-          await broadcastAccountConnected()
+          await broadcastConnectionState(toConnectionState(session))
           await logDiagnosticEvent({
             area: "connect",
             event: "account-connected-broadcast",

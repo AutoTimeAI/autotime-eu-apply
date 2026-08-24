@@ -1,16 +1,9 @@
-// Supabase OAuth/magic-link callback endpoint. This is the redirect target
-// Supabase sends the browser to after a user completes sign-in with an
-// external provider (or clicks a magic link); it exchanges the returned
-// auth code for a session, provisions a free subscription on first login,
-// gates redirects into /admin behind an admin-permission check, and then
-// forwards the browser to the originally requested page (or /auth/error on
-// failure). Server-only route handler; not a page a user navigates to
-// directly.
 import { type NextRequest, NextResponse } from "next/server"
 import type { User } from "@supabase/supabase-js"
 import { isAdminUser } from "../../../lib/admin-access"
 import { sendWelcomeEmail } from "../../../lib/email"
 import { isTestAccountUser } from "../../../lib/qa-test-account"
+import { resolveSafeRedirectPath } from "../../../lib/safe-redirect-path"
 import { createAdminClient } from "../../../lib/supabase/admin"
 import { createServerClient } from "../../../lib/supabase/server"
 
@@ -24,17 +17,6 @@ function getErrorRedirect(
   errorUrl.searchParams.set("message", message.slice(0, 180))
 
   return NextResponse.redirect(errorUrl)
-}
-
-function getSafeRedirectPath(request: NextRequest): string {
-  const requestUrl = new URL(request.url)
-  const redirectTo = requestUrl.searchParams.get("redirectTo")
-
-  if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
-    return "/dashboard"
-  }
-
-  return redirectTo
 }
 
 function isAdminRedirect(pathname: string): boolean {
@@ -52,12 +34,6 @@ function getPostAuthRedirectPath(pathname: string): string {
   return isAdminRedirect(pathname) ? "/admin" : pathname
 }
 
-/**
- * Ensures the user has a `subscriptions` row, creating a "free"/"active"
- * one via the admin (service-role) client if none exists yet. Returns true
- * when a new row was inserted (i.e. this is the user's first login), false
- * if a subscription already existed.
- */
 async function ensureFreeSubscription(userId: string): Promise<boolean> {
   try {
     const supabase = createAdminClient()
@@ -122,12 +98,6 @@ function logAuthCallbackError(stage: string, error: unknown): void {
   })
 }
 
-/**
- * Runs post-sign-in provisioning: creates the user's free subscription if
- * needed and, only on that first login and only for non-QA test accounts,
- * sends the welcome email. Failures are logged but never thrown, so they
- * cannot block the redirect back into the app.
- */
 async function runFirstLoginSetup({
   email,
   name,
@@ -150,15 +120,6 @@ async function runFirstLoginSetup({
   }
 }
 
-/**
- * Handles the Supabase OAuth callback redirect. Reads the `code` (or an
- * `error`/`error_description` param) off the URL, exchanges it for a
- * session, resolves the safe post-login redirect path, and — if that path
- * targets /admin — signs the user back out and redirects to /admin/login
- * unless `isAdminUser` grants them the "overview:read" admin permission.
- * Otherwise runs first-login setup and redirects into the app. Any
- * unexpected error redirects to /auth/error with a stage/message pair.
- */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const requestUrl = new URL(request.url)
@@ -194,7 +155,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return getErrorRedirect(request, "read-user", message)
     }
 
-    const redirectPath = getSafeRedirectPath(request)
+    const redirectPath = resolveSafeRedirectPath(requestUrl)
 
     if (isAdminRedirect(redirectPath) && !(await isAdminUser(user))) {
       await supabase.auth.signOut()

@@ -5,15 +5,18 @@ extension with testers.
 
 ## Privacy Basics
 
-- Data stays local-first in `chrome.storage.local`.
+- Extension profile, reusable-answer, and tracker data is local-first in
+  `chrome.storage.local` unless the extension is linked to a web account.
 - The extension does not auto-submit forms.
-- Autofill and saved-content insertion only run after a user clicks a side-panel
-  button.
+- Autofill and saved-content insertion only run after an explicit user action
+  in the extension's in-page widget.
 - Saved application content is inserted only into empty matching textareas.
-- No Firebase, backend, or external job API is used in the current extension
-  flow.
-- AI usage logging records feature name, timestamp, model, and estimated cost,
-  but does not send data anywhere by itself.
+- AI-assisted generation (job analysis, cover letters, tailored CVs, interview
+  prep) runs server-side in `apps/web` against AutoTime's own OpenAI key, and
+  is gated by the user's subscription/credit balance - see
+  `../README.md#product-architecture`.
+- Web dashboard account data lives in Supabase, with row-level security
+  enforced per-user; see `docs/product-security-protocols.md`.
 - Clear saved-data controls are available for profile, reusable answers, job
   analysis, application content, tracker draft, and usage log.
 
@@ -36,10 +39,10 @@ pnpm validation:new
 ```
 
 This writes a timestamped report to `docs/founder-validation-runs/` with the
-automated gates, Chrome smoke test, V2 dashboard smoke test, live job evidence,
+automated gates, Chrome smoke test, dashboard smoke test, live job evidence,
 CSV exports, and release decision sections ready to fill.
 
-Run the broader MVP automation toolkit when validating the V2 dashboard, AI
+Run the broader MVP automation toolkit when validating the dashboard, AI
 interview prep, and deployed web smoke path:
 
 ```bash
@@ -71,20 +74,20 @@ pnpm test:mvp:coverage
 12. Record the smoke-test result, live job checks, exported validation metrics,
     and release decision in the generated founder validation report.
 
-## Known MVP Risks
+## Known Risks
 
-- Optional AI-backed generation should be checked with a controlled-cost API key
-  before any wider AI-enabled release.
-- Priority job-site extraction is selector-based and should be tested on live
-  Greenhouse, Lever, and Workday pages before a wider release. LinkedIn remains
-  manual copy/paste only.
-- Local storage is browser-local; users need to export CSV if they want a backup
-  of saved applications.
-- Supabase sync, account login, cloud hosting, Edge support, native mobile, and
-  deeper analytics are V2/post-MVP work, not blockers for the local-first V1
-  extension. The local V2 companion dashboard and Interview Prep Pack
-  foundation are available for smoke testing, but are not required for the V1
-  release tag.
+- AI-backed generation is billed server-side; verify the reserve/confirm/
+  release flow and rate limits before a wider release rather than assuming
+  cost is bounded by a user-supplied key.
+- Job-board and ATS extraction is selector/JSON-LD based; the live platform
+  list is checked weekly by `.github/workflows/platform-coverage.yml`, but a
+  selector regression on a specific site can still slip through between runs.
+  LinkedIn remains manual copy/paste only.
+- Extension data not linked to a web account is browser-local; users need to
+  export CSV or link an account if they want a backup of saved applications.
+- Native mobile and deeper analytics remain post-MVP work; Supabase account
+  sync, cloud hosting, and billing are live in production, not pending V2
+  work.
 
 ## Validation Report
 

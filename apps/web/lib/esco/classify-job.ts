@@ -30,15 +30,28 @@ export function classifyJobToEsco(
   );
   if (exact) return { occupationId: exact.id, confidence: 1, method: "exact" };
   const jobWords = words(`${title} ${description.slice(0, 2000)}`);
+  // Normalizing purely by the occupation's own vocabulary size only
+  // breaks down when that vocabulary is tiny (e.g. a preferredLabel with
+  // no description) - a single incidental shared word can then reach
+  // confidence 1, indistinguishable from a real exact match. Normalizing
+  // by the larger of the two vocabularies instead "fixes" that but badly
+  // under-scores every legitimate match too, since a real job description
+  // is naturally much longer than a terse occupation-taxonomy entry - that
+  // size gap is expected, not a sign of a bad match. Requiring a minimum
+  // occupation vocabulary size closes the degenerate case directly
+  // without changing the score for any occupation with a real,
+  // substantive description.
+  const MIN_OCCUPATION_VOCAB = 4;
   let best: EscoOccupationCandidate | undefined,
     bestScore = 0;
   for (const occupation of occupations) {
     const tokens = words(
       `${occupation.preferredLabel} ${occupation.description ?? ""}`,
     );
+    if (tokens.size < MIN_OCCUPATION_VOCAB) continue;
     const overlap =
       [...tokens].filter((token) => jobWords.has(token)).length /
-      Math.max(tokens.size, 1);
+      tokens.size;
     if (overlap > bestScore) {
       best = occupation;
       bestScore = overlap;

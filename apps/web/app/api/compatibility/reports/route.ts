@@ -2,12 +2,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { coverageReportSchema, getCoverageRequesterHash, normalizeCoverageReportUrl } from "../../../../lib/coverage-report";
+import { getRequestIp } from "../../../../lib/request-ip";
 import { createAdminClient } from "../../../../lib/supabase/admin";
-
-function getRequestIp(request: NextRequest) {
-  return request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-}
 
 export async function POST(request: NextRequest) {
   try {

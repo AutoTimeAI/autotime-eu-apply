@@ -18,6 +18,7 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  poweredByHeader: false,
   serverExternalPackages: ["@napi-rs/canvas", "pdf-parse"],
   async headers() {
     return [
@@ -43,6 +44,16 @@ const nextConfig: NextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()"
+          },
+          {
+            // No window.open()-based flows anywhere in the app (checked),
+            // so same-origin is safe - it doesn't need to tolerate popups.
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin"
+          },
+          {
+            key: "Cross-Origin-Resource-Policy",
+            value: "same-origin"
           }
         ]
       }

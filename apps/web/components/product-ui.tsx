@@ -1,4 +1,3 @@
-/** Shared evidence-led presentation primitives for consistent product states. */
 import type { ReactNode } from "react";
 import type { CapabilityReadiness } from "../lib/capability-readiness";
 
@@ -12,7 +11,6 @@ export type ProductStatus =
   | "skip"
   | "insufficient";
 
-/** Renders a consistent product page heading and optional actions. */
 export function ProductPageHeader({
   eyebrow,
   title,
@@ -39,7 +37,48 @@ export function ProductPageHeader({
   );
 }
 
-/** Renders a section heading with supporting context. */
+// Shared state shape for useJobWorkflowSync/useInterviewWorkflowSync
+// controllers - kept as a plain string union here (rather than importing
+// their types) so this file stays free of a dependency on those hooks.
+export type SyncStatusLineState =
+  | "loading"
+  | "synced"
+  | "syncing"
+  | "conflict"
+  | "offline"
+  | "error"
+  | "server-disabled";
+
+// Renders null for "loading" (transient, avoids a flash on mount) and
+// "server-disabled" (the default everywhere today, since the underlying
+// sync flags are still off - showing "account sync unavailable" on every
+// page visit for every user would be noise about an internal flag they
+// can't act on). Only renders when there's something a user can actually
+// learn or act on, mirroring the transparency MobilityPersistencePanel
+// already gives Mobility sync's status.
+export function SyncStatusLine({
+  state,
+  status,
+}: {
+  state: SyncStatusLineState;
+  status: string;
+}) {
+  if (state === "loading" || state === "server-disabled") return null;
+  const variant =
+    state === "synced"
+      ? "success"
+      : state === "syncing"
+        ? "info"
+        : state === "error"
+          ? "error"
+          : "warning";
+  return (
+    <p aria-live="polite" className={`status-banner compact ${variant}`} role="status">
+      {status}
+    </p>
+  );
+}
+
 export function ProductSectionHeader({
   title,
   description,
@@ -60,7 +99,6 @@ export function ProductSectionHeader({
   );
 }
 
-/** Maps product decision states to accessible badge styling. */
 export function ProductStatusBadge({
   status,
   children,
@@ -71,7 +109,6 @@ export function ProductStatusBadge({
   return <span className={`product-status-badge ${status}`}>{children}</span>;
 }
 
-/** Presents a clear empty state with an optional recovery action. */
 export function ProductEmptyState({
   title,
   description,
@@ -91,7 +128,6 @@ export function ProductEmptyState({
   );
 }
 
-/** Groups sourced evidence with an explicit status. */
 export function ProductEvidencePanel({
   title,
   status,
@@ -120,7 +156,6 @@ export function ProductEvidencePanel({
   );
 }
 
-/** Explains capability readiness, missing inputs, and the next action. */
 export function CapabilityReadinessNotice({
   readiness,
 }: {

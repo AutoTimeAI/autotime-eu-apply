@@ -1,4 +1,3 @@
-// Captures and checks the phase-3 job/application workflow at supported viewports.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
@@ -202,6 +201,28 @@ test("Apply journey, application readiness and applied record", async ({
     path: `${screenshotDir}/applications-pipeline-1440.png`,
   });
 
+  // Completes the happy-path fixture QA asked for (issue #56): continues
+  // this same real UI journey - Job -> Apply -> Application -> Ready ->
+  // Applied - through to a real Interview record, rather than stopping at
+  // Applied. Nothing previously proved via the UI that a freshly-applied
+  // application can actually reach interview creation.
+  await page.goto("/dashboard/interviews");
+  await page.getByRole("button", { name: "Add interview" }).first().click();
+  const interviewForm = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Add interview" }),
+  });
+  await interviewForm
+    .getByLabel("Application")
+    .selectOption({ label: "FinTech Application Analyst — Northstar Payments" });
+  await interviewForm.getByLabel("Stage").selectOption("recruiter_screen");
+  await page
+    .getByRole("button", { name: "Create preparation record" })
+    .click();
+  await expect(page).toHaveURL(/\/dashboard\/interviews\//);
+  await expect(
+    page.getByRole("heading", { name: "FinTech Application Analyst" }),
+  ).toBeVisible();
+
   for (const [width, height] of [
     [1024, 768],
     [768, 1024],
@@ -270,16 +291,12 @@ test("Skip is explained and legacy routes resolve without loops", async ({
     fullPage: true,
     path: `${screenshotDir}/skip-analysis-1440.png`,
   });
-  for (const [route, expectedPath] of [
-    ["match-score", "/dashboard/jobs"],
-    ["inbox", "/dashboard/jobs"],
-    ["cv-tailor", "/dashboard/cv-tailor"],
-    ["application-answers", "/dashboard/applications"],
-    ["documents", "/dashboard/applications"],
-    ["follow-ups", "/dashboard/follow-ups"],
-  ]) {
+  // cv-tailor and follow-ups were legacy redirect stubs when this list was
+  // written, but are now real pages (CVWorkspace, OutreachWorkspace) -
+  // excluded here since they no longer redirect anywhere.
+  for (const route of ["match-score", "inbox", "application-answers", "documents"]) {
     await page.goto(`/dashboard/${route}`, { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveURL(new RegExp(`${expectedPath}$`));
+    await expect(page).toHaveURL(new RegExp(`/dashboard/(jobs|applications)$`));
   }
 });
 

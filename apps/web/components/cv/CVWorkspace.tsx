@@ -1,11 +1,10 @@
 "use client";
-/** Edits, enriches, tailors, validates, and exports the user's structured CV. */
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductPageHeader } from "../product-ui";
 import { CVRenderer } from "./CVRenderer";
-import { CVEnrichmentPanel } from "./CVEnrichmentPanel";
-import type { CVData } from "../../lib/cv/types";
+import { CVEnrichmentPanel, mergeCvEnrichment } from "./CVEnrichmentPanel";
+import type { CVData, CVEnrichment } from "../../lib/cv/types";
 import { useDashboardPlan } from "../UserNav";
 import { loadJobWorkflow } from "../../lib/job-workflow-storage";
 import { downloadCvDocx } from "../../lib/cv/export-docx";
@@ -26,8 +25,13 @@ type OnboardingProfile = {
   linkedin_url: string | null;
   github_url: string | null;
   portfolio_url: string | null;
+  base_cv_text: string | null;
 };
-/** Renders the CV editor in general or job-tailoring mode. */
+const isCvContentEmpty = (value: CVData) =>
+  !value.summary.trim() &&
+  value.experience.length === 0 &&
+  value.education.length === 0 &&
+  value.skills.length === 0;
 export default function CVWorkspace({
   embedded = false,
 }: {
@@ -84,6 +88,54 @@ export default function CVWorkspace({
             localStorage.setItem(key, JSON.stringify(next));
             return next;
           });
+          // Contact fields have a canonical source (Profile) that maps
+          // directly onto CVData's contact fields above, but summary/
+          // experience/education/skills are structured, not free text - the
+          // canonical base_cv_text can't be assigned to them directly. Reuse
+          // the same free-text-to-structured-CV AI extraction already used
+          // for pasted LinkedIn text (/api/ai/cv-enrich) rather than leaving
+          // an otherwise-empty CV disconnected from the Profile's saved CV.
+          if (
+            isCvContentEmpty(saved) &&
+            (profileData.base_cv_text?.trim().length ?? 0) >= 80
+          ) {
+            setStatus("Importing your saved CV from Profile…");
+            void fetch("/api/ai/cv-enrich", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                source: "profile_cv",
+                content: profileData.base_cv_text,
+              }),
+            })
+              .then(async (enrichResponse) => ({
+                enrichResponse,
+                enrichPayload: await enrichResponse.json(),
+              }))
+              .then(({ enrichResponse, enrichPayload }) => {
+                if (!enrichResponse.ok) {
+                  setStatus(
+                    enrichPayload.error ||
+                      "Could not import the saved CV from Profile.",
+                  );
+                  return;
+                }
+                setCv((current) => {
+                  const next = mergeCvEnrichment(
+                    current,
+                    enrichPayload.data as CVEnrichment,
+                  );
+                  localStorage.setItem(key, JSON.stringify(next));
+                  return next;
+                });
+                setStatus(
+                  "Imported experience, education and skills from your saved CV. Review every claim.",
+                );
+              })
+              .catch(() => {
+                setStatus("Could not import the saved CV from Profile.");
+              });
+          }
         });
       const job = jobId
         ? loadJobWorkflow(userId).jobs.find((item) => item.id === jobId)

@@ -486,45 +486,59 @@ export function getInterviewReadiness(interview: InterviewRecord): {
 }
 
 function readinessAreas(interview: InterviewRecord) {
+  const relevantQuestions = (categories: InterviewQuestionCategory[]) =>
+    interview.questions.filter((item) => categories.includes(item.category));
+  // Array.every() vacuously returns true on an empty array. A stage's
+  // coverage map (see `coverage` above) only generates certain question
+  // categories - e.g. a recruiter_screen interview never generates
+  // "technical"/"scenario"/"job_risk" questions - so filtering to a
+  // category list a given stage never populates previously made that area
+  // silently report "Complete" with zero prep work done. Only report an
+  // area at all when it actually has relevant questions for this stage.
   const complete = (categories: InterviewQuestionCategory[]) =>
-    interview.questions
-      .filter((item) => categories.includes(item.category))
-      .every(
-        (item) =>
-          item.importance !== "high" ||
-          Boolean(
-            item.answerDraft?.confirmed &&
-            !item.answerDraft.unsupportedClaims.length,
-          ),
-      );
+    relevantQuestions(categories).every(
+      (item) =>
+        item.importance !== "high" ||
+        Boolean(
+          item.answerDraft?.confirmed &&
+          !item.answerDraft.unsupportedClaims.length,
+        ),
+    );
   return [
     {
       label: "Role understanding",
-      complete: complete(["motivation", "experience"]),
+      categories: ["motivation", "experience"] as InterviewQuestionCategory[],
     },
     {
       label: "Essential technical coverage",
-      complete: complete(["technical", "scenario", "job_risk"]),
+      categories: ["technical", "scenario", "job_risk"] as InterviewQuestionCategory[],
     },
     {
       label: "Behavioural evidence",
-      complete: complete(["behavioural", "stakeholder"]),
-    },
-    { label: "Domain preparation", complete: complete(["scenario"]) },
-    {
-      label: "Questions for interviewer",
-      complete: interview.questions.some(
-        (item) =>
-          item.category === "employer_questions" && item.answerDraft?.confirmed,
-      ),
+      categories: ["behavioural", "stakeholder"] as InterviewQuestionCategory[],
     },
     {
-      label: "Unresolved evidence warnings",
-      complete: !interview.questions.some(
-        (item) => item.answerDraft?.unsupportedClaims.length,
-      ),
+      label: "Domain preparation",
+      categories: ["scenario"] as InterviewQuestionCategory[],
     },
-  ];
+  ]
+    .filter((area) => relevantQuestions(area.categories).length > 0)
+    .map((area) => ({ label: area.label, complete: complete(area.categories) }))
+    .concat([
+      {
+        label: "Questions for interviewer",
+        complete: interview.questions.some(
+          (item) =>
+            item.category === "employer_questions" && item.answerDraft?.confirmed,
+        ),
+      },
+      {
+        label: "Unresolved evidence warnings",
+        complete: !interview.questions.some(
+          (item) => item.answerDraft?.unsupportedClaims.length,
+        ),
+      },
+    ]);
 }
 
 /** Saves an evidence-aware answer and invalidates stale final review when needed. */
@@ -545,10 +559,17 @@ export function saveInterviewAnswer(
       "Resolve unsupported claims before confirming this answer.",
     );
   const now = input.now ?? new Date().toISOString();
+  // completed/cancelled are terminal in transitionInterview's own allowed
+  // map (zero outbound transitions) - unconditionally resetting status to
+  // "preparing" here bypassed that guard entirely, resurrecting a decided
+  // interview as active (getInterviewHomeSignals only excludes
+  // completed/cancelled) while a real recorded outcome still sat on it.
+  const isTerminal =
+    interview.status === "completed" || interview.status === "cancelled";
   return {
     ...interview,
-    finalReviewCompleted: false,
-    status: "preparing",
+    finalReviewCompleted: isTerminal ? interview.finalReviewCompleted : false,
+    status: isTerminal ? interview.status : "preparing",
     updatedAt: now,
     questions: interview.questions.map((q) =>
       q.id !== questionId
@@ -642,8 +663,17 @@ export function refreshInterviewPreparation(
       },
     ],
     questions: nextQuestions,
-    finalReviewCompleted: false,
-    status: "preparing" as const,
+    // Same terminal-state protection as saveInterviewAnswer: refreshing
+    // practice questions for an already-decided interview shouldn't
+    // resurrect it as active or clear a completed final review.
+    finalReviewCompleted:
+      interview.status === "completed" || interview.status === "cancelled"
+        ? interview.finalReviewCompleted
+        : false,
+    status:
+      interview.status === "completed" || interview.status === "cancelled"
+        ? interview.status
+        : ("preparing" as const),
     updatedAt: now,
   };
 }
@@ -678,6 +708,8 @@ export function recordInterviewOutcome(
       "Mark the interview completed before recording its outcome.",
     );
   if (outcome === "awaiting") throw new Error("Choose a recorded outcome.");
+  if (interview.outcome !== "awaiting")
+    throw new Error("An outcome has already been recorded for this interview.");
   return {
     ...interview,
     outcome,

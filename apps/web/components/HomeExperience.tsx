@@ -26,8 +26,8 @@ import {
 } from "../lib/interview-workflow";
 import type { JobWorkflowState } from "../lib/job-application-workflow";
 import {
-  getProfileReadinessFromParts,
   profileProtocolReadinessEvent,
+  useProfileProtocolReadiness,
 } from "./ProfileProtocolLock";
 import {
   hasCompletedOnboarding,
@@ -132,7 +132,12 @@ function getContext(
       (application) =>
         application.status === "Applied" &&
         Boolean(application.followUpDate) &&
-        new Date(`${application.followUpDate}T23:59:59`) <= new Date(),
+        // Anchor to the start of the due date, not the end - otherwise a
+        // follow-up due "today" doesn't get flagged until 23:59:59 that
+        // night, delaying the nudge by up to a full day. Matches the
+        // start-of-day pattern DashboardExperience.tsx's getNextActionTiming
+        // already uses for the same "is this due" question.
+        new Date(`${application.followUpDate}T00:00:00`) <= new Date(),
     ) ||
     applications.some(
       (application) =>
@@ -370,6 +375,8 @@ export default function HomeExperience({
 }) {
   const router = useRouter();
   const { userId } = useDashboardPlan();
+  const { readinessScore: cloudAwareProfileScore } =
+    useProfileProtocolReadiness(userId);
   const [testFixture, setTestFixture] = useState<HomeTestFixture>();
   const [dashboardState, setDashboardState] =
     useState<CompanionDashboardState | null>(null);
@@ -486,14 +493,7 @@ export default function HomeExperience({
   );
   const context = testFixture?.context ?? liveContext;
   const nextAction = getHomeNextAction(context);
-  const profileScore =
-    testFixture?.profileScore ??
-    (dashboardState
-      ? getProfileReadinessFromParts(
-          dashboardState.profile,
-          dashboardState.reusableAnswers,
-        )
-      : 0);
+  const profileScore = testFixture?.profileScore ?? cloudAwareProfileScore;
   const confirmedAreas = [
     context.hasCareerEvidence ? "Career evidence" : null,
     context.hasCareerLane ? "Career direction" : null,
@@ -606,7 +606,7 @@ export default function HomeExperience({
   ) {
     const unavailable = testFixture.viewState === "unavailable";
     return (
-      <div className="home-experience" data-next-action={nextAction.id}>
+      <main className="home-experience" data-next-action={nextAction.id}>
         <ProductPageHeader
           description="Focus on the task that needs attention now."
           eyebrow="Home"
@@ -644,17 +644,34 @@ export default function HomeExperience({
             </button>
           )}
         </section>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="home-experience" data-next-action={nextAction.id}>
+    <main className="home-experience" data-next-action={nextAction.id}>
       <ProductPageHeader
         description="Focus on the task that needs attention now."
         eyebrow="Home"
         title="Your search"
       />
+
+      <details className="walkthrough-inline-panel">
+        <summary>Product walkthrough</summary>
+        <section aria-labelledby="home-walkthrough-title">
+          <div className="walkthrough-copy">
+            <p className="eyebrow">2-minute walkthrough</p>
+            <h2 id="home-walkthrough-title">See how AutoTime works</h2>
+            <p>
+              A short, narrated tour of evidence-backed job checks, the
+              application tracker and interview prep - watch any time.
+            </p>
+          </div>
+          <video controls preload="metadata" src="/demo/autotime-walkthrough-2min-voiced.mp4">
+            Your browser does not support the walkthrough video.
+          </video>
+        </section>
+      </details>
 
       {status ? (
         <p
@@ -731,6 +748,6 @@ export default function HomeExperience({
           </p>
         </details>
       </section>
-    </div>
+    </main>
   );
 }

@@ -1,12 +1,3 @@
-// The extension's local-first persistence layer and its type definitions.
-// Everything the user enters (profile, reusable answers, drafts, tracked
-// applications, AI usage log, diagnostic log, sync state) lives in
-// `chrome.storage.local` and works fully offline; only the account session
-// (see the comment above saveAccountSession) lives in `chrome.storage.session`
-// for a hard content-script isolation boundary. Every getter runs stored
-// values through a `normalize*` function so older/partial shapes saved by a
-// previous version of the extension don't crash newer code - this is the
-// project's schema-migration mechanism in lieu of real storage versioning.
 export type CandidateProfile = {
   fullName: string
   email: string
@@ -639,11 +630,34 @@ export async function getApplicationSyncState(): Promise<
   )
 }
 
-/** Records `status` (and, for a "failed" status, `options.error`) for each of `applicationIds` in the sync-state map, bumping `attempts` on "pending". Queued (see comment above) so concurrent callers never clobber each other's writes. */
+// Read-modify-write over the whole map (chrome.storage.local.get/set are
+// real async round trips) - two concurrent calls (e.g. a retry sync and a
+// widget-triggered sync racing) would each read the same starting
+// snapshot, mutate only their own applicationIds, and whichever writes
+// last would silently clobber the other's status updates for its own ids.
+// Queuing every call onto a single chain makes each one see the previous
+// call's write before it reads, regardless of which code path calls it.
+let applicationSyncStateQueue: Promise<unknown> = Promise.resolve()
+
 export async function updateApplicationSyncState(
   applicationIds: string[],
   status: ApplicationSyncStatus,
   options: { error?: string } = {}
+) {
+  const run = applicationSyncStateQueue.then(() =>
+    writeApplicationSyncState(applicationIds, status, options)
+  )
+  applicationSyncStateQueue = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
+}
+
+async function writeApplicationSyncState(
+  applicationIds: string[],
+  status: ApplicationSyncStatus,
+  options: { error?: string }
 ) {
   const existing = await getApplicationSyncState()
   const now = new Date().toISOString()
@@ -671,42 +685,38 @@ export async function updateApplicationSyncState(
   return existing
 }
 
+// The account session (raw auth/refresh tokens) is deliberately kept in
+// chrome.storage.session rather than chrome.storage.local. Session storage's
+// default access level is TRUSTED_CONTEXTS only (background + extension
+// pages) - content scripts, which run injected into every visited website,
+// cannot read it or receive its onChanged events at all, even if compromised
+// by a malicious page. This is a hard boundary enforced by the browser, not
+// just an app-level convention: storing the token in .local would let any
+// content-script-context code call chrome.storage.local.get directly and
+// bypass whatever message-passing discipline this codebase follows. The
+// trade-off: session storage is cleared when the browser fully restarts
+// (unlike .local, which persists indefinitely), so a full browser restart
+// requires reconnecting the dashboard from the extension's Connect flow.
 export async function saveAccountSession(session: AccountSession) {
   await chrome.storage.session.set({ [ACCOUNT_SESSION_KEY]: session })
-  await chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
 }
 
 export async function getAccountSession(): Promise<AccountSession | null> {
-  const sessionResult = await chrome.storage.session.get(ACCOUNT_SESSION_KEY)
-  const session = sessionResult[ACCOUNT_SESSION_KEY] as
+  const result = await chrome.storage.session.get(ACCOUNT_SESSION_KEY)
+  const session = result[ACCOUNT_SESSION_KEY] as
     | Partial<AccountSession>
     | undefined
-  if (session) return normalizeAccountSession(session)
-
-  const legacyResult = await chrome.storage.local.get(ACCOUNT_SESSION_KEY)
-  const legacySession = legacyResult[ACCOUNT_SESSION_KEY] as
-    | Partial<AccountSession>
-    | undefined
-  if (!legacySession) return null
-
-  const normalizedSession = normalizeAccountSession(legacySession)
-  await chrome.storage.session.set({ [ACCOUNT_SESSION_KEY]: normalizedSession })
-  await chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
-  return normalizedSession
+  return session ? normalizeAccountSession(session) : null
 }
 
 export async function clearAccountSession() {
-  await Promise.all([
-    chrome.storage.session.remove(ACCOUNT_SESSION_KEY),
-    chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
-  ])
+  await chrome.storage.session.remove(ACCOUNT_SESSION_KEY)
 }
 
 export async function clearLegacyOpenAISettings() {
   await chrome.storage.local.remove(LEGACY_OPENAI_SETTINGS_KEY)
 }
 
-/** Returns all saved applications, newest-first, each run through `normalizeApplicationRecord` to upgrade any legacy status/shape. */
 export async function getApplications(): Promise<ApplicationRecord[]> {
   const result = await chrome.storage.local.get(APPLICATIONS_KEY)
   const applications =
@@ -714,25 +724,20 @@ export async function getApplications(): Promise<ApplicationRecord[]> {
   return applications.map(normalizeApplicationRecord)
 }
 
-/** Prepends `record` (normalized) to the saved applications list. Does not check for an existing entry with the same URL - callers (contents/autofill.ts, sidepanel) check `hasApplicationWithUrl` first. */
 export async function saveApplication(record: ApplicationRecord) {
   const existing = await getApplications()
   const updated = [normalizeApplicationRecord(record), ...existing]
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }
-/** Returns saved job references (lightweight records for API-covered boards; see JobCaptureMode in lib/job-page.ts), newest-first. */
 export async function getJobReferences(): Promise<JobReference[]> { const result=await chrome.storage.local.get(JOB_REFERENCES_KEY); return (result[JOB_REFERENCES_KEY] as JobReference[]|undefined)??[] }
-/** Saves a job reference, replacing any existing entry for the same URL (dedup by URL, not id). */
 export async function saveJobReference(reference: JobReference) { const existing=await getJobReferences(); const without=existing.filter((item)=>item.url!==reference.url); await chrome.storage.local.set({[JOB_REFERENCES_KEY]:[reference,...without]}) }
 
-/** Removes the application with the given `id` from storage. */
 export async function deleteApplication(id: string) {
   const existing = await getApplications()
   const updated = existing.filter((record) => record.id !== id)
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }
 
-/** Shallow-merges `changes` into the stored application with the given `id` (no-op if not found), re-normalizing the result. Used for inline edits in the Applications section and for applying tracker fields when a tracked application already exists. */
 export async function updateApplication(
   id: string,
   changes: Partial<

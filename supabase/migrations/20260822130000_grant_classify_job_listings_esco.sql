@@ -1,0 +1,20 @@
+-- classify_job_listings_esco has never had an explicit grant to any role,
+-- unlike every sibling security-definer RPC in this codebase (see
+-- increment_ai_rate_limit, grant_ai_credit_pack, consume_ai_credit, and
+-- 20260822100000_pin_get_monthly_ai_calls_grant.sql for the equivalent
+-- read-only case). Both the original definition (20260810120000) and its
+-- replacement (20260811130000) only run
+-- `revoke all on function ... from public, anon, authenticated;` with no
+-- matching `grant execute ... to service_role`. Since that revoke removes
+-- the function's only privilege (the default PUBLIC grant every new
+-- function receives on creation), no role - not even service_role, which
+-- is what supabase/functions/sync-job-sources/index.ts actually calls this
+-- RPC with - has ever been able to execute it. Every invocation has failed
+-- with "permission denied for function classify_job_listings_esco",
+-- silently (the error is only visible in that cron function's own JSON
+-- response body, which nothing currently alerts on) - meaning ESCO
+-- occupation classification for aggregated job listings has never
+-- succeeded, and every downstream feature that depends on
+-- job_listings.esco_occupation_id being populated (e.g. match_esco_jobs)
+-- has been returning empty results for every user since this shipped.
+grant execute on function public.classify_job_listings_esco(integer) to service_role;

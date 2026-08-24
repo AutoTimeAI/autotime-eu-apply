@@ -74,7 +74,7 @@ export default function ProfileSummary() {
 
   return (
     <main className="workflow-page profile-page">
-      <ProductPageHeader eyebrow="Profile" title={profile.full_name || "Your profile"} description="Your confirmed personal details, target markets, professional links and canonical CV."/>
+      <ProductPageHeader eyebrow="Profile" title={profile.full_name || "Your profile"} description="Your confirmed personal details, target markets, professional links and canonical CV." action={<Link className="button-secondary" href="/dashboard/autofill-profile">Review evidence &amp; readiness</Link>}/>
 
       <div className="profile-summary-grid">
         <section className="workflow-section profile-card profile-identity-card">

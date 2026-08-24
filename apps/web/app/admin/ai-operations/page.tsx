@@ -1,14 +1,9 @@
-/**
- * Shows privacy-minimised AI provider health to operators permitted to inspect
- * AI activity; sensitive prompts and generated user content stay excluded.
- */
-import { requireAdminPrincipal } from "../../../lib/admin-authorization"
+import { requireAdminPageAccess } from "../../../lib/admin-authorization"
 import { getAdminAiOperationsOverview } from "../../../lib/admin-ai-operations"
 import { AdminAiOperationsLog } from "./AdminAiOperationsLog"
 
-/** Requires AI-operations read access before loading the provider overview. */
 export default async function Page() {
-  await requireAdminPrincipal("ai_operations:read")
+  await requireAdminPageAccess("ai_operations:read")
   const overview = await getAdminAiOperationsOverview()
 
   return (

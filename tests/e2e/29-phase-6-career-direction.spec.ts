@@ -1,5 +1,5 @@
-// Exercises evidence-led career-direction recommendations and saved lane state.
 import { expect, test, type Page } from "@playwright/test";
+import { expectNoSeriousViolations } from "./helpers/axe";
 import { mkdir } from "node:fs/promises";
 
 const userId = "00000000-0000-4000-8000-000000000001";
@@ -29,9 +29,7 @@ async function disableDevelopmentToolbar(page: Page) {
 
 async function gotoRolePathways(page: Page) {
   await page.goto("/dashboard/role-pathways");
-  await expect(
-    page.getByRole("heading", { name: "Role Pathways" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Role Pathways" })).toBeVisible();
   // First visit to this route compiles on demand in dev; a Fast Refresh
   // mid-interaction can silently drop the next click. Settle first.
   await page.waitForLoadState("networkidle");
@@ -165,18 +163,23 @@ test("stepper active state uses shared blue, not the site teal default", async (
   await gotoRolePathways(page);
   const activeStep = page.locator(".pathway-steps li.active button");
   await expect(activeStep).toHaveCSS("border-color", "rgb(23, 78, 166)");
+  // The button is disabled (and styled accordingly) until there is CV
+  // evidence to extract from - fill it first, matching the setup every
+  // other test in this file uses before interacting with this button.
+  await page
+    .getByRole("textbox", { name: "CV, project and experience evidence" })
+    .fill(backendEvidence);
   const extractButton = page.getByRole("button", {
     name: "Extract evidence",
     exact: true,
   });
-  await page
-    .getByRole("textbox", { name: "CV, project and experience evidence" })
-    .fill(backendEvidence);
-  await expect(extractButton).toBeEnabled();
-  await expect(extractButton).toHaveCSS(
-    "background-image",
-    /rgb\(23, 78, 166\)/,
-  );
+  // Buttons use `background: linear-gradient(...)`, which browsers report
+  // via `background-image`, not `background-color` (that stays transparent
+  // regardless of the gradient) - checking background-color here could
+  // never pass. border-color is the property that actually differs between
+  // enabled (var(--accent), the same shared blue checked above) and
+  // disabled (light grey) states.
+  await expect(extractButton).toHaveCSS("border-color", "rgb(23, 78, 166)");
 });
 
 test("active step scrolls into view on mobile when advancing stages", async ({
@@ -226,4 +229,7 @@ test("detail is responsive at required intermediate viewports", async ({
   await capture(page, "stage1-768x1024.png");
   await page.setViewportSize({ width: 360, height: 800 });
   await assertVisualContract(page);
+  await expectNoSeriousViolations(page, {
+    include: "main.phase-six-career-direction",
+  });
 });

@@ -4,12 +4,21 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { reportClientIssue } from "../lib/client-diagnostics";
+import {
+  configurationUnavailableMessage,
+  isConfigurationUnavailableError,
+} from "../lib/configuration-error";
+import { getClientSafeRedirectPath } from "../lib/safe-redirect-path";
 import { getStatusTone } from "../lib/status-tone";
 import { createBrowserClient } from "../lib/supabase/client";
 
 type OAuthProvider = "github" | "google";
 
 function getErrorMessage(error: unknown): string {
+  if (isConfigurationUnavailableError(error)) {
+    return configurationUnavailableMessage;
+  }
+
   return error instanceof Error
     ? error.message
     : "Sign-in could not be started. Please try again.";
@@ -34,11 +43,24 @@ function LoginForm() {
   const [hasExistingSession, setHasExistingSession] = useState(false);
   const [identityProviderLabel, setIdentityProviderLabel] = useState<string | null>(null);
   const oauthStartedRef = useRef(false);
-  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+  const redirectTo = getClientSafeRedirectPath(searchParams.get("redirectTo"));
 
   useEffect(() => {
     let isMounted = true;
-    const supabase = createBrowserClient();
+    let supabase: ReturnType<typeof createBrowserClient>;
+
+    try {
+      supabase = createBrowserClient();
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+      setStatus(`Failed: ${message}`);
+      reportClientIssue({
+        area: "auth",
+        code: "auth.client.create.failed",
+        message,
+      });
+      return;
+    }
 
     supabase.auth.getSession().then(async ({ data, error }) => {
       if (!isMounted) {
@@ -291,7 +313,7 @@ function LoginForm() {
             ) : null}
             <div className="header-actions auth-provider-actions">
               <button
-                disabled={Boolean(pendingProvider)}
+                disabled={Boolean(pendingProvider) || !accountConsent}
                 type="button"
                 onClick={continueWithExistingSession}
               >
@@ -310,7 +332,7 @@ function LoginForm() {
         ) : (
           <div className="header-actions auth-provider-actions">
             <button
-              disabled={Boolean(pendingProvider)}
+              disabled={Boolean(pendingProvider) || !accountConsent}
               type="button"
               onClick={() => handleSignIn("github")}
             >
@@ -320,7 +342,7 @@ function LoginForm() {
             </button>
             <button
               className="secondary-button"
-              disabled={Boolean(pendingProvider)}
+              disabled={Boolean(pendingProvider) || !accountConsent}
               type="button"
               onClick={() => handleSignIn("google")}
             >

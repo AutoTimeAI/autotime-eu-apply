@@ -1,4 +1,3 @@
-/** Enforces plan entitlements, monthly AI allowances, and purchased-credit usage. */
 import { createAdminClient } from "./supabase/admin"
 import { createDiagnostic, logDiagnostic } from "./diagnostics"
 import type { SubscriptionPlan, SubscriptionStatus } from "./supabase/types"
@@ -31,7 +30,6 @@ function isEntitledStatus(status: SubscriptionStatus | null | undefined) {
   return status === "active" || status === "trialing"
 }
 
-/** Resolves the effective subscription plan for a user. */
 export async function getUserPlan(
   userId: string
 ): Promise<SubscriptionPlan> {
@@ -67,7 +65,6 @@ export async function getUserPlan(
   }
 }
 
-/** Returns whether the user's effective plan is Pro. */
 export async function isProUser(userId: string): Promise<boolean> {
   try {
     const plan = await getUserPlan(userId)
@@ -80,7 +77,6 @@ export async function isProUser(userId: string): Promise<boolean> {
   }
 }
 
-/** Counts unused purchased AI credits available to the user. */
 export async function getPurchasedAiCredits(userId: string): Promise<number> {
   if (isTestAuthUserId(userId)) {
     return 0
@@ -124,7 +120,6 @@ async function getMonthlyAiCallCount(userId: string): Promise<number> {
   }
 }
 
-/** Calculates the user's remaining included and purchased AI calls. */
 export async function getRemainingAiCalls(userId: string): Promise<number> {
   try {
     const [plan, monthlyCalls, purchasedCredits] = await Promise.all([
@@ -148,9 +143,69 @@ export async function getRemainingAiCalls(userId: string): Promise<number> {
   }
 }
 
-/** Records an AI call against the appropriate allowance or purchased credit. */
-export async function trackAiCall(
-  userId: string,
+/**
+ * Atomically reserves one AI call slot *before* the caller makes the real,
+ * paid provider request - closing a race where concurrent requests could
+ * each pass a plain "remaining calls" read-check simultaneously and all
+ * reach OpenAI before any of them recorded usage. Consumes a purchased
+ * credit under the hood (via the same per-user advisory lock
+ * consume_ai_credit uses) if the monthly allowance is already exhausted.
+ *
+ * Returns a reservation id to pass to finalizeAiCall (on success) or
+ * releaseAiCall (if the provider call itself throws) - or null for the
+ * test-auth user, which is never gated or recorded.
+ *
+ * Throws FeatureGateError if no allowance or credit remains.
+ */
+export async function reserveAiCall(userId: string): Promise<string | null> {
+  if (isTestAuthUserId(userId)) {
+    return null
+  }
+
+  const reservationId = crypto.randomUUID()
+
+  try {
+    const plan = await getUserPlan(userId)
+    const supabase = createAdminClient()
+    const { data, error } = await supabase.rpc("reserve_ai_call", {
+      p_user_id: userId,
+      p_reservation_id: reservationId,
+      p_monthly_limit: PLAN_AI_CALLS_PER_MONTH[plan],
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    if (!data) {
+      throw new FeatureGateError(
+        "LIMIT_REACHED",
+        0,
+        "Your monthly AI allowance is used. Buy a credit pack or upgrade to continue."
+      )
+    }
+
+    return reservationId
+  } catch (error: unknown) {
+    if (error instanceof FeatureGateError) {
+      throw error
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Unable to check AI access"
+
+    throw new Error(message)
+  }
+}
+
+/**
+ * Fills in the real token/cost data on a reservation after a successful
+ * provider call. Best-effort: a failure here means a usage row keeps its
+ * placeholder values rather than losing the reservation's allowance/credit
+ * accounting, so it never throws.
+ */
+export async function finalizeAiCall(
+  reservationId: string | null,
   opts: {
     feature: string
     model: string
@@ -159,39 +214,23 @@ export async function trackAiCall(
     costUsd: number
   }
 ): Promise<void> {
-  if (isTestAuthUserId(userId)) {
+  if (!reservationId) {
     return
   }
 
   try {
     const supabase = createAdminClient()
-    const { error } = await supabase.from("ai_usage").insert({
-      user_id: userId,
-      feature: opts.feature,
-      model: opts.model,
-      prompt_tokens: opts.promptTokens,
-      completion_tokens: opts.completionTokens,
-      cost_usd: opts.costUsd
+    const { error } = await supabase.rpc("confirm_ai_call", {
+      p_reservation_id: reservationId,
+      p_feature: opts.feature,
+      p_model: opts.model,
+      p_prompt_tokens: opts.promptTokens,
+      p_completion_tokens: opts.completionTokens,
+      p_cost_usd: opts.costUsd,
     })
 
     if (error) {
       throw new Error(error.message)
-    }
-
-    const [plan, monthlyCalls] = await Promise.all([
-      getUserPlan(userId),
-      getMonthlyAiCallCount(userId),
-    ])
-
-    if (monthlyCalls > PLAN_AI_CALLS_PER_MONTH[plan]) {
-      const { data: consumed, error: consumeError } = await supabase.rpc(
-        "consume_ai_credit",
-        { p_feature: opts.feature, p_user_id: userId },
-      )
-
-      if (consumeError || !consumed) {
-        throw new Error(consumeError?.message ?? "AI credit could not be consumed")
-      }
     }
   } catch (error: unknown) {
     const message =
@@ -208,32 +247,45 @@ export async function trackAiCall(
         costUsd: opts.costUsd,
         feature: opts.feature,
         model: opts.model,
-        userId
+        reservationId
       }
     )
   }
 }
 
-/** Throws when the user has no remaining entitlement for an AI request. */
-export async function assertCanUseAi(userId: string): Promise<void> {
-  try {
-    const remainingCalls = await getRemainingAiCalls(userId)
+/**
+ * Releases a reservation the provider call never fulfilled - deletes its
+ * placeholder usage row and refunds a purchased credit if one was consumed
+ * to make the reservation, so a failed generation never costs the caller
+ * an allowance slot or a credit. Best-effort: never throws, since the
+ * caller is already handling/rethrowing the original provider error.
+ */
+export async function releaseAiCall(reservationId: string | null): Promise<void> {
+  if (!reservationId) {
+    return
+  }
 
-    if (remainingCalls <= 0) {
-      throw new FeatureGateError(
-        "LIMIT_REACHED",
-        0,
-        "Your monthly AI allowance is used. Buy a credit pack or upgrade to continue."
-      )
+  try {
+    const supabase = createAdminClient()
+    const { error } = await supabase.rpc("release_ai_call", {
+      p_reservation_id: reservationId,
+    })
+
+    if (error) {
+      throw new Error(error.message)
     }
   } catch (error: unknown) {
-    if (error instanceof FeatureGateError) {
-      throw error
-    }
-
     const message =
-      error instanceof Error ? error.message : "Unable to check AI access"
+      error instanceof Error ? error.message : "Unable to release AI reservation"
 
-    throw new Error(message)
+    logDiagnostic(
+      createDiagnostic({
+        area: "ai",
+        code: "ai.usage.release.failed",
+        message,
+        status: 500
+      }),
+      { reservationId }
+    )
   }
 }

@@ -1,6 +1,7 @@
 // Protects the public landing and authentication experience across viewports.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
+import { expectNoSeriousViolations } from "./helpers/axe";
 
 const output = "screenshots/phase-8-landing-login/review";
 
@@ -90,13 +91,20 @@ test("login page sign-in buttons are green-free with a single primary action", a
   await forbiddenGreen(".auth-shell")(page);
 
   const githubButton = page.getByRole("button", { name: "Sign in with GitHub" });
-  await expect(githubButton).toHaveCSS("background-color", "rgb(23, 78, 166)");
   const googleButton = page.getByRole("button", { name: "Sign in with Google" });
+  await expect(githubButton).toBeDisabled();
+  await expect(googleButton).toBeDisabled();
+
+  await page.getByRole("checkbox").check();
+  await expect(githubButton).toBeEnabled();
+  await expect(githubButton).toHaveCSS("background-color", "rgb(23, 78, 166)");
+  await expect(googleButton).toBeEnabled();
   await expect(googleButton).not.toHaveCSS("background-color", "rgb(23, 78, 166)");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await capture(page, "login-390x844.png");
   await forbiddenGreen(".auth-shell")(page);
+  await expectNoSeriousViolations(page);
 });
 
 test("shared brand name and PRO badge use blue everywhere, not the sitewide teal/green default", async ({

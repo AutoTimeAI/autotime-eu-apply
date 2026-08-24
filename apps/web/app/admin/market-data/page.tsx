@@ -5,14 +5,14 @@
 import { ESCO_CACHE_VERSION, ROLE_PATHWAYS_SCHEMA_VERSION } from "shared"
 import {
   hasAdminPermission,
-  requireAdminPrincipal,
+  requireAdminPageAccess,
 } from "../../../lib/admin-authorization"
 import { getLatestAdminMarketRefreshRequest } from "../../../lib/admin-market-data"
 import { AdminMarketRefreshStatus } from "./AdminMarketRefreshStatus"
 
 /** Loads version and refresh state for an authorised market-data reader. */
 export default async function Page() {
-  const principal = await requireAdminPrincipal("market_data:read")
+  const principal = await requireAdminPageAccess("market_data:read")
   const canRefresh = hasAdminPermission(principal.membership, "market_data:refresh")
   const latestRequest = await getLatestAdminMarketRefreshRequest()
 

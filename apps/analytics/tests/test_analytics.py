@@ -1,18 +1,18 @@
-"""Tests for the apps/analytics FastAPI service (main.py)."""
-
+import os
 import sys
 from pathlib import Path
 
-from fastapi.testclient import TestClient
+os.environ["ANALYTICS_INTERNAL_SECRET"] = "test-secret"
 
-# main.py has no package structure (it's the FastAPI entrypoint Vercel routes
-# to directly), so its parent dir must be on sys.path before it can be imported.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from main import app
+from fastapi.testclient import TestClient
+
+from main import app, MAX_RECORDS_PER_REQUEST
 
 
 client = TestClient(app)
+AUTH_HEADERS = {"x-analytics-secret": "test-secret"}
 
 
 def test_health():
@@ -22,9 +22,45 @@ def test_health():
     assert response.json()["ok"] is True
 
 
+def test_evidence_outcomes_requires_the_internal_secret():
+    response = client.post(
+        "/evidence-outcomes",
+        json={"evidenceRecords": [], "outcomeRecords": []},
+    )
+
+    assert response.status_code == 401
+
+
+def test_evidence_outcomes_rejects_a_wrong_secret():
+    response = client.post(
+        "/evidence-outcomes",
+        json={"evidenceRecords": [], "outcomeRecords": []},
+        headers={"x-analytics-secret": "not-the-secret"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_evidence_outcomes_rejects_an_oversized_payload():
+    response = client.post(
+        "/evidence-outcomes",
+        json={
+            "evidenceRecords": [],
+            "outcomeRecords": [
+                {"applicationId": f"app-{i}"}
+                for i in range(MAX_RECORDS_PER_REQUEST + 1)
+            ],
+        },
+        headers=AUTH_HEADERS,
+    )
+
+    assert response.status_code == 422
+
+
 def test_evidence_outcome_report_score_bands():
     response = client.post(
         "/evidence-outcomes",
+        headers=AUTH_HEADERS,
         json={
             "evidenceRecords": [
                 {

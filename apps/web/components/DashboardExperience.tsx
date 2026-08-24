@@ -349,8 +349,6 @@ type OnlineAnalyticsReport = {
   limits: string[]
 }
 
-const analyticsServiceBaseUrl =
-  process.env.NEXT_PUBLIC_ANALYTICS_URL ?? "/analytics"
 const storageKey = "autotime-v2-companion-dashboard"
 const productContextStorageKey = "autotime-v2-product-context"
 const productContextSchemaVersion = 2
@@ -3553,6 +3551,7 @@ export default function HomePage({
     null
   )
   const hasUnsyncedDashboardChangesRef = useRef(false)
+  const hasUnsyncedProfileChangesRef = useRef(false)
   const [onlineAnalyticsReport, setOnlineAnalyticsReport] =
     useState<OnlineAnalyticsReport | null>(null)
   const [onlineAnalyticsStatus, setOnlineAnalyticsStatus] = useState("")
@@ -4354,6 +4353,10 @@ export default function HomePage({
         return false
       }
 
+      if (silent && hasUnsyncedProfileChangesRef.current) {
+        return false
+      }
+
       try {
         const response = await fetch("/api/sync/profile", {
           cache: "no-store"
@@ -4553,7 +4556,12 @@ export default function HomePage({
     }
 
     const refreshSyncedWorkflow = () => {
-      void loadDashboardSnapshot({ force: true, silent: true })
+      // This runs on a recurring 3s interval plus focus/visibility events
+      // throughout an active session, not just once at mount - force: true
+      // here would bypass hasUnsyncedDashboardChangesRef and let a poll that
+      // lands mid-debounce (or while a write is still in flight) overwrite
+      // an edit the user just made with the older server snapshot.
+      void loadDashboardSnapshot({ silent: true })
       void loadProfileSnapshot({ silent: true })
     }
     const refreshWhenVisible = () => {
@@ -4633,17 +4641,14 @@ export default function HomePage({
 
     setOnlineAnalyticsStatus("Preparing evidence report from tracked jobs...")
     try {
-      const response = await fetch(
-        `${analyticsServiceBaseUrl}/evidence-outcomes`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            evidenceRecords: persistedEvidenceRecords,
-            outcomeRecords: persistedOutcomeRecords
-          })
-        }
-      )
+      const response = await fetch("/api/analytics/evidence-outcomes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          evidenceRecords: persistedEvidenceRecords,
+          outcomeRecords: persistedOutcomeRecords
+        })
+      })
 
       if (!response.ok) {
         throw new Error(`service returned ${response.status}`)
@@ -4779,6 +4784,8 @@ export default function HomePage({
       return
     }
 
+    hasUnsyncedProfileChangesRef.current = true
+
     if (profileSyncTimeoutRef.current) {
       clearTimeout(profileSyncTimeoutRef.current)
     }
@@ -4788,6 +4795,8 @@ export default function HomePage({
       void syncProfileStateToCloud(profile, {
         failureMessage: "Profile saved locally. Dashboard sync failed",
         successMessage: "Profile saved and synced to dashboard"
+      }).then((synced) => {
+        hasUnsyncedProfileChangesRef.current = !synced
       })
     }, 1200)
   }
@@ -6446,7 +6455,11 @@ export default function HomePage({
       authenticated: Boolean(userId),
       evidence: {
         cv: Boolean(state.profile.baseCvText.trim()),
-        education: Boolean(state.profile.projectSummaries.trim()),
+        // CandidateProfile has no dedicated education field - baseCvText is
+        // the only place education credentials could actually appear, so
+        // this was a copy-paste of the "projects" line below rather than a
+        // genuine independent education signal.
+        education: Boolean(state.profile.baseCvText.trim()),
         experience: Boolean(state.profile.experienceHighlights.trim()),
         projects: Boolean(state.profile.projectSummaries.trim()),
         confirmedSkills: Boolean(state.jobAnalysis.skills?.length),

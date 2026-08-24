@@ -36,6 +36,33 @@ test("Stripe webhook awaits server-side subscription processing", () => {
   assert.doesNotMatch(route, /void handleStripeEvent\(event\)\.catch/)
 })
 
+test("Stripe refunds and disputes are logged for manual review, not auto-actioned", () => {
+  const route = read("apps/web/app/api/stripe/webhook/route.ts")
+
+  assert.match(route, /event\.type === "charge\.refunded"/)
+  assert.match(route, /event\.type === "charge\.dispute\.created"/)
+  assert.match(route, /await handleChargeRefunded\(eventObject\)/)
+  assert.match(route, /await handleDisputeCreated\(eventObject\)/)
+  assert.match(route, /area: "stripe"/)
+
+  // Founder-approved policy: log for manual review, no automatic account
+  // action. Neither handler should touch subscriptions, ai_credit_ledger,
+  // or beta_access.
+  const refundHandler = route.slice(
+    route.indexOf("async function handleChargeRefunded"),
+    route.indexOf("async function handleDisputeCreated"),
+  )
+  const disputeHandler = route.slice(
+    route.indexOf("async function handleDisputeCreated"),
+    route.indexOf("async function markInvoicePaymentFailed"),
+  )
+  for (const handler of [refundHandler, disputeHandler]) {
+    assert.doesNotMatch(handler, /\.from\("subscriptions"\)\.update/)
+    assert.doesNotMatch(handler, /\.from\("ai_credit_ledger"\)/)
+    assert.doesNotMatch(handler, /\.from\("beta_access"\)/)
+  }
+})
+
 test("environment templates keep development and production credentials separated", () => {
   const localTemplate = read(".env.local.example")
   const productionTemplate = read(".env.production.example")
@@ -97,7 +124,7 @@ test("profile CV AI review validates input before quota checks", () => {
     const route = read(routePath)
     const parseIndex = route.indexOf("const body = requestSchema.parse")
     const rateLimitIndex = route.indexOf("await assertAiRouteRateLimit")
-    const featureGateIndex = route.indexOf("await assertCanUseAi")
+    const featureGateIndex = route.indexOf("await reserveAiCall")
 
     assert.notEqual(parseIndex, -1, routePath)
     assert.notEqual(rateLimitIndex, -1, routePath)
@@ -174,7 +201,7 @@ test("Proof Library stays a standalone reusable-proof workspace", () => {
   const userNav = read("apps/web/components/UserNav.tsx")
   const publicNav = read("apps/web/components/PublicNav.tsx")
 
-  assert.match(userNav, /aliases: \["\/dashboard\/profile", "\/dashboard\/cv-tailor"\]/)
+  assert.match(userNav, /aliases: \["\/dashboard\/autofill-profile", "\/dashboard\/cv-tailor"\]/)
   assert.match(userNav, /label: "Profile"/)
   assert.match(userNav, /description: "Facts and proof"/)
   assert.doesNotMatch(userNav, /protocol-locked-link|90% before using/)
@@ -419,6 +446,27 @@ test("Client fallbacks surface and record runtime and action failures", () => {
   assert.match(extensionConnect, /extension\.connect\.unhandled/)
 })
 
+test("login page survives a misconfigured Supabase client instead of crashing to the error boundary", () => {
+  // Reproduced live: LoginForm's mount effect called createBrowserClient()
+  // directly with no try/catch. When NEXT_PUBLIC_SUPABASE_URL/ANON_KEY are
+  // missing or invalid, that throws ConfigurationUnavailableError
+  // synchronously inside the effect, which crashed the entire /login page to
+  // the generic error.tsx fallback - the one page where that's most
+  // damaging, since it leaves zero path to sign in. Every other
+  // createBrowserClient() call site in the app already wraps it in a
+  // try/catch; this asserts LoginContent does too, and that it maps the
+  // config error to the same user-facing message used elsewhere (not the
+  // raw internal "Required service configuration is unavailable" string).
+  const login = read("apps/web/components/LoginContent.tsx")
+
+  assert.match(login, /isConfigurationUnavailableError/)
+  assert.match(login, /configurationUnavailableMessage/)
+  assert.match(
+    login,
+    /try\s*\{[\s\S]{0,40}createBrowserClient\(\)[\s\S]{0,40}\}\s*catch/
+  )
+})
+
 test("feature readiness supersedes the universal profile lock", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const readiness = read("apps/web/lib/capability-readiness.ts")
@@ -430,6 +478,662 @@ test("feature readiness supersedes the universal profile lock", () => {
   assert.match(
     readiness,
     /"prepare_application"[\s\S]*"evidence_confirmation"/
+  )
+})
+
+test("every AI route reserves a call slot before the provider request and releases it on failure", () => {
+  const routesAndProviderCalls = [
+    ["apps/web/app/api/ai/analyse/route.ts", "analyseJobWithOpenAI"],
+    ["apps/web/app/api/ai/content/route.ts", "generateContentWithOpenAI"],
+    ["apps/web/app/api/ai/interview/route.ts", "generateInterviewPrepWithOpenAI"],
+    ["apps/web/app/api/ai/interview-answer/route.ts", "generateInterviewAnswerWithOpenAI"],
+    ["apps/web/app/api/ai/profile-context/route.ts", "reviewProfileContextWithOpenAI"],
+    ["apps/web/app/api/ai/tailor-cv/route.ts", "tailorCvWithOpenAI"],
+    ["apps/web/app/api/ai/cover-letter/route.ts", "tailorCoverLetterWithOpenAI"],
+    ["apps/web/app/api/ai/cv-enrich/route.ts", "extractCvEnrichmentWithOpenAI"],
+    ["apps/web/app/api/ai/technical-interview/route.ts", "generateTechnicalInterviewDrillsWithOpenAI"],
+    ["apps/web/app/api/ai/work-authorisation/route.ts", "reviewWorkAuthorisationWithOpenAI"],
+    ["apps/web/app/api/esco/questionnaire/route.ts", "runEscoQuestionnaireRoundWithOpenAI"],
+    ["apps/web/app/api/outreach/route.ts", "draftOutreachWithOpenAI"],
+  ]
+
+  for (const [routePath, providerCall] of routesAndProviderCalls) {
+    const route = read(routePath)
+    const reserveIndex = route.indexOf("await reserveAiCall")
+    const providerIndex = route.indexOf(providerCall + "(")
+    // A release call guarding an earlier guardrail/validation early-return
+    // (before the provider call) is also valid - only a release reachable
+    // *after* the provider call (in its own catch block) proves this
+    // specific failure mode is covered, so search from providerIndex on.
+    const releaseIndex = route.indexOf("await releaseAiCall", providerIndex)
+    const finalizeIndex = route.indexOf("await finalizeAiCall", providerIndex)
+
+    assert.notEqual(reserveIndex, -1, `${routePath}: no reserveAiCall call`)
+    assert.notEqual(providerIndex, -1, `${routePath}: no ${providerCall} call`)
+    assert.notEqual(releaseIndex, -1, `${routePath}: no releaseAiCall call after the provider call`)
+    assert.notEqual(finalizeIndex, -1, `${routePath}: no finalizeAiCall call after the provider call`)
+
+    // The reservation must happen before the real, paid provider call -
+    // this is the actual fix: a plain read-then-write check let concurrent
+    // requests all pass the allowance/credit check before any of them
+    // reached OpenAI. releaseAiCall must appear between the two (in the
+    // catch block guarding the provider call) so a failed generation never
+    // costs the caller an allowance slot or a purchased credit, and
+    // finalizeAiCall must come after the provider call succeeds.
+    assert.ok(reserveIndex < providerIndex, `${routePath}: reservation must precede the provider call`)
+    assert.ok(providerIndex < releaseIndex, `${routePath}: release must be reachable after the provider call (in its catch block)`)
+    assert.ok(providerIndex < finalizeIndex, `${routePath}: finalize must come after the provider call`)
+    assert.doesNotMatch(
+      route,
+      /assertCanUseAi|trackAiCall/,
+      `${routePath}: must not use the old, racy check-then-track functions`,
+    )
+  }
+})
+
+test("the AI-call reservation RPC is atomic per user and refunds a consumed credit on release", () => {
+  const migration = read("supabase/migrations/20260821160000_atomic_ai_call_reservation.sql")
+
+  assert.match(
+    migration,
+    /create or replace function public\.reserve_ai_call/,
+  )
+  assert.match(
+    migration,
+    /pg_advisory_xact_lock\(hashtext\(p_user_id::text \|\| ':ai_reserve'\)\)/,
+  )
+  // The lock must be acquired, and the reservation row inserted, before
+  // returning - otherwise a second concurrent call could still race past
+  // the count check while the first call's OpenAI request is still in
+  // flight (the actual bug: the row that makes concurrent requests visible
+  // to each other didn't exist until *after* the provider call succeeded).
+  const reserveBody = migration.slice(
+    migration.indexOf("create or replace function public.reserve_ai_call"),
+    migration.indexOf("create or replace function public.confirm_ai_call"),
+  )
+  assert.match(reserveBody, /insert into public\.ai_usage/)
+  assert.match(
+    migration,
+    /create or replace function public\.release_ai_call/,
+  )
+  assert.match(
+    migration,
+    /insert into public\.ai_credit_ledger \(user_id, delta, reason, feature\)\s*\n\s*values \(v_user_id, 1, 'refund', 'ai-call-release'\)/,
+  )
+  assert.match(
+    migration,
+    /grant execute on function public\.reserve_ai_call\(uuid, uuid, integer\) to service_role/,
+  )
+})
+
+test("get_monthly_ai_calls has an explicit grant, matching every sibling RPC", () => {
+  const migration = read(
+    "supabase/migrations/20260822100000_pin_get_monthly_ai_calls_grant.sql",
+  )
+
+  assert.match(
+    migration,
+    /grant execute on function public\.get_monthly_ai_calls\(uuid\) to authenticated;/,
+  )
+})
+
+test("stripe_webhook_events and ai_rate_limits explicitly revoke client access, matching the other service-role-only tables", () => {
+  const migration = read(
+    "supabase/migrations/20260822110000_explicit_revoke_stripe_events_rate_limits.sql",
+  )
+
+  assert.match(
+    migration,
+    /revoke all on table public\.stripe_webhook_events from public, anon, authenticated;/,
+  )
+  assert.match(
+    migration,
+    /revoke all on table public\.ai_rate_limits from public, anon, authenticated;/,
+  )
+})
+
+test("cover letter and outreach message writes verify the referenced job belongs to the same account", () => {
+  const coverLetter = read("apps/web/app/api/ai/cover-letter/route.ts")
+  const outreach = read("apps/web/app/api/outreach/route.ts")
+
+  const coverLetterOwnershipIndex = coverLetter.indexOf(
+    'from("applications").select("id").eq("id",body.jobId).eq("user_id",user.id)',
+  )
+  const coverLetterInsertIndex = coverLetter.indexOf(
+    'from("cover_letters").insert(',
+  )
+  assert.notEqual(coverLetterOwnershipIndex, -1)
+  assert.notEqual(coverLetterInsertIndex, -1)
+  assert.ok(coverLetterOwnershipIndex < coverLetterInsertIndex)
+
+  const outreachOwnershipIndex = outreach.indexOf(
+    'from("applications").select("id").eq("id", body.jobId).eq("user_id", user.id)',
+  )
+  const outreachInsertIndex = outreach.indexOf('from("outreach_messages").insert(')
+  assert.notEqual(outreachOwnershipIndex, -1)
+  assert.notEqual(outreachInsertIndex, -1)
+  assert.ok(outreachOwnershipIndex < outreachInsertIndex)
+})
+
+test("workflow_dispatch confirmation/boolean inputs are passed via env, not interpolated into run: steps", () => {
+  // Substituting github.event.inputs.* straight into a `run:` block before
+  // the shell parses the line is the classic GitHub Actions script-injection
+  // pattern - a crafted input value can break out of its quoted context and
+  // run as an injected command. The safe pattern passes the input through
+  // `env:` and references it as a shell variable instead.
+  const k6 = read(".github/workflows/k6-manual.yml")
+  assert.match(k6, /CONFIRM_INPUT: \$\{\{ github\.event\.inputs\.confirm \}\}/)
+  assert.match(k6, /if \[ "\$CONFIRM_INPUT" != "\$expected" \]/)
+  assert.doesNotMatch(k6, /if \[ "\$\{\{ github\.event\.inputs\.confirm \}\}"/)
+
+  const visualRegression = read(".github/workflows/visual-regression.yml")
+  assert.match(
+    visualRegression,
+    /UPDATE_SNAPSHOTS: \$\{\{ github\.event\.inputs\.update_snapshots \}\}/,
+  )
+  assert.match(visualRegression, /if \[ "\$UPDATE_SNAPSHOTS" = "true" \]/)
+  assert.doesNotMatch(
+    visualRegression,
+    /if \[ "\$\{\{ github\.event\.inputs\.update_snapshots \}\}"/,
+  )
+})
+
+test("diagnostics client route rate-limits before logging (unauthenticated writes are otherwise unbounded)", () => {
+  const route = read("apps/web/app/api/diagnostics/client/route.ts")
+  const parseIndex = route.indexOf("clientDiagnosticSchema.parse")
+  const rateLimitIndex = route.indexOf("await assertDiagnosticRouteRateLimit")
+  const logIndex = route.indexOf("logDiagnostic(diagnostic")
+
+  assert.notEqual(rateLimitIndex, -1)
+  assert.notEqual(logIndex, -1)
+  assert.ok(parseIndex < rateLimitIndex)
+  assert.ok(rateLimitIndex < logIndex)
+})
+
+test("the public analytics service and its authenticated proxy both gate on the shared internal secret", () => {
+  const service = read("apps/analytics/main.py")
+  const proxyRoute = read(
+    "apps/web/app/api/analytics/evidence-outcomes/route.ts",
+  )
+
+  // apps/analytics is a separate Python service reachable at a public
+  // production URL (vercel.json routes /analytics to it) - it can't
+  // validate a Supabase session itself, so /evidence-outcomes must reject
+  // any call missing the shared secret, and the proxy route must
+  // authenticate the caller before it ever forwards that secret.
+  assert.match(service, /dependencies=\[Depends\(require_internal_secret\)\]/)
+  assert.match(service, /def require_internal_secret/)
+
+  const authIndex = proxyRoute.indexOf("await getRequestUser(request)")
+  const forwardIndex = proxyRoute.indexOf("x-analytics-secret")
+  assert.notEqual(authIndex, -1)
+  assert.notEqual(forwardIndex, -1)
+  assert.ok(authIndex < forwardIndex)
+})
+
+test("every admin read route sends the same private, no-store cache header", () => {
+  const routes = [
+    "apps/web/app/api/admin/overview/route.ts",
+    "apps/web/app/api/admin/users/route.ts",
+    "apps/web/app/api/admin/feedback/route.ts",
+    "apps/web/app/api/admin/ai-operations/route.ts",
+    "apps/web/app/api/admin/market-data/route.ts",
+    "apps/web/app/api/admin/audit-log/route.ts",
+  ]
+
+  for (const routePath of routes) {
+    assert.match(
+      read(routePath),
+      /"Cache-Control":\s*"private, no-store"/,
+      routePath,
+    )
+  }
+})
+
+test("the home page's follow-up-due check anchors to the start of the due date, not the end", () => {
+  // Comparing against T23:59:59 instead of T00:00:00 means a follow-up due
+  // "today" doesn't get flagged until nearly midnight that night, delaying
+  // the home page's single "next best action" nudge by up to a full day.
+  // DashboardExperience.tsx's getNextActionTiming already anchors the same
+  // kind of due-date check to the start of the day - this must match it.
+  const home = read("apps/web/components/HomeExperience.tsx")
+  assert.match(home, /\$\{application\.followUpDate\}T00:00:00/)
+  assert.doesNotMatch(home, /\$\{application\.followUpDate\}T23:59:59/)
+})
+
+test("admin login preserves the post-login redirect target instead of always discarding it", () => {
+  // getUnauthenticatedRedirect (proxy-policy.ts) sends an unauthenticated
+  // admin visiting a deep link (e.g. /admin/users) to
+  // /admin/login?redirectTo=/admin/users - the page's own safeRedirect
+  // check previously had both ternary branches return the same literal
+  // "/admin", silently discarding that value on every login regardless of
+  // where the admin actually came from.
+  const page = read("apps/web/app/(admin-auth)/admin/login/page.tsx")
+
+  assert.doesNotMatch(
+    page,
+    /=== "\/admin" \? "\/admin" : "\/admin"/,
+    "both ternary branches must not return the same literal",
+  )
+  assert.match(page, /candidate === "\/admin" \|\| candidate\.startsWith\("\/admin\/"\)/)
+  assert.match(page, /candidate\.includes\("\\\\"\)/)
+})
+
+test("job workflow application upserts verify the referenced job belongs to the same account before writing", () => {
+  const repository = read("apps/web/lib/job-workflow-repository.ts")
+  const upsertApplicationBody = repository.slice(
+    repository.indexOf("export async function upsertApplication"),
+  )
+
+  const referencedJobCheckIndex = upsertApplicationBody.indexOf(
+    'from("job_workflow_jobs")',
+  )
+  const existingLookupIndex = upsertApplicationBody.indexOf(
+    'select("updated_at")',
+  )
+
+  assert.notEqual(referencedJobCheckIndex, -1)
+  assert.match(
+    upsertApplicationBody.slice(0, existingLookupIndex),
+    /if \(!referencedJob\) \{\s*throw new Error/,
+  )
+  assert.ok(referencedJobCheckIndex < existingLookupIndex)
+})
+
+test("job workflow sync distinguishes a disabled server from a real upload failure", () => {
+  const hook = read("apps/web/lib/useJobWorkflowSync.ts")
+  const uploadBody = hook.slice(
+    hook.indexOf("const upload = useCallback"),
+    hook.indexOf("const sync = useCallback"),
+  )
+
+  const statusCheckIndex = uploadBody.indexOf('response.status === 404')
+  const genericThrowIndex = uploadBody.indexOf(
+    'throw new Error("Account sync could not be completed.")',
+  )
+
+  assert.notEqual(statusCheckIndex, -1)
+  assert.notEqual(genericThrowIndex, -1)
+  assert.ok(statusCheckIndex < genericThrowIndex)
+  assert.match(uploadBody, /setState\("server-disabled"\)/)
+})
+
+test("interview upserts verify the referenced application and job belong to the same account before writing", () => {
+  const repository = read("apps/web/lib/interview-workflow-repository.ts")
+  const upsertInterviewBody = repository.slice(
+    repository.indexOf("export async function upsertInterview"),
+  )
+
+  const applicationCheckIndex = upsertInterviewBody.indexOf(
+    'from("job_workflow_applications")',
+  )
+  const jobCheckIndex = upsertInterviewBody.indexOf('from("job_workflow_jobs")')
+  const existingLookupIndex = upsertInterviewBody.indexOf(
+    'select("updated_at")',
+  )
+
+  assert.notEqual(applicationCheckIndex, -1)
+  assert.notEqual(jobCheckIndex, -1)
+  assert.match(
+    upsertInterviewBody.slice(0, existingLookupIndex),
+    /if \(!referencedApplication \|\| !referencedJob\) \{\s*throw new Error/,
+  )
+  assert.ok(applicationCheckIndex < existingLookupIndex)
+  assert.ok(jobCheckIndex < existingLookupIndex)
+})
+
+test("account deletion also cleans up the user's profile-photo storage objects, not just DB rows", () => {
+  const route = read("apps/web/app/api/account/route.ts")
+
+  // Supabase Storage objects have no FK to auth.users - only an RLS policy
+  // scoping them by folder name to auth.uid() - so ON DELETE CASCADE never
+  // reaches them. Without an explicit cleanup step, a deleted account
+  // leaves its profile photo (a real personal image) orphaned forever.
+  const cleanupIndex = route.indexOf("async function deleteProfilePhotos")
+  const deleteUserIndex = route.indexOf("auth.admin.deleteUser")
+  const callSiteIndex = route.indexOf("await deleteProfilePhotos(")
+
+  assert.notEqual(cleanupIndex, -1)
+  assert.notEqual(callSiteIndex, -1)
+  assert.ok(callSiteIndex < deleteUserIndex)
+
+  const cleanupBody = route.slice(cleanupIndex)
+  assert.match(cleanupBody, /\.storage\s*\n?\s*\.from\("profile-photos"\)/)
+  assert.match(cleanupBody, /\.list\(userId\)/)
+  assert.match(cleanupBody, /\.remove\(paths\)/)
+})
+
+test("classify_job_listings_esco has an explicit grant, matching every sibling RPC", () => {
+  // Both migrations that ever defined this function only ran
+  // `revoke all ... from public, anon, authenticated`, with no matching
+  // `grant execute ... to service_role` - since that revoke removes the
+  // function's only privilege (the default PUBLIC grant every new function
+  // gets on creation), no role could ever call it, so ESCO classification
+  // of aggregated job listings silently failed on every cron run.
+  const migration = read(
+    "supabase/migrations/20260822130000_grant_classify_job_listings_esco.sql",
+  )
+
+  assert.match(
+    migration,
+    /grant execute on function public\.classify_job_listings_esco\(integer\) to service_role;/,
+  )
+})
+
+test("every admin page catches its own authorization failure instead of letting it hit the generic error boundary", () => {
+  // requireAdminPrincipal throws a plain AdminAuthorizationError - Next.js
+  // does not let a parent layout's try/catch catch an exception thrown
+  // during a child page's own separate async render, so a page calling
+  // requireAdminPrincipal directly (instead of the wrapped
+  // requireAdminPageAccess) would have a permission failure escape past
+  // the /admin layout's redirect logic and hit the app's generic root
+  // error.tsx - a confusing message plus a spurious Sentry report for what
+  // is really just an expected authorization boundary. Every admin page
+  // must use the wrapper, which redirects the same way the layout does.
+  const pages = [
+    "apps/web/app/admin/page.tsx",
+    "apps/web/app/admin/users/page.tsx",
+    "apps/web/app/admin/feedback/page.tsx",
+    "apps/web/app/admin/ai-operations/page.tsx",
+    "apps/web/app/admin/market-data/page.tsx",
+    "apps/web/app/admin/feature-flags/page.tsx",
+    "apps/web/app/admin/audit-log/page.tsx",
+  ]
+
+  for (const pagePath of pages) {
+    const page = read(pagePath)
+    assert.match(page, /requireAdminPageAccess\(/, pagePath)
+    assert.doesNotMatch(page, /requireAdminPrincipal\(/, pagePath)
+  }
+
+  const lib = read("apps/web/lib/admin-authorization.ts")
+  assert.match(
+    lib,
+    /export async function requireAdminPageAccess\(/,
+  )
+  assert.match(lib, /error instanceof AdminAuthorizationError/)
+  assert.match(
+    lib,
+    /redirect\(\s*error\.status === 401 \? "\/admin\/login" : "\/admin\/login\?adminDenied=1",?\s*\)/,
+  )
+})
+
+test("interview outcome learningSignals condition is not a dead no-op ternary", () => {
+  // Found by an independent review pass over this PR before merge: the
+  // logic fix itself only had pnpm typecheck as its test plan, with no
+  // assertion that would catch a regression back to the dead-ternary
+  // shape (or a wrong condition). This component embeds the fix inline in
+  // a JSX onClick handler with no extracted, directly-importable function,
+  // so a static-inspection check matches the convention already used
+  // elsewhere in this file for component-level logic fixes.
+  const workspace = read("apps/web/components/InterviewsWorkspace.tsx")
+
+  assert.doesNotMatch(
+    workspace,
+    /employerReason \|\| interpretation\s*\n?\s*\?\s*\["unknown"\]\s*\n?\s*:\s*\["unknown"\]/,
+    "both ternary branches must not return the same literal",
+  )
+  assert.match(
+    workspace,
+    /learningSignals:\s*\n?\s*employerReason \|\| interpretation \? \["unknown"\] : \[\]/,
+  )
+})
+
+test("AI route CV and outreach free-text fields have upper size bounds, not just a lower one", () => {
+  // cv/outreach fields previously had no .max() at all, so a client could
+  // submit an arbitrarily large payload (thousands of experience entries
+  // with megabyte-long bullets) and inflate OpenAI token cost per call -
+  // unlike jobDescription in the same schemas, which was already capped.
+  const tailorCv = read("apps/web/app/api/ai/tailor-cv/route.ts")
+  const coverLetter = read("apps/web/app/api/ai/cover-letter/route.ts")
+  const outreach = read("apps/web/app/api/outreach/route.ts")
+
+  assert.match(tailorCv, /summary: z\.string\(\)\.max\(4000\)/)
+  assert.match(tailorCv, /bullets: z\.array\(z\.string\(\)\.max\(1000\)\)\.max\(40\)/)
+  assert.match(tailorCv, /skills: z\.array\(z\.string\(\)\.max\(100\)\)\.max\(200\)/)
+
+  assert.match(coverLetter, /summary:z\.string\(\)\.max\(4000\)/)
+  assert.match(coverLetter, /skills:z\.array\(z\.string\(\)\.max\(100\)\)\.max\(200\)/)
+
+  assert.match(outreach, /candidateSummary: z\.string\(\)\.trim\(\)\.min\(20\)\.max\(5000\)/)
+  assert.match(
+    outreach,
+    /candidateKeyStrengths: z\.array\(z\.string\(\)\.trim\(\)\.min\(1\)\.max\(200\)\)\.min\(1\)\.max\(20\)/,
+  )
+  // recruiterEmail was missed in the initial pass - z.string().email() has
+  // no length cap of its own, so an "email-shaped" string with a huge
+  // local-part (e.g. 100k "a" characters before the @) could still inflate
+  // the OpenAI prompt this field flows into via draftOutreachWithOpenAI.
+  assert.match(outreach, /recruiterEmail: z\.string\(\)\.trim\(\)\.email\(\)\.max\(254\)/)
+})
+
+test("cloud-sync polling cannot silently overwrite a profile or dashboard edit still in flight", () => {
+  // hasUnsyncedDashboardChangesRef already guarded loadDashboardSnapshot
+  // against a silent background poll overwriting a debounced-but-not-yet-
+  // synced write, but the recurring focus/visibility/3s-interval poll
+  // passed force: true, which unconditionally bypassed that guard - and
+  // loadProfileSnapshot had no equivalent guard or ref at all, so any
+  // profile edit typed during its 1200ms sync debounce (or while the sync
+  // request was still in flight) could be silently discarded by the next
+  // poll's server response landing first.
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.match(dashboard, /const hasUnsyncedProfileChangesRef = useRef\(false\)/)
+  assert.match(
+    dashboard,
+    /if \(silent && hasUnsyncedProfileChangesRef\.current\) \{\s*return false\s*\}/,
+  )
+  assert.match(dashboard, /hasUnsyncedProfileChangesRef\.current = true/)
+  assert.match(dashboard, /hasUnsyncedProfileChangesRef\.current = !synced/)
+
+  const refreshSyncedWorkflowIndex = dashboard.indexOf(
+    "const refreshSyncedWorkflow = () => {",
+  )
+  const refreshSyncedWorkflowBody = dashboard.slice(
+    refreshSyncedWorkflowIndex,
+    refreshSyncedWorkflowIndex + 700,
+  )
+  assert.notEqual(refreshSyncedWorkflowIndex, -1)
+  assert.doesNotMatch(
+    refreshSyncedWorkflowBody,
+    /loadDashboardSnapshot\(\{ force: true/,
+    "the recurring poll must not force past the unsynced-changes guard",
+  )
+  assert.match(refreshSyncedWorkflowBody, /loadDashboardSnapshot\(\{ silent: true \}\)/)
+})
+
+test("admin_update_feature_flag takes its lock unconditionally, even when creating a brand-new flag", () => {
+  // The original definition only locked via "select ... for update" when a
+  // matching row already existed. Creating a new (key, environment) pair
+  // has no row to lock, so two concurrent creates could both pass the
+  // existence check unprotected and race on the "insert ... on conflict do
+  // update" - the second caller would silently bump another caller's
+  // just-created flag to version 2 without ever validating its version
+  // against the row that now exists.
+  const migration = read(
+    "supabase/migrations/20260823100000_admin_feature_flag_create_lock.sql",
+  )
+
+  assert.match(
+    migration,
+    /create or replace function public\.admin_update_feature_flag/,
+  )
+
+  const lockIndex = migration.indexOf(
+    "perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_key || ':' || p_environment, 0));",
+  )
+  const existenceCheckIndex = migration.indexOf(
+    "select * into v_row from public.admin_feature_flags f where f.key = p_key and f.environment = p_environment for update;",
+  )
+
+  assert.notEqual(lockIndex, -1)
+  assert.notEqual(existenceCheckIndex, -1)
+  assert.ok(
+    lockIndex < existenceCheckIndex,
+    "the advisory lock must be taken before the existence/version check, not after",
+  )
+})
+
+test("saveCurrentTabAsApplication does not clobber a fresh deletion-aware application list with a stale one", () => {
+  // syncApplicationListToDashboard refreshes `applications` state itself
+  // (via getApplications()) whenever the sync response includes
+  // deletedApplicationIds - the backend can resurrect/merge a duplicate
+  // record via resurrectUrlKey, which is exactly the call path this
+  // function takes. It previously followed that call with
+  // setApplications(applications), re-applying the array captured in the
+  // outer closure *before* the sync ran - deterministically overwriting
+  // the fresh, deletion-aware state with a list that still contains the
+  // just-deleted duplicate record.
+  const sidepanel = read("apps/extension/sidepanel/main.tsx")
+
+  const functionIndex = sidepanel.indexOf(
+    "const saveCurrentTabAsApplication = async () => {",
+  )
+  const nextFunctionIndex = sidepanel.indexOf(
+    "\n  const ",
+    functionIndex + "const saveCurrentTabAsApplication = async () => {".length,
+  )
+  assert.notEqual(functionIndex, -1)
+  const functionBody = sidepanel.slice(functionIndex, nextFunctionIndex)
+
+  assert.doesNotMatch(functionBody, /setApplications\(applications\)/)
+  assert.match(functionBody, /resurrectUrlKey: normalizeApplicationUrlKey\(details\.url\)/)
+})
+
+test("outreach route only refunds the AI credit reservation if the OpenAI call itself fails, not a later DB write", () => {
+  // cover-letter and tailor-cv routes only wrap the OpenAI call itself in
+  // the release-on-failure try/catch, then finalize (charge) the
+  // reservation before doing any DB persistence - a later DB failure after
+  // a successful, already-charged generation is not refunded. The outreach
+  // route previously wrapped both the OpenAI call AND the outreach_messages
+  // insert in one try/catch, so a transient DB failure right after a
+  // successful (and real-money) OpenAI call would call releaseAiCall,
+  // silently refunding a credit for a generation that had already
+  // succeeded and been paid for.
+  const route = read("apps/web/app/api/outreach/route.ts")
+
+  const releaseIndex = route.indexOf("releaseAiCall(reservationId)")
+  const finalizeIndex = route.indexOf("finalizeAiCall(reservationId")
+  const insertIndex = route.indexOf('.from("outreach_messages").insert(')
+
+  assert.notEqual(releaseIndex, -1)
+  assert.notEqual(finalizeIndex, -1)
+  assert.notEqual(insertIndex, -1)
+  assert.ok(
+    releaseIndex < finalizeIndex,
+    "release-on-failure must be scoped to the AI call, resolved before finalize runs",
+  )
+  assert.ok(
+    finalizeIndex < insertIndex,
+    "the DB insert must happen after the credit is finalized, so its own failure can't trigger a refund of an already-incurred cost",
+  )
+})
+
+test("diagnostics.ts reuses the Sentry pipeline's broader, recursive redaction instead of its own shallow, exact-key-only list", () => {
+  // sanitizeDetails previously only redacted a top-level, exact-match
+  // config list (email, access_token, refresh_token, authorization,
+  // password, secret, service_role) - common spellings like "token", "cv",
+  // "resume", "jobDescription" and "phone" were never redacted, nested
+  // objects were never scanned, and diagnostic.message (a public,
+  // optionally-unauthenticated endpoint accepts an arbitrary client-
+  // supplied message string, persisted into operational_logs and later
+  // readable through the admin monitoring UI) was never redacted at all.
+  const diagnostics = read("apps/web/lib/diagnostics.ts")
+  const sentryPrivacy = read("apps/web/lib/sentry-privacy.ts")
+
+  assert.match(
+    diagnostics,
+    /import \{ redactSensitiveUrlText, redactSensitiveValue \} from "\.\/sentry-privacy"/,
+  )
+  assert.match(diagnostics, /redactSensitiveValue\(configRedacted\)/)
+  assert.match(diagnostics, /message: redactSensitiveUrlText\(diagnostic\.message\)/)
+
+  const persistIndex = diagnostics.indexOf("persistOperationalLog(")
+  const sanitizedDiagnosticDefinitionIndex = diagnostics.indexOf(
+    "const sanitizedDiagnostic",
+  )
+  assert.notEqual(persistIndex, -1)
+  assert.notEqual(sanitizedDiagnosticDefinitionIndex, -1)
+  assert.ok(
+    sanitizedDiagnosticDefinitionIndex < persistIndex,
+    "the redacted diagnostic, not the original, must be what's persisted",
+  )
+
+  // The two redaction helpers must actually be exported for diagnostics.ts
+  // to reuse rather than reimplement them.
+  assert.match(sentryPrivacy, /export function redactSensitiveUrlText/)
+  assert.match(sentryPrivacy, /export function redactSensitiveValue/)
+})
+
+test("capability-readiness education evidence reads a real field, not a copy-pasted duplicate of projects", () => {
+  // CandidateProfile has no dedicated education field, so this was a
+  // copy-paste of the "projects" line - education evidence silently
+  // mirrored project-summary evidence instead of reflecting anything
+  // about education, inflating confirmedEvidenceCount whenever
+  // projectSummaries was filled in but nothing else was.
+  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+
+  assert.doesNotMatch(
+    dashboard,
+    /education: Boolean\(state\.profile\.projectSummaries\.trim\(\)\)/,
+  )
+  assert.match(
+    dashboard,
+    /education: Boolean\(state\.profile\.baseCvText\.trim\(\)\)/,
+  )
+})
+
+test("profile onboarding save is a single atomic upsert, not a read-then-branch insert/update race", () => {
+  // Reading whether a profiles row exists, then branching to insert or
+  // update, let two concurrent PATCHes for the same brand-new user (e.g. a
+  // double-clicked "Next" on the first onboarding step) both see no
+  // existing row and both attempt an insert - the loser hit the
+  // unique(user_id) constraint and surfaced as a generic 500, silently
+  // dropping that request's data.
+  const route = read("apps/web/app/api/profile/onboarding/route.ts")
+
+  assert.doesNotMatch(
+    route,
+    /const \{data:existing\}=await client\.from\("profiles"\)\.select/,
+    "must not read for existence before deciding insert vs update",
+  )
+  assert.match(route, /const payload=\{user_id:user\.id,\.\.\.changes\}/)
+  assert.match(route, /\.from\("profiles"\)\.upsert\(payload,\{onConflict:"user_id"\}\)/)
+})
+
+test("job/interview workflow sync helpers check every write's error instead of firing and forgetting", () => {
+  // Supabase-js does not throw on a write failure by default. These
+  // helper functions previously called .insert()/.upsert()/.delete()
+  // without destructuring { error }, so a constraint violation (e.g. two
+  // overlapping syncs racing on a unique(job_id, version) constraint) was
+  // silently discarded - the outer upsertJob()/upsertInterview() reported
+  // success to the client even though the write never actually landed.
+  const jobWorkflow = read("apps/web/lib/job-workflow-repository.ts")
+  const interviewWorkflow = read("apps/web/lib/interview-workflow-repository.ts")
+
+  assert.match(
+    jobWorkflow,
+    /const \{ error \} = await client\.from\("job_workflow_analysis_snapshots"\)\.insert\(/,
+  )
+  assert.match(jobWorkflow, /if \(error\) throw new Error\("Job analysis snapshot could not be saved\."\)/)
+
+  assert.match(
+    interviewWorkflow,
+    /const \{ error \} = await client\s*\.from\("interview_questions"\)\s*\.delete\(\)/,
+  )
+  assert.match(interviewWorkflow, /if \(error\) throw new Error\("Stale interview questions could not be removed\."\)/)
+  assert.match(
+    interviewWorkflow,
+    /const \{ error \} = await client\s*\.from\("interview_questions"\)\s*\.upsert\(/,
+  )
+  assert.match(interviewWorkflow, /if \(error\) throw new Error\("Interview questions could not be saved\."\)/)
+  assert.match(
+    interviewWorkflow,
+    /const \{ error \} = await client\.from\("interview_preparation_snapshots"\)\.insert\(/,
+  )
+  assert.match(
+    interviewWorkflow,
+    /if \(error\) throw new Error\("Interview preparation snapshot could not be saved\."\)/,
   )
 })
 

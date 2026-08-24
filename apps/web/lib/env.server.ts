@@ -73,3 +73,12 @@ export function getOpenAIEnv(): { apiKey: string } {
 export function getResendEnv(): { apiKey: string } {
   return { apiKey: requireServerValue("email", process.env.RESEND_API_KEY) }
 }
+
+export function getAnalyticsInternalEnv(): { secret: string } {
+  return {
+    secret: requireServerValue(
+      "analytics",
+      process.env.ANALYTICS_INTERNAL_SECRET,
+    ),
+  }
+}

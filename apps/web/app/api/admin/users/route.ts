@@ -16,7 +16,10 @@ export async function GET(request: Request) {
       principal.membership,
       "users:read_email",
     );
-    const data = await getAdminUsersOverview(includeEmail);
+    const requestedPage = Number(
+      new URL(request.url).searchParams.get("page") ?? "1",
+    );
+    const data = await getAdminUsersOverview(includeEmail, requestedPage);
     return NextResponse.json(
       { data, error: null, status: 200 },
       { headers: { "Cache-Control": "private, no-store" } },

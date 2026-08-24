@@ -259,6 +259,47 @@ test("progressed outcome can create a stage-specific next interview", () => {
   assert.ok(next.questions.some((item) => item.category === "technical"));
   assert.notEqual(next.id, previous.id);
 });
+test("saving an answer or refreshing preparation cannot resurrect a completed interview", () => {
+  let interview = createInterview({
+    userId,
+    application: { ...application, status: "Interview" },
+    job,
+    stage: "recruiter_screen",
+    format: "video",
+  });
+  interview = transitionInterview(interview, "completed");
+  interview = recordInterviewOutcome(interview, "offer", {
+    questionsAsked: [],
+    difficultAreas: [],
+    notes: "",
+    followUpAction: "",
+    learningSignals: ["unknown"],
+  });
+
+  const afterAnswer = saveInterviewAnswer(interview, interview.questions[0].id, {
+    value: "Reviewing my notes after the fact.",
+    evidenceIds: [],
+    confirmed: false,
+  });
+  assert.equal(afterAnswer.status, "completed");
+  assert.equal(afterAnswer.outcome, "offer");
+
+  const afterRefresh = refreshInterviewPreparation(interview, application, job);
+  assert.equal(afterRefresh.status, "completed");
+  assert.equal(afterRefresh.outcome, "offer");
+
+  assert.throws(
+    () =>
+      recordInterviewOutcome(interview, "rejected", {
+        questionsAsked: [],
+        difficultAreas: [],
+        notes: "",
+        followUpAction: "",
+        learningSignals: ["unknown"],
+      }),
+    /already been recorded/,
+  );
+});
 test("storage rejects malformed and cross-user records", () => {
   const interview = createInterview({
     userId,
@@ -470,4 +511,26 @@ test("editing a reviewed answer invalidates final review and Ready", () => {
   assert.equal(value.finalReviewCompleted, false);
   assert.equal(value.status, "preparing");
   assert.throws(() => transitionInterview(value, "ready"));
+});
+test("readiness areas only report on categories this stage actually generates questions for", () => {
+  // A recruiter_screen interview's coverage never generates technical,
+  // scenario or job_risk questions - Array.every() on the empty filtered
+  // list used to vacuously report those areas "Complete" with zero prep
+  // work done, before a single question had even been looked at.
+  const value = createInterview({
+    userId,
+    application,
+    job,
+    stage: "recruiter_screen",
+    format: "phone",
+  });
+  const readiness = getInterviewReadiness(value);
+  const labels = readiness.areas.map((area) => area.label);
+
+  assert.ok(!labels.includes("Essential technical coverage"));
+  assert.ok(!labels.includes("Domain preparation"));
+  assert.ok(labels.includes("Role understanding"));
+  for (const area of readiness.areas) {
+    if (area.label === "Role understanding") assert.equal(area.complete, false);
+  }
 });

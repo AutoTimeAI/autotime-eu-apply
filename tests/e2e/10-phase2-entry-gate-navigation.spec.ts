@@ -1,4 +1,3 @@
-// Covers onboarding entry gates and navigation across authenticated product routes.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { seedReadyDashboardProfile } from "./helpers";
 
@@ -9,7 +8,7 @@ const destinations = [
   ["Applications", "/dashboard/applications"],
   ["Interviews", "/dashboard/interviews"],
   ["Countries", "/dashboard/international"],
-  ["Profile", "/dashboard/autofill-profile"],
+  ["Profile", "/dashboard/profile"],
 ] as const;
 
 const primaryMobileDestinations = [
@@ -22,7 +21,7 @@ const primaryMobileDestinations = [
 const moreMobileDestinations = [
   ["Career Direction", "/dashboard/role-pathways"],
   ["Countries", "/dashboard/international"],
-  ["Profile", "/dashboard/autofill-profile"],
+  ["Profile", "/dashboard/profile"],
 ] as const;
 
 async function assertLanded(
@@ -52,7 +51,7 @@ async function assertAccountMenu(page: Page) {
     page.getByRole("menuitem", { name: "Settings" }),
   ).toHaveAttribute("href", "/dashboard/settings");
   await expect(
-    page.getByRole("menuitem", { name: "Billing & Plan" }),
+    page.getByRole("menuitem", { name: /Billing & Plan|Upgrade plan/ }),
   ).toBeVisible();
 }
 

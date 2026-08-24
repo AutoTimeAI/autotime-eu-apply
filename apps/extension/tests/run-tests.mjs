@@ -25,7 +25,6 @@ import {
   getJobPlatform,
   getJobCaptureMode,
   inferJobPageDetails,
-  inferLocationSignalFromText,
   isLinkedInUrl,
   parseLinkedInPageTitle
 } from "../lib/job-page.ts"
@@ -76,6 +75,7 @@ import {
   updateApplication,
   updateApplicationSyncState
 } from "../lib/storage.ts"
+import { getActiveSession } from "../lib/session.ts"
 import {
   countWords,
   validateApplicationContentDraft,
@@ -91,34 +91,46 @@ function test(name, run) {
   tests.push({ name, run })
 }
 
-const localStore = new Map()
+const store = new Map()
+
 const sessionStore = new Map()
 
-function storageArea(store) {
-  return {
-    async get(key) {
-      return { [key]: store.get(key) }
+globalThis.chrome = {
+  storage: {
+    local: {
+      async get(key) {
+        return { [key]: store.get(key) }
+      },
+      async set(values) {
+        Object.entries(values).forEach(([key, value]) => {
+          store.set(key, value)
+        })
+      },
+      async remove(key) {
+        store.delete(key)
+      }
     },
-    async set(values) {
-      Object.entries(values).forEach(([key, value]) => {
-        store.set(key, value)
-      })
-    },
-    async remove(key) {
-      store.delete(key)
+    // The account session lives in chrome.storage.session (see storage.ts),
+    // not .local, so content scripts can't read it - kept as a separate map
+    // here to mirror that real separation.
+    session: {
+      async get(key) {
+        return { [key]: sessionStore.get(key) }
+      },
+      async set(values) {
+        Object.entries(values).forEach(([key, value]) => {
+          sessionStore.set(key, value)
+        })
+      },
+      async remove(key) {
+        sessionStore.delete(key)
+      }
     }
   }
 }
 
-globalThis.chrome = {
-  storage: {
-    local: storageArea(localStore),
-    session: storageArea(sessionStore)
-  }
-}
-
 function resetStorage() {
-  localStore.clear()
+  store.clear()
   sessionStore.clear()
 }
 
@@ -156,6 +168,15 @@ test("detects obvious application form fields", () => {
   assert.equal(detectFieldFromText("email", ""), "email")
   assert.equal(detectFieldFromText("tel", ""), "phone")
   assert.equal(detectFieldFromText("text", "mobile number"), "phone")
+  assert.equal(detectFieldFromText("text", "phone-number"), "phone")
+  assert.equal(detectFieldFromText("text", "Tel:"), "phone")
+})
+
+test("does not treat an unrelated word containing 'tel'/'phone'/'mobile' as a phone field", () => {
+  assert.equal(detectFieldFromText("text", "hotel preference"), null)
+  assert.equal(detectFieldFromText("text", "intel briefing"), null)
+  assert.equal(detectFieldFromText("text", "confirm you have a working microphone"), null)
+  assert.equal(detectFieldFromText("text", "automobile allowance"), null)
 })
 
 test("maps reusable answers to autofill fields", () => {
@@ -351,6 +372,27 @@ test("cleans job page descriptions and infers missing location", () => {
   )
 })
 
+test("decodes named entities in one pass without double-escaping", () => {
+  // A single &amp; decode pass before &lt;/&gt; decodes would turn a
+  // legitimately double-escaped source ("&amp;lt;", the literal two
+  // characters "&lt;") into a raw "<" instead of the correct "&lt;" -
+  // corrupting real scraped job data (e.g. a company name using "&amp;"
+  // as literal text) with no relation to any real HTML tag.
+  const details = inferJobPageDetails({
+    title: "Engineer at C&amp;A",
+    heading: "Engineer",
+    company: "C&amp;amp;A",
+    description: "We use &amp;lt;script&amp;gt; tags for templating, nothing more.",
+    url: "https://example.com/jobs/engineer"
+  })
+
+  assert.equal(details.company, "C&amp;A")
+  assert.equal(
+    details.jobDescription,
+    "We use &lt;script&gt; tags for templating, nothing more."
+  )
+})
+
 test("stops flattened location parsing at following job sections", () => {
   const details = inferJobPageDetails({
     title: "Founder's Associate",
@@ -448,6 +490,20 @@ test("narrows extraction to uncovered ATS and unknown sites", () => {
   assert.equal(getJobCaptureMode("https://careers.example.com/openings/1"), "selector-extraction")
   assert.equal(getJobCaptureMode("https://linkedin.com/jobs/view/1"), "manual-only")
   assert.equal(getJobCaptureMode("https://jobs.smartrecruiters.com/acme/1"), "api-reference")
+})
+
+test("does not treat a look-alike host as an aggregator-covered domain", () => {
+  // A bare host.endsWith("adzuna.com") also matches "fake-adzuna.com" - a
+  // real, freely registrable domain unrelated to Adzuna - since endsWith
+  // has no concept of a label/dot boundary. Same class of bug the
+  // "notlinkedin.com" case above already guards against for LinkedIn.
+  for (const url of [
+    "https://fake-adzuna.com/job/1",
+    "https://notjooble.org/job/1",
+    "https://xeures.europa.eu/job/1"
+  ]) {
+    assert.notEqual(getJobCaptureMode(url), "api-reference", url)
+  }
 })
 
 test("detects Tier 1 EU JSON-LD boards as priority platforms", () => {
@@ -974,12 +1030,27 @@ test("infers location from pasted job descriptions", () => {
     inferLocationFromJobDescription("No location is listed in this posting."),
     ""
   )
+})
+
+test("still infers location from a short description padded with a huge non-matching tail", () => {
+  const padding = "x".repeat(500000)
+  const start = Date.now()
+
   assert.equal(
-    inferLocationSignalFromText(
-      `${"Background information. ".repeat(1_000)}Location: Paris, France`
+    inferLocationFromJobDescription(
+      `Role: Business Analyst\nLocation: London, United Kingdom\n${padding}`
     ),
+    "London, United Kingdom"
+  )
+  assert.equal(
+    inferLocationFromJobDescription(`No location is listed. ${padding}`),
     ""
   )
+
+  // Regression guard for the unbounded unanchored-regex scan this was
+  // fixed for - a huge adversarial description should resolve quickly,
+  // not hang the tab scraping it.
+  assert.ok(Date.now() - start < 1000)
 })
 
 test("saves and loads candidate profile", async () => {
@@ -1146,23 +1217,42 @@ test("saves and clears account session", async () => {
     plan: "pro",
     provider: "github"
   })
-  assert.equal(localStore.has("account-session"), false)
-  assert.equal(sessionStore.has("account-session"), true)
 
   await clearAccountSession()
 
   assert.equal(await getAccountSession(), null)
 })
 
+test("account session lives in chrome.storage.session, not .local - content scripts can't read it", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "supabase-token",
+    refreshToken: "supabase-refresh-token",
+    expiresAt: 1893456000000,
+    email: "user@example.com",
+    plan: "pro",
+    provider: "github"
+  })
+
+  const local = await chrome.storage.local.get("account-session")
+  assert.equal(local["account-session"], undefined)
+
+  const session = await chrome.storage.session.get("account-session")
+  assert.equal(session["account-session"].authToken, "supabase-token")
+
+  await clearAccountSession()
+  const cleared = await chrome.storage.session.get("account-session")
+  assert.equal(cleared["account-session"], undefined)
+})
+
 test("normalizes a legacy account session saved before refresh tokens existed", async () => {
   resetStorage()
 
-  await chrome.storage.local.set({
-    "account-session": {
-      authToken: "legacy-token",
-      email: "legacy@example.com",
-      plan: "free"
-    }
+  await saveAccountSession({
+    authToken: "legacy-token",
+    email: "legacy@example.com",
+    plan: "free"
   })
 
   assert.deepEqual(await getAccountSession(), {
@@ -1173,8 +1263,62 @@ test("normalizes a legacy account session saved before refresh tokens existed", 
     plan: "free",
     provider: "email"
   })
-  assert.equal(localStore.has("account-session"), false)
-  assert.equal(sessionStore.has("account-session"), true)
+})
+
+test("concurrent getActiveSession calls on an expiring token share one refresh, not a racing pair", async () => {
+  resetStorage()
+
+  await saveAccountSession({
+    authToken: "stale-token",
+    refreshToken: "single-use-refresh-token",
+    expiresAt: Date.now(), // already within the refresh buffer
+    email: "user@example.com",
+    plan: "pro",
+    provider: "github"
+  })
+
+  let fetchCallCount = 0
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => {
+    fetchCallCount += 1
+    return {
+      ok: true,
+      async json() {
+        return {
+          data: {
+            authToken: "fresh-token",
+            refreshToken: "fresh-refresh-token",
+            expiresAt: Date.now() + 60 * 60 * 1000
+          },
+          error: null
+        }
+      }
+    }
+  }
+
+  try {
+    // A second refresh token is single-use in Supabase - if two callers both
+    // raced their own /api/sync/refresh with the stale refresh token, the
+    // second would fail and clear the session the first one just saved.
+    const [first, second] = await Promise.all([
+      getActiveSession(),
+      getActiveSession()
+    ])
+
+    assert.equal(fetchCallCount, 1)
+    assert.equal(first.session?.authToken, "fresh-token")
+    assert.equal(second.session?.authToken, "fresh-token")
+    assert.deepEqual(await getAccountSession(), {
+      authToken: "fresh-token",
+      refreshToken: "fresh-refresh-token",
+      expiresAt: first.session.expiresAt,
+      email: "user@example.com",
+      plan: "pro",
+      provider: "github"
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 
 test("tracks application sync state from pending to synced", async () => {
@@ -1222,6 +1366,26 @@ test("keeps failed application sync state retryable with reason", async () => {
   assert.equal(retryState["application-1"].status, "pending")
   assert.equal(retryState["application-1"].attempts, 2)
   assert.equal(retryState["application-1"].lastError, undefined)
+})
+
+test("concurrent sync-state updates for different applications don't clobber each other", async () => {
+  // getApplicationSyncState/set is a read-whole-map, mutate, write-whole-map
+  // cycle - without internal serialization, two concurrent calls each read
+  // the same starting snapshot and whichever writes last silently drops the
+  // other's update, even though they touch disjoint application ids.
+  resetStorage()
+
+  await Promise.all([
+    updateApplicationSyncState(["application-1"], "synced"),
+    updateApplicationSyncState(["application-2"], "synced"),
+    updateApplicationSyncState(["application-3"], "failed", { error: "boom" })
+  ])
+
+  const state = await getApplicationSyncState()
+  assert.equal(state["application-1"].status, "synced")
+  assert.equal(state["application-2"].status, "synced")
+  assert.equal(state["application-3"].status, "failed")
+  assert.equal(state["application-3"].lastError, "boom")
 })
 
 test("clears legacy OpenAI settings", async () => {
@@ -2000,22 +2164,50 @@ test("exports applications to csv", () => {
   )
 })
 
-test("neutralizes spreadsheet formulas in exported application cells", () => {
+test("neutralizes CSV/formula injection payloads scraped from job postings", () => {
   const csv = applicationsToCsv([
     {
-      id: "untrusted",
-      title: "=HYPERLINK(\"https://attacker.example\")",
-      roleTitle: " +SUM(1,1)",
-      company: "@malicious",
-      url: "https://example.com/jobs/untrusted",
+      id: "application",
+      title: "=HYPERLINK(\"http://evil.example\",\"click me\")",
+      roleTitle: "+cmd|'/c calc'!A1",
+      company: "-2+3",
+      source: "example.com",
+      url: "https://example.com/jobs/frontend",
+      nextAction: "@SUM(A1:A9)",
+      nextActionDate: "2026-04-10",
+      notes: "Senior Engineer",
       createdAt: "2026-04-01T00:00:00.000Z",
-      status: "Saved"
+      status: "Applied"
     }
   ])
 
-  assert.match(csv, /"'=HYPERLINK\(""https:\/\/attacker\.example""\)"/)
-  assert.match(csv, /"' \+SUM\(1,1\)"/)
-  assert.match(csv, /"'@malicious"/)
+  const rows = csv.split("\n")
+  const dataRow = rows[1]
+
+  // Dangerous leading characters (=, +, -, @) are neutralized with a
+  // leading single quote so spreadsheet apps treat the value as literal
+  // text instead of evaluating it as a formula.
+  assert.equal(
+    dataRow,
+    [
+      '"\'=HYPERLINK(""http://evil.example"",""click me"")"',
+      '"\'+cmd|\'/c calc\'!A1"',
+      '"\'-2+3"',
+      '"https://example.com/jobs/frontend"',
+      '"example.com"',
+      '"2026-04-01T00:00:00.000Z"',
+      '"Applied"',
+      '"\'@SUM(A1:A9)"',
+      '"2026-04-10"',
+      '"Senior Engineer"',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""'
+    ].join(",")
+  )
 })
 
 test("summarizes founder validation metrics from applications", () => {

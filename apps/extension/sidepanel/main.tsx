@@ -392,7 +392,7 @@ function SidePanelApp() {
       changes: Record<string, chrome.storage.StorageChange>,
       areaName: string
     ) => {
-      if (areaName === "local" && changes["account-session"]) {
+      if (areaName === "session" && changes["account-session"]) {
         refreshAccountSession()
       }
 
@@ -753,7 +753,6 @@ function SidePanelApp() {
         resurrectUrlKey: normalizeApplicationUrlKey(details.url)
       })
       if (syncResult.synced) {
-        setApplications(applications)
         setApplicationsStatus(
           "This job is already tracked and synced to dashboard — it'll be up to date there within a few seconds."
         )

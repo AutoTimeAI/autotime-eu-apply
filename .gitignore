@@ -11,9 +11,14 @@ build
 .env.*.local
 .DS_Store
 .idea/
+.claude/settings.local.json
 coverage
 playwright-report/
 test-results/
+.lighthouseci/
+lighthouse-report/
+axe-report/
+k6-report/
 *.log
 npm-debug.log*
 pnpm-debug.log*

@@ -1,12 +1,13 @@
 "use client";
 
-/** Coordinates interview preparation, practice, readiness, and outcome workflows. */
 import { useEffect, useMemo, useState } from "react";
 import { useDashboardPlan } from "./UserNav";
 import {
   ProductEmptyState,
   ProductPageHeader,
   ProductStatusBadge,
+  SyncStatusLine,
+  type SyncStatusLineState,
 } from "./product-ui";
 import {
   applyInterviewOutcome,
@@ -14,6 +15,7 @@ import {
   type JobWorkflowState,
 } from "../lib/job-application-workflow";
 import { loadJobWorkflow, saveJobWorkflow } from "../lib/job-workflow-storage";
+import { useJobWorkflowSync } from "../lib/useJobWorkflowSync";
 import {
   completeInterviewFinalReview,
   createInterview,
@@ -34,6 +36,7 @@ import {
   loadInterviewWorkflow,
   saveInterviewWorkflow,
 } from "../lib/interview-storage";
+import { useInterviewWorkflowSync } from "../lib/useInterviewWorkflowSync";
 
 type View = { kind: "list" } | { kind: "detail"; id: string };
 const stageLabel = (value: string) =>
@@ -47,7 +50,6 @@ const formatDate = (value?: string, timezone?: string) =>
       }).format(new Date(value))
     : "Date not set";
 
-/** Renders the requested interview workspace view for the signed-in user. */
 export default function InterviewsWorkspace({ view }: { view: View }) {
   const { userId } = useDashboardPlan();
   const [workflow, setWorkflow] = useState<JobWorkflowState>({
@@ -58,16 +60,18 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
   const [state, setState] = useState<InterviewWorkflowState>(
     emptyInterviewWorkflowState,
   );
+  const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("");
   useEffect(() => {
     setWorkflow(loadJobWorkflow(userId));
     setState(loadInterviewWorkflow(userId));
+    setReady(true);
   }, [userId]);
-  const persist = (next: InterviewWorkflowState) => {
+  const applyLocal = (next: InterviewWorkflowState) => {
     saveInterviewWorkflow(userId, next);
     setState(next);
   };
-  const persistBoth = (
+  const applyLocalBoth = (
     next: InterviewWorkflowState,
     jobs: JobWorkflowState,
   ) => {
@@ -76,6 +80,45 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
     setState(next);
     setWorkflow(jobs);
   };
+  // Real two-way sync (issue #29 phase 4b), mirroring JobApplicationWorkspace's
+  // useJobWorkflowSync wiring. This component owns its own useJobWorkflowSync
+  // instance (independent of the one mounted inside JobApplicationWorkspace)
+  // because persistBoth also writes job-workflow local state here (an
+  // interview outcome can flip the linked application's status), and that
+  // change needs its own background mirror to the cloud too.
+  const interviewWorkflowSync = useInterviewWorkflowSync({
+    enabled: ready,
+    localInterviews: state.interviews,
+    onReconciled: (next) =>
+      applyLocal({ ...state, interviews: next.interviews }),
+    userId,
+  });
+  const jobWorkflowSync = useJobWorkflowSync({
+    enabled: ready,
+    localJobs: workflow.jobs,
+    localApplications: workflow.applications,
+    onReconciled: (next) =>
+      applyLocalBoth(state, { ...workflow, jobs: next.jobs, applications: next.applications }),
+    userId,
+  });
+  const persist = (next: InterviewWorkflowState) => {
+    applyLocal(next);
+    interviewWorkflowSync.sync({ interviews: next.interviews });
+  };
+  const persistBoth = (
+    next: InterviewWorkflowState,
+    jobs: JobWorkflowState,
+  ) => {
+    applyLocalBoth(next, jobs);
+    interviewWorkflowSync.sync({ interviews: next.interviews });
+    jobWorkflowSync.sync({ jobs: jobs.jobs, applications: jobs.applications });
+  };
+  if (!ready)
+    return (
+      <main className="workflow-page">
+        <p role="status">Loading your private workflow...</p>
+      </main>
+    );
   if (view.kind === "detail") {
     const interview = findOwnedInterview(state, userId, view.id);
     if (!interview)
@@ -98,6 +141,7 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
         workflow={workflow}
         status={status}
         onStatus={setStatus}
+        sync={{ state: interviewWorkflowSync.state, status: interviewWorkflowSync.status }}
         onSave={(updated, applicationOutcome) => {
           const next = {
             ...state,
@@ -132,6 +176,7 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
       userId={userId}
       status={status}
       onStatus={setStatus}
+      sync={{ state: interviewWorkflowSync.state, status: interviewWorkflowSync.status }}
       onCreate={(record) => {
         const application = workflow.applications.find(
           (item) => item.id === record.applicationId,
@@ -166,6 +211,7 @@ function InterviewList({
   userId,
   status,
   onStatus,
+  sync,
   onCreate,
 }: {
   state: InterviewWorkflowState;
@@ -173,6 +219,7 @@ function InterviewList({
   userId: string;
   status: string;
   onStatus: (value: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
   onCreate: (record: InterviewRecord) => void;
 }) {
   const [adding, setAdding] = useState(false);
@@ -289,6 +336,7 @@ function InterviewList({
           </div>
         }
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <p className="phase-four-live-status" role="status">
         {status}
       </p>
@@ -551,9 +599,9 @@ function InterviewList({
         />
       )}
       <p className="workflow-storage-note phase-four-storage-note">
-        Development storage: interview records are isolated to this signed-in
-        user in this browser and are not durable cross-device production
-        records.
+        {sync.state === "server-disabled" || sync.state === "loading"
+          ? "Interview records are saved to this browser only and are not yet durable across devices."
+          : "Interview records sync to your account and also remain available in this browser if you're offline."}
       </p>
     </main>
   );
@@ -564,12 +612,14 @@ function InterviewDetail({
   workflow,
   status,
   onStatus,
+  sync,
   onSave,
 }: {
   interview: InterviewRecord;
   workflow: JobWorkflowState;
   status: string;
   onStatus: (value: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
   onSave: (
     value: InterviewRecord,
     outcome?: "progressed" | "offer" | "rejected" | "withdrawn" | "no_response",
@@ -617,6 +667,7 @@ function InterviewDetail({
         title={job.title.value || "Interview"}
         description={`${job.employer.value || "Employer unknown"} · ${formatDate(interview.scheduledAt, interview.timezone)}`}
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <p role="status" aria-live="polite">
         {status}
       </p>
@@ -1114,7 +1165,6 @@ function InterviewPractice({
           Previous
         </button>
         <button
-          className="button-secondary"
           disabled={index === interview.questions.length - 1}
           onClick={() => setIndex((value) => value + 1)}
         >
@@ -1205,10 +1255,19 @@ function InterviewOutcomePanel({
                       : "Review the outcome",
                   employerConfirmedReason: employerReason || undefined,
                   userInterpretation: interpretation || undefined,
+                  // Both branches of this conditional used to return the
+                  // identical ["unknown"] value - a dead check that
+                  // silently discarded whether any feedback was actually
+                  // given. No automatic text-to-category classifier exists
+                  // for employerReason/interpretation free text, so this
+                  // can't derive a specific signal (technical_gap,
+                  // salary_mismatch, etc.) - but it can at least honestly
+                  // distinguish "feedback was given, just not categorised"
+                  // from "no feedback was given at all", instead of
+                  // recording "unknown" even when the user left both
+                  // fields blank.
                   learningSignals:
-                    employerReason || interpretation
-                      ? ["unknown"]
-                      : ["unknown"],
+                    employerReason || interpretation ? ["unknown"] : [],
                 });
                 onSave(updated, outcome);
                 onStatus("Interview outcome recorded.");

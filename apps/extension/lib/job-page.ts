@@ -1,12 +1,3 @@
-// Parses raw signals from a job posting page (JSON-LD JobPosting data,
-// page title, and free text) into a normalized JobPageDetails shape, and
-// decides the "capture mode" policy that gates how much of a page this
-// extension is allowed to read: `api-reference` (data comes from the
-// aggregated feed, no scraping), `manual-only` (LinkedIn - never read
-// automatically), or `selector-extraction` (safe to scrape visible DOM).
-// Pure text-parsing/URL logic - no chrome.* APIs - shared by
-// contents/autofill.ts (the live page) and sidepanel code (parsing a tab's
-// title/URL when the content script isn't reachable).
 import { detectATS, getCoveragePlatform, isApiCoveredJobUrl, type PlatformName } from "shared"
 
 export type JobPageDetails = {
@@ -25,15 +16,6 @@ export type JobPageDetails = {
 export type JobPlatform = PlatformName | "Generic"
 
 export type JobCaptureMode = "api-reference" | "selector-extraction" | "manual-only"
-/**
- * Decides how (or whether) this extension is allowed to read a job page at
- * `url`: LinkedIn is always `manual-only` (never scraped); URLs already
- * covered by the aggregated jobs feed are `api-reference` (Track Job saves
- * a lightweight reference instead of extracting page content); Workday/
- * iCIMS/unrecognized ATSes are `selector-extraction` (safe to scrape);
- * anything else recognized is `manual-only`. This is the policy gate that
- * `detectJobPage` (contents/autofill.ts) checks before touching the DOM.
- */
 export function getJobCaptureMode(url = ""): JobCaptureMode {
   if (isLinkedInUrl(url)) return "manual-only"
   if (isApiCoveredJobUrl(url)) return "api-reference"
@@ -62,15 +44,30 @@ type StructuredJobPostingData = {
   salary: string
 }
 
+const namedEntities: Record<string, string> = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'"
+}
+
+// Decoding &amp; in a separate pass before &lt;/&gt;/etc. is a classic
+// double-escaping bug: text that was legitimately double-escaped in the
+// source page (e.g. a company name literally containing "&amp;", written
+// in the page's HTML as "&amp;amp;") would decode in two passes into a
+// bare "&" instead of staying "&amp;" - corrupting scraped job data (job
+// title, company, location) with no relation to any real HTML tag.
+// Matching every named entity in one pass avoids re-scanning content a
+// prior replacement already produced.
+function decodeNamedEntities(value: string): string {
+  return value.replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;|&apos;/gi, (match) => namedEntities[match.toLowerCase()] ?? match)
+}
+
 function cleanText(value = "") {
-  return value
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
+  return decodeNamedEntities(value.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim()
 }
@@ -188,15 +185,6 @@ function getStructuredSalaryText(value: unknown): string {
   return [currency, valueText, unitText].filter(Boolean).join(" ")
 }
 
-/**
- * Finds the first schema.org `JobPosting` node inside a parsed JSON-LD
- * value (searching `@graph` and `itemListElement` arrays too) and extracts
- * its role title, company, location, salary, employment type, and
- * description into plain strings. Returns `null` if no JobPosting node is
- * found. This is the highest-priority source `detectJobPage` tries before
- * falling back to CSS selector heuristics, since structured data is far
- * less brittle than page-specific selectors.
- */
 export function extractJobPostingFromJsonLd(
   value: unknown
 ): StructuredJobPostingData | null {
@@ -238,23 +226,14 @@ function getLinkedInJobId(url = "") {
   return directMatch?.[1] ?? currentJobIdMatch?.[1] ?? ""
 }
 
-/** Identifies which known job board/ATS `url` belongs to (from the shared platform-coverage table), or `"Generic"` if unrecognized. */
 export function getJobPlatform(url = ""): JobPlatform {
   return getCoveragePlatform(url) ?? "Generic"
 }
 
-/** True if `url` belongs to LinkedIn - gates the manual-only capture mode and the LinkedIn-specific consent flow in lib/match-overlay.ts. */
 export function isLinkedInUrl(url = "") {
   return getJobPlatform(url) === "LinkedIn"
 }
 
-/**
- * Rewrites a LinkedIn job URL to its canonical `/jobs/view/{id}/` form
- * (extracting the id from either the path or a `currentJobId` query
- * param), so the same posting reached via a search results page or a
- * direct link normalizes to one URL for dedup purposes. Returns the
- * cleaned input unchanged if it isn't a LinkedIn URL or has no job id.
- */
 export function getLinkedInCanonicalJobUrl(url = "") {
   if (!isLinkedInUrl(url)) {
     return cleanText(url)
@@ -274,12 +253,6 @@ export function getLinkedInCanonicalJobUrl(url = "") {
   return cleanText(url)
 }
 
-/**
- * Parses a LinkedIn `<title>` of the form "Job Title | Company | ... |
- * LinkedIn" into `{ title, company }`. Returns both empty if the title
- * doesn't have at least 3 pipe-separated parts ending in "LinkedIn", or if
- * either extracted value fails the short-field plausibility check.
- */
 export function parseLinkedInPageTitle(value = "") {
   const parts = value
     .split("|")
@@ -415,15 +388,12 @@ function getLikelyLocation(value = "") {
   return isLikelyLocationValue(location) ? location : ""
 }
 
-/**
- * Scans free-text job description content for a location signal, trying a
- * series of patterns (explicit "Location:"/"Office:"/"Based in ..." labels,
- * then "Remote/Hybrid/On-site in ...") in priority order and returning the
- * first plausible match (checked via isLikelyLocationValue). Returns `""`
- * if nothing plausible is found. Input is capped before regex evaluation to
- * keep untrusted, unusually large descriptions from causing excessive work.
- */
-const MAX_LOCATION_SIGNAL_SCAN_LENGTH = 20_000
+// A real job description is never anywhere near this long - this just
+// bounds the cost of the unanchored regex scans below against a page that
+// hands back an unexpectedly huge (or adversarially padded) description,
+// matching the length-before-regex discipline used elsewhere in this file
+// (isLikelyShortFieldValue/isLikelyLocationValue).
+const MAX_LOCATION_SIGNAL_SCAN_LENGTH = 20000
 
 export function inferLocationSignalFromText(description = "") {
   const text = description
@@ -453,17 +423,6 @@ export function inferLocationSignalFromText(description = "") {
   return ""
 }
 
-/**
- * Normalizes already-extracted page text (title, heading, company,
- * location, description, salary, employment type, url, source) into a
- * final JobPageDetails record: cleans HTML/whitespace, plausibility-checks
- * role title/company/location against length and noise-word heuristics
- * (rejecting things like stray boilerplate or salary text mistaken for a
- * location), and falls back to scanning the description for a location
- * signal if none was directly detected. This is the last step both
- * `detectJobPage` (live page) and the side panel's tab-title fallback run
- * their raw inputs through.
- */
 export function inferJobPageDetails(
   input: JobPageTextInput
 ): JobPageDetails {
@@ -493,7 +452,6 @@ export function inferJobPageDetails(
   }
 }
 
-/** Formats the non-description JobPageDetails fields (location, salary, employment type, platform, source, page title) as one newline-joined notes block, appended to a tracked application's notes alongside the job description. */
 export function formatJobPageNotes(details: JobPageDetails) {
   return [
     details.location && `Location: ${details.location}`,

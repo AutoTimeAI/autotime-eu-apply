@@ -1,5 +1,6 @@
 // Exercises country-fit and mobility guidance with evidence and disclaimer checks.
 import { expect, test, type Page } from "@playwright/test";
+import { expectNoSeriousViolations } from "./helpers/axe";
 import { mkdir } from "node:fs/promises";
 import { seedReadyDashboardProfile } from "./helpers";
 import { sampleUser } from "../fixtures/sample-user";
@@ -189,6 +190,7 @@ test("detail is responsive at required intermediate viewports", async ({
   await capture(page, "overview-768x1024.png");
   await page.setViewportSize({ width: 360, height: 800 });
   await assertVisualContract(page);
+  await expectNoSeriousViolations(page, { include: "main.phase-five-countries" });
 });
 
 test("shared tab standard: single underline, no pills or fills", async ({

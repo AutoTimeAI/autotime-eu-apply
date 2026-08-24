@@ -1,0 +1,56 @@
+name: Verify job ingestion secrets
+
+# Diagnostic-only, manual dispatch. Confirms SUPABASE_FUNCTION_BASE_URL,
+# JOB_SYNC_CRON_SECRET and SUPABASE_ANON_KEY are configured correctly
+# without ever printing them: checks only the HTTP status code and (non-
+# sensitive) response body of each sync function. Supabase's own API
+# gateway requires a valid apikey header on every Edge Function call even
+# when the function itself is deployed with --no-verify-jwt - that's a
+# separate concern from this function's own x-cron-secret check. A working
+# setup returns 200/503 (503 means auth passed but the EURES partner API
+# credentials aren't configured in Supabase - a separate, non-blocking
+# concern); 401 means either the apikey or the shared cron secret is wrong;
+# any other status/connection failure means the base URL is wrong.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check sync-eures response (status only)
+        env:
+          FUNCTION_BASE_URL: ${{ secrets.SUPABASE_FUNCTION_BASE_URL }}
+          CRON_SECRET: ${{ secrets.JOB_SYNC_CRON_SECRET }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$FUNCTION_BASE_URL" ] || [ -z "$CRON_SECRET" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "SUPABASE_FUNCTION_BASE_URL, JOB_SYNC_CRON_SECRET or SUPABASE_ANON_KEY is not set."
+            exit 1
+          fi
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            "$FUNCTION_BASE_URL/sync-eures" || true)
+          status=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "HTTP status: $status"
+          echo "Response body: $body"
+          if [ "$status" = "200" ] || [ "$status" = "503" ]; then
+            echo "Bootstrap looks healthy: shared secret accepted."
+          elif [ "$status" = "401" ]; then
+            if echo "$body" | grep -qi "invalid jwt\|missing authorization\|no api key found\|apikey\|\"code\":401"; then
+              echo "Rejected by Supabase's own API gateway before reaching the function - the function was deployed WITH JWT verification enabled. Redeploy with --no-verify-jwt (see scripts/deploy-job-ingestion.ps1)."
+            else
+              echo "Rejected by the function itself as Unauthorized - JOB_SYNC_CRON_SECRET does not match the Supabase function's CRON_SECRET."
+            fi
+            exit 1
+          else
+            echo "Unexpected status - check SUPABASE_FUNCTION_BASE_URL is correct (should end in /functions/v1)."
+            exit 1
+          fi

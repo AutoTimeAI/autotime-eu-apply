@@ -1,0 +1,47 @@
+name: Dependency review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+          # GHSA-jmr9-qjv8-65gv (extract-zip symlink path traversal, high):
+          # transitive via @lhci/cli -> lighthouse -> puppeteer-core ->
+          # @puppeteer/browsers, used only to unpack pinned Chrome-for-Testing
+          # binaries from Google's own CDN during local/CI Lighthouse runs -
+          # never untrusted/user-supplied zip content. No patched extract-zip
+          # release exists upstream (2.0.1 is latest as of this writing).
+          #
+          # GHSA-w3rx-r6r6-pgpr / GHSA-5p2g-fcmc-qvqq (image-size ICNS/JXL/HEIF
+          # parser DoS, high): transitive via apps/extension's
+          # @wxt-dev/module-react -> vite -> less -> image-size, a dev-only
+          # build-tool dependency of the browser-extension bundler. Never
+          # parses user-supplied images at runtime - only touched during
+          # `wxt build`/`vite build` on trusted, repo-controlled assets. No
+          # patched image-size release exists upstream (2.0.2 is latest).
+          #
+          # All three are documented accepted risk (no fix available), not a
+          # general severity-threshold change - see docs/quality-assurance.md.
+          allow-ghsas: "GHSA-jmr9-qjv8-65gv,GHSA-w3rx-r6r6-pgpr,GHSA-5p2g-fcmc-qvqq"

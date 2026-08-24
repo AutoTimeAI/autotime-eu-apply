@@ -1,6 +1,7 @@
 // Exercises saved-job capture, evidence-led analysis, and decision states.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
+import { expectNoSeriousViolations } from "./helpers/axe";
 
 const userId = "00000000-0000-4000-8000-000000000001";
 const output = "screenshots/phase-2-jobs-analysis/review";
@@ -123,6 +124,7 @@ test("Jobs to Job Detail to Analysis preserves deterministic workflow", async ({
   await seed(page);
   await page.goto("/dashboard/jobs");
   await assertVisualContract(page);
+  await expectNoSeriousViolations(page, { include: "main.phase-two-jobs" });
   await page.screenshot({
     path: `${output}/jobs-empty-1440x900.png`,
     fullPage: false,

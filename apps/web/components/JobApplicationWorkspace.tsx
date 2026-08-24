@@ -6,18 +6,22 @@ import {
   ProductEmptyState,
   ProductPageHeader,
   ProductStatusBadge,
+  SyncStatusLine,
   type ProductStatus,
+  type SyncStatusLineState,
 } from "./product-ui";
 import { useDashboardPlan } from "./UserNav";
 import { ApplicationChecklist } from "./ApplicationChecklist";
 import {
   analyseJob,
+  cloudApplicationToWorkspaceJob,
   createApplication,
   duplicateJob,
   extractJob,
   getApplicationReadiness,
   getApplicationReviewQueue,
   isRestrictedJobUrl,
+  normalizeJobUrl,
   transitionApplication,
   type ApplicationWorkspace,
   type ApplicationWorkspaceStatus,
@@ -32,11 +36,9 @@ import {
 } from "../lib/job-workflow-storage";
 import { loadInterviewWorkflow } from "../lib/interview-storage";
 import type { InterviewRecord } from "../lib/interview-workflow";
-import {
-  loadMobilityProfile,
-  saveMobilityProfile,
-} from "../lib/international-mobility-storage";
-import type { MobilityProfile } from "shared";
+import { loadMobilityProfile, saveMobilityProfile } from "../lib/international-mobility-storage";
+import { useJobWorkflowSync } from "../lib/useJobWorkflowSync";
+import type { ApplicationRecord, MobilityProfile } from "shared";
 
 type View =
   | { kind: "jobs" }
@@ -117,7 +119,10 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
   const [applicationSystemState, setApplicationSystemState] = useState<
     "loading" | "unavailable" | null
   >(null);
-  const persist = (next: JobWorkflowState) => {
+  const [cloudApplications, setCloudApplications] = useState<
+    ApplicationRecord[]
+  >([]);
+  const applyLocal = (next: JobWorkflowState) => {
     setState(next);
     saveJobWorkflow(userId, next);
   };
@@ -152,6 +157,63 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
     setReady(true);
   }, [userId, view.kind]);
 
+  // Best-effort read-only bridge: surfaces applications that exist in the
+  // cloud (seeded, created on another device, or by another surface of the
+  // app) but aren't yet tracked in this browser's local workflow. Never
+  // written back through persist/saveJobWorkflow - see
+  // cloudApplicationToWorkspaceJob for why.
+  useEffect(() => {
+    let isActive = true;
+    void fetch("/api/sync/dashboard", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!isActive || !payload?.data?.dashboard?.applications) return;
+        setCloudApplications(payload.data.dashboard.applications);
+      })
+      .catch(() => {
+        // Cloud data is a display-only enhancement; failures here should
+        // never block the local-only workflow these pages already support.
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [userId]);
+
+  const localUrlKeys = useMemo(
+    () => new Set(state.jobs.map((job) => normalizeJobUrl(job.sourceUrl))),
+    [state.jobs],
+  );
+  const cloudOnly = useMemo(
+    () =>
+      cloudApplications
+        .filter((record) => !localUrlKeys.has(normalizeJobUrl(record.url)))
+        .map((record) => cloudApplicationToWorkspaceJob(record)),
+    [cloudApplications, localUrlKeys],
+  );
+  const cloudOnlyJobs = useMemo(
+    () => cloudOnly.map((item) => item.job),
+    [cloudOnly],
+  );
+
+  // Real two-way sync (issue #29 phase 4a) - local storage stays the
+  // source of truth for immediate UI, this mirrors it to the cloud in the
+  // background so it survives across devices. Distinct from the read-only
+  // cloudApplications bridge above (a display-only fallback for the
+  // legacy applications table); this reads/writes the dedicated
+  // job_workflow_* tables and merges results into real local state.
+  const jobWorkflowSync = useJobWorkflowSync({
+    enabled: ready,
+    localJobs: state.jobs,
+    localApplications: state.applications,
+    onReconciled: (next) =>
+      applyLocal({ ...state, jobs: next.jobs, applications: next.applications }),
+    userId,
+  });
+  const persist = (next: JobWorkflowState) => {
+    applyLocal(next);
+    jobWorkflowSync.sync({ jobs: next.jobs, applications: next.applications });
+  };
+
   if (!ready)
     return view.kind === "applications" || view.kind === "application" ? (
       <ApplicationsSystemState kind="loading" />
@@ -166,17 +228,21 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
     return (
       <JobsList
         state={state}
+        cloudOnlyJobs={cloudOnlyJobs}
         onChange={persist}
         onOpen={(id) => router.push(`/dashboard/jobs/${id}`)}
         status={status}
         setStatus={setStatus}
+        sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
       />
     );
   if (view.kind === "applications")
     return (
       <ApplicationsList
         state={state}
+        cloudOnly={cloudOnly}
         onOpen={(id) => router.push(`/dashboard/applications/${id}`)}
+        sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
       />
     );
   if (view.kind === "job") {
@@ -189,6 +255,7 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
         onChange={persist}
         onStatus={setStatus}
         status={status}
+        sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
       />
     );
   }
@@ -208,22 +275,27 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
       onChange={persist}
       onStatus={setStatus}
       status={status}
+      sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
     />
   );
 }
 
 function JobsList({
   state,
+  cloudOnlyJobs,
   onChange,
   onOpen,
   status,
   setStatus,
+  sync,
 }: {
   state: JobWorkflowState;
+  cloudOnlyJobs: JobRecord[];
   onChange: (value: JobWorkflowState) => void;
   onOpen: (id: string) => void;
   status: string;
   setStatus: (value: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
@@ -269,11 +341,8 @@ function JobsList({
           ) : undefined
         }
       />
-      <p>
-        <a className="text-link" href="/dashboard/jobs/browse">
-          Browse aggregated EU jobs
-        </a>
-      </p>
+      <SyncStatusLine state={sync.state} status={sync.status} />
+      <p><a className="text-link" href="/dashboard/jobs/browse">Browse aggregated EU jobs</a></p>
       {adding ? (
         <JobCapture
           state={state}
@@ -386,6 +455,39 @@ function JobsList({
           }
         />
       )}
+      {cloudOnlyJobs.length ? (
+        <section
+          className="workflow-list phase-two-job-list workflow-cloud-bridge"
+          aria-label="Jobs saved to your account"
+        >
+          <h2>Also saved to your account</h2>
+          <p>
+            These were saved from another device or surface of AutoTime and
+            aren&apos;t yet tracked in this browser. Open the original
+            posting to review it, or add it here to track it in this
+            workflow.
+          </p>
+          {cloudOnlyJobs.map((job) => (
+            <article className="workflow-list-row phase-two-job-row" key={job.id}>
+              <div>
+                <p className="product-eyebrow">Synced from your account</p>
+                <h2>{job.title.value || "Untitled role"}</h2>
+                <p>{job.employer.value || "Employer unknown"}</p>
+              </div>
+              {job.sourceUrl ? (
+                <a
+                  className="button-secondary"
+                  href={job.sourceUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  View posting
+                </a>
+              ) : null}
+            </article>
+          ))}
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -496,69 +598,42 @@ function JobDetail({
   onChange,
   onStatus,
   status,
+  sync,
 }: {
   job: JobRecord;
   state: JobWorkflowState;
   onChange: (value: JobWorkflowState) => void;
   onStatus: (value: string) => void;
   status: string;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const { userId } = useDashboardPlan();
   const [tab, setTab] = useState<
     "overview" | "analysis" | "application" | "activity"
   >("overview");
   const analysis = currentAnalysis(job);
-  const [cloudEvidence, setCloudEvidence] = useState<ReturnType<
-    typeof legacyEvidence
-  > | null>(null);
+  const [cloudEvidence, setCloudEvidence] = useState<ReturnType<typeof legacyEvidence> | null>(null);
   useEffect(() => {
     let active = true;
-    void fetch("/api/profile/onboarding")
-      .then(async (response) => ({ response, payload: await response.json() }))
-      .then(({ response, payload }) => {
-        if (!active || !response.ok || !payload.data) return;
-        const profile = payload.data as {
-          base_cv_text?: string | null;
-          work_authorisation_category?: string | null;
-          country_current?: string | null;
-          countries_target?: string[] | null;
-        };
-        const sponsorshipRequired =
-          profile.work_authorisation_category === "sponsorship_required";
-        setCloudEvidence({
-          text: profile.base_cv_text ?? "",
-          sponsorshipRequired,
+    void fetch("/api/profile/onboarding").then(async (response) => ({ response, payload: await response.json() })).then(({ response, payload }) => {
+      if (!active || !response.ok || !payload.data) return;
+      const profile = payload.data as { base_cv_text?: string | null; work_authorisation_category?: string | null; country_current?: string | null; countries_target?: string[] | null };
+      const sponsorshipRequired = profile.work_authorisation_category === "sponsorship_required";
+      setCloudEvidence({ text: profile.base_cv_text ?? "", sponsorshipRequired });
+      const applicantPosition = profile.work_authorisation_category === "eu_eea_swiss_citizen" ? "eu-eea-swiss-citizen" : profile.work_authorisation_category === "existing_permission" ? "existing-country-permission" : sponsorshipRequired ? "sponsorship-required" : "unsure";
+      const existingMobility = loadMobilityProfile(localStorage, userId);
+      if (existingMobility.source !== "saved") {
+        saveMobilityProfile(localStorage, userId, {
+          schemaVersion: 1,
+          currentCountry: profile.country_current ?? "",
+          targetCountries: profile.countries_target?.length ? profile.countries_target : ["Ireland"],
+          applicantPosition,
+          sponsorshipRequired: sponsorshipRequired ? "yes" : profile.work_authorisation_category ? "no" : "unsure",
+          relocationPreference: "depends",
         });
-        const applicantPosition =
-          profile.work_authorisation_category === "eu_eea_swiss_citizen"
-            ? "eu-eea-swiss-citizen"
-            : profile.work_authorisation_category === "existing_permission"
-              ? "existing-country-permission"
-              : sponsorshipRequired
-                ? "sponsorship-required"
-                : "unsure";
-        const existingMobility = loadMobilityProfile(localStorage, userId);
-        if (existingMobility.source !== "saved") {
-          saveMobilityProfile(localStorage, userId, {
-            schemaVersion: 1,
-            currentCountry: profile.country_current ?? "",
-            targetCountries: profile.countries_target?.length
-              ? profile.countries_target
-              : ["Ireland"],
-            applicantPosition,
-            sponsorshipRequired: sponsorshipRequired
-              ? "yes"
-              : profile.work_authorisation_category
-                ? "no"
-                : "unsure",
-            relocationPreference: "depends",
-          });
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
+      }
+    }).catch(() => undefined);
+    return () => { active = false; };
   }, [userId]);
   const updateJob = (nextJob: JobRecord) =>
     onChange({
@@ -623,6 +698,7 @@ function JobDetail({
           </button>
         }
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <nav className="workflow-tabs" aria-label="Job sections" role="tablist">
         {["overview", "analysis", "application", "activity"].map((item) => (
           <button
@@ -639,21 +715,12 @@ function JobDetail({
       <p className="phase-two-job-status" aria-live="polite">
         {status}
       </p>
-      <div className="workflow-actions">
-        <a
-          className="button-secondary"
-          href={`/dashboard/cv-tailor?job_id=${encodeURIComponent(job.id)}`}
-        >
-          Tailor CV for this job
-        </a>
-      </div>
+      <div className="workflow-actions"><a className="button-secondary" href={`/dashboard/cv-tailor?job_id=${encodeURIComponent(job.id)}`}>Tailor CV for this job</a></div>
       {tab === "overview" ? (
         <>
           <JobOverview job={job} updateJob={updateJob} />
           <RecruiterOutreachForm
-            applicationId={
-              state.applications.find((item) => item.jobId === job.id)?.id
-            }
+            applicationId={state.applications.find((item) => item.jobId === job.id)?.id}
             job={job}
           />
         </>
@@ -685,156 +752,23 @@ function JobDetail({
   );
 }
 
-function RecruiterOutreachForm({
-  applicationId,
-  job,
-}: {
-  applicationId?: string;
-  job: JobRecord;
-}) {
+function RecruiterOutreachForm({ applicationId, job }: { applicationId?: string; job: JobRecord }) {
   const [recruiterName, setRecruiterName] = useState("");
   const [recruiterRole, setRecruiterRole] = useState("Recruiter");
   const [recruiterEmail, setRecruiterEmail] = useState("");
   const [candidateSummary, setCandidateSummary] = useState("");
   const [strengths, setStrengths] = useState("");
-  const [channel, setChannel] = useState<
-    "email" | "linkedin_note" | "linkedin_inmail"
-  >("email");
-  const [contactType, setContactType] = useState<
-    "recruiter" | "hiring_manager" | "peer_target_role"
-  >("recruiter");
+  const [channel, setChannel] = useState<"email" | "linkedin_note" | "linkedin_inmail">("email");
+  const [contactType, setContactType] = useState<"recruiter"|"hiring_manager"|"peer_target_role">("recruiter");
   const [status, setStatus] = useState("");
-  return (
-    <section
-      className="workflow-section"
-      aria-labelledby="job-outreach-heading"
-    >
-      <p className="product-eyebrow">Human-sent outreach</p>
-      <h2 id="job-outreach-heading">Draft recruiter outreach</h2>
-      <p>
-        Enter recruiter details manually. This form can accept approved lookup
-        autofill later without changing stored data.
-      </p>
-      <div className="workflow-form-grid">
-        <label>
-          Contact type
-          <select
-            value={contactType}
-            onChange={(e) =>
-              setContactType(e.target.value as typeof contactType)
-            }
-          >
-            <option value="recruiter">Recruiter</option>
-            <option value="hiring_manager">Hiring manager</option>
-            <option value="peer_target_role">Peer in target role</option>
-          </select>
-        </label>
-        <label>
-          Name
-          <input
-            value={recruiterName}
-            onChange={(e) => setRecruiterName(e.target.value)}
-          />
-        </label>
-        <label>
-          Role
-          <input
-            value={recruiterRole}
-            onChange={(e) => setRecruiterRole(e.target.value)}
-          />
-        </label>
-        <label>
-          Email <span>optional</span>
-          <input
-            type="email"
-            value={recruiterEmail}
-            onChange={(e) => {
-              setRecruiterEmail(e.target.value);
-              if (e.target.value) setChannel("email");
-            }}
-          />
-        </label>
-        <label>
-          Channel
-          <select
-            value={channel}
-            onChange={(e) => setChannel(e.target.value as typeof channel)}
-          >
-            <option value="email">Email</option>
-            <option value="linkedin_note">LinkedIn note</option>
-            <option value="linkedin_inmail">LinkedIn InMail</option>
-          </select>
-        </label>
-        <label className="full-span">
-          Candidate summary
-          <textarea
-            value={candidateSummary}
-            onChange={(e) => setCandidateSummary(e.target.value)}
-          />
-        </label>
-        <label className="full-span">
-          Strongest matching evidence (comma separated)
-          <input
-            value={strengths}
-            onChange={(e) => setStrengths(e.target.value)}
-          />
-        </label>
-      </div>
-      {contactType === "peer_target_role" ? (
-        <p className="notice-warning">
-          Peer outreach is informational only: ask about the role or team, never
-          for an application update or referral.
-        </p>
-      ) : null}
-      <button
-      className="button-secondary"
-      disabled={!applicationId}
-        onClick={async () => {
-          setStatus("Drafting outreach…");
-          const response = await fetch("/api/outreach", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              jobId: applicationId,
-              jobTitle: job.title.value,
-              companyName: job.employer.value,
-              jobDescription: job.description,
-              recruiterName,
-              recruiterRole,
-              recruiterEmail,
-              contactType,
-              candidateSummary,
-              candidateKeyStrengths: strengths
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean),
-              channel,
-            }),
-          });
-          const payload = await response.json();
-          setStatus(
-            response.ok
-              ? "Draft saved. Open Recruiter outreach to review and copy it."
-              : payload.error || "Drafting failed.",
-          );
-        }}
-      >
-        Draft outreach
-      </button>
-      {!applicationId ? (
-        <p className="notice-warning">
-          Prepare an application first so outreach can be linked to the private
-          application record.
-        </p>
-      ) : null}
-      <p role="status">{status}</p>
-      {status.startsWith("Draft saved") ? (
-        <a className="text-link" href="/dashboard/follow-ups">
-          Open recruiter outreach
-        </a>
-      ) : null}
-    </section>
-  );
+  return <section className="workflow-section" aria-labelledby="job-outreach-heading">
+    <p className="product-eyebrow">Human-sent outreach</p><h2 id="job-outreach-heading">Draft recruiter outreach</h2>
+    <p>Enter recruiter details manually. This form can accept approved lookup autofill later without changing stored data.</p>
+    <div className="workflow-form-grid"><label>Contact type<select value={contactType} onChange={(e)=>setContactType(e.target.value as typeof contactType)}><option value="recruiter">Recruiter</option><option value="hiring_manager">Hiring manager</option><option value="peer_target_role">Peer in target role</option></select></label><label>Name<input value={recruiterName} onChange={(e) => setRecruiterName(e.target.value)} /></label><label>Role<input value={recruiterRole} onChange={(e) => setRecruiterRole(e.target.value)} /></label><label>Email <span>optional</span><input type="email" value={recruiterEmail} onChange={(e) => { setRecruiterEmail(e.target.value); if (e.target.value) setChannel("email"); }} /></label><label>Channel<select value={channel} onChange={(e) => setChannel(e.target.value as typeof channel)}><option value="email">Email</option><option value="linkedin_note">LinkedIn note</option><option value="linkedin_inmail">LinkedIn InMail</option></select></label><label className="full-span">Candidate summary<textarea value={candidateSummary} onChange={(e) => setCandidateSummary(e.target.value)} /></label><label className="full-span">Strongest matching evidence (comma separated)<input value={strengths} onChange={(e) => setStrengths(e.target.value)} /></label></div>
+    {contactType==="peer_target_role"?<p className="notice-warning">Peer outreach is informational only: ask about the role or team, never for an application update or referral.</p>:null}
+    <button className="button-secondary" disabled={!applicationId} onClick={async () => { setStatus("Drafting outreach…"); const response = await fetch("/api/outreach", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jobId: applicationId, jobTitle: job.title.value, companyName: job.employer.value, jobDescription: job.description, recruiterName, recruiterRole, recruiterEmail, contactType, candidateSummary, candidateKeyStrengths: strengths.split(",").map((item) => item.trim()).filter(Boolean), channel }) }); const payload = await response.json(); setStatus(response.ok ? "Draft saved. Open Recruiter outreach to review and copy it." : payload.error || "Drafting failed."); }}>Draft outreach</button>
+    {!applicationId ? <p className="notice-warning">Prepare an application first so outreach can be linked to the private application record.</p> : null}<p role="status">{status}</p>{status.startsWith("Draft saved") ? <a className="text-link" href="/dashboard/follow-ups">Open recruiter outreach</a> : null}
+  </section>;
 }
 
 function JobOverview({
@@ -1172,10 +1106,14 @@ function ApplicationsSystemState({
 
 function ApplicationsList({
   state,
+  cloudOnly,
   onOpen,
+  sync,
 }: {
   state: JobWorkflowState;
+  cloudOnly: { application: ApplicationWorkspace; job: JobRecord }[];
   onOpen: (id: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const [filter, setFilter] = useState("all");
   const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
@@ -1201,13 +1139,10 @@ function ApplicationsList({
         title="Your application pipeline"
         description="See what needs attention and move each application forward."
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <div className="workflow-actions">
-        <a className="button-secondary" href="/dashboard/cv-tailor">
-          Tailor CV
-        </a>
-        <a className="button-secondary" href="/dashboard/follow-ups">
-          Recruiter outreach
-        </a>
+        <a className="button-secondary" href="/dashboard/cv-tailor">Tailor CV</a>
+        <a className="button-secondary" href="/dashboard/follow-ups">Recruiter outreach</a>
       </div>
       {reviewQueue.length ? (
         <section className="workflow-section" aria-labelledby="review-queue-title">
@@ -1338,6 +1273,40 @@ function ApplicationsList({
           }
         />
       )}
+      {cloudOnly.length ? (
+        <section
+          className="phase-three-application-list workflow-cloud-bridge"
+          aria-label="Applications saved to your account"
+        >
+          <h2>Also saved to your account</h2>
+          <p>
+            These were saved from another device or surface of AutoTime and
+            aren&apos;t yet tracked in this browser&apos;s pipeline.
+          </p>
+          {cloudOnly.map(({ application, job }) => (
+            <article className="phase-three-application-row" key={application.id}>
+              <div className="phase-three-application-context">
+                <p className="product-eyebrow">Synced from your account</p>
+                <h2>{job.title.value || "Application"}</h2>
+                <p>{job.employer.value || "Employer unknown"}</p>
+              </div>
+              <ProductStatusBadge status={applicationTone(application.status)}>
+                {application.status}
+              </ProductStatusBadge>
+              {job.sourceUrl ? (
+                <a
+                  className="button-secondary"
+                  href={job.sourceUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  View posting
+                </a>
+              ) : null}
+            </article>
+          ))}
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -1350,6 +1319,7 @@ function ApplicationDetail({
   onChange,
   onStatus,
   status,
+  sync,
 }: {
   application: ApplicationWorkspace;
   interviews: InterviewRecord[];
@@ -1358,6 +1328,7 @@ function ApplicationDetail({
   onChange: (value: JobWorkflowState) => void;
   onStatus: (value: string) => void;
   status: string;
+  sync: { state: SyncStatusLineState; status: string };
 }) {
   const readiness = getApplicationReadiness(application, job);
   const analysis = currentAnalysis(job);
@@ -1431,6 +1402,7 @@ function ApplicationDetail({
         }
         action={primaryAction}
       />
+      <SyncStatusLine state={sync.state} status={sync.status} />
       <section
         className="phase-three-readiness-summary"
         aria-labelledby="application-readiness-heading"

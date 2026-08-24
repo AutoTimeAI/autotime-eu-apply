@@ -257,6 +257,381 @@ export type Database = {
         };
         Relationships: [];
       };
+      job_workflow_jobs: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: Json;
+          employer: Json;
+          facts: Json;
+          description: string;
+          source: string;
+          source_url: string;
+          ats_platform: string | null;
+          lane: string;
+          source_surface: string;
+          captured_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          title: Json;
+          employer: Json;
+          facts: Json;
+          description?: string;
+          source: string;
+          source_url?: string;
+          ats_platform?: string | null;
+          lane?: string;
+          source_surface?: string;
+          captured_at: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: Json;
+          employer?: Json;
+          facts?: Json;
+          description?: string;
+          source?: string;
+          source_url?: string;
+          ats_platform?: string | null;
+          lane?: string;
+          source_surface?: string;
+          captured_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      job_workflow_analysis_snapshots: {
+        Row: {
+          id: string;
+          user_id: string;
+          job_id: string;
+          version: number;
+          decision: string;
+          confidence: string;
+          coverage: number;
+          critical_risk: string;
+          next_action: string;
+          positive_evidence: string;
+          reason: string;
+          capability: Json;
+          unknowns: string[];
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          job_id: string;
+          version: number;
+          decision: string;
+          confidence: string;
+          coverage: number;
+          critical_risk?: string;
+          next_action?: string;
+          positive_evidence?: string;
+          reason?: string;
+          capability?: Json;
+          unknowns?: string[];
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          job_id?: string;
+          version?: number;
+          decision?: string;
+          confidence?: string;
+          coverage?: number;
+          critical_risk?: string;
+          next_action?: string;
+          positive_evidence?: string;
+          reason?: string;
+          capability?: Json;
+          unknowns?: string[];
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      job_workflow_applications: {
+        Row: {
+          id: string;
+          user_id: string;
+          job_id: string;
+          status: string;
+          checklist: boolean[];
+          consequential_answers_reviewed: boolean;
+          cover_letter: string | null;
+          cover_letter_requested: boolean;
+          document_versions: string[];
+          evidence_confirmed: boolean;
+          follow_up_date: string | null;
+          reference_number: string | null;
+          selected_cv_version: string;
+          submission_confirmed: boolean;
+          unsupported_claims: string[];
+          applied_at: string | null;
+          application_channel: string | null;
+          source_surface: string;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          job_id: string;
+          status: string;
+          checklist: boolean[];
+          consequential_answers_reviewed?: boolean;
+          cover_letter?: string | null;
+          cover_letter_requested?: boolean;
+          document_versions?: string[];
+          evidence_confirmed?: boolean;
+          follow_up_date?: string | null;
+          reference_number?: string | null;
+          selected_cv_version?: string;
+          submission_confirmed?: boolean;
+          unsupported_claims?: string[];
+          applied_at?: string | null;
+          application_channel?: string | null;
+          source_surface?: string;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          job_id?: string;
+          status?: string;
+          checklist?: boolean[];
+          consequential_answers_reviewed?: boolean;
+          cover_letter?: string | null;
+          cover_letter_requested?: boolean;
+          document_versions?: string[];
+          evidence_confirmed?: boolean;
+          follow_up_date?: string | null;
+          reference_number?: string | null;
+          selected_cv_version?: string;
+          submission_confirmed?: boolean;
+          unsupported_claims?: string[];
+          applied_at?: string | null;
+          application_channel?: string | null;
+          source_surface?: string;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      job_workflow_screening_answers: {
+        Row: {
+          id: string;
+          user_id: string;
+          application_id: string;
+          question: string;
+          proposed: string;
+          user_value: string;
+          confirmed: boolean;
+          consequential: boolean;
+          evidence_ids: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          application_id: string;
+          question: string;
+          proposed?: string;
+          user_value?: string;
+          confirmed?: boolean;
+          consequential?: boolean;
+          evidence_ids?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          application_id?: string;
+          question?: string;
+          proposed?: string;
+          user_value?: string;
+          confirmed?: boolean;
+          consequential?: boolean;
+          evidence_ids?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      interview_records: {
+        Row: {
+          id: string;
+          user_id: string;
+          application_id: string;
+          job_id: string;
+          stage: string;
+          custom_stage: string | null;
+          format: string;
+          scheduled_at: string | null;
+          timezone: string | null;
+          duration_minutes: number | null;
+          location_or_meeting_note: string | null;
+          participant_notes: string | null;
+          participant_roles: string[];
+          preparation_notes: string | null;
+          status: string;
+          outcome: string;
+          preparation_version: number;
+          final_review_completed: boolean;
+          outcome_details: Json | null;
+          source_surface: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          application_id: string;
+          job_id: string;
+          stage: string;
+          custom_stage?: string | null;
+          format: string;
+          scheduled_at?: string | null;
+          timezone?: string | null;
+          duration_minutes?: number | null;
+          location_or_meeting_note?: string | null;
+          participant_notes?: string | null;
+          participant_roles?: string[];
+          preparation_notes?: string | null;
+          status: string;
+          outcome: string;
+          preparation_version?: number;
+          final_review_completed?: boolean;
+          outcome_details?: Json | null;
+          source_surface?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          application_id?: string;
+          job_id?: string;
+          stage?: string;
+          custom_stage?: string | null;
+          format?: string;
+          scheduled_at?: string | null;
+          timezone?: string | null;
+          duration_minutes?: number | null;
+          location_or_meeting_note?: string | null;
+          participant_notes?: string | null;
+          participant_roles?: string[];
+          preparation_notes?: string | null;
+          status?: string;
+          outcome?: string;
+          preparation_version?: number;
+          final_review_completed?: boolean;
+          outcome_details?: Json | null;
+          source_surface?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      interview_questions: {
+        Row: {
+          id: string;
+          user_id: string;
+          interview_id: string;
+          category: string;
+          question: string;
+          reason: string;
+          source_references: Json;
+          importance: string;
+          evidence_status: string;
+          answer_draft: Json | null;
+          user_confidence: string | null;
+          marked_for_practice: boolean;
+          practice_sessions: Json;
+          origin: string;
+          version: number;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          interview_id: string;
+          category: string;
+          question: string;
+          reason?: string;
+          source_references?: Json;
+          importance: string;
+          evidence_status: string;
+          answer_draft?: Json | null;
+          user_confidence?: string | null;
+          marked_for_practice?: boolean;
+          practice_sessions?: Json;
+          origin: string;
+          version?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          interview_id?: string;
+          category?: string;
+          question?: string;
+          reason?: string;
+          source_references?: Json;
+          importance?: string;
+          evidence_status?: string;
+          answer_draft?: Json | null;
+          user_confidence?: string | null;
+          marked_for_practice?: boolean;
+          practice_sessions?: Json;
+          origin?: string;
+          version?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      interview_preparation_snapshots: {
+        Row: {
+          id: string;
+          user_id: string;
+          interview_id: string;
+          version: number;
+          questions: Json;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          user_id: string;
+          interview_id: string;
+          version: number;
+          questions?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          interview_id?: string;
+          version?: number;
+          questions?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       user_accounts: {
         Row: {
           user_id: string;
@@ -395,6 +770,7 @@ export type Database = {
           prompt_tokens: number;
           completion_tokens: number;
           cost_usd: number;
+          used_credit: boolean;
           created_at: string;
         };
         Insert: {
@@ -402,9 +778,10 @@ export type Database = {
           user_id: string;
           feature: string;
           model: string;
-          prompt_tokens: number;
-          completion_tokens: number;
-          cost_usd: number;
+          prompt_tokens?: number;
+          completion_tokens?: number;
+          cost_usd?: number;
+          used_credit?: boolean;
           created_at?: string;
         };
         Update: {
@@ -415,6 +792,7 @@ export type Database = {
           prompt_tokens?: number;
           completion_tokens?: number;
           cost_usd?: number;
+          used_credit?: boolean;
           created_at?: string;
         };
         Relationships: [];
@@ -459,6 +837,24 @@ export type Database = {
           request_count?: number;
           reset_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      stripe_webhook_events: {
+        Row: {
+          event_id: string;
+          event_type: string;
+          processed_at: string;
+        };
+        Insert: {
+          event_id: string;
+          event_type: string;
+          processed_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          event_type?: string;
+          processed_at?: string;
         };
         Relationships: [];
       };
@@ -1226,6 +1622,29 @@ export type Database = {
           p_max_requests: number;
         };
         Returns: boolean;
+      };
+      reserve_ai_call: {
+        Args: {
+          p_user_id: string;
+          p_reservation_id: string;
+          p_monthly_limit: number;
+        };
+        Returns: boolean;
+      };
+      confirm_ai_call: {
+        Args: {
+          p_reservation_id: string;
+          p_feature: string;
+          p_model: string;
+          p_prompt_tokens: number;
+          p_completion_tokens: number;
+          p_cost_usd: number;
+        };
+        Returns: undefined;
+      };
+      release_ai_call: {
+        Args: { p_reservation_id: string };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;

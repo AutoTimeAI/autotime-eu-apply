@@ -3,6 +3,7 @@
  * back from the sign-in flow.
  */
 import Link from "next/link"
+import { getAuthErrorMessage } from "../../../lib/auth-error-messages"
 
 function getSafeParam(value: string | string[] | undefined) {
   const text = Array.isArray(value) ? value[0] : value
@@ -17,19 +18,15 @@ export default async function AuthErrorPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const params = searchParams ? await searchParams : {}
-  const message = getSafeParam(params.message)
   const stage = getSafeParam(params.stage)
+  const message = getAuthErrorMessage(stage)
 
   return (
     <main className="dashboard-shell">
       <section className="rich-empty-state">
         <p className="eyebrow">Authentication</p>
         <h1>Sign-in could not be completed</h1>
-        <p>
-          {message ||
-            "Your session could not be created. Please return to the sign-in page and try again."}
-        </p>
-        {stage ? <p>Stage: {stage}</p> : null}
+        <p>{message}</p>
         <div className="header-actions">
           <Link className="primary-link" href="/login">
             Back to sign in

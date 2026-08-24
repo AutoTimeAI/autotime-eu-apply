@@ -10,6 +10,7 @@ import {
   isRestrictedJobUrl,
   transitionApplication,
 } from "../apps/web/lib/job-application-workflow.ts";
+import { createInterview } from "../apps/web/lib/interview-workflow.ts";
 
 const strongVacancy = `Job title: Backend Engineer
 Company: Example Payments
@@ -31,6 +32,33 @@ assert.equal(job.title.state, "extracted");
 assert.equal(job.facts.salary.sourceText, "€75,000 - €90,000");
 assert.equal(job.facts.country.value, "Ireland");
 assert.equal(job.facts.education.state, "missing");
+
+// Exercises the skills-pattern regex-escaping fix (CodeQL
+// js/incomplete-sanitization): "C++", "C#", and ".NET" all contain
+// characters that are regex metacharacters unless escaped, and the
+// custom (?<![A-Za-z0-9])...(?![A-Za-z0-9]) boundary must still match
+// each of them correctly.
+const specialCharSkillsJob = extractJob({
+  description:
+    "We need a senior backend engineer with deep C++ and C# experience, plus .NET and SQL knowledge required.",
+});
+assert.match(specialCharSkillsJob.facts.skills.value, /C\+\+/);
+assert.match(specialCharSkillsJob.facts.skills.value, /C#/);
+assert.match(specialCharSkillsJob.facts.skills.value, /\.NET/);
+
+const spelledYearsVacancy = `Job title: Backend Engineer
+Company: Example Payments
+Location: Dublin, Ireland
+Hybrid permanent role. Salary €75,000 - €90,000.
+Required five years of backend engineering experience.
+Essential experience building PostgreSQL services and secure APIs.
+English required.`;
+const spelledYearsJob = extractJob({ description: spelledYearsVacancy });
+assert.match(
+  spelledYearsJob.facts.experience.value,
+  /five years/i,
+  "facts.experience must extract spelled-out years-of-experience wording, not just digits",
+);
 assert.throws(() => extractJob({ description: "short" }), /80/);
 assert.throws(() => extractJob({ description: "x".repeat(50_001) }), /50,000/);
 assert.equal(
@@ -133,6 +161,56 @@ assert.ok(application.appliedAt);
 assert.equal(application.submissionConfirmed, true);
 assert.equal(application.coverLetterRequested, false);
 assert.equal(application.documentVersions.length, 0);
+assert.throws(
+  () => transitionApplication(application, "Ready", job),
+  /cannot be moved back to Ready/,
+);
+
+// An application that has moved into Interview/Offer/Rejected/Withdrawn must
+// never silently revert into the base Preparing/Needs review/Ready/Applied
+// pipeline - Array.indexOf's -1-for-not-found result made "Preparing" only
+// look one step away from each of those four statuses.
+for (const extendedStatus of ["Interview", "Offer", "Rejected", "Withdrawn"]) {
+  assert.throws(
+    () =>
+      transitionApplication(
+        { ...application, status: extendedStatus },
+        "Preparing",
+        job,
+      ),
+    /Invalid application status transition/,
+    extendedStatus,
+  );
+}
+
+// Completes the happy-path fixture QA asked for (issue #56): a real
+// vacancy, analysed for real by analyseJob (not hand-crafted with
+// decision/status set directly, the way phase-3c-interviews.test.mjs's
+// fixtures do), all the way through Job -> Apply -> Application -> Ready ->
+// Applied -> Interview. Nothing previously proved this full journey
+// actually connects end to end with real analysis output.
+const interview = createInterview({
+  userId: "33333333-3333-4333-8333-333333333333",
+  application,
+  job,
+  stage: "recruiter_screen",
+  format: "video",
+});
+assert.equal(interview.applicationId, application.id);
+assert.equal(interview.jobId, job.id);
+assert.equal(interview.status, "preparing");
+assert.ok(interview.questions.length > 0);
+assert.throws(
+  () =>
+    createInterview({
+      userId: "33333333-3333-4333-8333-333333333333",
+      application: { ...application, status: "Preparing" },
+      job,
+      stage: "recruiter_screen",
+      format: "video",
+    }),
+  /Applied or Interview/,
+);
 
 const blocked = {
   ...createApplication(job),

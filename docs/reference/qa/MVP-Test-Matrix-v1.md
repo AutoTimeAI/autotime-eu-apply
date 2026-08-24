@@ -8,6 +8,12 @@ Status: Draft
 
 This matrix tracks core MVP coverage for Autotime EU Apply. Add one row per meaningful user workflow, integration, permission rule, or regression risk.
 
+> This matrix predates and complements `docs/qa/AutoTime-EU-Apply-QA-Documentation.xlsx`
+> (2026-08-21), which covers the automated test suite (123 test cases across
+> the local-fixture and production Playwright suites) with embedded
+> screenshot evidence. This file remains the record for manually-tracked
+> scenarios such as the browser extension rows below.
+
 ## Priority Guide
 
 | Priority | Meaning |

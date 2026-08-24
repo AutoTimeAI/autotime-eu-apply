@@ -5,7 +5,8 @@
  * respecting the server's decision about whether email addresses may appear.
  */
 import { useEffect, useState } from "react"
-import type { AdminUserRow } from "../../../lib/admin-users"
+import type { AdminUsersPage } from "../../../lib/admin-users"
+import { getVisibleRowRange } from "../../../lib/admin-users-pagination"
 
 function formatTimestamp(value: string | null): string {
   return value ? new Date(value).toLocaleString("en-GB") : "Never signed in"
@@ -15,30 +16,32 @@ const POLL_INTERVAL_MS = 15_000
 
 /** Renders manual and optional polling refresh controls for beta-user rows. */
 export function AdminUsersTable({
-  initialUsers,
+  initialData,
   includeEmail,
 }: {
-  initialUsers: AdminUserRow[]
+  initialData: AdminUsersPage
   includeEmail: boolean
 }) {
-  const [users, setUsers] = useState(initialUsers)
+  const [data, setData] = useState(initialData)
   const [checkedAt, setCheckedAt] = useState<Date | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [error, setError] = useState("")
 
-  async function refresh() {
+  async function loadPage(page: number) {
     setRefreshing(true)
     setError("")
     try {
-      const response = await fetch("/api/admin/users", { cache: "no-store" })
+      const response = await fetch(`/api/admin/users?page=${page}`, {
+        cache: "no-store",
+      })
       const payload = (await response.json()) as {
-        data?: AdminUserRow[]
+        data?: AdminUsersPage
         error?: string
       }
       if (!response.ok || !payload.data)
         throw new Error(payload.error || "Refresh failed")
-      setUsers(payload.data)
+      setData(payload.data)
       setCheckedAt(new Date())
     } catch {
       setError("User data could not be refreshed.")
@@ -50,10 +53,18 @@ export function AdminUsersTable({
   useEffect(() => {
     if (!autoRefresh) return
     const timer = window.setInterval(() => {
-      void refresh()
+      // Re-fetch the page currently being viewed, not always page 1.
+      void loadPage(data.page)
     }, POLL_INTERVAL_MS)
     return () => window.clearInterval(timer)
-  }, [autoRefresh])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRefresh, data.page])
+
+  const { firstRow, lastRow } = getVisibleRowRange(
+    data.page,
+    data.perPage,
+    data.total,
+  )
 
   return (
     <>
@@ -74,7 +85,7 @@ export function AdminUsersTable({
         <button
           className="secondary-button"
           disabled={refreshing}
-          onClick={() => void refresh()}
+          onClick={() => void loadPage(data.page)}
           type="button"
         >
           {refreshing ? "Refreshing…" : "Refresh now"}
@@ -96,7 +107,7 @@ export function AdminUsersTable({
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {data.users.map((user) => (
               <tr key={user.id}>
                 <td>{includeEmail ? (user.email ?? "—") : user.id}</td>
                 <td>{user.betaStatus}</td>
@@ -106,6 +117,29 @@ export function AdminUsersTable({
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="admin-pagination">
+        <p>
+          {data.total > 0
+            ? `Showing ${firstRow}–${lastRow} of ${data.total} users`
+            : "No users found"}
+        </p>
+        <button
+          className="secondary-button"
+          disabled={refreshing || data.page <= 1}
+          onClick={() => void loadPage(data.page - 1)}
+          type="button"
+        >
+          Previous
+        </button>
+        <button
+          className="secondary-button"
+          disabled={refreshing || !data.hasMore}
+          onClick={() => void loadPage(data.page + 1)}
+          type="button"
+        >
+          Next
+        </button>
       </div>
     </>
   )

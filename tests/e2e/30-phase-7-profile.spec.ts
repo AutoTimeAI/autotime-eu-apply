@@ -2,6 +2,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { seedReadyDashboardProfile } from "./helpers";
+import { expectNoSeriousViolations } from "./helpers/axe";
 
 const output = "screenshots/phase-7-profile/review";
 
@@ -90,6 +91,7 @@ test("profile workspace is green-free with a single primary action", async ({
   await expect(
     page.getByRole("heading", { name: "Profile is ready" }),
   ).toBeVisible();
+  await expectNoSeriousViolations(page, { include: "main.phase-seven-profile" });
   await capture(page, "workspace-top-1440x900.png");
   await page.setViewportSize({ width: 390, height: 844 });
   await capture(page, "workspace-top-390x844.png");

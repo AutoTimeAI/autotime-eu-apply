@@ -1,5 +1,5 @@
-/** Owns deterministic job extraction, fit analysis, application state, and transitions. */
 import { detectATS } from "./ats-detector.ts";
+import type { ApplicationRecord } from "shared";
 
 export type EvidenceState = "confirmed" | "partial" | "missing" | "conflicting";
 export type JobDecision =
@@ -63,6 +63,7 @@ export type JobRecord = {
     language: SourcedValue;
     location: SourcedValue;
     salary: SourcedValue;
+    skills: SourcedValue;
     sponsorship: SourcedValue;
     workArrangement: SourcedValue;
     workAuthorisation: SourcedValue;
@@ -118,6 +119,72 @@ export type JobWorkflowState = {
   schemaVersion: 1;
 };
 
+const europeanTechHubCityCountries: Record<string, string> = {
+  London: "United Kingdom", Manchester: "United Kingdom", Edinburgh: "United Kingdom",
+  Bristol: "United Kingdom", Cambridge: "United Kingdom",
+  Dublin: "Ireland", Cork: "Ireland", Belfast: "United Kingdom",
+  Berlin: "Germany", Munich: "Germany", Hamburg: "Germany", Frankfurt: "Germany",
+  Cologne: "Germany", Stuttgart: "Germany",
+  Amsterdam: "Netherlands", Rotterdam: "Netherlands", Eindhoven: "Netherlands",
+  Utrecht: "Netherlands", "The Hague": "Netherlands",
+  Paris: "France", Lyon: "France", Toulouse: "France",
+  Madrid: "Spain", Barcelona: "Spain", Valencia: "Spain",
+  Lisbon: "Portugal", Porto: "Portugal",
+  Brussels: "Belgium", Antwerp: "Belgium",
+  Stockholm: "Sweden", Gothenburg: "Sweden", Malmo: "Sweden", Malmö: "Sweden",
+  Copenhagen: "Denmark", Aarhus: "Denmark",
+  Oslo: "Norway", Bergen: "Norway",
+  Helsinki: "Finland", Espoo: "Finland",
+  Warsaw: "Poland", Krakow: "Poland", Kraków: "Poland",
+  Wroclaw: "Poland", Wrocław: "Poland",
+  Vienna: "Austria", Graz: "Austria",
+  Zurich: "Switzerland", Zürich: "Switzerland", Geneva: "Switzerland", Basel: "Switzerland",
+  Milan: "Italy", Rome: "Italy", Turin: "Italy",
+};
+const europeanTechHubCities = Object.keys(europeanTechHubCityCountries);
+const cityPattern = new RegExp(`\\b(${europeanTechHubCities.join("|")})\\b`, "i");
+const findKnownCity = (text: string): string => {
+  const match = firstMatch(text, cityPattern);
+  const canonical = europeanTechHubCities.find(
+    (city) => city.toLowerCase() === match.toLowerCase(),
+  );
+  return canonical ?? "";
+};
+const skillsTaxonomy = [
+  "TypeScript", "JavaScript", "Python", "Java", "Kotlin", "Swift",
+  "Ruby", "PHP", "Golang", "Rust", "C++", "C#", ".NET", "Scala",
+  "Node.js", "React", "Vue", "Angular", "Next.js", "Django", "Flask",
+  "Spring", "Spring Boot", "Rails",
+  "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch", "Kafka",
+  "RabbitMQ", "DynamoDB", "SQL",
+  "AWS", "GCP", "Azure", "Kubernetes", "Docker", "Terraform", "Ansible",
+  "Jenkins", "CI/CD", "GraphQL", "REST", "gRPC", "Microservices",
+] as const;
+// Escapes every regex metacharacter, not just the ones skillsTaxonomy's
+// current entries happen to contain - a partial escape (e.g. only .+#)
+// would silently misinterpret an unescaped backslash or bracket as a regex
+// metacharacter instead of a literal character the moment a future skill
+// name needs one (CodeQL: js/incomplete-sanitization). skillsTaxonomy is a
+// hardcoded constant, never user input, so this had no live exploit path -
+// fixed for correctness and to close the flagged sanitizer-completeness gap.
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Custom (rather than \b) boundaries: several entries (".NET", "C++", "C#")
+// start or end with a non-word character, which \b cannot bound correctly.
+const skillsPattern = new RegExp(
+  `(?<![A-Za-z0-9])(${skillsTaxonomy.map((skill) => escapeRegExp(skill)).join("|")})(?![A-Za-z0-9])`,
+  "gi",
+);
+const extractSkills = (description: string): string => {
+  const matches = new Set<string>();
+  for (const match of description.matchAll(skillsPattern)) {
+    const canonical = skillsTaxonomy.find(
+      (skill) => skill.toLowerCase() === match[0].toLowerCase(),
+    );
+    if (canonical) matches.add(canonical);
+  }
+  return [...matches].join(", ");
+};
 const unknown = (): SourcedValue => ({ state: "missing", value: "" });
 const sourced = (value: string, sourceText: string): SourcedValue =>
   value ? { state: "extracted", value, sourceText } : unknown();
@@ -130,7 +197,6 @@ const lineAfter = (text: string, label: RegExp) =>
     ?.replace(label, "")
     .trim() ?? "";
 
-/** Extracts a bounded job record and detected ATS metadata from raw input. */
 export function extractJob(input: {
   description: string;
   employer?: string;
@@ -148,11 +214,16 @@ export function extractJob(input: {
   const employer =
     input.employer?.trim() ||
     lineAfter(description, /^(company|employer)\s*:\s*/i);
-  const location = lineAfter(description, /^(location)\s*:\s*/i);
-  const country = firstMatch(
-    [location, description.slice(0, 1200)].join(" "),
-    /\b(United Kingdom|UK|Ireland|Germany|Netherlands|France|Spain|Portugal|Belgium|Sweden|Denmark|Norway|Finland|Poland|Austria|Switzerland)\b/i,
-  );
+  const labelledLocation = lineAfter(description, /^(location)\s*:\s*/i);
+  const detectedCity = findKnownCity(description.slice(0, 1200));
+  const location = labelledLocation || detectedCity;
+  const country =
+    firstMatch(
+      [labelledLocation, description.slice(0, 1200)].join(" "),
+      /\b(United Kingdom|UK|Ireland|Germany|Netherlands|France|Spain|Portugal|Belgium|Sweden|Denmark|Norway|Finland|Poland|Austria|Switzerland)\b/i,
+    ) ||
+    (detectedCity ? europeanTechHubCityCountries[detectedCity] : "") ||
+    "";
   const salary = firstMatch(
     description,
     /(?:£|€)\s?\d{2,3}(?:[,.]\d{3})?(?:\s?[-–]\s?(?:£|€)?\s?\d{2,3}(?:[,.]\d{3})?)?/i,
@@ -184,12 +255,16 @@ export function extractJob(input: {
   );
   const experience = firstMatch(
     description,
-    /\b\d+\+?\s+years?(?:'| of)? experience\b/i,
+    new RegExp(
+      `\\b${yearsNumberAlternation}\\+?\\s*years?\\b[^.\\n]{0,40}?\\bexperience\\b`,
+      "i",
+    ),
   );
   const education = firstMatch(
     description,
     /[^.\n]{0,70}\b(?:degree|bachelor|master|certification)\b[^.\n]{0,100}/i,
   );
+  const skills = extractSkills(description);
   const value = (raw: string) => sourced(raw, raw);
   return {
     atsPlatform: detectATS(input.sourceUrl ?? ""),
@@ -213,6 +288,7 @@ export function extractJob(input: {
       language: value(language),
       location: value(location),
       salary: value(salary),
+      skills: value(skills),
       sponsorship: value(sponsorship),
       workArrangement: value(arrangement),
       workAuthorisation: value(workAuth),
@@ -222,6 +298,44 @@ export function extractJob(input: {
 
 const tokens = (value: string) =>
   new Set(value.toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g) ?? []);
+// Vacancies and CVs sometimes spell out small numbers ("five years of
+// backend experience") instead of using digits - matched here so years-of-
+// experience requirements aren't silently missed just because of phrasing.
+const spelledYearNumbers: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+};
+const yearsNumberAlternation = `(?:\\d+|${Object.keys(spelledYearNumbers).join("|")})`;
+const yearsPattern = new RegExp(
+  `(${yearsNumberAlternation})\\+?\\s*(?:years?|yrs?)\\b`,
+  "gi",
+);
+const allYearsMentioned = (value: string): number[] =>
+  [...value.matchAll(yearsPattern)].map((match) => {
+    const raw = match[1].toLowerCase();
+    return /^\d+$/.test(raw) ? Number(raw) : spelledYearNumbers[raw];
+  });
+const maxYearsMentioned = (value: string): number | null => {
+  const years = allYearsMentioned(value);
+  return years.length ? Math.max(...years) : null;
+};
+const requiredYears = (requirement: string): number | null => {
+  const years = allYearsMentioned(requirement);
+  return years.length ? years[0] : null;
+};
 const requirements = (description: string) =>
   description
     .split(/[.\n;•]/)
@@ -235,13 +349,18 @@ const requirements = (description: string) =>
     )
     .slice(0, 12);
 
-/** Produces an evidence-led fit decision without inventing missing candidate facts. */
 export function analyseJob(
   job: JobRecord,
   candidateEvidence: string,
   options: { careerLane?: string; sponsorshipRequired?: boolean } = {},
 ): JobAnalysisResult {
   const evidenceTokens = tokens(candidateEvidence);
+  // Tracked in parallel with `mapped` (rather than added to the returned
+  // RequirementEvidence shape, which is a public wire type) so a single
+  // requirement confirmed via an explicit years-of-experience match can be
+  // told apart from one confirmed via generic keyword overlap - see the
+  // decision logic below.
+  const yearsSatisfiedFlags: boolean[] = [];
   const mapped = requirements(job.description).map((requirement) => {
     const meaningful = [...tokens(requirement)].filter(
       (token) =>
@@ -266,14 +385,28 @@ export function analyseJob(
     const matchCoverage = meaningful.length
       ? matches.length / meaningful.length
       : 0;
+    const neededYears = requiredYears(requirement);
+    const candidateYears =
+      neededYears !== null ? maxYearsMentioned(candidateEvidence) : null;
+    const yearsSatisfied =
+      neededYears !== null &&
+      candidateYears !== null &&
+      candidateYears >= neededYears;
+    yearsSatisfiedFlags.push(yearsSatisfied);
+    const evidence = matches.map((item) => `Confirmed evidence mentions ${item}`);
+    if (yearsSatisfied) {
+      evidence.unshift(
+        `Confirmed evidence states ${candidateYears}+ years experience (requirement: ${neededYears}+ years)`,
+      );
+    }
     return {
       requirement,
       sourceText: requirement,
-      evidence: matches.map((item) => `Confirmed evidence mentions ${item}`),
+      evidence,
       state:
-        matches.length >= 2 && matchCoverage >= 0.6
+        yearsSatisfied || (matches.length >= 2 && matchCoverage >= 0.6)
           ? "confirmed"
-          : matches.length === 1
+          : matches.length >= 1
             ? "partial"
             : "missing",
     } satisfies RequirementEvidence;
@@ -300,9 +433,18 @@ export function analyseJob(
   const coverage = mapped.length
     ? Math.round(((confirmed + partial * 0.5) / mapped.length) * 100)
     : 0;
+  // A single extracted requirement is normally too thin a signal to trust -
+  // matching just one requirement via generic keyword overlap is easy to get
+  // by chance. An explicit years-of-experience match is a much stronger,
+  // harder-to-game signal, so it's allowed to stand on its own.
+  const singleRequirementStrongMatch =
+    mapped.length === 1 &&
+    mapped[0].state === "confirmed" &&
+    yearsSatisfiedFlags[0];
   const decision: JobDecision = incompatible
     ? "Skip"
-    : mapped.length < 2 || !candidateEvidence.trim()
+    : !candidateEvidence.trim() ||
+        (mapped.length < 2 && !singleRequirementStrongMatch)
       ? "Insufficient information"
       : unknowns.length >= 2
         ? "Consider"
@@ -355,7 +497,6 @@ export function analyseJob(
   };
 }
 
-/** Creates the initial preparation workspace for a saved job. */
 export function createApplication(job: JobRecord): ApplicationWorkspace {
   if (!job.id) throw new Error("An owned job is required.");
   const now = new Date().toISOString();
@@ -377,7 +518,96 @@ export function createApplication(job: JobRecord): ApplicationWorkspace {
   };
 }
 
-/** Returns whether an application can advance and the remaining blockers. */
+// Normalizes a job/application URL the same way apps/web/app/api/sync/dashboard/route.ts
+// does server-side, so client-side dedup against cloud records agrees with the server's
+// own identity rule for an application.
+export function normalizeJobUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.hash = "";
+    parsed.hostname = parsed.hostname.toLowerCase();
+    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+    return parsed.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return rawUrl.trim().toLowerCase().replace(/\/$/, "");
+  }
+}
+
+const cloudToLocalStatus: Record<
+  ApplicationRecord["status"],
+  ApplicationWorkspaceStatus
+> = {
+  Saved: "Preparing",
+  "Checking fit": "Preparing",
+  "Ready to apply": "Ready",
+  Applied: "Applied",
+  Interview: "Interview",
+  Offer: "Offer",
+  Rejected: "Rejected",
+  Archived: "Withdrawn",
+};
+
+// Converts a cloud `applications` row (from GET /api/sync/dashboard) into a
+// read-only-in-practice local job/application pair, so it can be displayed
+// alongside browser-local jobs on the Jobs/Applications pages. This is a
+// display bridge only: none of the local-only concepts these pages otherwise
+// support (extracted facts, analysis history, screening answers, checklist,
+// etc.) exist in the cloud row, so those fields are intentionally left empty
+// rather than fabricated. Callers should not feed the result back through
+// saveJobWorkflow/persist - it is not a real local record.
+export function cloudApplicationToWorkspaceJob(record: ApplicationRecord): {
+  application: ApplicationWorkspace;
+  job: JobRecord;
+} {
+  const timestamp = record.updatedAt ?? record.createdAt;
+  const job: JobRecord = {
+    analysisHistory: [],
+    analysisState: "Not analysed",
+    atsPlatform: record.atsPlatform,
+    capturedAt: record.createdAt,
+    description: "",
+    employer: sourced(record.company ?? "", record.company ?? ""),
+    facts: {
+      contract: unknown(),
+      country: unknown(),
+      education: unknown(),
+      employmentType: unknown(),
+      experience: unknown(),
+      language: unknown(),
+      location: unknown(),
+      salary: unknown(),
+      skills: unknown(),
+      sponsorship: unknown(),
+      workArrangement: unknown(),
+      workAuthorisation: unknown(),
+    },
+    id: record.id,
+    lane: "",
+    source: "Saved job",
+    sourceUrl: record.url,
+    title: sourced(record.title, record.title),
+    updatedAt: timestamp,
+  };
+  const application: ApplicationWorkspace = {
+    checklist: [true, false, false, false, false, false, false, false],
+    consequentialAnswersReviewed: false,
+    coverLetterRequested: false,
+    createdAt: record.createdAt,
+    documentVersions: [],
+    evidenceConfirmed: false,
+    followUpDate: record.nextActionDate,
+    id: record.id,
+    jobId: record.id,
+    screeningAnswers: [],
+    selectedCvVersion: "Confirmed profile",
+    status: cloudToLocalStatus[record.status] ?? "Preparing",
+    submissionConfirmed: false,
+    unsupportedClaims: [],
+    updatedAt: timestamp,
+  };
+  return { application, job };
+}
+
 export function getApplicationReadiness(
   application: ApplicationWorkspace,
   job: JobRecord,
@@ -392,7 +622,6 @@ export function getApplicationReadiness(
   return { blockers, ready: blockers.length === 0 };
 }
 
-/** Lists applications that still require user review. */
 export function getApplicationReviewQueue(state: JobWorkflowState) {
   return state.applications.flatMap((application) => {
     const job = state.jobs.find((item) => item.id === application.jobId);
@@ -404,7 +633,6 @@ export function getApplicationReviewQueue(state: JobWorkflowState) {
   });
 }
 
-/** Applies a valid application status transition. */
 export function transitionApplication(
   application: ApplicationWorkspace,
   next: ApplicationWorkspaceStatus,
@@ -433,6 +661,17 @@ export function transitionApplication(
       updatedAt: new Date().toISOString(),
     };
   }
+  // application.status here may itself be Interview/Offer/Rejected/Withdrawn
+  // (none of those are in `order` above), and Array.indexOf returns -1 for
+  // a value it doesn't contain - so e.g. order.indexOf("Preparing") (0) minus
+  // order.indexOf("Interview") (-1) is only 1, the same "one step" gap as a
+  // real adjacent pair, letting the adjacency check below silently wave
+  // through "Interview" -> "Preparing" instead of rejecting it. Reject any
+  // such move explicitly before that arithmetic ever runs.
+  if (["Interview", "Offer", "Rejected", "Withdrawn"].includes(application.status))
+    throw new Error("Invalid application status transition.");
+  if (next === "Ready" && application.status === "Applied")
+    throw new Error("An applied application cannot be moved back to Ready.");
   if (next === "Ready" && !getApplicationReadiness(application, job).ready)
     throw new Error("Resolve every readiness blocker before marking Ready.");
   if (next === "Applied" && (application.status !== "Ready" || !confirm))
@@ -449,7 +688,6 @@ export function transitionApplication(
   };
 }
 
-/** Mirrors an interview outcome into the linked application status. */
 export function applyInterviewOutcome(
   application: ApplicationWorkspace,
   outcome: "progressed" | "offer" | "rejected" | "withdrawn" | "no_response",
@@ -469,11 +707,9 @@ export function applyInterviewOutcome(
   return { ...application, status, updatedAt: new Date().toISOString() };
 }
 
-/** Identifies job URLs that should not be fetched or automated. */
 export function isRestrictedJobUrl(value: string) {
   return /https?:\/\/(?:[^/]+\.)?(linkedin|indeed)\./i.test(value);
 }
-/** Detects an existing job using canonical URL and identity signals. */
 export function duplicateJob(
   jobs: JobRecord[],
   candidate: Pick<JobRecord, "sourceUrl" | "title" | "employer">,

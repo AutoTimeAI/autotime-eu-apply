@@ -1,13 +1,6 @@
-// Legacy, keyword-based country rulebook (UK/Ireland/Germany/Netherlands/
-// France/EU-wide) used by the deprecated evaluateCountryFit path in
-// fit-model.ts to guess sponsorship/relocation/work-right signals from raw
-// job text. Newer country logic (with cited official sources) lives in
-// international/country-packs/*; this file stays for the legacy scoring
-// path and getCountryRule() until that path is fully retired.
 export type SponsorshipStrictness = "open" | "mixed" | "strict"
 export type RelocationFriction = "low" | "medium" | "high"
 
-/** One country's keyword signals and market notes used to interpret a job posting's sponsorship/work-right/relocation language. */
 export type CountryRule = {
   code: string
   name: string
@@ -23,7 +16,6 @@ export type CountryRule = {
   evidencePrompts: string[]
 }
 
-/** The hard-coded rulebook itself, ordered with the "EU" catch-all rule last (used as the fallback in getCountryRule). */
 export const countryRules: CountryRule[] = [
   {
     code: "GB",
@@ -222,12 +214,6 @@ function matchesAlias(target: string, alias: string): boolean {
   return containsWholeWord(target, alias) || containsWholeWord(alias, target)
 }
 
-/**
- * Looks up the CountryRule matching a free-text target country (matched by
- * alias, whole-word, case-insensitive). Falls back to the last entry in
- * `countryRules` (currently the "EU" broad rule) for an empty or unrecognised
- * input, so this function never returns undefined.
- */
 export function getCountryRule(targetCountry: string) {
   const target = targetCountry.trim().toLowerCase()
 

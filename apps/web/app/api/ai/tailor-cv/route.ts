@@ -1,4 +1,3 @@
-/** Tailors CV content to a job while retaining evidence and usage boundaries. */
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
@@ -8,13 +7,43 @@ import {
   tailorCvWithOpenAI,
 } from "../../../../lib/openai-server";
 import {
-  assertCanUseAi,
+  reserveAiCall,
+  releaseAiCall,
   FeatureGateError,
-  trackAiCall,
+  finalizeAiCall,
 } from "../../../../lib/feature-gate";
-import { boundedCvSchema } from "../../../../lib/content-security";
+const cvSchema = z.object({
+  contact: z.object({
+    name: z.string().max(200),
+    email: z.string().max(200),
+    phone: z.string().max(50),
+    location: z.string().max(200),
+    linkedin: z.string().max(300).optional(),
+  }),
+  summary: z.string().max(4000),
+  experience: z
+    .array(
+      z.object({
+        title: z.string().max(200),
+        company: z.string().max(200),
+        dates: z.string().max(100),
+        bullets: z.array(z.string().max(1000)).max(40),
+      }),
+    )
+    .max(40),
+  education: z
+    .array(
+      z.object({
+        degree: z.string().max(200),
+        institution: z.string().max(200),
+        dates: z.string().max(100),
+      }),
+    )
+    .max(20),
+  skills: z.array(z.string().max(100)).max(200),
+});
 const schema = z.object({
-  cv: boundedCvSchema,
+  cv: cvSchema,
   jobDescription: z.string().trim().min(80).max(50000),
 });
 export async function POST(request: NextRequest) {
@@ -27,9 +56,15 @@ export async function POST(request: NextRequest) {
       );
     const body = schema.parse(await request.json());
     await assertAiRouteRateLimit(user.id);
-    await assertCanUseAi(user.id);
-    const result = await tailorCvWithOpenAI(body);
-    await trackAiCall(user.id, {
+    const reservationId = await reserveAiCall(user.id);
+    let result;
+    try {
+      result = await tailorCvWithOpenAI(body);
+    } catch (error) {
+      await releaseAiCall(reservationId);
+      throw error;
+    }
+    await finalizeAiCall(reservationId, {
       feature: "cv-tailoring",
       model: result.model,
       promptTokens: result.promptTokens,

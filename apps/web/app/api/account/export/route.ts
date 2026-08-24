@@ -7,30 +7,22 @@ import {
 } from "../../../../lib/configuration-error"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { diagnosticJson } from "../../../../lib/diagnostics"
+import { exportedTables } from "../../../../lib/account-export"
 
-// Tables holding this user's own data, each with a user_id column and an
-// ON DELETE CASCADE foreign key to auth.users(id). Jobs and applications
-// captured in the Phase 3B workflow live only in browser localStorage
-// (see lib/job-workflow-storage.ts) and are out of scope here — there is
-// nothing server-side to export for them.
-const exportedTables = [
-  "profiles",
-  "account_settings",
-  "subscriptions",
-  "mobility_profiles",
-  "user_accounts",
-  "applications",
-  "evidence_records",
-  "outcome_records",
-  "interview_prep_packs",
-  "reusable_answers",
-  "beta_access",
-] as const
-
-// GDPR Article 20 (right to data portability). Operational/metering
-// tables (operational_logs, ai_usage, sync_events, extension_connections)
-// are intentionally excluded: they are non-content telemetry about the
-// account, not data the user provided or generated.
+// GDPR Article 20 (right to data portability). The exported set matches
+// every table with an ON DELETE CASCADE ownership link to auth.users(id),
+// except genuine operational/metering tables (operational_logs, ai_usage,
+// ai_credit_ledger, sync_events, extension_connections,
+// deleted_application_tombstones, workflow_operational_events - non-content
+// telemetry about the account, not data the user provided or generated)
+// and admin_memberships (a role assignment record, not user content).
+//
+// Found and fixed 2026-08-21: this previously omitted job_workflow_*,
+// interview_records/interview_questions/interview_preparation_snapshots,
+// cover_letters, outreach_contacts/outreach_messages, user_skill_profile,
+// esco_questionnaire_answers, and profile_revisions - all real,
+// server-synced user content that an earlier version of this comment
+// incorrectly described as living only in browser localStorage.
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { user, error: userError } = await getRequestUser(request)

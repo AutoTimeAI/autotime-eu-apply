@@ -9,7 +9,7 @@
   --surface-blue: #f1f6ff;
   --ink: #0d1728;
   --text: #263244;
-  --muted: #667385;
+  --muted: #606c7d;
   --border: #d8e0eb;
   --border-strong: #aebccc;
   --accent: #174ea6;
@@ -8132,6 +8132,7 @@ h4 {
 .admin-command-strip,
 .admin-console-panel,
 .admin-live-meta,
+.admin-pagination,
 .admin-alert-panel {
   border: 1px solid rgba(20, 31, 46, 0.14);
   border-radius: 8px;
@@ -8262,6 +8263,20 @@ h4 {
 
 .admin-live-meta input {
   width: auto;
+}
+
+.admin-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.admin-pagination p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .admin-alert-panel {

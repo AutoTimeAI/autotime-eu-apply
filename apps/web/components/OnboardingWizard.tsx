@@ -461,8 +461,8 @@ export function OnboardingWizard() {
             {(
               [
                 ["fullName", "Full name", "text", "name", 100],
-                ["phone", "Phone", "tel", "tel", 25],
-                ["email", "Contact email", "email", "email", 254],
+                ["phone", "Phone *", "tel", "tel", 25],
+                ["email", "Contact email (optional)", "email", "email", 254],
                 [
                   "countryCurrent",
                   "Current location",

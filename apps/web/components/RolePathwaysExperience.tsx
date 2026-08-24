@@ -14,7 +14,9 @@ import {
 import { useDashboardPlan } from "./UserNav";
 import {
   loadLaneSelection,
+  loadRolePathwaysProgress,
   saveLaneSelection,
+  saveRolePathwaysProgress,
 } from "../lib/role-pathways-storage";
 import { loadMobilityProfile } from "../lib/international-mobility-storage";
 
@@ -92,9 +94,20 @@ export function RolePathwaysExperience() {
   const [primary, setPrimary] = useState("");
   const [secondary, setSecondary] = useState<string[]>([]);
   const [explorer, setExplorer] = useState("");
+  // Tracks the exact lane selection last successfully saved, so the "Save
+  // career lanes" button can tell an already-saved selection apart from
+  // one with real unsaved changes - previously it stayed enabled after a
+  // successful save with no visual difference, leaving it unclear whether
+  // anything still needed saving.
+  const [savedSelection, setSavedSelection] = useState<{
+    primary: string;
+    secondary: string[];
+    explorer: string;
+  } | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const activeStepRef = useRef<HTMLLIElement>(null);
   useEffect(() => {
     activeStepRef.current?.scrollIntoView({
@@ -104,12 +117,57 @@ export function RolePathwaysExperience() {
   }, [stage]);
   useEffect(() => {
     setCandidateText(savedCandidateText(userId));
+    // The legacy local blob above is a fallback only - the canonical CV
+    // lives in the profiles table (base_cv_text), the same source
+    // /dashboard/profile reads from. A CV seeded directly there (rather
+    // than through the old DashboardExperience local wizard) would
+    // otherwise never populate this field.
+    void fetch("/api/profile/onboarding")
+      .then(async (response) => ({ response, payload: await response.json() }))
+      .then(({ response, payload }) => {
+        if (!response.ok || !payload.data) return;
+        const profile = payload.data as {
+          base_cv_text?: string | null;
+          experience_highlights?: string | null;
+          project_summaries?: string | null;
+        };
+        const canonicalText = [
+          profile.base_cv_text,
+          profile.experience_highlights,
+          profile.project_summaries,
+        ]
+          .filter((item): item is string => Boolean(item))
+          .join("\n\n");
+        if (canonicalText) setCandidateText(canonicalText);
+      })
+      .catch(() => undefined);
     const saved = loadLaneSelection(localStorage, userId);
     if (saved) {
       setPrimary(saved.primary);
       setSecondary(saved.secondary);
       setExplorer(saved.explorer ?? "");
+      setSavedSelection({
+        primary: saved.primary,
+        secondary: saved.secondary,
+        explorer: saved.explorer ?? "",
+      });
     }
+    // Extracted/confirmed evidence, recommendations, the selected role and
+    // the current stage previously had no persistence at all, so leaving
+    // and returning to this page always reset to Stage 1 with everything
+    // empty - see issue #52. Only trust a saved snapshot from the same
+    // ESCO catalogue version, matching loadLaneSelection's own guard.
+    const progress = loadRolePathwaysProgress(localStorage, userId);
+    if (progress && progress.catalogueVersion === ESCO_CACHE_VERSION) {
+      setCandidateText(progress.candidateText);
+      setStage(progress.stage);
+      setEvidence(progress.evidence);
+      setRecommendations(progress.recommendations as unknown as RoleRecommendation[]);
+      setSelectedRole(
+        progress.selectedRole as unknown as RoleRecommendation | null,
+      );
+    }
+    setHydrated(true);
     const mobility = loadMobilityProfile(localStorage, userId).profile;
     const supportedCountries = mobility.targetCountries.filter(
       (country): country is RolePreferences["countries"][number] =>
@@ -125,6 +183,37 @@ export function RolePathwaysExperience() {
       supportRequired: mobility.sponsorshipRequired,
     }));
   }, [userId]);
+  // Persists whenever any of the pieces that used to be lost on navigation
+  // change, rather than at each individual mutation call site - fewer
+  // places to remember to update, and it can't drift out of sync with a
+  // handler that forgets to save. Gated on `hydrated` so this doesn't fire
+  // with the pre-restore empty defaults before the mount effect above has
+  // had a chance to load any existing progress.
+  useEffect(() => {
+    if (!hydrated || !userId) return;
+    try {
+      saveRolePathwaysProgress(localStorage, userId, {
+        schemaVersion: ROLE_PATHWAYS_SCHEMA_VERSION,
+        catalogueVersion: ESCO_CACHE_VERSION,
+        userId,
+        stage,
+        candidateText,
+        evidence,
+        recommendations: recommendations as unknown as Record<
+          string,
+          unknown
+        >[],
+        selectedRole: selectedRole as unknown as Record<
+          string,
+          unknown
+        > | null,
+        savedAt: new Date().toISOString(),
+      });
+    } catch {
+      // Best-effort persistence - a transient parse failure just means this
+      // particular change isn't saved; the next mutation will retry.
+    }
+  }, [hydrated, userId, stage, candidateText, evidence, recommendations, selectedRole]);
   const generate = async () => {
     setBusy(true);
     setStatus("");
@@ -217,6 +306,7 @@ export function RolePathwaysExperience() {
         savedAt: new Date().toISOString(),
       });
       saveLaneSelection(localStorage, userId, value);
+      setSavedSelection({ primary, secondary, explorer });
       setStatus(
         "Career lanes saved for this authenticated account in this browser.",
       );
@@ -226,6 +316,12 @@ export function RolePathwaysExperience() {
       );
     }
   };
+  const hasUnsavedLaneChanges =
+    !savedSelection ||
+    savedSelection.primary !== primary ||
+    savedSelection.explorer !== explorer ||
+    savedSelection.secondary.length !== secondary.length ||
+    savedSelection.secondary.some((item, index) => item !== secondary[index]);
   const cards = (items: RoleRecommendation[]) =>
     items.map((item) => (
       <button
@@ -783,8 +879,14 @@ export function RolePathwaysExperience() {
             </label>
           </div>
           <div className="pathway-actions">
-            <button disabled={!primary} onClick={save} type="button">
-              Save career lanes
+            <button
+              disabled={!primary || !hasUnsavedLaneChanges}
+              onClick={save}
+              type="button"
+            >
+              {primary && !hasUnsavedLaneChanges
+                ? "Career lanes saved"
+                : "Save career lanes"}
             </button>
           </div>
         </section>

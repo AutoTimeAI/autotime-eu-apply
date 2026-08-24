@@ -10,11 +10,47 @@ export const dashboardStorageKey = `autotime-v2-companion-dashboard:${sampleUser
 export const onboardingCompleteKey = `autotime-v2-onboarding-complete:${sampleUser.id}`
 
 export async function seedReadyDashboardProfile(page: Page) {
+  // HomeExperience re-verifies onboarding completion against the server on
+  // every /dashboard load (GET /api/profile/onboarding), regardless of the
+  // local onboardingCompleteKey flag set below - that flag alone used to be
+  // sufficient but no longer is. Without this mock, the fake e2e test-auth
+  // user (which has no real `profiles` row) reads back onboarding_completed_at
+  // as falsy and gets redirected straight to /dashboard/onboarding on any
+  // bare /dashboard visit.
+  await page.route("**/api/profile/onboarding", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue()
+      return
+    }
+    await route.fulfill({
+      json: {
+        data: {
+          alert_frequency: "weekly",
+          alert_last_sent_at: null,
+          base_cv_text: sampleCandidateProfile.baseCvText,
+          country_current: sampleCandidateProfile.currentCountry,
+          countries_target: sampleCandidateProfile.targetCountries
+            .split(",")
+            .map((item) => item.trim()),
+          email: sampleCandidateProfile.email,
+          full_name: sampleCandidateProfile.fullName,
+          github_url: sampleCandidateProfile.githubUrl || null,
+          linkedin_url: sampleCandidateProfile.linkedInUrl || null,
+          onboarding_completed_at: "2026-01-01T00:00:00.000Z",
+          onboarding_ready: true,
+          phone: sampleCandidateProfile.phone || null,
+          photoUrl: null,
+          portfolio_url: sampleCandidateProfile.portfolioUrl || null,
+          work_right_details: sampleCandidateProfile.workRightDetails
+        },
+        error: null
+      }
+    })
+  })
   await page.addInitScript(
     ({ key, onboardingKey, profile, reusableAnswers }) => {
-      // First-time dashboard entry is gated behind a one-time onboarding
-      // wizard (see components/OnboardingWizard.tsx) unless this flag is
-      // already set, regardless of how complete the seeded profile is.
+      // Local-only signal, paired with the server-side mock registered
+      // above - HomeExperience requires both to skip the onboarding wizard.
       window.localStorage.setItem(onboardingKey, "true")
 
       if (window.localStorage.getItem(key)) {
