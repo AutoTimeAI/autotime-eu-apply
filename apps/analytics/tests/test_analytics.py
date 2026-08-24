@@ -1,8 +1,12 @@
+"""Tests for the apps/analytics FastAPI service (main.py)."""
+
 import sys
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+# main.py has no package structure (it's the FastAPI entrypoint Vercel routes
+# to directly), so its parent dir must be on sys.path before it can be imported.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from main import app
