@@ -1246,6 +1246,35 @@ test("account session lives in chrome.storage.session, not .local - content scri
   assert.equal(cleared["account-session"], undefined)
 })
 
+test("migrates and removes a legacy local account session", async () => {
+  resetStorage()
+  await chrome.storage.local.set({
+    "account-session": {
+      authToken: "legacy-local-token",
+      email: "legacy@example.com",
+      plan: "free"
+    }
+  })
+
+  const migrated = await getAccountSession()
+  assert.equal(migrated?.authToken, "legacy-local-token")
+  assert.equal(
+    (await chrome.storage.local.get("account-session"))["account-session"],
+    undefined
+  )
+  assert.equal(
+    (await chrome.storage.session.get("account-session"))["account-session"]
+      .authToken,
+    "legacy-local-token"
+  )
+
+  await clearAccountSession()
+  assert.equal(
+    (await chrome.storage.local.get("account-session"))["account-session"],
+    undefined
+  )
+})
+
 test("normalizes a legacy account session saved before refresh tokens existed", async () => {
   resetStorage()
 
