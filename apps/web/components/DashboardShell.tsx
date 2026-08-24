@@ -1,5 +1,12 @@
 "use client";
 
+// Top-level layout wrapper for every /dashboard route: provides the plan
+// context (DashboardPlanProvider), mounts the inactivity auto-logout timer,
+// and renders the topbar + workflow sidebar chrome around page content. A
+// small set of routes (onboarding, and the CV tailor when reached from
+// onboarding) render "chrome-free" — brand backdrop and children only, no
+// topbar/sidebar — since those flows are meant to be distraction-free.
+
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import {
@@ -13,6 +20,13 @@ import { BrandBackdrop } from "./BrandBackdrop";
 
 const chromeFreePaths = new Set(["/dashboard/onboarding"]);
 
+/**
+ * Renders the dashboard shell (topbar, workflow sidebar, brand backdrop)
+ * around `children`, or a minimal chrome-free wrapper for onboarding-style
+ * routes. Always wraps content in `DashboardPlanProvider` (so descendants
+ * can read plan/userId via `useDashboardPlan`) and mounts
+ * `InactivityLogout` for session timeout handling.
+ */
 export function DashboardShell({
   children,
   email,

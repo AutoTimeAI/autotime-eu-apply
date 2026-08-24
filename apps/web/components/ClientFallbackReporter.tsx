@@ -1,5 +1,11 @@
 "use client"
 
+// Global safety-net UI: listens for uncaught window errors and unhandled
+// promise rejections anywhere in the dashboard, reports them via
+// `reportClientIssue` for diagnostics, and surfaces a small dismissible
+// alert so the user knows something failed even if the failing component
+// didn't render its own error state. Mounted once near the app root.
+
 import { useEffect, useState } from "react"
 import {
   getClientErrorMessage,
@@ -11,6 +17,12 @@ type ClientFallbackAlert = {
   message: string
 }
 
+/**
+ * Registers `window.onerror`/`unhandledrejection` listeners for the
+ * lifetime of the component, reports each occurrence via
+ * `reportClientIssue`, and renders a single dismissible alert for the most
+ * recent one. Renders nothing until an error has actually occurred.
+ */
 export function ClientFallbackReporter() {
   const [alert, setAlert] = useState<ClientFallbackAlert | null>(null)
 

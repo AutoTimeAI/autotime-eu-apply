@@ -1,9 +1,22 @@
 "use client"
 
+// GDPR-style consent banner for optional product analytics. Persists the
+// user's choice ("granted"/"denied") to localStorage and broadcasts a
+// window event so PostHogProvider (which reads the same storage key) can
+// react immediately without a page reload. Renders nothing once a choice
+// has already been recorded.
+
 import { useEffect, useState } from "react"
 
 export const analyticsConsentStorageKey = "autotime-analytics-consent"
 
+/**
+ * Analytics consent banner. Reads any prior choice from localStorage on
+ * mount; while no choice is stored it renders an Allow/Decline banner, and
+ * saving a choice both persists it and dispatches
+ * `autotime-analytics-consent-changed` so listeners (e.g. PostHogProvider)
+ * can initialise or skip analytics immediately.
+ */
 export default function AnalyticsConsent() {
   const [choice, setChoice] = useState<string | null>(null)
 

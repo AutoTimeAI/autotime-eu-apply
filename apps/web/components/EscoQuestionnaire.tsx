@@ -1,5 +1,12 @@
 "use client";
 
+// Six-round, evidence-focused Q&A that builds the user's confirmed ESCO
+// skill profile server-side (via /api/esco/questionnaire) and shows which
+// aggregated jobs currently match that profile. Distinct from the CV/GitHub
+// enrichment flows: every skill mapping here traces back to a written
+// answer the user gave, so "confirmed" skills are explainable rather than
+// inferred from parsed documents.
+
 import { useEffect, useState } from "react";
 import { ProductEmptyState, ProductPageHeader, ProductStatusBadge } from "./product-ui";
 
@@ -8,6 +15,15 @@ type Match = { job_id: string; title: string; company: string; location: string 
 
 const firstQuestion = "What kind of work are you strongest at, and what have you actually done recently?";
 
+/**
+ * Client component driving the ESCO skills questionnaire. Loads any
+ * in-progress questionnaire state and matches from the server on mount,
+ * submits each answer to `/api/esco/questionnaire` (POST) which returns the
+ * next question and updated skill mappings, and lets the user promote a
+ * "stated"/"inferred" skill to "confirmed" via PATCH. Also fetches
+ * `/api/esco/matches` to show aggregated jobs that match the current
+ * profile, since match quality changes as skills are confirmed.
+ */
 export default function EscoQuestionnaire() {
   const [question, setQuestion] = useState(firstQuestion);
   const [answer, setAnswer] = useState("");

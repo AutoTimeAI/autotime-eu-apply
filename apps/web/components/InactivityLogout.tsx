@@ -1,5 +1,10 @@
 "use client";
 
+// Invisible session-safety component mounted once inside DashboardShell.
+// Tracks user activity via DOM listeners and force-signs-out (both the
+// server session cookie and the local Supabase client) after one hour of
+// no interaction, redirecting to /login. Renders no UI of its own.
+
 import { useEffect, useRef } from "react";
 import { createBrowserClient } from "../lib/supabase/client";
 
@@ -13,6 +18,13 @@ const ACTIVITY_EVENTS = [
   "touchstart",
 ] as const;
 
+/**
+ * Mounts activity listeners and a polling timer (checked every 30s) that
+ * signs the user out after `INACTIVITY_LIMIT_MS` (1 hour) of no mouse,
+ * keyboard, scroll or touch activity. Signs out via `/auth/signout` first,
+ * falling back to a full Supabase sign-out if that request fails, then
+ * redirects to `/login?sessionExpired=1`. Always returns `null`.
+ */
 export function InactivityLogout() {
   const lastActivityRef = useRef(Date.now());
 
