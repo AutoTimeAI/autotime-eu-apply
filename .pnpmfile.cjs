@@ -9,10 +9,10 @@ module.exports = {
   hooks: {
     readPackage(pkg) {
       if (pkg.peerDependenciesMeta?.less?.optional) {
-        delete pkg.peerDependencies.less
-        delete pkg.peerDependenciesMeta.less
+        delete pkg.peerDependencies.less;
+        delete pkg.peerDependenciesMeta.less;
       }
-      return pkg
+      return pkg;
     },
   },
-}
+};
