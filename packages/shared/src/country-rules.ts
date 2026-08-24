@@ -1,6 +1,13 @@
+// Legacy, keyword-based country rulebook (UK/Ireland/Germany/Netherlands/
+// France/EU-wide) used by the deprecated evaluateCountryFit path in
+// fit-model.ts to guess sponsorship/relocation/work-right signals from raw
+// job text. Newer country logic (with cited official sources) lives in
+// international/country-packs/*; this file stays for the legacy scoring
+// path and getCountryRule() until that path is fully retired.
 export type SponsorshipStrictness = "open" | "mixed" | "strict"
 export type RelocationFriction = "low" | "medium" | "high"
 
+/** One country's keyword signals and market notes used to interpret a job posting's sponsorship/work-right/relocation language. */
 export type CountryRule = {
   code: string
   name: string
@@ -16,6 +23,7 @@ export type CountryRule = {
   evidencePrompts: string[]
 }
 
+/** The hard-coded rulebook itself, ordered with the "EU" catch-all rule last (used as the fallback in getCountryRule). */
 export const countryRules: CountryRule[] = [
   {
     code: "GB",
@@ -192,6 +200,34 @@ export const countryRules: CountryRule[] = [
   }
 ]
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+// A bare `.includes()` check lets a short alias like "uk" match inside an
+// unrelated word that happens to start the same way (e.g. "ukraine"),
+// silently returning the wrong country's rules. Require the shorter string
+// to appear as a whole word (bounded by the string edge or a non-alphanumeric
+// character) inside the longer one.
+function containsWholeWord(haystack: string, needle: string): boolean {
+  if (!needle) {
+    return false
+  }
+  const boundary = "(?:^|[^a-z0-9])"
+  const boundaryEnd = "(?:[^a-z0-9]|$)"
+  return new RegExp(`${boundary}${escapeRegExp(needle)}${boundaryEnd}`).test(haystack)
+}
+
+function matchesAlias(target: string, alias: string): boolean {
+  return containsWholeWord(target, alias) || containsWholeWord(alias, target)
+}
+
+/**
+ * Looks up the CountryRule matching a free-text target country (matched by
+ * alias, whole-word, case-insensitive). Falls back to the last entry in
+ * `countryRules` (currently the "EU" broad rule) for an empty or unrecognised
+ * input, so this function never returns undefined.
+ */
 export function getCountryRule(targetCountry: string) {
   const target = targetCountry.trim().toLowerCase()
 
@@ -201,7 +237,7 @@ export function getCountryRule(targetCountry: string) {
 
   return (
     countryRules.find((rule) =>
-      rule.aliases.some((alias) => target.includes(alias) || alias.includes(target))
+      rule.aliases.some((alias) => matchesAlias(target, alias))
     ) ?? countryRules[countryRules.length - 1]
   )
 }

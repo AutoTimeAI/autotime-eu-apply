@@ -1,3 +1,7 @@
+// Ireland's CountryPack: employment-permit pathways, required evidence, and
+// citations to the Department of Enterprise, Tourism and Employment sources
+// they're based on. Consumed by assessInternationalJob (../assessment.ts)
+// when the hiring country resolves to Ireland.
 import type { CountryPack } from "../types.ts";
 
 export const irelandCountryPack: CountryPack = {

@@ -1,3 +1,10 @@
+// The core International assessment engine: turns a candidate's mobility
+// profile plus one job's evidence into a country-aware Apply/Investigate/
+// Skip decision (assessInternationalJob), routed through whichever
+// CountryPack matches the hiring country. Deliberately rule-based rather
+// than AI-driven, since this evidence has legal/financial consequences for
+// the candidate; every conclusion must trace back to a specific evidence
+// field or an explicit "missing evidence" gap rather than an inference.
 import {
   europeanExplorerPack,
   germanyCountryPack,
@@ -16,6 +23,7 @@ const fullCountryPacks = [
   germanyCountryPack,
   netherlandsCountryPack,
 ];
+/** Countries with generic "explorer" coverage (see country-packs/european-explorer.ts) rather than a dedicated pack - listed for UI display, not used to gate assessInternationalJob's own pack lookup. */
 export const supportedExplorerCountries = [
   "Belgium",
   "Luxembourg",
@@ -32,6 +40,7 @@ export const supportedExplorerCountries = [
   "Lithuania",
 ];
 
+/** Looks up the CountryPack for a country by id or display name (case-insensitive). Falls back to europeanExplorerPack for any country without dedicated coverage, so this never returns undefined. */
 export function getInternationalCountryPack(country: string): CountryPack {
   const normalized = country.trim().toLowerCase();
   return (
@@ -47,6 +56,19 @@ function includesAny(text: string, signals: string[]) {
   return signals.some((signal) => normalized.includes(signal));
 }
 
+/**
+ * Assesses one job's cross-border viability for a candidate, routed by the
+ * hiring country's CountryPack. In "explorer" mode (no dedicated pack) it
+ * always returns "Investigate first" with no pathway conclusions - the pack
+ * has nothing evidence-checkable to reason over. In "full" mode it checks
+ * sponsorship signals in the job text against the candidate's need, then
+ * requires salary, contract duration, and occupation-mapping evidence before
+ * it will call the pathway "potentially viable"; missing any of these
+ * degrades the decision to "Investigate first" rather than guessing. Country
+ * packs can add their own required checks (e.g. Germany's qualification
+ * evidence, Netherlands' recognised-sponsor register). Throws if `value`
+ * fails internationalAssessmentInputSchema validation.
+ */
 export function assessInternationalJob(
   value: InternationalAssessmentInput,
 ): InternationalAssessment {

@@ -1,3 +1,8 @@
+// The single point where the two independent judgments AutoTime makes about
+// a job - role/skill fit (fit-model.ts's AutoTimeFitReview) and cross-border
+// legal viability (assessment.ts's InternationalAssessment) - are combined
+// into one final decision. See orchestrateJobDecision's own doc comment for
+// why this boundary exists and must not be bypassed.
 import type { AutoTimeFitReview } from "../fit-model.ts";
 import type {
   InternationalAssessment,
@@ -5,11 +10,13 @@ import type {
   OfficialSourceCitation,
 } from "./types.ts";
 
+/** Whether international (cross-border) evidence is even relevant to a given job/candidate pairing - e.g. "not-relevant" for a candidate applying in their own country with existing work rights. */
 export type InternationalEvidenceRequirement =
   | "not-relevant"
   | "required"
   | "unknown";
 
+/** The final, single decision for a job after reconciling role fit and international evidence - the return shape of orchestrateJobDecision. */
 export type CombinedJobDecision = {
   decision: InternationalDecision;
   roleFitScore: number;

@@ -1,3 +1,9 @@
+// TypeScript types for the schemas.ts domain objects, derived with z.infer
+// so the compile-time types can never drift from the runtime validators.
+// This is the file both apps actually import for type annotations (via the
+// `export type *` re-export in index.ts) - schemas.ts stays the source of
+// truth, this file just exposes its shapes to TS without pulling in zod at
+// type-only call sites.
 import type { z } from "zod"
 import type {
   applicationContentDraftSchema,

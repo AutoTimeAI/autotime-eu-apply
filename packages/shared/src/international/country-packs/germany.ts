@@ -1,3 +1,8 @@
+// Germany's CountryPack: EU Blue Card / skilled-worker pathways, required
+// evidence (including qualification recognition), and citations to the
+// "Make it in Germany" federal government portal. Deliberately omits salary
+// thresholds (see `limitations`) since those change and must be verified at
+// the source rather than hard-coded here.
 import type { CountryPack } from "../types.ts";
 
 export const germanyCountryPack: CountryPack = {

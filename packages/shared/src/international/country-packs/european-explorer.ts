@@ -1,3 +1,8 @@
+// Generic fallback CountryPack ("supportLevel: explorer") for any European
+// country without a dedicated pack (Ireland/Germany/Netherlands). Has no
+// concrete pathways - assessInternationalJob (../assessment.ts) treats
+// explorer-mode countries as always needing manual investigation rather than
+// attempting to compute a pathway conclusion it can't back with evidence.
 import type { CountryPack } from "../types.ts";
 
 export const europeanExplorerPack: CountryPack = {
@@ -32,7 +37,7 @@ export const europeanExplorerPack: CountryPack = {
     },
   ],
   limitations: [
-    "Limited coverage — verification required.",
     "Explorer mode does not calculate permit eligibility or pathway viability.",
+    "Limited coverage — verification required.",
   ],
 };
