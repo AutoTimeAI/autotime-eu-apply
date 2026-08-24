@@ -1,12 +1,19 @@
+// Server-side Supabase repository for the cloud-synced international
+// mobility/relocation profile: read, optimistic-locked upsert, disable-sync,
+// and delete. Distinct from mobility-sync.ts (shared client/server
+// reconciliation logic and Zod schemas) — this file is the actual database
+// access layer, feature-gated behind mobilityServerSyncEnabled.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { mobilityProfileSchema, type MobilityProfile } from "shared";
 import { mobilityConsentSchema, type MobilityConsent } from "./mobility-sync";
 import type { Database, Json } from "./supabase/types";
 
+/** Whether server-side sync of the mobility profile is enabled at all, gated by the AUTOTIME_MOBILITY_SERVER_SYNC_ENABLED env var. */
 export const mobilityServerSyncEnabled =
   process.env.AUTOTIME_MOBILITY_SERVER_SYNC_ENABLED === "true";
 
+/** Validates an incoming mobility profile write request body: the profile itself, consent record, and the client's expected current `updatedAt` (for optimistic concurrency). */
 export const mobilityWriteRequestSchema = z
   .object({
     profile: mobilityProfileSchema.strict(),
@@ -15,6 +22,7 @@ export const mobilityWriteRequestSchema = z
   })
   .strict();
 
+/** A mobility profile record as read from/written to the database, with its consent and sync state. */
 export type MobilityProfileRecord = {
   profile: MobilityProfile;
   schemaVersion: 1;
@@ -24,6 +32,7 @@ export type MobilityProfileRecord = {
   syncEnabled: boolean;
 };
 
+/** Thrown by upsertMobilityProfile when the caller's `expectedUpdatedAt` doesn't match the current stored row (optimistic-concurrency conflict). */
 export class MobilityConflictError extends Error {
   constructor() {
     super("The account copy changed before this update was saved.");
@@ -41,6 +50,7 @@ type MobilityRow = Pick<
   | "sync_enabled"
 >;
 
+/** Maps a raw `mobility_profiles` database row into a validated MobilityProfileRecord. Throws if the row's schema/consent version isn't the currently supported version 1. */
 function recordFromRow(row: MobilityRow): MobilityProfileRecord {
   if (row.schema_version !== 1 || row.consent_version !== 1) {
     throw new Error("Unsupported mobility profile schema version.");
@@ -61,6 +71,7 @@ function recordFromRow(row: MobilityRow): MobilityProfileRecord {
 const selection =
   "profile,schema_version,updated_at,consent_version,consent_granted_at,sync_enabled" as const;
 
+/** Reads the authenticated user's mobility profile, or null if none exists yet. Throws on a database error. */
 export async function readMobilityProfile(
   client: SupabaseClient<Database>,
   authenticatedUserId: string,
@@ -75,6 +86,14 @@ export async function readMobilityProfile(
   return data ? recordFromRow(data) : null;
 }
 
+/**
+ * Validates `input` against mobilityWriteRequestSchema and inserts or updates
+ * the user's mobility profile row. Enforces optimistic concurrency: throws
+ * MobilityConflictError if an existing row's `updatedAt` doesn't match
+ * `expectedUpdatedAt`, if the caller expected no row (`expectedUpdatedAt: null`)
+ * but one already exists, or if a unique-constraint violation (a concurrent
+ * insert) or an unexpectedly-empty write result occurs.
+ */
 export async function upsertMobilityProfile(
   client: SupabaseClient<Database>,
   authenticatedUserId: string,
@@ -114,6 +133,7 @@ export async function upsertMobilityProfile(
   return recordFromRow(data);
 }
 
+/** Sets `sync_enabled` to false on the user's mobility profile row, without deleting it. Throws on a database error. */
 export async function disableMobilitySync(
   client: SupabaseClient<Database>,
   authenticatedUserId: string,
@@ -125,6 +145,7 @@ export async function disableMobilitySync(
   if (error) throw new Error("Mobility sync could not be disabled.");
 }
 
+/** Permanently deletes the user's mobility profile row. Throws on a database error. */
 export async function deleteMobilityProfile(
   client: SupabaseClient<Database>,
   authenticatedUserId: string,

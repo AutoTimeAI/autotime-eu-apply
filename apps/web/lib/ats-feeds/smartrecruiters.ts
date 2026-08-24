@@ -1,3 +1,7 @@
+// Client for SmartRecruiters' public postings API. One of several
+// per-company ATS feed clients in this directory that all implement
+// ATSFeedFetcher and normalise their provider-specific response into
+// NormalisedJob.
 import type { ATSFeedFetcher, FetchLike, NormalisedJob } from "./types";
 
 type SmartRecruitersPosting = {
@@ -13,6 +17,7 @@ type SmartRecruitersPosting = {
   company?: { name?: string };
 };
 
+/** Fetches and normalises open postings from a company's SmartRecruiters job board. */
 export class SmartRecruitersFeed implements ATSFeedFetcher {
   private readonly fetchImpl: FetchLike;
 
@@ -20,6 +25,13 @@ export class SmartRecruitersFeed implements ATSFeedFetcher {
     this.fetchImpl = fetchImpl;
   }
 
+  /**
+   * Fetches up to 100 public postings for `companySlug` from the SmartRecruiters
+   * API and maps them to NormalisedJob. The list endpoint doesn't return full
+   * posting bodies, so `descriptionRaw` is always left empty here (left for
+   * downstream enrichment to fetch on demand) rather than guessed at. Throws
+   * if the request fails. Postings missing a title or url are dropped.
+   */
   async fetchJobs(companySlug: string): Promise<NormalisedJob[]> {
     const company = encodeURIComponent(companySlug);
     const response = await this.fetchImpl(

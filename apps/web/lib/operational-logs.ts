@@ -1,8 +1,15 @@
+// Server-only helper that writes a DiagnosticPayload (see ./diagnostics) into
+// the `operational_logs` table for later admin-side review, using the
+// service-role Supabase client. Deliberately fail-open: a logging failure
+// swallows itself (falling back to a console warning) rather than surfacing
+// as an error to whatever request triggered the log, since operational
+// logging must never be the reason a user-facing request fails.
 import "server-only"
 import type { DiagnosticPayload } from "./diagnostics"
 import { createAdminClient } from "./supabase/admin"
 import type { Json } from "./supabase/types"
 
+/** Deep-clones `value` through a JSON round-trip so it's safe to store as the `metadata` Json column (drops functions/undefined, throws on cycles). */
 function toJsonObject(value: Record<string, unknown> | undefined): Json {
   if (!value) {
     return {}

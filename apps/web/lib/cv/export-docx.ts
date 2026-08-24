@@ -1,6 +1,13 @@
+// Builds a minimal .docx (Office Open XML) file from a CVData document and
+// triggers a browser download, without depending on a full docx-generation
+// library. A .docx is just a zip of XML parts, so this hand-assembles the
+// small subset of WordprocessingML parts (document.xml, styles.xml, and
+// their relationship/content-type manifests) needed to render a simple CV,
+// then zips them with JSZip.
 import JSZip from "jszip";
 import type { CVData } from "./types";
 
+/** Escapes the five XML special characters so arbitrary CV text is safe to embed in WordprocessingML. */
 function escapeXml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -10,6 +17,11 @@ function escapeXml(value: string): string {
     .replaceAll("'", "&apos;");
 }
 
+/**
+ * Renders one WordprocessingML `<w:p>` paragraph for `text`, or an empty string
+ * if `text` is blank (so callers can push blank-input paragraphs unconditionally
+ * without producing stray empty paragraphs in the output document).
+ */
 function paragraph(
   text: string,
   options: { style?: string; bold?: boolean; after?: number } = {},
@@ -23,11 +35,18 @@ function paragraph(
   return `<w:p><w:pPr>${style}${after}</w:pPr><w:r><w:rPr>${bold}</w:rPr><w:t xml:space="preserve">${escapeXml(text.trim())}</w:t></w:r></w:p>`;
 }
 
+/** Strips characters illegal in Windows/macOS filenames from `value`, falling back to "CV" if empty. */
 function safeFileName(value: string): string {
   const name = value.trim().replace(/[<>:"/\\|?*\u0000-\u001f]+/g, "-");
   return name || "CV";
 }
 
+/**
+ * Builds a .docx from `cv` and immediately triggers a browser file download
+ * (client-side only: creates an object URL and a synthetic anchor click).
+ * Empty sections (no summary, no experience, etc.) are omitted entirely
+ * rather than rendered as empty headings.
+ */
 export async function downloadCvDocx(cv: CVData): Promise<void> {
   const contact = [
     cv.contact.email,

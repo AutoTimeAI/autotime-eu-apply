@@ -1,3 +1,10 @@
+// Persists JobWorkflowState (see job-application-workflow.ts) to the
+// browser's localStorage, keyed per user, and emits operational telemetry
+// events (job_saved, job_analysed, application_prepared,
+// application_submitted) whenever a save introduces one of those state
+// transitions. Also handles one-time migration of an older ("Phase 2")
+// companion-dashboard localStorage format into the current job workflow
+// shape, on first load with no current-format data present.
 import { extractJob, type JobWorkflowState } from "./job-application-workflow";
 import {
   emitWorkflowOperationalEvent,
@@ -5,6 +12,7 @@ import {
 } from "./workflow-operational-events";
 
 const baseKey = "autotime-phase-3b-workflow-v1";
+/** The empty JobWorkflowState used whenever no valid stored/migrated state exists for the user. */
 export const emptyJobWorkflowState: JobWorkflowState = {
   applications: [],
   jobs: [],
@@ -12,6 +20,13 @@ export const emptyJobWorkflowState: JobWorkflowState = {
 };
 const keyFor = (userId: string) => `${baseKey}:${userId}`;
 
+/**
+ * One-time migration path: reads the older "autotime-v2-companion-dashboard"
+ * localStorage entry (if present) and re-extracts each saved application's
+ * notes into a JobRecord via extractJob, skipping any entry with no notes or
+ * notes under 80 characters (extractJob's own minimum) or that otherwise
+ * fails to extract. Never throws — returns the empty state on any error.
+ */
 function importLegacyJobs(userId: string): JobWorkflowState {
   try {
     const legacy = JSON.parse(
@@ -57,6 +72,12 @@ function importLegacyJobs(userId: string): JobWorkflowState {
   }
 }
 
+/**
+ * Loads `userId`'s job workflow state from localStorage. Falls back to
+ * importLegacyJobs if no current-format entry exists yet, or to the empty
+ * state if the stored value is missing/malformed/wrong schema version.
+ * Returns the empty state outside the browser or without a userId.
+ */
 export function loadJobWorkflow(userId: string): JobWorkflowState {
   if (typeof window === "undefined" || !userId) return emptyJobWorkflowState;
   try {
@@ -76,6 +97,16 @@ export function loadJobWorkflow(userId: string): JobWorkflowState {
   }
 }
 
+/**
+ * Writes `state` to `userId`'s localStorage slot and dispatches an
+ * "autotime-job-workflow-changed" CustomEvent. Diffs `state` against the
+ * previously stored state to detect exactly one of each operational event
+ * type per save (a newly-added job, a job whose analysis history grew, a
+ * newly-added application, or an application that just transitioned to
+ * "Applied") and emits each via emitWorkflowOperationalEvent — so a batch
+ * of unrelated changes saved together doesn't fire duplicate/misleading
+ * events for the same transition. Throws if `userId` is blank.
+ */
 export function saveJobWorkflow(userId: string, state: JobWorkflowState) {
   if (!userId) throw new Error("Authenticated user ID is required.");
   const previous = loadJobWorkflow(userId);

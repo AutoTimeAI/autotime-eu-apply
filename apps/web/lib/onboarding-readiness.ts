@@ -1,3 +1,9 @@
+// Defines what counts as "required onboarding evidence" on a profile —
+// the minimum set of fields a profile must have filled in (with basic shape
+// validation, not just presence) before the app treats onboarding as
+// genuinely complete, independent of the stored onboarding_completed_at flag
+// alone (which a user could reach without ever filling required fields via
+// the older/legacy onboarding flow).
 type OnboardingEvidence = {
   full_name?: string | null;
   phone?: string | null;
@@ -11,6 +17,7 @@ type OnboardingEvidence = {
 
 const phonePattern = /^\+?[0-9][0-9 ()-]{6,24}$/;
 
+/** True if `value` is a well-formed LinkedIn personal profile URL (http(s), linkedin.com host, `/in/<slug>` path). */
 export function isValidLinkedInProfile(value: string | null | undefined): boolean {
   try {
     const url = new URL(value ?? "");
@@ -21,6 +28,13 @@ export function isValidLinkedInProfile(value: string | null | undefined): boolea
   }
 }
 
+/**
+ * Lists which required onboarding fields are still missing or invalid on
+ * `profile`: full name, a plausible phone number, current country, at least
+ * one non-blank target country, work-right details of 10+ characters, a
+ * valid LinkedIn profile URL, and CV text of 50+ characters. Returns an
+ * empty array once everything required is present.
+ */
 export function getMissingOnboardingEvidence(profile: OnboardingEvidence): string[] {
   return [
     !profile.full_name?.trim() && "fullName",
@@ -33,6 +47,7 @@ export function getMissingOnboardingEvidence(profile: OnboardingEvidence): strin
   ].filter((field): field is string => Boolean(field));
 }
 
+/** True only if `profile` both has an `onboarding_completed_at` timestamp and passes getMissingOnboardingEvidence with no gaps — either alone is not sufficient. */
 export function hasCompletedRequiredOnboarding(profile: OnboardingEvidence | null): boolean {
   return Boolean(
     profile?.onboarding_completed_at &&

@@ -1,3 +1,10 @@
+// Generates interview preparation packs (likely questions, STAR prompts,
+// talking points, checklist) either locally/deterministically from saved
+// profile and job-analysis evidence, or via a direct-from-browser OpenAI
+// call using a user-supplied API key and budget (see WebAISettings). Also
+// enforces the evidence guardrails that gate prep generation: a pack is only
+// generated once the application is in "Interview" status and there is
+// enough saved candidate/job evidence to avoid fabricating claims.
 import type {
   ApplicationRecord,
   CandidateProfile,
@@ -6,6 +13,7 @@ import type {
   ReusableAnswers
 } from "shared"
 
+/** User-configurable settings for direct-from-browser OpenAI calls: API key, model, and a monthly spend cap. */
 export type WebAISettings = {
   apiKey: string
   model: string
@@ -32,6 +40,7 @@ type PrepPackOptions = {
   now?: string
 }
 
+/** Outcome of evaluating whether enough evidence exists to generate interview prep safely. */
 export type InterviewPrepGuardrailResult = {
   ready: boolean
   blockers: string[]
@@ -40,6 +49,7 @@ export type InterviewPrepGuardrailResult = {
   limits: string[]
 }
 
+/** Thrown by assertInterviewPrepReady when guardrail blockers prevent generating a prep pack; carries the full guardrail result. */
 export class InterviewPrepGuardrailError extends Error {
   guardrails: InterviewPrepGuardrailResult
 
@@ -59,6 +69,7 @@ const modelPricesPerMillionTokens: Record<
   "gpt-4o-mini": { input: 0.15, output: 0.6 }
 }
 
+/** Default WebAISettings before a user configures their own API key/model/budget. */
 export const defaultWebAISettings: WebAISettings = {
   apiKey: "",
   model: "gpt-4.1-mini",
@@ -66,6 +77,7 @@ export const defaultWebAISettings: WebAISettings = {
   usedBudgetUsd: 0
 }
 
+/** Minimum remaining budget headroom required before allowing another AI interview-prep call (canUseWebAI). */
 export const fallbackOpenAIInterviewBudgetUsd = 0.01
 
 function getId() {
@@ -157,6 +169,16 @@ function getJobEvidence(
   return evidence
 }
 
+/**
+ * Evaluates whether there is enough saved evidence to generate interview prep
+ * for `application`/`job`/`profile` without fabricating claims. Requires the
+ * application to be in "Interview" status, a role and company to be known,
+ * and at least 2 distinct candidate evidence sources (CV text, experience
+ * highlights, project summaries) and 2 distinct job evidence sources
+ * (description, summary, positioning angle, saved skills, notes). Missing
+ * work-right, salary, or notice-period details produce warnings (prep can
+ * proceed, but must stay general on those topics) rather than blockers.
+ */
 export function getInterviewPrepGuardrails({
   application,
   job,
@@ -237,6 +259,7 @@ export function getInterviewPrepGuardrails({
   }
 }
 
+/** Runs getInterviewPrepGuardrails and throws InterviewPrepGuardrailError if any blocker is present; otherwise returns the guardrail result. */
 export function assertInterviewPrepReady({
   application,
   job,
@@ -299,6 +322,7 @@ function getOpenAIStatusHint(status: number) {
   return "check AI settings and try again."
 }
 
+/** Converts an error from an AI interview-prep call into a user-facing message, special-casing a JSON parse failure. */
 export function getAIInterviewErrorMessage(error: unknown) {
   if (error instanceof SyntaxError) {
     return "OpenAI returned a response that was not valid JSON."
@@ -311,6 +335,7 @@ export function getAIInterviewErrorMessage(error: unknown) {
   return "OpenAI interview prep request failed."
 }
 
+/** True if `settings` has an API key set and enough remaining monthly budget headroom (fallbackOpenAIInterviewBudgetUsd) to attempt another call. */
 export function canUseWebAI(settings: WebAISettings) {
   return (
     settings.apiKey.trim() !== "" &&
@@ -319,6 +344,7 @@ export function canUseWebAI(settings: WebAISettings) {
   )
 }
 
+/** Estimates USD cost from token usage using the hardcoded per-model prices above; falls back to gpt-4.1-mini pricing for an unrecognised model. */
 export function estimateOpenAIInterviewCostUsd(
   model: string,
   usage?: OpenAIUsage
@@ -335,6 +361,12 @@ export function estimateOpenAIInterviewCostUsd(
   return Number(estimatedCost.toFixed(6))
 }
 
+/**
+ * Builds an interview prep pack deterministically from saved profile/job/
+ * application data, without calling any AI. Throws (via assertInterviewPrepReady)
+ * if the evidence guardrails aren't met. Used as the no-AI-key fallback and
+ * as the `fallbackPack` basis for normalizeAIInterviewPrepPack.
+ */
 export function createLocalInterviewPrepPack(
   application: ApplicationRecord,
   profile: CandidateProfile,
@@ -402,6 +434,12 @@ export function createLocalInterviewPrepPack(
   }
 }
 
+/**
+ * Coerces an AI-returned (and therefore untrusted-shape) partial prep pack
+ * `value` into a well-formed InterviewPrepPack, filling any missing/wrong-typed
+ * scalar field from `fallback` and coercing list fields to string arrays
+ * (dropping non-string entries) rather than trusting the AI response as-is.
+ */
 export function normalizeAIInterviewPrepPack(
   value: Partial<InterviewPrepPack>,
   fallback: InterviewPrepPack,
@@ -427,6 +465,14 @@ export function normalizeAIInterviewPrepPack(
   }
 }
 
+/**
+ * Calls OpenAI's Responses API directly from the browser (using the user's
+ * own `settings.apiKey`) to generate an interview prep pack, then normalises
+ * the result against `fallbackPack` via normalizeAIInterviewPrepPack. Throws
+ * (via assertInterviewPrepReady) if evidence guardrails aren't met, before
+ * any network call is made. Returns both the generated pack and an
+ * approximate USD cost estimate for the call.
+ */
 export async function generateAIInterviewPrepPack({
   settings,
   application,
