@@ -1,5 +1,9 @@
 "use client"
 
+/**
+ * Keeps the privacy-minimised beta-user table fresh in the browser while
+ * respecting the server's decision about whether email addresses may appear.
+ */
 import { useEffect, useState } from "react"
 import type { AdminUserRow } from "../../../lib/admin-users"
 
@@ -9,6 +13,7 @@ function formatTimestamp(value: string | null): string {
 
 const POLL_INTERVAL_MS = 15_000
 
+/** Renders manual and optional polling refresh controls for beta-user rows. */
 export function AdminUsersTable({
   initialUsers,
   includeEmail,

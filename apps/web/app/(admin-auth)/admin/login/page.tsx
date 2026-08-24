@@ -1,3 +1,7 @@
+/**
+ * Presents the isolated operations-admin sign-in entry point and redirects
+ * users who already hold an active admin membership into the admin console.
+ */
 import { redirect } from "next/navigation"
 import { AdminLoginContent } from "../../../admin/login/AdminLoginContent"
 import { getAdminMembership } from "../../../../lib/admin-authorization"
@@ -12,6 +16,7 @@ function safeRedirect(value: string | string[] | undefined) {
   return (Array.isArray(value) ? value[0] : value) === "/admin" ? "/admin" : "/admin"
 }
 
+/** Renders admin sign-in state without accepting an open redirect target. */
 export default async function AdminLoginPage({ searchParams }: Props) {
   const params = await searchParams
   const redirectTo = safeRedirect(params?.redirectTo)

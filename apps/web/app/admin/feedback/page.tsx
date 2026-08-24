@@ -1,7 +1,12 @@
+/**
+ * Displays private-beta feedback for operational triage without triggering
+ * any automatic communication with the submitting user.
+ */
 import { requireAdminPrincipal } from "../../../lib/admin-authorization"
 import { getAdminFeedbackOverview } from "../../../lib/admin-feedback"
 import { AdminFeedbackTable } from "./AdminFeedbackTable"
 
+/** Requires feedback-read access before loading the live feedback queue. */
 export default async function Page() {
   await requireAdminPrincipal("feedback:read")
   const feedback = await getAdminFeedbackOverview()

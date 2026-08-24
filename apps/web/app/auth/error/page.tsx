@@ -1,3 +1,7 @@
+/**
+ * Provides a bounded, user-safe authentication failure page for errors passed
+ * back from the sign-in flow.
+ */
 import Link from "next/link"
 
 function getSafeParam(value: string | string[] | undefined) {
@@ -6,6 +10,7 @@ function getSafeParam(value: string | string[] | undefined) {
   return text?.trim().slice(0, 220) ?? ""
 }
 
+/** Renders trimmed error context with a route back to sign-in. */
 export default async function AuthErrorPage({
   searchParams
 }: {

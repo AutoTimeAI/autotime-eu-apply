@@ -1,3 +1,7 @@
+/**
+ * Renders the live operations overview and limits enhanced detail to owner or
+ * admin roles after an explicit overview permission check.
+ */
 import { AdminRealtimeConsole } from "./AdminRealtimeConsole";
 import { redirect } from "next/navigation";
 import {
@@ -8,6 +12,7 @@ import { getAdminOverview } from "../../lib/admin-monitoring";
 
 export const dynamic = "force-dynamic";
 
+/** Redirects denied operators before retrieving the live admin overview. */
 export default async function AdminPage() {
   let principal;
   try {

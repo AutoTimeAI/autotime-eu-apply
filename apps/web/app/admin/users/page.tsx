@@ -1,3 +1,7 @@
+/**
+ * Loads privacy-minimised beta account summaries and reveals email addresses
+ * only when the operator holds the additional email-read permission.
+ */
 import {
   hasAdminPermission,
   requireAdminPrincipal,
@@ -5,6 +9,7 @@ import {
 import { getAdminUsersOverview } from "../../../lib/admin-users"
 import { AdminUsersTable } from "./AdminUsersTable"
 
+/** Requires user-read access and passes the narrower email policy to the UI. */
 export default async function AdminUsersPage() {
   const principal = await requireAdminPrincipal("users:read")
   const includeEmail = hasAdminPermission(

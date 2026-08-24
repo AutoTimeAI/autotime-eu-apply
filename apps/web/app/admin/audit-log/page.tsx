@@ -1,7 +1,12 @@
+/**
+ * Exposes append-only administrative audit events and the current retention
+ * policy to operators with explicit audit-read permission.
+ */
 import { requireAdminPrincipal } from "../../../lib/admin-authorization"
 import { getAdminAuditLog } from "../../../lib/admin-audit"
 import { AdminAuditLogTable } from "./AdminAuditLogTable"
 
+/** Requires audit-read access before retrieving administrative events. */
 export default async function Page() {
   await requireAdminPrincipal("audit:read")
   const events = await getAdminAuditLog()
