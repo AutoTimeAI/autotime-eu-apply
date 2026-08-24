@@ -45,9 +45,9 @@ Confirm-Path "ESCO questionnaire API" "apps/web/app/api/esco/questionnaire/route
 Confirm-Path "ESCO single-job score API" "apps/web/app/api/esco/score-job/route.ts"
 Confirm-Path "Extension ESCO overlay" "apps/extension/lib/match-overlay.ts"
 Confirm-Path "Overlap-only ESCO correction" "supabase/migrations/20260811120000_defer_esco_vector_matching.sql"
-Confirm-Path "Feature audit" "docs/autotime-feature-spec-audit.md"
-Confirm-Path "Compliance policy" "docs/job-aggregation-compliance.md"
-Confirm-Path "Ingestion deployment guide" "docs/job-ingestion-deployment.md"
+Confirm-Path "Feature audit" "docs/reference/autotime-feature-spec-audit.md"
+Confirm-Path "Compliance policy" "docs/reference/job-aggregation-compliance.md"
+Confirm-Path "Ingestion deployment guide" "docs/reference/job-ingestion-deployment.md"
 Confirm-Path "Cron SQL" "supabase/cron/job-ingestion.sql"
 Confirm-Path "Deployment helper" "scripts/deploy-job-ingestion.ps1"
 
@@ -59,5 +59,5 @@ Invoke-Gate "production extension build" { pnpm.cmd --filter extension build }
 Invoke-Gate "production web build" { pnpm.cmd build:web }
 
 Write-Host "PASS: $passed  FAIL: $failed"
-Write-Host "See docs/verify-feature-implementation.md for manual and live checks."
+Write-Host "See docs/reference/verify-feature-implementation.md for manual and live checks."
 if ($failed -gt 0) { exit 1 }

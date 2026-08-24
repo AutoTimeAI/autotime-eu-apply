@@ -54,7 +54,7 @@ Current V2 implementation:
   success-probability claims.
 - Production web dashboard: <https://autotime-eu-apply.vercel.app>.
 
-V2 details live in `docs/v2-product-surface.md`.
+V2 details live in `docs/reference/v2-product-surface.md`.
 
 ## Extension MVP
 
@@ -69,7 +69,7 @@ Current status:
   metrics are recorded.
 - Final local-first MVP candidate commit: `3d0cf72`.
 - Final automated release report:
-  `docs/release-runs/2026-05-04T11-05-34-292Z.md`.
+  `docs/reports/release-runs/2026-05-04T11-05-34-292Z.md`.
 - Next milestone: complete final manual Chrome validation, record live UK/EU job
   evidence, export validation metrics, and then tag `v0.0.2`.
 
@@ -131,14 +131,14 @@ backend work starts.
 
 Remaining release work is manual validation: record live UK/EU application
 outcomes, export founder validation metrics, and complete
-`docs/founder-validation-runs/2026-05-04-final-mvp-validation.md`.
+`docs/reports/founder-validation-runs/2026-05-04-final-mvp-validation.md`.
 
 ## Current Validation Build
 
 - Tag: `v0.0.1`
 - Commit: `3d0cf72`
 - Latest automated release report:
-  `docs/release-runs/2026-05-04T11-05-34-292Z.md`
+  `docs/reports/release-runs/2026-05-04T11-05-34-292Z.md`
 - OpenAI API validation: confirmed with `gpt-4.1-mini` usage/cost log entries.
 - LinkedIn policy: manual copy/paste only.
 - Remaining evidence: live job rows for LinkedIn manual input, Greenhouse,
@@ -162,7 +162,7 @@ cp .env.local.example .env.local
 Use separate provider resources for each lane: local and preview should use a
 development Supabase project plus Stripe test mode, while production should use
 the production Supabase project plus Stripe live mode. The full policy lives in
-`docs/environment-strategy.md`.
+`docs/reference/environment-strategy.md`.
 
 Run the extension in development:
 
@@ -250,7 +250,7 @@ Check the 90-95% MVP testing automation target:
 pnpm test:mvp:coverage
 ```
 
-The coverage model is documented in `docs/mvp-testing-automation.md`.
+The coverage model is documented in `docs/reference/mvp-testing-automation.md`.
 
 To test a different preview or production URL:
 
@@ -264,7 +264,7 @@ Create a fresh manual validation evidence report before Chrome/live-job testing:
 pnpm validation:new
 ```
 
-This writes a timestamped file in `docs/founder-validation-runs/` with the
+This writes a timestamped file in `docs/reports/founder-validation-runs/` with the
 automated gates, extension smoke test, V2 dashboard smoke test, LinkedIn manual
 copy/paste check, Greenhouse/Lever/Workday live-job rows, CSV export evidence,
 and release decision sections.
@@ -372,7 +372,7 @@ apps/extension/.output/chrome-mv3
 The manual extension smoke-test checklist lives at:
 
 ```text
-docs/extension-smoke-test.md
+docs/reference/extension-smoke-test.md
 ```
 
 Run that checklist before shipping an MVP build to testers.
@@ -380,19 +380,19 @@ Run that checklist before shipping an MVP build to testers.
 The full MVP spec alignment checklist lives at:
 
 ```text
-docs/mvp-spec-alignment.md
+docs/reference/mvp-spec-alignment.md
 ```
 
 The release-readiness checklist lives at:
 
 ```text
-docs/release-readiness.md
+docs/reference/release-readiness.md
 ```
 
 The founder validation report template lives at:
 
 ```text
-docs/founder-validation-report.md
+docs/reference/founder-validation-report.md
 ```
 
 ## Repository Notes

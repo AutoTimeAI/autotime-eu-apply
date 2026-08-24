@@ -10,8 +10,8 @@ const completeReport = `
 - Branch: main
 - Commit SHA: \`abc123\`
 - Chrome version: 124.0.0.0
-- Automated release check: \`docs/release-runs/run.md\`
-- MVP automation report: \`docs/automation-runs/run.md\`
+- Automated release check: \`docs/reports/release-runs/run.md\`
+- MVP automation report: \`docs/reports/automation-runs/run.md\`
 
 ## Extension Smoke Test
 

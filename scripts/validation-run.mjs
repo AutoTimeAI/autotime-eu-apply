@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
-export const validationRunDir = join("docs", "founder-validation-runs")
+export const validationRunDir = join("docs", "reports", "founder-validation-runs")
 
 export function findLatestReportPath(dir) {
   if (!existsSync(dir)) {
@@ -86,7 +86,7 @@ export function createValidationReport({
     "## Extension Smoke Test",
     "",
     "- Result: Not run",
-    "- Checklist used: `docs/extension-smoke-test.md`",
+    "- Checklist used: `docs/reference/extension-smoke-test.md`",
     "- Chrome extension loaded from: `apps/extension/.output/chrome-mv3`",
     "- Blockers:",
     "- Follow-up fixes:",
@@ -94,7 +94,7 @@ export function createValidationReport({
     "## V2 Dashboard Smoke Test",
     "",
     "- Result: Not run",
-    "- Checklist used: `docs/v2-smoke-test.md`",
+    "- Checklist used: `docs/reference/v2-smoke-test.md`",
     "- Preview or deployed URL:",
     "- Import/export checked:",
     "- Interview prep checked:",
@@ -175,16 +175,16 @@ export function createValidationRun({
 
 function main() {
   const metadata = getGitMetadata()
-  const latestAutomationReport = findLatestReportPath(join("docs", "automation-runs"))
-  const latestReleaseReport = findLatestReportPath(join("docs", "release-runs"))
+  const latestAutomationReport = findLatestReportPath(join("docs", "reports", "automation-runs"))
+  const latestReleaseReport = findLatestReportPath(join("docs", "reports", "release-runs"))
   const reportPath = createValidationRun({
     ...metadata,
     automatedReportPath: latestAutomationReport
       ? `\`${latestAutomationReport}\``
-      : "Run `pnpm test:mvp`, then paste the generated `docs/automation-runs/...` path here",
+      : "Run `pnpm test:mvp`, then paste the generated `docs/reports/automation-runs/...` path here",
     releaseCheckPath: latestReleaseReport
       ? `\`${latestReleaseReport}\``
-      : "Run `pnpm release:check`, then paste the generated `docs/release-runs/...` path here"
+      : "Run `pnpm release:check`, then paste the generated `docs/reports/release-runs/...` path here"
   })
 
   console.log(`Founder validation report created at ${reportPath}`)
