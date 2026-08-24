@@ -1,3 +1,23 @@
+# Generates the AutoTime EU Apply "first-time user" demo video entirely from
+# code: renders a fixed set of narrated slide scenes (product promise,
+# profile, Job Check, extension, application content, tracker, interview
+# prep, pricing, closing) as PNG frames using System.Drawing, synthesizes
+# narration audio from each slide's script text via the Windows
+# System.Speech engine, then concatenates the frames and narration into an
+# MP4 with ffmpeg. Run via `pnpm` is not wired up for this script directly —
+# invoke it with `powershell -ExecutionPolicy Bypass -File
+# scripts/create-demo-video.ps1`.
+#
+# Requirements: Windows (System.Drawing/System.Speech are Windows-only) and
+# ffmpeg on PATH or discoverable under the WinGet packages folder — throws if
+# ffmpeg cannot be found. If narration synthesis fails, falls back to
+# rendering a silent video instead of failing the whole run.
+#
+# Side effects: writes generated slide PNGs to
+# `docs/demo-video/generated/slides/`, narration WAV to
+# `docs/demo-video/generated/audio/narration.wav`, a concat list file, and
+# the final video to `-OutputPath` (default
+# `docs/demo-video/autotime-first-user-demo.mp4`).
 param(
   [string]$OutputPath = "docs/demo-video/autotime-first-user-demo.mp4"
 )
@@ -26,14 +46,18 @@ if (-not $ffmpeg) {
 
 Add-Type -AssemblyName System.Drawing
 
+# Converts a "#rrggbb" hex string to a System.Drawing.Color.
 function New-Color([string]$hex) {
   return [System.Drawing.ColorTranslator]::FromHtml($hex)
 }
 
+# Builds a solid brush from a "#rrggbb" hex color string.
 function New-Brush([string]$hex) {
   return [System.Drawing.SolidBrush]::new((New-Color $hex))
 }
 
+# Fills a rounded-corner rectangle of radius $r at ($x,$y) size ($w,$h) using
+# $brush, by building a GraphicsPath from four corner arcs.
 function Draw-RoundedRect($graphics, $brush, [float]$x, [float]$y, [float]$w, [float]$h, [float]$r) {
   $path = [System.Drawing.Drawing2D.GraphicsPath]::new()
   $d = $r * 2
@@ -46,6 +70,8 @@ function Draw-RoundedRect($graphics, $brush, [float]$x, [float]$y, [float]$w, [f
   $path.Dispose()
 }
 
+# Draws the outline of the same rounded-corner rectangle shape as
+# Draw-RoundedRect, using $pen instead of filling it.
 function Draw-RoundedOutline($graphics, $pen, [float]$x, [float]$y, [float]$w, [float]$h, [float]$r) {
   $path = [System.Drawing.Drawing2D.GraphicsPath]::new()
   $d = $r * 2
@@ -58,6 +84,9 @@ function Draw-RoundedOutline($graphics, $pen, [float]$x, [float]$y, [float]$w, [
   $path.Dispose()
 }
 
+# Word-wraps $text to fit within width $w (measured with $font), draws up to
+# $maxLines lines starting at ($x,$y) spaced by $lineHeight, and returns the y
+# coordinate just below the last drawn line.
 function Draw-WrappedText($graphics, [string]$text, $font, $brush, [float]$x, [float]$y, [float]$w, [float]$lineHeight, [int]$maxLines = 8) {
   $words = $text -split "\s+"
   $line = ""
@@ -83,6 +112,9 @@ function Draw-WrappedText($graphics, [string]$text, $font, $brush, [float]$x, [f
   return $y + ($lines.Count * $lineHeight)
 }
 
+# Draws a mock form-field card (rounded white box with border) showing an
+# uppercase $label and a wrapped bold $value, used across several mock
+# browser scenes.
 function Draw-Field($graphics, [string]$label, [string]$value, [float]$x, [float]$y, [float]$w, [float]$h) {
   $white = New-Brush "#ffffff"
   $border = [System.Drawing.Pen]::new((New-Color "#d8e1ec"), 2)
@@ -94,6 +126,9 @@ function Draw-Field($graphics, [string]$label, [string]$value, [float]$x, [float
   $border.Dispose()
 }
 
+# Draws a rounded status/label "pill" containing $text, sized to the text
+# width, styled differently when $active (teal fill/text) vs inactive (pale
+# fill, gray text). Returns the pill's rendered width.
 function Draw-Pill($graphics, [string]$text, [float]$x, [float]$y, [bool]$active = $false) {
   $bg = if ($active) { "#e7f5f2" } else { "#f8fbff" }
   $fg = if ($active) { "#0f766e" } else { "#667385" }
@@ -108,6 +143,8 @@ function Draw-Pill($graphics, [string]$text, [float]$x, [float]$y, [bool]$active
   return $width
 }
 
+# Draws a mock browser window chrome (rounded frame, traffic-light dots,
+# address bar showing $url) as a backdrop for a mocked-up app screen.
 function Draw-Browser($graphics, [float]$x, [float]$y, [float]$w, [float]$h, [string]$url) {
   Draw-RoundedRect $graphics (New-Brush "#ffffff") $x $y $w $h 22
   Draw-RoundedOutline $graphics ([System.Drawing.Pen]::new((New-Color "#d8e1ec"), 2)) $x $y $w $h 22
@@ -120,6 +157,10 @@ function Draw-Browser($graphics, [float]$x, [float]$y, [float]$w, [float]$h, [st
   $graphics.DrawString($url, $script:fontTiny, (New-Brush "#667385"), $x + 132, $y + 22)
 }
 
+# Draws the shared slide chrome: background, card frame, brand wordmark,
+# eyebrow label, wrapped title/lead text from $slide, and the "Scene N/total"
+# and caption footer text. Called before Draw-SceneVisual adds per-slide
+# content on top.
 function Draw-BaseSlide($graphics, $slide, [int]$number, [int]$total) {
   $graphics.Clear((New-Color "#eef3f8"))
   $graphics.FillRectangle((New-Brush "#fbfdff"), 70, 58, 1780, 964)
@@ -133,6 +174,11 @@ function Draw-BaseSlide($graphics, $slide, [int]$number, [int]$total) {
   $graphics.DrawString($slide.Caption, $script:fontSmallBold, (New-Brush "#667385"), 1450, 952)
 }
 
+# Draws the scene-specific mock UI illustration for slide $index (0-8): a
+# hardcoded switch statement, one case per slide, using the helper drawing
+# functions above to sketch product screens (Job Check summary, profile
+# form, job analysis score, ATS import panel, application answers, tracker
+# table, interview prep, pricing tiers, closing message).
 function Draw-SceneVisual($graphics, [int]$index) {
   switch ($index) {
     0 {

@@ -1,8 +1,30 @@
+# Runs the admin operations / workflow-events migration safety test suite
+# against a disposable local PostgreSQL container, without touching any real
+# Supabase project. Run via `pnpm test:admin-migrations:local`.
+#
+# Requires Docker on PATH. Side effects: creates (and always removes, even on
+# failure, via the `finally` block) a `postgres:16-alpine` container named
+# `autotime-admin-migration-test`, plus a local `.tmp-admin-migration-test`
+# scratch directory. Applies
+# `supabase/migrations/20260801190000_admin_operations_foundation.sql` and
+# `supabase/migrations/20260801191000_workflow_operational_events.sql`
+# against several throwaway databases to verify: clean application succeeds,
+# re-applying fails cleanly, applying without `auth.users` present fails,
+# applying against pre-existing conflicting objects fails without leaving
+# partial state, RLS denies anon/authenticated reads of admin membership
+# while service_role can read/write it, the beta-access-change and
+# feature-flag RPCs are atomic (including rolling back on an injected audit
+# trigger failure), the audit log is append-only, and workflow event
+# recording deduplicates. On success prints a compact JSON summary object to
+# stdout; throws (non-zero exit) on the first failed assertion.
 $ErrorActionPreference = "Stop"
 $container = "autotime-admin-migration-test"
 $tempRoot = Join-Path (Get-Location) ".tmp-admin-migration-test"
 $workspace = (Resolve-Path -LiteralPath ".").Path
 
+# Runs a single SQL statement in database $db via `docker exec ... psql -c`.
+# Throws with the captured output unless -AllowFailure is set. Returns an
+# object with ExitCode and combined Output.
 function ExecSql([string]$db, [string]$sql, [switch]$AllowFailure) {
   $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
   $output = & docker exec $container psql -X -v ON_ERROR_STOP=1 -U postgres -d $db -c $sql 2>&1
@@ -10,18 +32,27 @@ function ExecSql([string]$db, [string]$sql, [switch]$AllowFailure) {
   if (-not $AllowFailure -and $code -ne 0) { throw "SQL failed in ${db}: $($output -join "`n")" }
   [pscustomobject]@{ ExitCode=$code; Output=($output -join "`n") }
 }
+# Applies a SQL file at $path (already copied into the container) to
+# database $db via `docker exec ... psql -f`. Unlike ExecSql, never throws —
+# always returns { ExitCode, Output } so callers can assert success/failure.
 function ApplyFile([string]$db, [string]$path) {
   $old=$ErrorActionPreference; $ErrorActionPreference="Continue"
   $output=& docker exec $container psql -X -v ON_ERROR_STOP=1 -U postgres -d $db -f $path 2>&1
   $code=$LASTEXITCODE; $ErrorActionPreference=$old
   [pscustomobject]@{ ExitCode=$code; Output=($output -join "`n") }
 }
+# Creates database $db in the container and, unless $withAuth is $false,
+# seeds a minimal `auth.users` table so migrations that reference it can
+# apply (used to test both the happy path and the "missing auth.users"
+# failure case).
 function NewDb([string]$db, [bool]$withAuth=$true) {
   & docker exec $container createdb -U postgres $db | Out-Null
   if ($withAuth) {
     ExecSql $db "create schema auth; create table auth.users(id uuid primary key,email text,created_at timestamptz default now(),last_sign_in_at timestamptz);" | Out-Null
   }
 }
+# Asserts that a previous ExecSql/ApplyFile result failed (non-zero exit);
+# throws with $label if it unexpectedly succeeded.
 function ExpectFailure($result,[string]$label) { if ($result.ExitCode -eq 0) { throw "$label unexpectedly succeeded" } }
 
 try {

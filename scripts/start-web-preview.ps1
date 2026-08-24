@@ -1,3 +1,14 @@
+# Restarts the local AutoTime V2 web preview server cleanly, so a stale dev
+# or start process left running on port 3000 doesn't collide with a new one.
+# Run via `pnpm dev:web:reset` (development mode) or `pnpm preview:web`
+# (production mode, `-Mode production`).
+#
+# Side effects: force-kills any running process in this repo whose command
+# line matches known Next.js dev/start invocations, then (in production
+# mode) runs `pnpm build:web` if no build output exists yet at
+# `apps/web/.next/BUILD_ID`, and finally starts `pnpm --filter web dev` or
+# `pnpm --filter web start` in the foreground, serving at
+# http://127.0.0.1:3000.
 param(
   [ValidateSet("development", "production")]
   [string]$Mode = "development"
