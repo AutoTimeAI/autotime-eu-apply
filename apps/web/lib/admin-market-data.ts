@@ -1,3 +1,9 @@
+/**
+ * Reads the status of governed market-data refresh jobs (requests to
+ * refresh the role/market dataset the product relies on) for the admin
+ * dashboard. Kept as its own module since market-data refresh has its own
+ * request/status lifecycle distinct from the rest of admin monitoring.
+ */
 import "server-only";
 import { createAdminClient } from "./supabase/admin";
 
@@ -10,6 +16,10 @@ export type AdminMarketRefreshRequest = {
   status: "requested" | "running" | "succeeded" | "failed";
 };
 
+/**
+ * Returns the most recently created market_refresh_requests row, or null if
+ * none exist. Throws if the underlying query fails.
+ */
 export async function getLatestAdminMarketRefreshRequest(): Promise<AdminMarketRefreshRequest | null> {
   const { data, error } = await createAdminClient()
     .from("market_refresh_requests")

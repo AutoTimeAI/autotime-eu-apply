@@ -1,3 +1,10 @@
+/**
+ * Data access for the admin "AI operations" dashboard panel: whether the
+ * NVIDIA AI provider is configured, plus a recent window of warn/severe
+ * provider failures pulled from the operational_logs table. Kept separate
+ * from the general admin-monitoring overview since AI provider health is
+ * read by its own permission-gated admin route.
+ */
 import "server-only";
 import { createAdminClient } from "./supabase/admin";
 
@@ -16,6 +23,12 @@ export type AdminAiOperationsOverview = {
   recentFailures: AdminProviderFailure[];
 };
 
+/**
+ * Fetches the AI operations overview: whether an NVIDIA API key is present
+ * in the environment, and up to 50 warn/severe entries logged under the
+ * "ai" area of operational_logs in the last 24 hours, newest first.
+ * Throws if the underlying query fails.
+ */
 export async function getAdminAiOperationsOverview(): Promise<AdminAiOperationsOverview> {
   const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
   const { data, error } = await createAdminClient()

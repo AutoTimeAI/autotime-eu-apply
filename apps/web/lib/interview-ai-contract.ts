@@ -1,9 +1,24 @@
+/**
+ * Defines and enforces the strict output contract an AI-rewritten interview
+ * question must satisfy. Interview questions are one of the few places the
+ * product lets an AI model touch user-facing content, so this module
+ * exists to guarantee the model can only reword an already-approved
+ * question - never introduce a new id, add extra fields, or return
+ * anything that isn't in the caller-supplied allowlist.
+ */
 import type { InterviewQuestion } from "./interview-workflow";
 
 export type InterviewQuestionRewrite = { id: string; question: string };
 const clean = (value: unknown) =>
   typeof value === "string" ? value.trim().slice(0, 600) : "";
 
+/**
+ * Validates that `value` is an array of `{ id, question }` objects whose
+ * `id`s are all present in `allowed` (with no extra properties per item),
+ * trimming/truncating each question to 600 characters. Throws "Malformed
+ * interview AI output." for any structural violation - wrong shape, an
+ * unknown id, an extra key, or an empty question after cleaning.
+ */
 export function validateInterviewAiOutput(
   value: unknown,
   allowed: InterviewQuestion[],
@@ -25,6 +40,7 @@ export function validateInterviewAiOutput(
   });
 }
 
+/** No-op "rewrite" used in mock/test mode: returns each question's id and original text unchanged, in the same contract shape a real AI rewrite would produce. */
 export function mockInterviewQuestionRewrite(
   questions: InterviewQuestion[],
 ): InterviewQuestionRewrite[] {

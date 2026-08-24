@@ -1,3 +1,11 @@
+/**
+ * Server-side entry point that calls the NVIDIA-hosted chat completion API
+ * to reword interview questions for clarity, or returns them unchanged in
+ * "mock" mode. Every response - real or mocked - is passed through
+ * validateInterviewAiOutput (./interview-ai-contract) before being
+ * returned, so a misbehaving model response can never bypass the
+ * question/id allowlist.
+ */
 import "server-only";
 import type { InterviewQuestion } from "./interview-workflow";
 import {
@@ -6,6 +14,20 @@ import {
   type InterviewQuestionRewrite,
 } from "./interview-ai-contract";
 export { validateInterviewAiOutput } from "./interview-ai-contract";
+/**
+ * Rewrites `input.questions` for clarity via the configured AI mode.
+ * `input.mode` defaults to the INTERVIEW_PREP_AI_MODE env var, then
+ * "mock". In "mock" mode, returns the questions unchanged
+ * (mockInterviewQuestionRewrite) with no network call. In "nvidia" mode,
+ * calls the NVIDIA chat completions API (model from NVIDIA_MODEL, default
+ * "meta/llama-3.1-70b-instruct") with a system prompt instructing it to
+ * only reword supplied questions and never add facts/evidence/scores;
+ * extracts the first JSON array found in the response text (tolerating
+ * extra prose around it) and validates it via validateInterviewAiOutput.
+ * Throws for any other mode, a missing NVIDIA_API_KEY, a non-OK HTTP
+ * response, or output that fails validation. `input.fetchImpl` lets tests
+ * inject a fetch stub.
+ */
 export async function rewriteInterviewQuestions(input: {
   questions: InterviewQuestion[];
   mode?: string;

@@ -1,3 +1,11 @@
+/**
+ * Persists the user's international-mobility profile and consent to a
+ * pluggable key-value Storage (e.g. browser localStorage), per-user-scoped
+ * by key. Also handles one-time migration from an older, differently
+ * shaped "companion dashboard" candidate-profile storage format into the
+ * current MobilityProfile schema, so users who saved data under the legacy
+ * format don't lose it.
+ */
 import {
   candidateProfileSchema,
   migrateCandidateProfileToMobilityProfile,
@@ -29,6 +37,7 @@ export const emptyMobilityProfile: MobilityProfile = {
   relocationPreference: "depends",
 };
 
+/** Trims `userId` and throws if the result is empty - every storage key here must be scoped to a real user. */
 function requireUserId(userId: string) {
   const normalized = userId.trim();
   if (!normalized) {
@@ -37,18 +46,22 @@ function requireUserId(userId: string) {
   return normalized;
 }
 
+/** Storage key for a user's mobility profile. Throws if `userId` is blank. */
 export function getMobilityStorageKey(userId: string) {
   return `${mobilityStoragePrefix}:${requireUserId(userId)}`;
 }
 
+/** Storage key for a user's mobility consent record. Throws if `userId` is blank. */
 export function getMobilityConsentKey(userId: string) {
   return `${mobilityConsentPrefix}:${requireUserId(userId)}`;
 }
 
+/** Storage key for the legacy "companion dashboard" candidate-profile data this module migrates from. Throws if `userId` is blank. */
 export function getLegacyDashboardStorageKey(userId: string) {
   return `${dashboardStoragePrefix}:${requireUserId(userId)}`;
 }
 
+/** Parses `value` as JSON, returning null (never throwing) for a null input or invalid JSON. */
 function parseJson(value: string | null): unknown {
   if (!value) return null;
   try {
@@ -58,6 +71,16 @@ function parseJson(value: string | null): unknown {
   }
 }
 
+/**
+ * Loads a user's mobility profile, trying in order: (1) a valid saved
+ * MobilityProfile ("saved"); (2) if saved data exists but fails schema
+ * validation, an empty profile tagged "malformed" (the corrupt data is not
+ * deleted or repaired here); (3) a legacy candidate-profile record under
+ * the old dashboard storage key, migrated via
+ * migrateCandidateProfileToMobilityProfile ("legacy-migration"); (4) an
+ * empty default profile ("empty") if nothing is found. The `source` field
+ * tells callers which path was taken.
+ */
 export function loadMobilityProfile(
   storage: MobilityStorage,
   userId: string,
@@ -87,6 +110,7 @@ export function loadMobilityProfile(
   return { profile: { ...emptyMobilityProfile }, source: "empty" };
 }
 
+/** Validates `profile` against the schema (throwing if invalid) and saves it under the user's storage key, returning the validated value. */
 export function saveMobilityProfile(
   storage: MobilityStorage,
   userId: string,
@@ -97,6 +121,7 @@ export function saveMobilityProfile(
   return validated;
 }
 
+/** Removes the user's saved mobility profile from storage. */
 export function removeLocalMobilityProfile(
   storage: MobilityStorage,
   userId: string,
@@ -104,6 +129,7 @@ export function removeLocalMobilityProfile(
   storage.removeItem(getMobilityStorageKey(userId));
 }
 
+/** Loads and validates the user's saved mobility consent record, or null if absent/invalid. */
 export function loadMobilityConsent(
   storage: MobilityStorage,
   userId: string,
@@ -114,6 +140,7 @@ export function loadMobilityConsent(
   return parsed.success ? parsed.data : null;
 }
 
+/** Validates `consent` against the schema (throwing if invalid) and saves it under the user's storage key, returning the validated value. */
 export function saveMobilityConsent(
   storage: MobilityStorage,
   userId: string,
@@ -124,6 +151,7 @@ export function saveMobilityConsent(
   return validated;
 }
 
+/** Removes the user's saved mobility consent record from storage. */
 export function removeMobilityConsent(
   storage: MobilityStorage,
   userId: string,

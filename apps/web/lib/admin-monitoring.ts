@@ -1,3 +1,11 @@
+/**
+ * Builds the admin overview dashboard's headline metrics by counting rows
+ * across several tables (beta users, workflow activity events, provider
+ * failures, unresolved feedback), while explicitly marking metrics with no
+ * canonical current data source as "Not instrumented" rather than guessing.
+ * Fails closed per-metric: any single count query failing degrades that one
+ * metric instead of the whole overview.
+ */
 import "server-only";
 import { createAdminClient } from "./supabase/admin";
 
@@ -22,6 +30,12 @@ export type AdminOverview = {
   warnings: string[];
 };
 
+/**
+ * Runs a head-only exact-count query against `table`, optionally narrowed
+ * by `configure`. Returns null (not a thrown error) if the query errors or
+ * the table/RPC throws, so a missing/unavailable table degrades its metric
+ * to "Not instrumented" instead of failing the whole overview.
+ */
 async function countRows(
   table: Parameters<ReturnType<typeof createAdminClient>["from"]>[0],
   configure?: (query: any) => any,
@@ -41,6 +55,16 @@ async function countRows(
 const displayCount = (value: number | null) =>
   value === null ? "Not instrumented" : String(value);
 
+/**
+ * Assembles the full admin overview: instrumented metrics (or "Not
+ * instrumented" placeholders where no canonical source exists yet),
+ * optionally the 10 most recent audit-log actions, and a warnings list that
+ * flags when one or more metrics failed to load. `includeAudit` should only
+ * be true when the caller has already checked the "audit:read" permission -
+ * this function does not check it itself, it only reports
+ * "unauthorised"/"unavailable" status for the recentActions block based on
+ * the flag and query outcome.
+ */
 export async function getAdminOverview(
   includeAudit = false,
 ): Promise<AdminOverview> {
