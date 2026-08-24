@@ -27,7 +27,7 @@ overrides:
   minimatch@3>brace-expansion: ^1.1.16
   brace-expansion: ^5.0.6
 
-pnpmfileChecksum: sha256-YclS4p1kdn7nX1gww7Ab7vbDPcF81xeD365SwZhlWpo=
+pnpmfileChecksum: sha256-Gb6UWPofH7I7+oqAVVnG2Jb0c983HaPRFk78I4v340s=
 
 importers:
 
