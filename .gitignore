@@ -30,6 +30,7 @@ pytest-cache-files-*
 *.db
 _tmp_*
 docs/demo-video/generated/
+docs/release-video/generated/
 
 .vercel
 
