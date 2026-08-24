@@ -1,3 +1,13 @@
+// Phase 3c interview-preparation suite (/dashboard/interviews): creating a
+// prep record from an Applied application, the Preparation tab's sourced
+// questions and its block on confirming an answer that has an unsupported
+// claim attached, the Practice tab's confidence rating being kept separate
+// from readiness, the "Complete final review" -> "Mark ready" gate (and its
+// invalidation when an answer is edited afterwards), progressing an outcome
+// into a new interview stage, the Home/application-detail surfacing of a
+// linked interview (including a live update when one is created in the same
+// session), recording a rejection outcome, and a mobile no-overflow +
+// legacy-route-redirect pass.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { seedReadyDashboardProfile } from "./helpers";

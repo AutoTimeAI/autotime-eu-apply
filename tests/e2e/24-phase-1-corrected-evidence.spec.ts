@@ -1,3 +1,12 @@
+// Produces an auditable evidence trail confirming a set of prior Home-page
+// regressions stay fixed: no leftover "Upgrade - GBP 9/month" promo banner,
+// no stray skip-link/home-shortcuts markup, no dev-mode overlay, no
+// forbidden green-hued styling, correct sidebar/mobile-nav visibility, a
+// compact topbar, and touch targets meeting minimum size - across several
+// Home "next action" fixture states and viewports. For each capture it
+// writes the screenshot plus a JSON sidecar recording the git branch,
+// working-tree status and a sha256 of the image, so the evidence can be
+// tied back to the exact commit/diff it was captured against.
 import { expect, test, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";

@@ -1,3 +1,8 @@
+// Covers the Jobs-list side of a LinkedIn capture: fills the "Add a job"
+// modal with the same fields the browser extension would send for a scraped
+// LinkedIn vacancy, then checks the new job appears promptly (under 5s) and
+// survives a page reload. Does not drive the extension itself - only the
+// web app's job-import UI with LinkedIn-shaped data.
 import { expect, test } from "@playwright/test"
 import { fillJobImport, seedReadyDashboardProfile } from "./helpers"
 

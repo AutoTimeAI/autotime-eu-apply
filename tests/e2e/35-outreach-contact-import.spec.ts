@@ -1,3 +1,9 @@
+// Covers importing outreach contacts from a CSV on /dashboard/follow-ups:
+// uploading a file renders a review table, the import button stays disabled
+// until the "permitted to contact" consent checkbox is checked, a
+// successful import POSTs the consent flag alongside the parsed contacts,
+// and an imported contact's details can be pulled into a draft outreach
+// message's recruiter fields.
 import { expect, test } from "@playwright/test";
 
 test("contact CSV requires review and consent before prefilling outreach", async ({ page }) => {

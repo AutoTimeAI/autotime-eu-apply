@@ -1,3 +1,10 @@
+// Complements 31-mobility-facts-reuse.spec.ts by testing the same
+// mobility-to-profile data reuse from the Profile page's own perspective:
+// saved mobility data fills empty country fields (with a "pre-filled from
+// your saved" note), never overwrites existing profile data, the note
+// clears once the user edits the field (and stays cleared across a
+// reload), and an unsaved mobility form's in-memory default value is never
+// mistaken for a saved fact and copied in.
 import { expect, test, type Page } from "@playwright/test";
 
 const userId = "00000000-0000-4000-8000-000000000001";

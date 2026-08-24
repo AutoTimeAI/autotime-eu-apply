@@ -1,3 +1,15 @@
+// Data-driven pass over the dashboard Home experience's "next best action"
+// states (new user, incomplete profile, unanalysed job, application needing
+// review, imminent/distant interview, outcome awaiting, integration
+// unavailable, loading). Each fixture is injected via the
+// window.__AUTOTIME_HOME_TEST_FIXTURE__ escape hatch so the Home component
+// can be driven into a specific state without wiring up real backend data,
+// then checks the correct data-next-action is set, the right CTA renders,
+// touch targets and focus outlines meet size minimums, no forbidden green
+// hues or diagnostic text leak into the UI, and captures per-state
+// screenshots. The final test is a plain unit test (no page) that exercises
+// the real getInterviewHomeSignals/getHomeNextAction logic directly to pin
+// down the 72-hour "interview soon" boundary and outcome-awaiting signal.
 import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";

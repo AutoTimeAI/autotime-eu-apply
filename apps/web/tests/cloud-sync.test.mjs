@@ -1,3 +1,13 @@
+// Lightweight node:assert unit test (no test runner/framework) for
+// lib/cloud-sync.ts, the module that decides whether/how a user's profile
+// may sync to the cloud. Covers the readiness ladder from feature flag off
+// through incomplete env config to fully ready, that a Supabase client is
+// never constructed before readiness is complete, reading session state
+// safely from a client adapter, building a sync payload restricted to
+// allowed profile fields (dropping stray keys like apiKey/cookie) and only
+// once mandatory bridge evidence is present, and that a sync action stays
+// blocked until readiness, an authenticated session, explicit user action
+// and consent are all satisfied together.
 import assert from "node:assert/strict"
 import {
   createCloudSyncClient,

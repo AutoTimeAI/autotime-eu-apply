@@ -1,3 +1,7 @@
+// Verifies the /sentry-test diagnostic page (used to manually trigger a
+// Sentry error for pipeline verification) is only reachable in non-production
+// environments. Guards against accidentally shipping a public
+// error-throwing debug page to real users.
 import { expect, test } from "@playwright/test"
 
 test("sentry test page is unavailable in production smoke targets", async ({

@@ -1,3 +1,8 @@
+// Security-boundary test for the admin foundation: an ordinary authenticated
+// (non-admin) user must not see an admin menu entry, must get 403 from
+// admin API endpoints (both reads and mutations), and must be redirected
+// away from /admin to a login page flagged with adminDenied=1. Captures
+// desktop and mobile screenshots of the denied state for review.
 import { expect, test } from "@playwright/test";
 
 test("ordinary authenticated users cannot discover or access admin functions", async ({

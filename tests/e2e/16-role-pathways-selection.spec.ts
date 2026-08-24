@@ -1,3 +1,8 @@
+// Covers the /dashboard/role-pathways flow: entering CV/experience evidence,
+// extracting and confirming it, generating recommended pathways, picking a
+// direct-match role, and saving a primary career lane. Confirms the saved
+// selection is scoped to the current user's localStorage key, survives a
+// reload, and is never written under another user's key.
 import { expect, test } from "@playwright/test";
 
 const userId = "00000000-0000-4000-8000-000000000001";

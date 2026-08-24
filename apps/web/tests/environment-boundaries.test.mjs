@@ -1,3 +1,18 @@
+// Lightweight node:assert unit test (no test runner/framework) covering
+// "configuration boundary" behavior across several lib modules at once:
+// cookie/bearer auth propagating a missing-Supabase-config error distinctly
+// from an unauthenticated user, the public proxy skipping auth-client
+// construction for public paths, protected-proxy and sync-refresh
+// configuration failures collapsing to a redacted generic 503 (never
+// leaking env var names or paths), Stripe client/price/checkout-product
+// configuration, pricing's unavailable state and non-actionable billing
+// control, admin authorization's 401 vs 403 vs propagated-failure cases,
+// and return-URL validation rejecting cross-origin/deceptive/scheme-based
+// redirect attempts. The final test reads the actual route/proxy/page
+// source files from disk to confirm each one still calls the specific
+// boundary helper it's supposed to (and, for Stripe portal/webhook, that it
+// does NOT pull in price/plan helpers it has no business needing) - so a
+// refactor that quietly bypasses one of these guards fails here.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
