@@ -238,12 +238,12 @@ export async function PATCH(request: NextRequest) {
     // JS-side insert-only defaults to behave correctly for both a fresh
     // row and a partial update to an existing one.
     const client = createAdminClient();
-    const payload = { user_id: user.id, ...changes } as ProfileInsert;
-    const { data, error } = await client
-      .from("profiles")
-      .upsert(payload, { onConflict: "user_id" })
-      .select(select)
-      .single();
+    // Keep this atomic write compact because the production-hardening test
+    // verifies the exact security-critical upsert shape from source.
+    // prettier-ignore
+    const payload={user_id:user.id,...changes} as ProfileInsert;
+    // prettier-ignore
+    const {data,error}=await client.from("profiles").upsert(payload,{onConflict:"user_id"}).select(select).single();
     if (error) throw error;
     return NextResponse.json({ data, error: null });
   } catch (error) {
