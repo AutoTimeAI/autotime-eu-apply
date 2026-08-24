@@ -1,3 +1,4 @@
+/** Receives bounded browser diagnostics for redacted operations logging. */
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getRequestUser } from "../../../../lib/api-auth"

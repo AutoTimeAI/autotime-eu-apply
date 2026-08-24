@@ -1,14 +1,17 @@
 "use client";
+/** Collects the minimum evidence needed to personalise trustworthy job guidance. */
 import { useEffect, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDashboardPlan } from "./UserNav";
 
 const completeKey = "autotime-v2-onboarding-complete";
+/** Records local completion for the current user after server onboarding succeeds. */
 export function markOnboardingComplete(userId: string) {
   if (typeof window !== "undefined")
     localStorage.setItem(`${completeKey}:${userId}`, "true");
 }
+/** Returns whether this browser has completed onboarding for the user. */
 export function hasCompletedOnboarding(userId: string) {
   return (
     typeof window === "undefined" ||
@@ -145,6 +148,7 @@ function getBuiltCvEvidence(userId: string): string {
   }
 }
 
+/** Renders and persists the multi-step founder-beta onboarding journey. */
 export function OnboardingWizard() {
   const router = useRouter(),
     params = useSearchParams(),

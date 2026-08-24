@@ -1,3 +1,4 @@
+/** Creates and edits user-owned, evidence-grounded cover-letter drafts. */
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";

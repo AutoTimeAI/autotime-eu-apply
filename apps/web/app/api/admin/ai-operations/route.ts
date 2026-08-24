@@ -1,3 +1,4 @@
+/** Serves privacy-minimised AI operations health to permitted administrators. */
 import { NextResponse } from "next/server";
 import { requireAdminRequest } from "../../../../lib/admin-authorization";
 import { getAdminAiOperationsOverview } from "../../../../lib/admin-ai-operations";

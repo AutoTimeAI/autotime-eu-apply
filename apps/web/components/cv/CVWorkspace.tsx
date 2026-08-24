@@ -1,4 +1,5 @@
 "use client";
+/** Edits, enriches, tailors, validates, and exports the user's structured CV. */
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductPageHeader } from "../product-ui";
@@ -26,6 +27,7 @@ type OnboardingProfile = {
   github_url: string | null;
   portfolio_url: string | null;
 };
+/** Renders the CV editor in general or job-tailoring mode. */
 export default function CVWorkspace({
   embedded = false,
 }: {

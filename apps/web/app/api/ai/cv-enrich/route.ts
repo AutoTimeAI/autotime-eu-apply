@@ -1,3 +1,4 @@
+/** Enriches CV evidence from bounded text or a safely fetched portfolio. */
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";

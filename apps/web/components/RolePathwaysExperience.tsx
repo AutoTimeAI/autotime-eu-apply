@@ -1,4 +1,5 @@
 "use client";
+/** Guides evidence capture, ESCO pathway recommendations, and career-lane selection. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ESCO_CACHE_VERSION,
@@ -75,6 +76,7 @@ function Score({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+/** Renders the persisted role-pathways decision workflow. */
 export function RolePathwaysExperience() {
   const { userId } = useDashboardPlan();
   const [stage, setStage] = useState(1);

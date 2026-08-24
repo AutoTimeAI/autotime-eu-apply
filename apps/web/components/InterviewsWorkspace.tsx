@@ -1,5 +1,6 @@
 "use client";
 
+/** Coordinates interview preparation, practice, readiness, and outcome workflows. */
 import { useEffect, useMemo, useState } from "react";
 import { useDashboardPlan } from "./UserNav";
 import {
@@ -46,6 +47,7 @@ const formatDate = (value?: string, timezone?: string) =>
       }).format(new Date(value))
     : "Date not set";
 
+/** Renders the requested interview workspace view for the signed-in user. */
 export default function InterviewsWorkspace({ view }: { view: View }) {
   const { userId } = useDashboardPlan();
   const [workflow, setWorkflow] = useState<JobWorkflowState>({

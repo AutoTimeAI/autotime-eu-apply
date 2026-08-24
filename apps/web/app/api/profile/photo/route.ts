@@ -1,3 +1,4 @@
+/** Uploads a bounded profile image to a caller-scoped storage path. */
 import { NextResponse, type NextRequest } from "next/server";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";

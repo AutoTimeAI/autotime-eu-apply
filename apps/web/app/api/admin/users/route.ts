@@ -1,3 +1,4 @@
+/** Serves privacy-minimised beta-user rows to permitted administrators. */
 import { NextResponse } from "next/server";
 import {
   hasAdminPermission,

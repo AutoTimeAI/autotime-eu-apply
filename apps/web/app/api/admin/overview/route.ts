@@ -1,3 +1,4 @@
+/** Serves permission-filtered operational overview data for the admin console. */
 import { NextResponse } from "next/server";
 import {
   hasAdminPermission,

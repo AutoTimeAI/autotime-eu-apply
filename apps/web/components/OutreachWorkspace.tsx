@@ -1,10 +1,12 @@
 "use client";
 
+/** Manages consented outreach contacts and evidence-grounded message drafts. */
 import { useCallback, useEffect, useState } from "react";
 import { ProductEmptyState, ProductPageHeader, ProductStatusBadge } from "./product-ui";
 import { OutreachDraftForm, type OutreachJob, type OutreachMessage } from "./outreach/OutreachDraftForm";
 import { ContactCsvImport, type SavedOutreachContact } from "./outreach/ContactCsvImport";
 
+/** Renders the outreach drafting, contact import, and message history workspace. */
 export default function OutreachWorkspace() {
   const [messages, setMessages] = useState<OutreachMessage[]>([]);
   const [jobs, setJobs] = useState<OutreachJob[]>([]);

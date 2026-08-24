@@ -1,3 +1,4 @@
+/** Lists, drafts, and updates user-owned outreach messages. */
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../lib/api-auth";

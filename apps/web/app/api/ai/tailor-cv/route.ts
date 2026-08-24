@@ -1,3 +1,4 @@
+/** Tailors CV content to a job while retaining evidence and usage boundaries. */
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";

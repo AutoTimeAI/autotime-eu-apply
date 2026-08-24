@@ -1,5 +1,6 @@
 "use client";
 
+/** Supplies dashboard identity/plan context and responsive account navigation. */
 import {
   createContext,
   type ReactNode,
@@ -44,6 +45,7 @@ const DashboardPlanContext = createContext<DashboardPlanContextValue | null>(
   null,
 );
 
+/** Reads the nearest dashboard plan context. */
 export function useDashboardPlan(): DashboardPlanContextValue {
   const context = useContext(DashboardPlanContext);
 
@@ -56,6 +58,7 @@ export function useDashboardPlan(): DashboardPlanContextValue {
   return context;
 }
 
+/** Provides resolved user and subscription data to dashboard descendants. */
 export function DashboardPlanProvider({
   children,
   plan,
@@ -195,6 +198,7 @@ function isActiveWorkflowNavItem(pathname: string, item: DashboardNavItem) {
   );
 }
 
+/** Renders the responsive workflow navigation for authenticated pages. */
 export function DashboardWorkflowSidebar() {
   const pathname = usePathname();
   const primaryMobile = dashboardWorkflowNavItems.filter((item) =>
@@ -258,6 +262,7 @@ export function DashboardWorkflowSidebar() {
   );
 }
 
+/** Renders account actions and plan/admin status for the signed-in user. */
 export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<string | null>(null);

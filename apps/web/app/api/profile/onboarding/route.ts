@@ -1,3 +1,4 @@
+/** Reads and updates the evidence required for trustworthy onboarding completion. */
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";

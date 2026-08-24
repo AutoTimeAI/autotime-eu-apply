@@ -1,3 +1,4 @@
+/** Produces a rate-limited, entitlement-gated job analysis from bounded evidence. */
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { candidateProfileSchema, jobAnalysisDraftSchema } from "shared"

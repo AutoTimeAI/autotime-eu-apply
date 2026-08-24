@@ -1,3 +1,4 @@
+/** Generates an interview preparation pack under evidence and usage guardrails. */
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import {

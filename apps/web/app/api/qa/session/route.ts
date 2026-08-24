@@ -1,3 +1,4 @@
+/** Provides an explicitly gated QA session diagnostic without exposing secrets. */
 import { timingSafeEqual } from "node:crypto"
 import { type NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "../../../../lib/supabase/admin"
