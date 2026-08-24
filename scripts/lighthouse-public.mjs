@@ -53,6 +53,13 @@ try {
       port: chrome.port,
       onlyCategories: Object.keys(thresholds),
       formFactor: "desktop",
+      screenEmulation: {
+        mobile: false,
+        width: 1350,
+        height: 940,
+        deviceScaleFactor: 1,
+        disabled: false,
+      },
       output: "json",
     });
     const scores = Object.fromEntries(
