@@ -5,6 +5,8 @@ import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { getMissingOnboardingEvidence, hasCompletedRequiredOnboarding, isValidLinkedInProfile } from "../../../../lib/onboarding-readiness";
 import type { Database } from "../../../../lib/supabase/types";
+import { configurationUnavailableMessage, isConfigurationUnavailableError } from "../../../../lib/configuration-error";
+import { isTestAuthUserId } from "../../../../lib/test-auth";
 
 // The generated Insert type still marks full_name/current_country/
 // target_countries/target_roles/work_right_details as required, from
@@ -39,12 +41,18 @@ const patchSchema = z.object({
 
 const select = "full_name,email,phone,photo_url,country_current,countries_target,current_country,target_countries,linkedin_url,github_url,portfolio_url,target_roles,work_authorisation_category,work_right_details,base_cv_text,experience_highlights,project_summaries,onboarding_step,onboarding_completed_at,alert_frequency,alert_last_sent_at";
 export async function GET(request: NextRequest) {
-  const { user } = await getRequestUser(request); if (!user) return NextResponse.json({ data:null,error:"Unauthorised" },{status:401});
-  const client=createAdminClient(); const {data,error}=await client.from("profiles").select(select).eq("user_id",user.id).maybeSingle();
-  let photoUrl:string|null=null; if(data?.photo_url){const signed=await client.storage.from("profile-photos").createSignedUrl(data.photo_url,3600);photoUrl=signed.data?.signedUrl??null;}
-  const countries=data?.countries_target?.length?data.countries_target:(data?.target_countries??"").split(",").map((item)=>item.trim()).filter(Boolean);
-  const normalised=data?{...data,country_current:data.country_current||data.current_country,countries_target:countries,photoUrl}:null;
-  return NextResponse.json({data:normalised?{...normalised,onboarding_ready:hasCompletedRequiredOnboarding(normalised),onboarding_missing:getMissingOnboardingEvidence(normalised)}:null,error:error?.message??null},{status:error?500:200});
+  try {
+    const { user } = await getRequestUser(request); if (!user) return NextResponse.json({ data:null,error:"Unauthorised" },{status:401});
+    if (isTestAuthUserId(user.id)) return NextResponse.json({ data:null,error:null });
+    const client=createAdminClient(); const {data,error}=await client.from("profiles").select(select).eq("user_id",user.id).maybeSingle();
+    let photoUrl:string|null=null; if(data?.photo_url){const signed=await client.storage.from("profile-photos").createSignedUrl(data.photo_url,3600);photoUrl=signed.data?.signedUrl??null;}
+    const countries=data?.countries_target?.length?data.countries_target:(data?.target_countries??"").split(",").map((item)=>item.trim()).filter(Boolean);
+    const normalised=data?{...data,country_current:data.country_current||data.current_country,countries_target:countries,photoUrl}:null;
+    return NextResponse.json({data:normalised?{...normalised,onboarding_ready:hasCompletedRequiredOnboarding(normalised),onboarding_missing:getMissingOnboardingEvidence(normalised)}:null,error:error?.message??null},{status:error?500:200});
+  } catch (error) {
+    const unavailable=isConfigurationUnavailableError(error);
+    return NextResponse.json({data:null,error:unavailable?configurationUnavailableMessage:"Profile load failed"},{status:unavailable?503:500});
+  }
 }
 export async function PATCH(request: NextRequest) {
   try { const {user}=await getRequestUser(request);if(!user)return NextResponse.json({data:null,error:"Unauthorised"},{status:401});const body=patchSchema.parse(await request.json());

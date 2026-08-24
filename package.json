@@ -69,12 +69,12 @@
     "test:unit": "pnpm --filter extension test && pnpm test:web:outreach-contacts && pnpm test:role-pathways && pnpm test:role-pathways-persistence && pnpm test:phase-3a-readiness && pnpm test:phase-3b-workflow && pnpm test:phase-3c-interviews && pnpm test:job-workflow-migration-safety && pnpm test:job-workflow-sync && pnpm test:interview-workflow-sync && pnpm test:admin-foundation && pnpm test:validation-run && pnpm test:market-ready-gate && pnpm test:production-hardening && pnpm test:country-fit && pnpm test:smoke:web:unit && pnpm test:web:cloud-sync && pnpm test:web:interview && pnpm test:web:sentry-privacy && pnpm test:web:dashboard-content-snapshot && pnpm test:web:auth-error-messages && pnpm test:web:safe-redirect-path && pnpm test:web:status-tone && pnpm test:web:account-export && pnpm test:web:image-signature && pnpm test:web:linkedin-import && pnpm test:web:admin-users-pagination && pnpm test:web:request-ip && pnpm test:web:docx-cv && pnpm test:web:portfolio-ssrf && pnpm test:web:role-intelligence-nvidia && pnpm test:web:environment-boundaries && pnpm test:ai-quality && pnpm test:mvp:coverage",
     "test:e2e": "playwright test",
     "test:e2e:core": "playwright test tests/e2e/34-core-journeys.spec.ts",
-    "test:e2e:production": "playwright test tests/e2e/production",
+    "test:e2e:production": "playwright test --config playwright.production.config.ts",
     "test:smoke": "playwright test --config playwright.smoke.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
-    "test:lighthouse": "pnpm build:web && lhci autorun",
+    "test:lighthouse": "pnpm build:web && node scripts/lighthouse-public.mjs",
     "test:lighthouse:dashboard": "node scripts/lighthouse-dashboard.mjs",
     "test:all": "pnpm lint && pnpm typecheck && pnpm build && pnpm build:web && pnpm test:e2e",
     "typecheck": "pnpm -r typecheck"
@@ -85,7 +85,6 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.60.0",
     "@supabase/supabase-js": "^2.105.3",
     "checkly": "^8.21.0",

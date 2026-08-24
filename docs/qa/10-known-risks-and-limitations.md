@@ -1,0 +1,10 @@
+# Known risks and limitations
+
+| ID    | Risk                                                                | Severity | Mitigation                                                                        | Owner               | Target               | Status                     |
+| ----- | ------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------- | ------------------- | -------------------- | -------------------------- |
+| R-001 | Five migrations are absent from production                          | High     | Ordered backup/apply/verify runbook; no invitations                               | Founder/DB operator | Before beta          | Open                       |
+| R-002 | RLS, AI concurrency and Stripe replay lack current runtime evidence | High     | Execute isolated database/API scenarios                                           | Founder/QA          | Before beta          | Open                       |
+| R-003 | Visual baselines require founder acceptance                         | Medium   | Review intentional UI, approve replacements, rerun                                | Founder             | Before freeze        | Open                       |
+| R-004 | Sentry/Checkly/cron/ingestion configuration is unverified           | High     | Operator checklist and synthetic delivery tests                                   | Founder/Operations  | Before beta          | Open                       |
+| R-005 | Backup restore and deployment rollback are not demonstrated         | High     | Controlled exercises with timestamps and artifacts                                | Founder/Operations  | Before beta          | Open                       |
+| R-006 | No independent professional penetration test                        | Medium   | Clearly scope founder-led assessment; commission third party before public launch | Founder             | Before public launch | Accepted for planning only |

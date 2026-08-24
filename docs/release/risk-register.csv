@@ -1,0 +1,6 @@
+id,risk,severity,likelihood,mitigation,owner,target_date,acceptance_rationale,status
+R-001,"Missing production migrations",High,High,"Backup and ordered apply/verify procedure",Founder/DB operator,Before beta,"Not acceptable for beta",Open
+R-002,"Runtime security scenarios lack isolated database evidence",High,High,"Provide local/test Supabase and execute catalogue",Founder/QA,Before beta,"Not acceptable for beta",Open
+R-003,"Monitoring and alert delivery unverified",High,Medium,"Synthetic redacted Sentry/Checkly alert",Founder/Operations,Before beta,"Not acceptable for beta",Open
+R-004,"Restore and rollback not demonstrated",High,Medium,"Controlled exercises",Founder/Operations,Before beta,"Not acceptable for beta",Open
+R-005,"Founder-led rather than professional penetration assessment",Medium,Medium,"Scoped assessment now; third-party test before public launch",Founder,Before public launch,"May be considered only after all beta safety gates pass",Open

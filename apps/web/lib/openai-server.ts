@@ -10,6 +10,7 @@ import {
   createLocalInterviewPrepPack,
 } from "./interview-prep"
 import { createAdminClient } from "./supabase/admin"
+import { isTestAuthUserId } from "./test-auth"
 import { AUTOTIME_FIT_SCORE_DISCLAIMER } from "shared"
 import type {
   ApplicationContentDraft,
@@ -271,6 +272,9 @@ export function __setOpenAIClientForTesting(client: OpenAI | null): void {
 export async function assertAiRouteRateLimit(
   rateLimitKey: string,
 ): Promise<void> {
+  // Test auth is hard-disabled in production and on Vercel production.
+  if (isTestAuthUserId(rateLimitKey)) return
+
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc("increment_ai_rate_limit", {
     p_rate_limit_key: rateLimitKey,

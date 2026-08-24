@@ -1,0 +1,16 @@
+control,expected_validation,current_status,evidence,owner,release_impact
+Supabase URL and anonymous key,"Present; correct project; public values only",PASS,"Prior provider metadata check; must refresh on new SHA",Founder/Operations,Blocker if invalid
+Supabase service role,"Server-only; present; never client-bundled",PASS,"Prior variable-presence check; runtime isolation retest required",Founder/Operations,Blocker
+Database configuration,"Production project and migration history match release",FAIL,"Five migrations absent",DB operator,Blocker
+OpenAI/provider credential,"Server-only and present; controlled failure path",PASS,"Prior variable-presence check; live test not run",Founder/Operations,Blocker if invalid
+Stripe key/webhook/monthly/public,"Test or intended mode; complete prices; signature secret",BLOCKED,,Founder/Operations,Blocker
+Resend,"Present; approved sender/domain; no real test without approval",BLOCKED,,Founder/Operations,Blocker
+Sentry,"DSN/auth/org/project and redaction; alert delivery",BLOCKED,,Founder/Operations,Blocker
+PostHog consent,"Key/host present; no capture before consent",PASS,"Prior variable-presence plus local consent tests pending",Founder/Operations,Blocker if invalid
+Checkly,"Checks configured and delivering",BLOCKED,,Founder/Operations,Blocker
+Cron authentication,"Secret present; missing/wrong rejected",BLOCKED,,Founder/Operations,Blocker
+Ingestion secrets,"Present; scoped; missing/wrong rejected",BLOCKED,,Founder/Operations,Blocker
+Extension configuration,"Production origin/API allowlist matches release",BLOCKED,,Engineering,Blocker
+Production URLs/redirects,"Canonical URLs and OAuth redirects match",BLOCKED,,Founder/Operations,Blocker
+QA/test auth,"Disabled in production",BLOCKED,,Founder/Operations,Blocker
+QA bootstrap,"Absent or tightly controlled",BLOCKED,,Founder/Operations,Blocker

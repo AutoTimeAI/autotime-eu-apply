@@ -1,9 +1,14 @@
 packages:
   - "apps/*"
   - "packages/*"
+ignoredOptionalDependencies:
+  # AutoTime has no Less sources. Omitting Vite's optional Less peer removes
+  # Less and its unpatched optional image-size parser chain from the lockfile
+  # and build without changing supported source inputs.
+  - less
 allowBuilds:
-  '@parcel/watcher': false
-  '@swc/core': false
+  "@parcel/watcher": false
+  "@swc/core": false
   esbuild: false
   lmdb: false
   msgpackr-extract: false

@@ -1,0 +1,6 @@
+order,migration,purpose,dependencies,production_state,risk,owner
+1,20260822100000_pin_get_monthly_ai_calls_grant.sql,"Explicitly grant authenticated execution of RLS-scoped monthly usage RPC",20260507100000_billing.sql,Missing,Medium,DB operator
+2,20260822110000_explicit_revoke_stripe_events_rate_limits.sql,"Defense-in-depth revokes on service-only Stripe and AI rate-limit tables",20260821170000_stripe_webhook_idempotency.sql,Missing,High,DB operator
+3,20260822120000_job_workflow_soft_delete.sql,"Add tombstones preventing deleted workflow records from reappearing",20260819100000_job_workflow_and_interviews.sql,Missing,High,DB operator
+4,20260822130000_grant_classify_job_listings_esco.sql,"Permit service-role ESCO classification RPC execution",20260811130000_optimize_esco_classification.sql,Missing,High,DB operator
+5,20260823100000_admin_feature_flag_create_lock.sql,"Serialize concurrent feature-flag creation",20260801190000_admin_operations_foundation.sql,Missing,High,DB operator

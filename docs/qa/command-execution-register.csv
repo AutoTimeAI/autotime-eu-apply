@@ -1,0 +1,11 @@
+id,command,environment,start_utc,finish_utc,exit_code,branch,sha,status,log_path,notes
+CMD-001,"pnpm audit --audit-level high --json",local-working,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,"Final indexed execution occurs after freeze"
+CMD-002,"pnpm install --frozen-lockfile",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-003,"pnpm lint",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-004,"pnpm typecheck",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-005,"pnpm test:unit",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-006,"pnpm build:web",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-007,"pnpm build:extension",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-008,"pnpm test:e2e:core",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-009,"pnpm exec playwright test tests/e2e/01-smoke.spec.ts",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,
+CMD-010,"pnpm exec playwright test tests/e2e/visual/key-states.spec.ts",local-frozen,,,,remediation/private-beta-v1.0.1,UNFROZEN,NOT RUN,,"Blocked pending founder baseline approval"

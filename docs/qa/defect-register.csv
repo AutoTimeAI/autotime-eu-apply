@@ -1,0 +1,7 @@
+id,title,severity,status,environment,test_id,evidence,owner,disposition
+DEF-001,"Vulnerable image-size optional parser path",High,Remediated,dependency,DEP-001,test-evidence/remediation-working/dependency-audit.json,Engineering,"Excluded unused optional dependency; frozen-SHA retest required"
+DEF-002,"Vulnerable extract-zip path via LHCI",High,Remediated,dependency,DEP-002,test-evidence/remediation-working/dependency-audit.json,Engineering,"Removed LHCI chain and replaced runner; frozen-SHA retest required"
+DEF-003,"Login visual baselines captured fallback error UI",High,Open,local-offline,VIS-LOGIN-001,,Founder/Engineering,"Founder approval required before baseline replacement"
+DEF-004,"Desktop dashboard baseline predates walkthrough",Medium,Open,local-offline,VIS-DASH-001,,Founder/Engineering,"Intentional change; founder approval required"
+DEF-005,"Playwright server shutdown hangs under restricted Windows process permissions",High,Remediated,local-offline,E2E-SHUTDOWN-001,,Engineering,"Direct child command and adequate runner process permission; frozen-SHA retest required"
+DEF-006,"Five release migrations absent from production",High,Open,production,DB-MIG-001,,Founder/DB operator,"Do not apply without explicit confirmation"

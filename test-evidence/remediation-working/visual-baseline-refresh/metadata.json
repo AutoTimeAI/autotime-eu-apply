@@ -1,0 +1,45 @@
+{
+  "evidence_status": "working-tree evidence; must be rerun on frozen candidate SHA",
+  "approval_reference": "Visual baseline refresh approved on 24 August 2026.",
+  "branch": "remediation/private-beta-v1.0.1",
+  "head_sha": "d980c53aacbbfa26898891444c1899c51e9a54aa",
+  "working_tree_dirty": true,
+  "environment": "local-offline",
+  "operating_system": "Windows",
+  "runner": "Playwright 1.60.0",
+  "browser": "Playwright Chromium revision 1223",
+  "suite_started_utc": "2026-08-24T12:17:46.6971964Z",
+  "suite_finished_utc": "2026-08-24T12:18:30.1113467Z",
+  "command": "pnpm.cmd exec playwright test tests/e2e/visual/key-states.spec.ts",
+  "snapshot_update_mode": false,
+  "exit_code": 0,
+  "result": { "pass": 12, "fail": 0, "remaining_differences": 0 },
+  "approved_replacements": [
+    {
+      "name": "login desktop",
+      "viewport": "1440x900",
+      "finding": "Previous baseline was a fallback/error screen with a development issue badge; replacement is the real login UI."
+    },
+    {
+      "name": "login mobile",
+      "viewport": "390x844",
+      "finding": "Previous baseline was a fallback/error screen with a development issue badge; replacement is the real login UI."
+    },
+    {
+      "name": "dashboard home desktop",
+      "viewport": "1440x900",
+      "finding": "Founder-approved intentional Product Walkthrough UI introduced by commit f837e201."
+    }
+  ],
+  "unchanged_baselines": 9,
+  "redaction": "Synthetic test.user@example.com fixture only; no credentials, tokens or real personal data.",
+  "sha256": {
+    "before/dashboard-home-desktop.png": "21fe6e3a39b3c04d810216155058cb8c4c03c9d2251113662f685c7934b9b873",
+    "before/login-desktop.png": "ba34a8587417b5c96b06d6161f9499457314c49cd79d2ab67c5c0d708053c69c",
+    "before/login-mobile.png": "5f23095ef4258c4998f545e3c4da360c3da308d6a4391decd4cf787f72ac609a",
+    "approved-after/dashboard-home-desktop.png": "3a8d3f7bbcd15853a8350eefb276d9a67cb3d2cae78d5184c691e331a9944f0e",
+    "approved-after/login-desktop.png": "b709ee691af8a98dd2669ad8d841fae1e37a30a0bdc387afe1939f223faa7bc2",
+    "approved-after/login-mobile.png": "b85ded0fc86bb5a47a6af6fd85858a045442d82fade247e4496022bdf10d560d",
+    "full-suite-clean.log": "bc6aa4b0852b6638f49c4d46d869c40a97614045f50c5254111ae329a401cf21"
+  }
+}

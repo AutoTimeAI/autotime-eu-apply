@@ -1,0 +1,6 @@
+id,title,owasp,api_owasp,severity,status,environment,evidence,remediation,retest
+SEC-F-001,"image-size ICNS parser denial of service",A06:2021,A08:2023,High,Remediated,dependency,test-evidence/remediation-working/dependency-audit.json,"Exclude unused optional image-size dependency",Pending frozen SHA
+SEC-F-002,"image-size JXL/HEIF parser denial of service",A06:2021,A08:2023,High,Remediated,dependency,test-evidence/remediation-working/dependency-audit.json,"Exclude unused optional image-size dependency",Pending frozen SHA
+SEC-F-003,"extract-zip symlink path traversal",A06:2021,A08:2023,High,Remediated,dependency,test-evidence/remediation-working/dependency-audit.json,"Remove LHCI dependency chain",Pending frozen SHA
+SEC-F-004,"Runtime access-control assessment unavailable",A01:2021,A01:2023,High,Open,local/test,,"Execute two-user/admin assessment",NOT RUN
+SEC-F-005,"Production monitoring and secret controls unverified",A09:2021,A09:2023,High,Open,production,,"Validate configuration and synthetic redacted alert",BLOCKED
