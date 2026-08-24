@@ -1,3 +1,8 @@
+// "Account" panel: shows sign-in/plan status, links out to the dashboard's
+// connect/pricing pages, and exposes the connection diagnostic log (export/
+// clear). Part of the legacy multi-section side panel layout, currently
+// unreached since `main.tsx` sets `renderLegacyTools = false` (the active
+// UI shows a lighter account badge inline instead).
 import type { Ref } from "react"
 import type { AccountSession, DiagnosticLogEntry } from "../lib/storage"
 import { appUrl } from "../lib/openai"
@@ -29,6 +34,7 @@ function openExtensionConnect() {
   openAppPath(`/extension/connect?extensionId=${extensionId}`)
 }
 
+/** Renders the signed-in or signed-out account view and the diagnostic log summary/export/clear controls, driven entirely by caller-supplied state and callbacks. */
 export function AccountSection({
   canSyncProfile,
   diagnosticLog,

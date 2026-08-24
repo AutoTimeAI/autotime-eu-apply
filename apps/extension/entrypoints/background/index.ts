@@ -1,3 +1,23 @@
+// MV3 background service worker. The account session (including its raw
+// authToken) lives in chrome.storage.local, which any extension context can
+// read (see lib/storage.ts's getAccountSession) and act on directly - e.g.
+// lib/match-overlay.ts fetches the dashboard's ESCO scoring endpoint
+// straight from content-script context. The background worker and side
+// panel are only the two contexts that call the dashboard's *sync* APIs
+// (lib/cloud-sync.ts) - applications sync, not scoring.
+// Responsibilities:
+//   - toolbar icon click: sends AUTOTIME_SHOW_WIDGET to the active tab (via
+//     chrome.tabs.sendMessage, falling back to chrome.scripting.executeScript
+//     if no listener responds), and AUTOTIME_LINKEDIN_MATCH_REQUEST on
+//     LinkedIn job pages
+//   - AUTOTIME_SYNC_APPLICATIONS: internal message from the side panel or a
+//     content script to push local applications to the dashboard
+//   - onMessageExternal: the AUTOTIME_CONNECT_ACCOUNT / AUTOTIME_PING
+//     handshake the AutoTime web dashboard uses (via externally_connectable
+//     in wxt.config.ts) to hand the extension a signed-in session, answered
+//     with AUTOTIME_ACCOUNT_CONNECTED
+//   - onInstalled / onStartup / storage.onChanged: retries any
+//     applications that failed to sync to the dashboard earlier
 import { defineBackground } from "wxt/utils/define-background"
 import { appUrl } from "../../lib/openai"
 import {

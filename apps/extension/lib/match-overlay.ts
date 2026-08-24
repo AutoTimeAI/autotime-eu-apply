@@ -1,3 +1,15 @@
+// Renders the small floating "ESCO skill match" card that shows how many
+// essential skills from a job posting match the signed-in user's confirmed
+// skill profile. Runs inside the content-script page context and fetches
+// the dashboard's /api/esco/score-job endpoint directly with the session's
+// authToken (read via getAccountSession) - it does not go through
+// lib/cloud-sync.ts or a message round-trip to the background worker. Two
+// entry points: showEscoMatchOverlay (passive, runs automatically on any
+// non-LinkedIn job page whenever the widget loads) and
+// requestLinkedInEscoMatch (explicit-only, triggered by clicking the
+// toolbar icon on a LinkedIn job page, gated behind a one-time consent
+// dialog since reading a LinkedIn page this way is outside LinkedIn's
+// terms).
 import { detectJobPage } from "../contents/autofill";
 import { getJobCaptureMode, isLinkedInUrl } from "./job-page";
 import { appUrl } from "./openai";
@@ -5,6 +17,15 @@ import { getAccountSession } from "./storage";
 
 type Score = { matched:boolean; title?:string; matchedCount?:number; totalEssentialSkills?:number; matchedSkills?:string[]; missingSkills?:string[] };
 
+/**
+ * Passively shows the ESCO match card on the current page, if all of the
+ * following hold: not LinkedIn (LinkedIn only ever uses the explicit
+ * consent-gated path below), no card already shown, the user has a signed-in
+ * session, and either the page is API-covered (score by URL alone) or
+ * selector-extraction found a role title plus a description of at least 80
+ * characters. Silently does nothing otherwise - this runs unconditionally
+ * whenever the widget loads, so it must never surface an error to the user.
+ */
 export async function showEscoMatchOverlay(){
   if(isLinkedInUrl(window.location.href)||document.getElementById("autotime-esco-match-host"))return;
   const session=await getAccountSession();if(!session?.authToken.trim())return;
@@ -20,6 +41,17 @@ export async function showEscoMatchOverlay(){
 
 const linkedInConsentKey="linkedin-single-page-match-risk-acknowledged";
 
+/**
+ * Entry point for the explicit, user-triggered LinkedIn match check (sent
+ * from the background worker when the toolbar icon is clicked on a
+ * `/jobs/...` LinkedIn URL - see AUTOTIME_LINKEDIN_MATCH_REQUEST in
+ * entrypoints/background/index.ts and entrypoints/autotime.content.ts).
+ * No-ops if not a LinkedIn `/jobs/` page. Shows the one-time risk
+ * disclosure dialog (`showLinkedInDisclosure`) if the user hasn't already
+ * acknowledged it (tracked in `chrome.storage.local` under
+ * `linkedin-single-page-match-risk-acknowledged`); otherwise scores the
+ * page directly.
+ */
 export async function requestLinkedInEscoMatch(){
   if(!isLinkedInUrl(window.location.href)||!/^\/jobs\//i.test(window.location.pathname))return;
   const stored=await chrome.storage.local.get(linkedInConsentKey);

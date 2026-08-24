@@ -1,3 +1,5 @@
+// Small formatting/parsing helpers shared across side panel components.
+/** Extracts the hostname from `url` (dropping a leading "www."), or `""` if `url` doesn't parse. */
 export function getHostname(url: string) {
   try {
     return new URL(url).hostname.replace(/^www\./, "")
@@ -6,6 +8,14 @@ export function getHostname(url: string) {
   }
 }
 
+/**
+ * Normalizes a URL for dedup comparisons (strips hash, lowercases
+ * hostname, drops trailing slash). Note: this is a near-duplicate of
+ * `normalizeApplicationUrl` in lib/applications.ts, which additionally
+ * lowercases the whole result and strips a trailing slash from the
+ * pathname before stringifying - the two are not guaranteed to produce
+ * identical keys for the same input.
+ */
 export function normalizeApplicationUrl(url: string) {
   try {
     const parsed = new URL(url)
@@ -25,6 +35,7 @@ export function formatCreatedDate(createdAt: string) {
   })
 }
 
+/** Maps an OAuth/sign-in provider id ("github"/"google"/"email") to its display label, passing unrecognized values through unchanged. */
 export function formatProviderLabel(provider: string): string {
   switch (provider) {
     case "github":

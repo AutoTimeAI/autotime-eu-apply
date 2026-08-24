@@ -1,3 +1,15 @@
+// WXT build/manifest configuration - the single source of truth for the
+// extension's MV3 manifest (permissions, host permissions, icons,
+// externally_connectable). `activeTab`/`scripting`/`storage` cover the
+// widget-injection fallback and local-first storage; `host_permissions`
+// lists the AutoTime web app origin (for the background worker's dashboard
+// calls) plus the job boards where automated selector extraction is
+// allowed (see JobCaptureMode in lib/job-page.ts - boards not listed here
+// still get manual-only/API-reference treatment, but adding a host here
+// alone doesn't change capture mode; both need to agree). The content
+// script itself (entrypoints/autotime.content.ts) declares its own scoped
+// `matches` list for runtime injection rather than using these
+// host_permissions directly - see that file's comment.
 import { defineConfig } from "wxt"
 
 const supportedJobBoardHostPermissions = [

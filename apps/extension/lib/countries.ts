@@ -1,3 +1,6 @@
+// Static ISO 3166-1 alpha-2 -> E.164 calling-code table, with display names
+// resolved via Intl.DisplayNames. Backs the profile's country picker and
+// lib/validation.ts's phone-number-matches-country check.
 const countryCallingCodes: Record<string, string> = {
   AD: "+376",
   AE: "+971",
@@ -271,6 +274,7 @@ export const countryOptions: CountryOption[] = Object.entries(
     firstCountry.name.localeCompare(secondCountry.name)
   )
 
+/** Looks up a country's E.164 calling code by its display name (as shown in the country picker), e.g. "United Kingdom" -> "+44". */
 export function getCountryCallingCode(countryName: string) {
   return countryOptions.find((country) => country.name === countryName)
     ?.callingCode

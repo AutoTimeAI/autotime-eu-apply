@@ -1,3 +1,21 @@
+// Entry point for the extension's side panel (registered as the sidepanel
+// page in wxt.config.ts's build output). Renders `<SidePanelApp>`, which
+// owns essentially all side panel state: the currently detected/tracked
+// job on the active tab, the account session and its dashboard sync
+// (queued through lib/session.ts + lib/cloud-sync.ts, with local-first
+// fallback via lib/storage.ts when offline or signed out), and the
+// editable drafts for every feature (profile, reusable answers, job
+// analysis, application content, tracker). Talks to the active tab's
+// content script via chrome.tabs.sendMessage/chrome.scripting.executeScript
+// (see `ensureContentScriptReady`) using the same AUTOTIME_* message
+// contract defined in contents/autofill.ts and entrypoints/background/index.ts.
+//
+// Note: `renderLegacyTools` below is currently `false`, so the actual
+// rendered UI is just the "Track Job" panel plus account badge and sync
+// diagnostics - the full multi-section layout (SectionNav + all the
+// ProfileSection/JobAnalysisSection/etc. components) is built and wired up
+// but not shown. Keep that in mind when reading this file: most of its
+// handlers exist to serve UI that isn't currently on screen.
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import "../styles/globals.css"

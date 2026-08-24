@@ -1,3 +1,13 @@
+// Core logic for the page-injected side of the extension, loaded by
+// entrypoints/autotime.content.ts (the actual WXT content script). Runs in
+// the DOM context of whatever job board / ATS page the user has open.
+// Covers three jobs: (1) detecting/parsing job posting details from the
+// current page (detectJobPage, plus a large block of per-platform selector
+// heuristics), (2) the floating, draggable "Track Job" shadow-DOM widget
+// that shows those details, reads the account session (getAccountSession)
+// to reflect connection state, and lets the user save/sync the job, and
+// (3) autofilling saved profile/reusable-answer/application-content values
+// into visible form fields (including the LinkedIn Easy Apply modal).
 import {
   getAccountSession,
   getApplicationContentDraft,
@@ -1104,6 +1114,22 @@ function cleanLinkedInLocation(value = "") {
   return parts[0] ?? ""
 }
 
+/**
+ * Detects and extracts job posting details (title, company, location,
+ * description, etc.) from the current page.
+ *
+ * First applies the capture-mode policy from lib/job-page.ts: LinkedIn is
+ * "manual-only" (returns an empty result with an explanatory `message` and
+ * never reads the page) unless `allowLinkedInRead` is explicitly passed
+ * (only used for the one-time, user-consented LinkedIn ESCO match check in
+ * lib/match-overlay.ts); API-covered boards return an empty result too,
+ * since their data comes from the aggregated feed instead of scraping.
+ * Otherwise reads JSON-LD JobPosting structured data first, then falls back
+ * to per-platform CSS selector heuristics and labeled-text scanning.
+ *
+ * Called directly by the widget's own refresh loop, and remotely via the
+ * AUTOTIME_DETECT_JOB_PAGE runtime message the side panel sends.
+ */
 export function detectJobPage(options: { allowLinkedInRead?: boolean } = {}): JobPageResponse {
   const platform = getJobPlatform(window.location.href)
   const captureMode = getJobCaptureMode(window.location.href)
@@ -2654,6 +2680,21 @@ function bindWidgetEvents(
   })
 }
 
+/**
+ * Entry point called once by entrypoints/autotime.content.ts each time it is
+ * injected into a page (on-demand - see the "Runtime registration" comment
+ * there - not on every page load). Starts the auto-show monitor that
+ * decides whether the floating job widget should appear on this page, and
+ * registers this content script's side of the runtime message contract
+ * with the background worker and side panel:
+ *   - AUTOTIME_AUTOFILL_PROFILE -> fills profile fields into visible inputs
+ *   - AUTOTIME_INSERT_APPLICATION_CONTENT -> fills saved application content
+ *     into visible textareas
+ *   - AUTOTIME_DETECT_JOB_PAGE -> returns detectJobPage() synchronously
+ *   - AUTOTIME_SHOW_WIDGET -> shows/creates the floating widget
+ * All handlers that do async work return `true` to keep the message channel
+ * open for `sendResponse`, per the chrome.runtime.onMessage contract.
+ */
 export function registerAutotimeContentScript() {
   startJobWidgetAutoShowMonitor()
 

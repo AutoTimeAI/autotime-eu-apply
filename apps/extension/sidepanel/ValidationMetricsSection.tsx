@@ -1,3 +1,8 @@
+// "Validation Metrics" panel: displays the ApplicationValidationMetrics
+// coverage summary (lib/applications.ts) plus per-status and per-source
+// breakdowns, each figure hidden behind MetricReveal until clicked. Part of
+// the legacy multi-section side panel layout, currently unreached since
+// `main.tsx` sets `renderLegacyTools = false`.
 import type { ApplicationValidationMetrics } from "../lib/applications"
 import { applicationStatuses } from "./constants"
 import { MetricReveal } from "./MetricReveal"
@@ -7,6 +12,7 @@ type ValidationMetricsSectionProps = {
   onExport: () => void
 }
 
+/** Renders the validation metrics summary, status-outcome breakdown, and source breakdown, plus a CSV export action. */
 export function ValidationMetricsSection({
   metrics,
   onExport

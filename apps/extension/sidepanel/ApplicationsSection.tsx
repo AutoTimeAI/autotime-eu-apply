@@ -1,3 +1,9 @@
+// "Applications" panel: the full list of tracked applications with search/
+// status filtering, inline editing of each record's fields, per-record sync
+// status badges, and CSV/V2-JSON export actions. Part of the legacy
+// multi-section side panel layout, currently unreached since `main.tsx`
+// sets `renderLegacyTools = false` (the active UI only has a single "Track
+// Job" panel, no full applications list).
 import type { Ref } from "react"
 import type { ApplicationStatusFilter } from "../lib/applications"
 import type {
@@ -39,6 +45,7 @@ type ApplicationsSectionProps = {
   onUpdateApplication: (id: string, changes: ApplicationChanges) => void
 }
 
+/** Renders the filterable list of tracked applications with inline-editable fields, sync status badges, and export/sync/save-current-tab actions; all state and persistence is owned by the caller. */
 export function ApplicationsSection({
   applications,
   applicationSyncState,

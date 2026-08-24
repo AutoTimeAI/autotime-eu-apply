@@ -1,3 +1,10 @@
+// Field-matching logic for the autofill feature in contents/autofill.ts:
+// given a form input/textarea's surrounding text (name, id, placeholder,
+// label, aria-label, parent text), decides which saved profile field,
+// reusable answer, or application-content field it most likely represents,
+// and whether the control is even safe to fill (visible, enabled, empty).
+// Pure text/DOM-state logic only - no chrome.* APIs - so it is unit
+// testable and reusable outside a real content-script context.
 import type {
   ApplicationContentDraft,
   CandidateProfile,
@@ -33,6 +40,7 @@ const allowedInputTypes = new Set([
   "url"
 ])
 
+/** Splits a full name into `firstName` (first token) and `lastName` (the rest, rejoined). */
 export function getNameParts(fullName: string) {
   const parts = fullName.trim().split(/\s+/).filter(Boolean)
 
@@ -42,6 +50,7 @@ export function getNameParts(fullName: string) {
   }
 }
 
+/** Maps a saved profile to the flat `{firstName, lastName, email, phone}` shape autofill fills into `<input>` elements. */
 export function getFieldValues(
   profile: Pick<CandidateProfile, "fullName" | "email" | "phone">
 ): Record<ProfileField, string> {
@@ -55,6 +64,7 @@ export function getFieldValues(
   }
 }
 
+/** Maps saved ReusableAnswers to a `Record<ReusableAnswerField, string>` keyed the same way autofill's field detection returns keys. */
 export function getReusableAnswerValues(
   answers: ReusableAnswers
 ): Record<ReusableAnswerField, string> {
@@ -70,6 +80,7 @@ export function getReusableAnswerValues(
   }
 }
 
+/** Maps a saved ApplicationContentDraft to a `Record<ApplicationContentField, string>` for the "Insert Saved Content" autofill pass. */
 export function getApplicationContentValues(
   content: ApplicationContentDraft
 ): Record<ApplicationContentField, string> {
@@ -86,6 +97,12 @@ export function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term))
 }
 
+/**
+ * Detects which profile field (email/phone/firstName/lastName) an `<input>`
+ * represents, from its HTML `type` attribute plus the input's combined
+ * label/name/id/placeholder/aria-label/parent text (see `getControlText` in
+ * contents/autofill.ts). Returns `null` if no field is recognized.
+ */
 export function detectFieldFromText(
   inputType: string,
   inputText: string
@@ -124,6 +141,12 @@ export function detectFieldFromText(
   return null
 }
 
+/**
+ * Detects which saved reusable answer (sponsorship, relocation, work
+ * authorisation, notice period, salary expectation, motivation, strengths,
+ * or availability) a `<textarea>`'s surrounding text is asking for, via
+ * keyword phrase matching. Returns `null` if nothing matches.
+ */
 export function detectReusableAnswerFromText(
   fieldText: string
 ): ReusableAnswerField | null {
@@ -211,6 +234,12 @@ export function detectReusableAnswerFromText(
   return null
 }
 
+/**
+ * Detects which saved application-content field (cover letter, profile
+ * summary, motivation, strengths, or availability) a `<textarea>`'s
+ * surrounding text is asking for. Shares keyword phrases with
+ * `detectReusableAnswerFromText` for the fields both drafts have in common.
+ */
 export function detectApplicationContentFromText(
   fieldText: string
 ): ApplicationContentField | null {
@@ -270,6 +299,12 @@ export function detectApplicationContentFromText(
   return null
 }
 
+/**
+ * Guards against autofilling a control that isn't safe to touch: must be
+ * enabled, not read-only, actually visible (has client rects), an allowed
+ * text-like input type, and currently empty (autofill never overwrites a
+ * value the user already entered).
+ */
 export function canFillInput(input: FillableInputState) {
   return (
     !input.disabled &&

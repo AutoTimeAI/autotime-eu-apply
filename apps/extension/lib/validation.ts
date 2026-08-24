@@ -1,3 +1,11 @@
+// Field-level validation for the side panel's editable drafts (profile, job
+// analysis, application content, reusable answers, tracker). Each
+// `validateX` function returns a list of `{ field, message }` issues rather
+// than throwing, so the UI can highlight individual invalid fields; the
+// `getXIssueForField` helpers look one up by field name for rendering next
+// to the relevant input. Required-field lists and per-field minimum word
+// counts are defined as data at the top of the file so the rules are easy
+// to scan and adjust.
 import type {
   ApplicationContentDraft,
   CandidateProfile,
@@ -122,6 +130,12 @@ function getMinimumWordMessage(label: string, minWords: number) {
   return `${label} must be at least ${minWords} words.`
 }
 
+/**
+ * Validates the profile essentials draft: required fields present, email
+ * format, and phone format (must be `+` followed by 7-15 digits, and must
+ * start with the calling code for `currentCountry` if that country is
+ * recognized). Returns an empty array when valid.
+ */
 export function validateProfile(profile: CandidateProfile): ProfileIssue[] {
   const issues: ProfileIssue[] = []
 
@@ -167,6 +181,7 @@ export function validateProfile(profile: CandidateProfile): ProfileIssue[] {
   return issues
 }
 
+/** Validates the job analysis draft: required fields present, work mode selected (not "unknown"), and job URL is a well-formed http(s) URL if non-empty. */
 export function validateJobAnalysisDraft(
   draft: JobAnalysisDraft
 ): JobAnalysisIssue[] {
@@ -204,6 +219,7 @@ export function validateJobAnalysisDraft(
   return issues
 }
 
+/** Validates application content: cover letter, profile summary, and motivation answer are required; every non-empty field must meet its per-field minimum word count (`applicationContentWordRules`), even fields that aren't required. */
 export function validateApplicationContentDraft(
   draft: ApplicationContentDraft
 ): ApplicationContentIssue[] {
@@ -229,6 +245,7 @@ export function validateApplicationContentDraft(
   return issues
 }
 
+/** Validates reusable answers: none are strictly required (`requiredReusableAnswerFields` is empty - these are optional shortcuts), but any non-empty answer must meet its minimum word count (`reusableAnswerWordRules`). */
 export function validateReusableAnswers(
   answers: ReusableAnswers
 ): ReusableAnswerIssue[] {
@@ -254,6 +271,7 @@ export function validateReusableAnswers(
   return issues
 }
 
+/** Validates the tracker draft: required fields present, application URL is a well-formed http(s) URL if non-empty, and next action date (if set) parses as a valid calendar date. */
 export function validateTrackerDraft(draft: TrackerDraft): TrackerIssue[] {
   const issues: TrackerIssue[] = []
 

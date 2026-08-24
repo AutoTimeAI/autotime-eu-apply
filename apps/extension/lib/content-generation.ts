@@ -1,3 +1,8 @@
+// Local, offline template generator for application content (cover letter,
+// profile summary, motivation/strengths/availability answers). Used as the
+// no-AI fallback in sidepanel/main.tsx whenever the user isn't signed in or
+// the backend AI call (lib/openai.ts) fails, so "Generate from Saved Data"
+// always produces something rather than erroring out.
 import type {
   ApplicationContentDraft,
   CandidateProfile,
@@ -27,6 +32,14 @@ function getRoleFocus(profile: CandidateProfile, job: JobAnalysisDraft) {
   return firstFilled(profile.targetRoles, job.jobTitle, "the role")
 }
 
+/**
+ * Builds a full ApplicationContentDraft by filling fixed sentence templates
+ * with whatever profile/job/reusable-answer text is available (preferring
+ * saved reusable answers, falling back to profile fields, then generic
+ * text). Purely template-based - invents nothing not already present in
+ * `profile`/`job`/`reusableAnswers`. See lib/openai.ts for the AI-backed
+ * equivalent this is a fallback for.
+ */
 export function generateApplicationContentDraft(
   profile: CandidateProfile,
   job: JobAnalysisDraft,

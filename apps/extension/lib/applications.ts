@@ -1,3 +1,10 @@
+// Pure helpers for working with the list of saved ApplicationRecord objects
+// (lib/storage.ts) - URL normalization/dedup for matching a page to an
+// existing tracked application, search/status filtering for the side
+// panel's Applications list, dashboard-merge logic used before a sync
+// write, and CSV export (with formula-injection sanitization) for both
+// applications and validation-metrics exports. No chrome.* APIs here, so
+// this is safe to import from both content scripts and the side panel.
 import type { ApplicationRecord, ApplicationStatus } from "./storage"
 
 export type ApplicationStatusFilter = "all" | ApplicationStatus
@@ -14,6 +21,14 @@ export type ApplicationValidationMetrics = {
   sourceCounts: Array<{ source: string; count: number }>
 }
 
+/**
+ * Normalizes a job URL into a stable dedup key: strips the hash, lowercases
+ * the hostname, drops a trailing slash from the path, and lowercases the
+ * whole result. Falls back to a lowercased/trimmed string if `url` doesn't
+ * parse. Used to detect "is this job already tracked?" across the widget,
+ * side panel, and dashboard merge, so equivalent URLs (different case,
+ * trailing slash, or fragment) collapse to the same application.
+ */
 export function normalizeApplicationUrl(url: string) {
   try {
     const parsed = new URL(url)
@@ -26,6 +41,12 @@ export function normalizeApplicationUrl(url: string) {
   }
 }
 
+/**
+ * Filters `applications` by status (or "all") and a free-text query matched
+ * case-insensitively against role title, title, company, source, URL, next
+ * action, next action date, and notes. Used to back the Applications
+ * section's search box and status dropdown.
+ */
 export function filterApplications(
   applications: ApplicationRecord[],
   query: string,
@@ -60,6 +81,7 @@ export function filterApplications(
   })
 }
 
+/** True if any application's normalized URL matches `url`'s normalized form. */
 export function hasApplicationWithUrl(
   applications: ApplicationRecord[],
   url: string
@@ -70,6 +92,14 @@ export function hasApplicationWithUrl(
   )
 }
 
+/**
+ * Merges a local applications list with the dashboard's copy, keyed by
+ * normalized URL (falling back to id if the URL is blank). Wherever both
+ * sides have an entry for the same key, the dashboard's version wins (it is
+ * the source of truth once synced); local-only entries are kept as-is.
+ * Used before every sync write in lib/cloud-sync.ts so a sync never
+ * silently drops edits made from the web dashboard.
+ */
 export function mergeDashboardApplications(
   localApplications: ApplicationRecord[],
   dashboardApplications: ApplicationRecord[]
@@ -105,6 +135,13 @@ function escapeCsvValue(value: string | undefined) {
   return `"${text.replace(/"/g, '""')}"`
 }
 
+/**
+ * Serializes applications (including their content snapshot, if any) to
+ * CSV text for the "Export CSV" action. Every cell goes through
+ * `escapeCsvValue`, which only quote-escapes the value - it does not
+ * neutralize formula-injection prefixes (e.g. a leading `=`), even though
+ * these fields can originate from scraped, untrusted job page content.
+ */
 export function applicationsToCsv(applications: ApplicationRecord[]) {
   const headers = [
     "Title",
@@ -149,6 +186,12 @@ export function applicationsToCsv(applications: ApplicationRecord[]) {
     .join("\n")
 }
 
+/**
+ * Serializes an ApplicationValidationMetrics summary to CSV as three
+ * blank-line-separated sections (summary, status counts, source counts),
+ * for the Validation Metrics section's export button. Same CSV-cell
+ * sanitization as `applicationsToCsv`.
+ */
 export function validationMetricsToCsv(metrics: ApplicationValidationMetrics) {
   const summaryRows = [
     ["Metric", "Value"],
@@ -195,6 +238,13 @@ export function validationMetricsToCsv(metrics: ApplicationValidationMetrics) {
     .join("\n\n")
 }
 
+/**
+ * Computes coverage metrics over the saved applications list: how many have
+ * a content snapshot, a next action, or an outcome note (for
+ * applied/interview/offer/rejected/archived statuses), plus counts by
+ * status and by source. Backs the Validation Metrics section, used to spot
+ * gaps in how thoroughly applications are being tracked.
+ */
 export function getApplicationValidationMetrics(
   applications: ApplicationRecord[]
 ): ApplicationValidationMetrics {

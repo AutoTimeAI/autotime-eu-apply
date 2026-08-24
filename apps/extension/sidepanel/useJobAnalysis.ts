@@ -1,3 +1,10 @@
+// State + handlers for the (legacy) job analysis workflow: editable draft,
+// last-saved draft, AI-or-local-fallback scoring on save, and importing the
+// current tab's job details. Extracted out of main.tsx as a hook so the
+// large SidePanelApp component doesn't own this state directly; still
+// instantiated unconditionally by main.tsx, but its return values are only
+// consumed by the legacy JobAnalysisSection/JobAnalysisView components,
+// which are unreached since `main.tsx` sets `renderLegacyTools = false`.
 import { useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react"
 import {
   inferJobFitAnalysis,
@@ -32,6 +39,14 @@ type UseJobAnalysisArgs = {
   setAIUsageLog: Dispatch<SetStateAction<AIUsageLogEntry[]>>
 }
 
+/**
+ * Owns the job analysis draft/saved-draft state and its handlers: field
+ * updates (auto-inferring location from a pasted description when the
+ * location field is still empty), saving (tries the AI backend if
+ * `canUseBackendAI()`, otherwise/on failure falls back to
+ * `inferJobFitAnalysis`), and importing the active tab's detected job page
+ * into the draft.
+ */
 export function useJobAnalysis({
   authToken,
   canUseBackendAI,

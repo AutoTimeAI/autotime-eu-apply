@@ -1,3 +1,9 @@
+// "Job Analysis" panel: editable job details form plus the saved fit-score/
+// recommendation/keyword insight cards (from either AI or the local
+// fallback in lib/job-analysis.ts). Part of the legacy multi-section side
+// panel layout, currently unreached since `main.tsx` sets
+// `renderLegacyTools = false`; its backing hook (useJobAnalysis) still
+// runs, but its results are only consumed by this and JobAnalysisView.
 import type { Ref } from "react"
 import type { JobAnalysisDraft } from "../lib/storage"
 import type { JobAnalysisIssue } from "../lib/validation"
@@ -81,6 +87,12 @@ function getDescriptionStats(description: string) {
   }
 }
 
+/**
+ * Renders the job analysis form and insight cards. Displays `draft` while
+ * the user has typed anything into it, otherwise falls back to showing
+ * `savedDraft` read-only-style (still editable via the same fields) so
+ * returning to this section after a save doesn't show a blank form.
+ */
 export function JobAnalysisSection({
   draft,
   issues,

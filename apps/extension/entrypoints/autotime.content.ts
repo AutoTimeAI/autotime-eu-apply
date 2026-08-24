@@ -1,3 +1,9 @@
+// WXT content-script entrypoint, injected on demand (see the "Runtime
+// registration" comment below) into the page's own DOM context. It wires up
+// the floating "Track Job" widget and its message handlers (see
+// contents/autofill.ts), schedules the passive ESCO match overlay, and
+// listens for an explicit LinkedIn match request from the toolbar icon
+// click (background/index.ts).
 import { defineContentScript } from "wxt/utils/define-content-script"
 import { registerAutotimeContentScript } from "../contents/autofill"
 import { requestLinkedInEscoMatch, showEscoMatchOverlay } from "../lib/match-overlay"

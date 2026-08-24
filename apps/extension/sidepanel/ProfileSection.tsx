@@ -1,3 +1,9 @@
+// "Profile essentials" panel: a minimal editable subset of CandidateProfile
+// (name, email, target countries/roles, work authorisation, CV text) kept
+// in the extension for autofill/local analysis - the fuller profile lives
+// in the web dashboard. Part of the legacy multi-section side panel
+// layout, currently unreached since `main.tsx` sets
+// `renderLegacyTools = false`.
 import type { Ref } from "react"
 import type { CandidateProfile } from "../lib/storage"
 import type { ProfileIssue } from "../lib/validation"
@@ -19,6 +25,7 @@ type ProfileSectionProps = {
   statusRef: Ref<HTMLParagraphElement>
 }
 
+/** Renders the profile essentials form with per-field validation messages (shown only after `saveAttempted`) and the save/autofill/open-full-setup actions. */
 export function ProfileSection({
   issues,
   onAutofillCurrentPage,

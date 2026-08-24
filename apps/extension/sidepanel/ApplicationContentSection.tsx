@@ -1,3 +1,8 @@
+// "Application Content" panel: editable draft form for cover letter,
+// profile summary, and motivation/strengths/availability answers, plus
+// "Generate from Saved Data" and "Insert Saved Content" actions. Part of
+// the legacy multi-section side panel layout, currently unreached since
+// `main.tsx` sets `renderLegacyTools = false`.
 import type { Ref } from "react"
 import type { ApplicationContentDraft } from "../lib/storage"
 import type { ApplicationContentIssue } from "../lib/validation"
@@ -19,6 +24,7 @@ type ApplicationContentSectionProps = {
   statusRef: Ref<HTMLParagraphElement>
 }
 
+/** Renders the application content draft form with per-field validation messages (shown only after `saveAttempted`) and the save/generate/insert action buttons. */
 export function ApplicationContentSection({
   draft,
   issues,

@@ -1,3 +1,12 @@
+// The extension's local-first persistence layer and its type definitions.
+// Everything the user enters (profile, reusable answers, drafts, tracked
+// applications, AI usage log, diagnostic log, sync state) lives in
+// `chrome.storage.local` and works fully offline; only the account session
+// (see the comment above saveAccountSession) lives in `chrome.storage.session`
+// for a hard content-script isolation boundary. Every getter runs stored
+// values through a `normalize*` function so older/partial shapes saved by a
+// previous version of the extension don't crash newer code - this is the
+// project's schema-migration mechanism in lieu of real storage versioning.
 export type CandidateProfile = {
   fullName: string
   email: string
@@ -630,6 +639,7 @@ export async function getApplicationSyncState(): Promise<
   )
 }
 
+/** Records `status` (and, for a "failed" status, `options.error`) for each of `applicationIds` in the sync-state map, bumping `attempts` on "pending". Queued (see comment above) so concurrent callers never clobber each other's writes. */
 export async function updateApplicationSyncState(
   applicationIds: string[],
   status: ApplicationSyncStatus,
@@ -681,6 +691,7 @@ export async function clearLegacyOpenAISettings() {
   await chrome.storage.local.remove(LEGACY_OPENAI_SETTINGS_KEY)
 }
 
+/** Returns all saved applications, newest-first, each run through `normalizeApplicationRecord` to upgrade any legacy status/shape. */
 export async function getApplications(): Promise<ApplicationRecord[]> {
   const result = await chrome.storage.local.get(APPLICATIONS_KEY)
   const applications =
@@ -688,20 +699,25 @@ export async function getApplications(): Promise<ApplicationRecord[]> {
   return applications.map(normalizeApplicationRecord)
 }
 
+/** Prepends `record` (normalized) to the saved applications list. Does not check for an existing entry with the same URL - callers (contents/autofill.ts, sidepanel) check `hasApplicationWithUrl` first. */
 export async function saveApplication(record: ApplicationRecord) {
   const existing = await getApplications()
   const updated = [normalizeApplicationRecord(record), ...existing]
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }
+/** Returns saved job references (lightweight records for API-covered boards; see JobCaptureMode in lib/job-page.ts), newest-first. */
 export async function getJobReferences(): Promise<JobReference[]> { const result=await chrome.storage.local.get(JOB_REFERENCES_KEY); return (result[JOB_REFERENCES_KEY] as JobReference[]|undefined)??[] }
+/** Saves a job reference, replacing any existing entry for the same URL (dedup by URL, not id). */
 export async function saveJobReference(reference: JobReference) { const existing=await getJobReferences(); const without=existing.filter((item)=>item.url!==reference.url); await chrome.storage.local.set({[JOB_REFERENCES_KEY]:[reference,...without]}) }
 
+/** Removes the application with the given `id` from storage. */
 export async function deleteApplication(id: string) {
   const existing = await getApplications()
   const updated = existing.filter((record) => record.id !== id)
   await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
 }
 
+/** Shallow-merges `changes` into the stored application with the given `id` (no-op if not found), re-normalizing the result. Used for inline edits in the Applications section and for applying tracker fields when a tracked application already exists. */
 export async function updateApplication(
   id: string,
   changes: Partial<

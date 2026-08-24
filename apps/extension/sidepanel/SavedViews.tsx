@@ -1,3 +1,8 @@
+// Read-only "view saved data" panels - one per editable draft type
+// (profile, reusable answers, job analysis, application content, tracker)
+// - each showing the last-saved value with a "Clear" action. Part of the
+// legacy multi-section side panel layout, currently unreached since
+// `main.tsx` sets `renderLegacyTools = false`.
 import type {
   ApplicationContentDraft,
   ApplicationContentSnapshot,
@@ -52,6 +57,7 @@ function ContentSnapshotView({
   )
 }
 
+/** Read-only view of the last-saved profile essentials, or an empty state if none is saved. */
 export function ProfileView({
   draft,
   onClear
@@ -107,6 +113,7 @@ export function ProfileView({
   )
 }
 
+/** Read-only view of the last-saved reusable answers, or an empty state if none is saved. */
 export function ReusableAnswersView({
   draft,
   onClear
@@ -162,6 +169,7 @@ export function ReusableAnswersView({
   )
 }
 
+/** Read-only view of the last-saved job analysis, including fit score/recommendation/skills/gaps insight cards behind `MetricReveal`, or an empty state if none is saved. */
 export function JobAnalysisView({
   draft,
   onClear
@@ -337,6 +345,7 @@ export function JobAnalysisView({
   )
 }
 
+/** Read-only view of the last-saved application content draft, or an empty state if none is saved. */
 export function ApplicationContentView({
   draft,
   onClear
@@ -380,6 +389,7 @@ export function ApplicationContentView({
   )
 }
 
+/** Read-only view of the last-saved tracker draft, including its content snapshot (if any), or an empty state if none is saved. */
 export function TrackerView({ draft, onClear }: SavedViewProps<TrackerDraft>) {
   return (
     <section className="panel-section">

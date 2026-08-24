@@ -1,3 +1,8 @@
+// Local, offline job-fit scoring engine: infers a fit score, recommendation
+// tier, detected skills, seniority, positioning angle, and gaps purely from
+// keyword signals in the job text plus the candidate's saved profile. Used
+// as the no-AI fallback in sidepanel/useJobAnalysis.ts when the user isn't
+// signed in or the backend AI analysis call (lib/openai.ts) fails.
 import type { CandidateProfile, JobAnalysisDraft } from "./storage"
 import { inferLocationSignalFromText } from "./job-page.ts"
 
@@ -11,6 +16,7 @@ function unique(values: string[]) {
   return Array.from(new Set(values))
 }
 
+/** Thin re-export of `inferLocationSignalFromText` for job-analysis call sites; scans free-text job description for a location signal (e.g. "Location: Berlin, Germany"). */
 export function inferLocationFromJobDescription(description: string) {
   return inferLocationSignalFromText(description)
 }
@@ -137,6 +143,18 @@ function getGaps(
   return gaps.length ? gaps : ["No obvious gaps detected from saved data."]
 }
 
+/**
+ * Scores a job-analysis draft against a starting baseline of 45 points,
+ * adjusting for role-title alignment, domain language (FinTech/regulated
+ * systems), work mode, location match against the profile's current
+ * country and relocation willingness, sponsorship need, and seniority
+ * language - clamped to 0-100. Also derives a recommendation tier
+ * (High Priority/Worth Applying/Stretch/Skip from `getRecommendation`),
+ * detected skills, seniority, a summary sentence, a positioning angle, and
+ * a list of gaps to address before applying. `profile` may be `null` if no
+ * profile is saved yet, in which case country/sponsorship scoring is
+ * skipped.
+ */
 export function inferJobFitAnalysis(
   draft: JobAnalysisDraft,
   profile: CandidateProfile | null

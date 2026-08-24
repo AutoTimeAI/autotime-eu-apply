@@ -1,3 +1,8 @@
+// Navigation bar for the legacy multi-section side panel layout: primary
+// tabs (job analysis, insights, account) plus a collapsible "Local tools"
+// group for the rest, with a "!" badge on any section whose last save
+// attempt failed validation. Currently unreached since `main.tsx` sets
+// `renderLegacyTools = false`.
 import { sections, type Section } from "./constants"
 import { appUrl } from "../lib/openai"
 import type { SaveAttempts } from "./types"
@@ -31,6 +36,7 @@ function openDashboard() {
   chrome.tabs.create({ url: `${appUrl}/dashboard` })
 }
 
+/** Renders the primary/secondary section navigation, highlighting `activeSection` and showing validation-issue badges for sections where `saveAttempts[section]` is true and that section still has outstanding issues. */
 export function SectionNav({
   activeSection,
   applicationContentIssueCount,
