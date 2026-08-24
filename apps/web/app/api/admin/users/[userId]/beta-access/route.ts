@@ -1,3 +1,16 @@
+/**
+ * POST /api/admin/users/[userId]/beta-access
+ *
+ * Sets a target user's beta-access status (active/suspended) via the
+ * `admin_change_beta_access` Postgres RPC.
+ *
+ * Auth: admin-only. Requires the `users:manage_beta` permission via
+ * `requireAdminRequest`, plus a same-origin check
+ * (`isSameOriginMutation`) that rejects cross-origin requests with 403.
+ *
+ * Behaviour: validates the `userId` route param as a UUID and requires a
+ * non-empty (>= 4 char) `reason` string when suspending a user.
+ */
 import { NextResponse } from "next/server";
 import {
   AdminAuthorizationError,
@@ -10,6 +23,22 @@ import { safeAdminError } from "../../../../../../lib/admin-safe-response";
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/**
+ * Updates the beta-access status for the user identified by the `userId`
+ * route param.
+ *
+ * Request body (JSON): `status` (must be "active" or "suspended");
+ * `reason` (string, required and must be >= 4 chars after trimming when
+ * `status` is "suspended").
+ *
+ * Responses:
+ * - 200: `{ data, error: null, status: 200 }` updated beta-access row.
+ * - 400: invalid `userId` (not a UUID), invalid `status`, or missing/short
+ *   `reason` for a suspension.
+ * - 403: cross-origin request.
+ * - non-2xx: sanitized error via `safeAdminError` for RPC/unexpected
+ *   failures.
+ */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ userId: string }> },

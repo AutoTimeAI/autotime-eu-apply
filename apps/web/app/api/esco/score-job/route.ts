@@ -1,3 +1,20 @@
+/**
+ * POST /api/esco/score-job
+ *
+ * Classifies a job (by URL lookup or title/description) to an ESCO
+ * occupation, then scores the caller's confirmed skills against that
+ * occupation's essential skills.
+ *
+ * Auth: requires a valid session — resolved via `getRequestUser`. Requests
+ * without a recognised user receive 401.
+ *
+ * Behaviour: no OpenAI call — classification is done locally via
+ * `classifyJobToEsco` against ESCO occupation candidates found by keyword
+ * search (`esco_occupations`), or directly from a previously classified
+ * `job_listings` row when the job URL is already known. A user's skill is
+ * only counted as "matched" if their `user_skill_profile` confidence for
+ * it is > 0.5.
+ */
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
@@ -7,6 +24,23 @@ import { createAdminClient } from "../../../../lib/supabase/admin";
 const schema=z.object({url:z.string().url().max(2000).optional(),title:z.string().trim().max(300).optional(),description:z.string().trim().max(50000).optional()}).refine((value)=>value.url||value.title,{message:"Provide a job URL or title"});
 const terms=(value:string)=>[...new Set(value.toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g)??[])].slice(0,6);
 
+/**
+ * Classifies the given job to an ESCO occupation and scores the caller's
+ * skill profile against its essential skills.
+ *
+ * Request body: `{ url?, title?, description? }` per `schema` — at least
+ * one of `url` or `title` is required.
+ *
+ * Responses:
+ * - 200 (default status): `{ data: { matched: false, title, reason },
+ *   error: null }` when no reliable occupation match is found, otherwise
+ *   `{ data: { matched: true, title, occupationId, classification,
+ *   matchedSkills, missingSkills, matchedCount, totalEssentialSkills },
+ *   error: null }`.
+ * - 400: request body fails schema validation.
+ * - 401: no authenticated user.
+ * - 500: unexpected error.
+ */
 export async function POST(request:NextRequest){try{
   const{user}=await getRequestUser(request);if(!user)return NextResponse.json({data:null,error:"Unauthorised"},{status:401});
   const body=schema.parse(await request.json());const db=createAdminClient();let title=body.title??"",description=body.description??"",occupationId:string|null=null,confidence=0,method="unmatched";

@@ -1,3 +1,19 @@
+/**
+ * POST /api/esco/import-evidence
+ *
+ * Bulk-imports a set of ESCO skill IDs into the caller's
+ * `user_skill_profile` as low-confidence, "inferred" evidence (e.g. from
+ * an external CV/evidence source that already resolved skill IDs).
+ *
+ * Auth: requires a valid session — resolved via `getRequestUser`. Requests
+ * without a recognised user receive 401.
+ *
+ * Behaviour: deduplicates the requested IDs, validates each against the
+ * `esco_skills` table (silently dropping unknown IDs), and skips any skill
+ * already present in the user's profile — only genuinely new, valid
+ * skills are inserted, each with `confidence: 0.55` and
+ * `source: "inferred"`.
+ */
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
@@ -5,6 +21,17 @@ import { createAdminClient } from "../../../../lib/supabase/admin";
 
 const schema = z.object({ escoSkillIds: z.array(z.string().trim().min(1)).max(20) });
 
+/**
+ * Validates `{ escoSkillIds }` (up to 20) against `schema`, filters to
+ * valid/new ESCO skill IDs, and inserts them into the caller's skill
+ * profile.
+ *
+ * Responses:
+ * - 200 (default status): `{ data: { inserted: <count> }, error: null }`.
+ * - 400: request body fails schema validation.
+ * - 401: no authenticated user.
+ * - 500: unexpected error.
+ */
 export async function POST(request: NextRequest) {
   try {
     const { user } = await getRequestUser(request);

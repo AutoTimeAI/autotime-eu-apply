@@ -1,3 +1,23 @@
+/**
+ * POST /api/operations/workflow-events
+ *
+ * Records a single job-workflow operational event (e.g. a state
+ * transition telemetry ping from the client-side job workflow) via the
+ * `record_workflow_operational_event` Postgres RPC.
+ *
+ * Auth: requires a valid Supabase session (`supabase.auth.getUser()`
+ * directly, not `getRequestUser`); unauthenticated callers receive 401.
+ *
+ * Behaviour: defence-in-depth request validation before touching auth or
+ * the database — rejects cross-origin requests (`isSameOriginWorkflowRequest`),
+ * non-JSON content types (415), and bodies whose declared `Content-Length`
+ * exceeds `workflowEventBodyLimit` (413). The body itself is parsed via
+ * `parseWorkflowOperationalEventBody`. The RPC can report a "rate_limited"
+ * outcome (surfaced as 429) or a "duplicate" outcome (idempotent replay,
+ * surfaced as 200 instead of 201). All error responses are intentionally
+ * generic ("The operation could not be completed.") with a
+ * `diagnosticId` for correlation, via `createSafeDiagnostic`.
+ */
 import "server-only";
 import { NextResponse } from "next/server";
 import { isSameOriginMutation } from "../../../../lib/admin-authorization";
@@ -20,6 +40,21 @@ const errorResponse = (status: number, category: string) =>
     { status },
   );
 
+/**
+ * Validates and records one workflow operational event for the
+ * authenticated caller.
+ *
+ * Responses:
+ * - 200/201: `{ outcome }` — 200 for a "duplicate" (idempotent) outcome,
+ *   201 otherwise.
+ * - 400: body failed `parseWorkflowOperationalEventBody` validation.
+ * - 401: no authenticated Supabase session.
+ * - 403: cross-origin request.
+ * - 413: declared body size exceeds `workflowEventBodyLimit`.
+ * - 415: request content-type is not JSON.
+ * - 429: RPC reports the event is rate-limited.
+ * - 503: RPC call failed or returned no data.
+ */
 export async function POST(request: Request) {
   if (!isSameOriginWorkflowRequest(request))
     return errorResponse(403, "workflow_event_origin");
