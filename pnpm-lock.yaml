@@ -27,8 +27,6 @@ overrides:
   minimatch@3>brace-expansion: ^1.1.16
   brace-expansion: ^5.0.6
 
-pnpmfileChecksum: sha256-Gb6UWPofH7I7+oqAVVnG2Jb0c983HaPRFk78I4v340s=
-
 importers:
 
   .:
@@ -5659,6 +5657,7 @@ packages:
       '@vitejs/devtools': ^0.4.0 || ^0.5.0
       esbuild: ^0.28.1
       jiti: '>=1.21.0'
+      less: ^4.0.0
       sass: ^1.70.0
       sass-embedded: ^1.70.0
       stylus: '>=0.54.8'
@@ -5674,6 +5673,8 @@ packages:
       esbuild:
         optional: true
       jiti:
+        optional: true
+      less:
         optional: true
       sass:
         optional: true
@@ -11533,6 +11534,7 @@ snapshots:
       - '@vitejs/devtools'
       - esbuild
       - jiti
+      - less
       - sass
       - sass-embedded
       - stylus
@@ -11863,6 +11865,7 @@ snapshots:
       - '@vitejs/devtools'
       - canvas
       - jiti
+      - less
       - oxc-parser
       - rollup
       - sass
