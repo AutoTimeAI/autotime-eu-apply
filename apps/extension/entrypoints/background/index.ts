@@ -1,10 +1,7 @@
-// MV3 background service worker. The account session (including its raw
-// authToken) lives in chrome.storage.local, which any extension context can
-// read (see lib/storage.ts's getAccountSession) and act on directly - e.g.
-// lib/match-overlay.ts fetches the dashboard's ESCO scoring endpoint
-// straight from content-script context. The background worker and side
-// panel are only the two contexts that call the dashboard's *sync* APIs
-// (lib/cloud-sync.ts) - applications sync, not scoring.
+// MV3 background service worker. Raw account tokens live in
+// chrome.storage.session and are used only by trusted extension contexts;
+// content scripts receive non-secret connection state and proxy authenticated
+// scoring/sync operations through this worker.
 // Responsibilities:
 //   - toolbar icon click: sends AUTOTIME_SHOW_WIDGET to the active tab (via
 //     chrome.tabs.sendMessage, falling back to chrome.scripting.executeScript
@@ -54,14 +51,19 @@ type ExternalResponse = {
 
 type InternalMessage = {
   applications?: unknown
+  payload?: unknown
   resurrectUrlKeys?: unknown
   type?: unknown
 }
 
 type InternalResponse = {
   connected?: boolean
+  data?: unknown
+  email?: string
   error?: string
   ok: boolean
+  plan?: "free" | "pro"
+  provider?: AccountSession["provider"]
   reason?: string
   synced?: boolean
 }
@@ -298,6 +300,42 @@ export default defineBackground(() => {
       _sender,
       sendResponse: (response: InternalResponse) => void
     ) => {
+      if (message?.type === "AUTOTIME_GET_ACCOUNT_STATE") {
+        void getActiveSession()
+          .then(({ session }) => sendResponse({
+            connected: Boolean(session?.authToken.trim()),
+            email: session?.email,
+            ok: true,
+            plan: session?.plan,
+            provider: session?.provider
+          }))
+          .catch(() => sendResponse({ connected: false, ok: true }))
+        return true
+      }
+
+      if (message?.type === "AUTOTIME_SCORE_JOB") {
+        void (async () => {
+          const { session } = await getActiveSession()
+          if (!session?.authToken.trim()) {
+            sendResponse({ connected: false, ok: false })
+            return
+          }
+          const response = await fetch(`${appUrl}/api/esco/score-job`, {
+            body: JSON.stringify(message.payload),
+            headers: {
+              Authorization: `Bearer ${session.authToken}`,
+              "Content-Type": "application/json",
+              "x-autotime-source": "extension"
+            },
+            method: "POST",
+            signal: AbortSignal.timeout(12_000)
+          })
+          const body = await response.json() as { data?: unknown }
+          sendResponse({ data: body.data, ok: response.ok })
+        })().catch(() => sendResponse({ ok: false }))
+        return true
+      }
+
       if (message?.type !== "AUTOTIME_SYNC_APPLICATIONS") {
         return false
       }
@@ -374,7 +412,7 @@ export default defineBackground(() => {
   })
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local" && changes["account-session"]) {
+    if (areaName === "session" && changes["account-session"]) {
       void retryPendingApplicationSync("startup")
     }
   })

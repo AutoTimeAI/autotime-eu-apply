@@ -132,15 +132,15 @@ export function mergeDashboardApplications(
 
 function escapeCsvValue(value: string | undefined) {
   const text = value ?? ""
-  return `"${text.replace(/"/g, '""')}"`
+  const safeText = /^[\u0000-\u0020]*[=+\-@]/.test(text) ? `'${text}` : text
+  return `"${safeText.replace(/"/g, '""')}"`
 }
 
 /**
  * Serializes applications (including their content snapshot, if any) to
  * CSV text for the "Export CSV" action. Every cell goes through
- * `escapeCsvValue`, which only quote-escapes the value - it does not
- * neutralize formula-injection prefixes (e.g. a leading `=`), even though
- * these fields can originate from scraped, untrusted job page content.
+ * `escapeCsvValue`, which quote-escapes values and prefixes spreadsheet
+ * formula-like content because fields may originate from untrusted pages.
  */
 export function applicationsToCsv(applications: ApplicationRecord[]) {
   const headers = [

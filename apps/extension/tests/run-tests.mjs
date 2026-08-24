@@ -25,6 +25,7 @@ import {
   getJobPlatform,
   getJobCaptureMode,
   inferJobPageDetails,
+  inferLocationSignalFromText,
   isLinkedInUrl,
   parseLinkedInPageTitle
 } from "../lib/job-page.ts"
@@ -90,28 +91,35 @@ function test(name, run) {
   tests.push({ name, run })
 }
 
-const store = new Map()
+const localStore = new Map()
+const sessionStore = new Map()
 
-globalThis.chrome = {
-  storage: {
-    local: {
-      async get(key) {
-        return { [key]: store.get(key) }
-      },
-      async set(values) {
-        Object.entries(values).forEach(([key, value]) => {
-          store.set(key, value)
-        })
-      },
-      async remove(key) {
-        store.delete(key)
-      }
+function storageArea(store) {
+  return {
+    async get(key) {
+      return { [key]: store.get(key) }
+    },
+    async set(values) {
+      Object.entries(values).forEach(([key, value]) => {
+        store.set(key, value)
+      })
+    },
+    async remove(key) {
+      store.delete(key)
     }
   }
 }
 
+globalThis.chrome = {
+  storage: {
+    local: storageArea(localStore),
+    session: storageArea(sessionStore)
+  }
+}
+
 function resetStorage() {
-  store.clear()
+  localStore.clear()
+  sessionStore.clear()
 }
 
 test("splits a full name into first and last name", () => {
@@ -966,6 +974,12 @@ test("infers location from pasted job descriptions", () => {
     inferLocationFromJobDescription("No location is listed in this posting."),
     ""
   )
+  assert.equal(
+    inferLocationSignalFromText(
+      `${"Background information. ".repeat(1_000)}Location: Paris, France`
+    ),
+    ""
+  )
 })
 
 test("saves and loads candidate profile", async () => {
@@ -1132,6 +1146,8 @@ test("saves and clears account session", async () => {
     plan: "pro",
     provider: "github"
   })
+  assert.equal(localStore.has("account-session"), false)
+  assert.equal(sessionStore.has("account-session"), true)
 
   await clearAccountSession()
 
@@ -1141,10 +1157,12 @@ test("saves and clears account session", async () => {
 test("normalizes a legacy account session saved before refresh tokens existed", async () => {
   resetStorage()
 
-  await saveAccountSession({
-    authToken: "legacy-token",
-    email: "legacy@example.com",
-    plan: "free"
+  await chrome.storage.local.set({
+    "account-session": {
+      authToken: "legacy-token",
+      email: "legacy@example.com",
+      plan: "free"
+    }
   })
 
   assert.deepEqual(await getAccountSession(), {
@@ -1155,6 +1173,8 @@ test("normalizes a legacy account session saved before refresh tokens existed", 
     plan: "free",
     provider: "email"
   })
+  assert.equal(localStore.has("account-session"), false)
+  assert.equal(sessionStore.has("account-session"), true)
 })
 
 test("tracks application sync state from pending to synced", async () => {
@@ -1978,6 +1998,24 @@ test("exports applications to csv", () => {
       '"Senior ""Frontend"" Engineer","Frontend Engineer","Example Co","https://example.com/jobs/frontend","example.com","2026-04-01T00:00:00.000Z","Applied","Follow up","2026-04-10","Remote, EU role","2026-04-01T12:00:00.000Z","Tailored cover letter.","Analyst profile summary.","Motivation answer.","Strengths answer.","Available in one month."'
     ].join("\n")
   )
+})
+
+test("neutralizes spreadsheet formulas in exported application cells", () => {
+  const csv = applicationsToCsv([
+    {
+      id: "untrusted",
+      title: "=HYPERLINK(\"https://attacker.example\")",
+      roleTitle: " +SUM(1,1)",
+      company: "@malicious",
+      url: "https://example.com/jobs/untrusted",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "Saved"
+    }
+  ])
+
+  assert.match(csv, /"'=HYPERLINK\(""https:\/\/attacker\.example""\)"/)
+  assert.match(csv, /"' \+SUM\(1,1\)"/)
+  assert.match(csv, /"'@malicious"/)
 })
 
 test("summarizes founder validation metrics from applications", () => {

@@ -118,26 +118,25 @@ registry file).
   `AUTOTIME_CONNECT_ACCOUNT` (hands the extension a freshly signed-in
   session).
 
-The account session (including its raw `authToken`/`refreshToken`) is
-stored via `lib/storage.ts`'s `getAccountSession`/`saveAccountSession` in
-`chrome.storage.local`, which any extension context - background, side
-panel, or content script - can read directly. The background worker and
-side panel are the only two contexts that call the dashboard's *sync* APIs
-(`lib/cloud-sync.ts`); `lib/match-overlay.ts`, which runs in content-script
-context, fetches the dashboard's ESCO scoring endpoint directly using the
-session it reads from storage.
+The account session (including its raw `authToken`/`refreshToken`) is stored
+in `chrome.storage.session`, whose default access level excludes content
+scripts. The trusted background worker refreshes and uses those tokens;
+content scripts receive only non-secret account state and proxy authenticated
+sync or ESCO scoring through runtime messages. A legacy session found in
+`chrome.storage.local` is migrated once and deleted from local storage.
 
 ## Local-first storage
 
-- **`chrome.storage.local`** holds everything: profile, reusable answers,
+- **`chrome.storage.local`** holds local-first product data: profile, reusable answers,
   drafts (job analysis, application content, tracker), saved applications,
   job references, AI usage log, diagnostic log, per-application sync state,
-  the onboarding-seen flag, and the account session (`getAccountSession`/
-  `saveAccountSession` in `lib/storage.ts`). All of it works fully offline.
+  and the onboarding-seen flag. This product data works fully offline.
   Every getter in `lib/storage.ts` runs the stored value through a
   `normalize*` function so older/partial shapes saved by a previous version
   of the extension don't break newer code — this is the project's
   schema-migration mechanism in lieu of real storage versioning.
+- **`chrome.storage.session`** holds the dashboard account session so raw
+  tokens are unavailable to content scripts and clear when the browser exits.
 - **Dashboard sync is optional and best-effort.** When a tracked
   application is saved, `lib/storage.ts` marks it `pending` in the
   per-application sync-state map; if the user is connected, a sync request

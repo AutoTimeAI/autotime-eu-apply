@@ -9,7 +9,6 @@
 // (3) autofilling saved profile/reusable-answer/application-content values
 // into visible form fields (including the LinkedIn Easy Apply modal).
 import {
-  getAccountSession,
   getApplicationContentDraft,
   getApplications,
   logDiagnosticEvent,
@@ -20,6 +19,28 @@ import {
   type AccountSession,
   type ApplicationRecord
 } from "../lib/storage"
+
+async function getAccountSession(): Promise<AccountSession | null> {
+  const response = await chrome.runtime.sendMessage({
+    type: "AUTOTIME_GET_ACCOUNT_STATE"
+  }) as {
+    connected?: boolean
+    email?: string
+    plan?: "free" | "pro"
+    provider?: AccountSession["provider"]
+  } | undefined
+
+  return response?.connected
+    ? {
+        authToken: "connected",
+        email: response.email ?? "Connected account",
+        expiresAt: 0,
+        plan: response.plan === "pro" ? "pro" : "free",
+        provider: response.provider ?? "email",
+        refreshToken: ""
+      }
+    : null
+}
 import {
   extractJobPostingFromJsonLd,
   formatJobPageNotes,

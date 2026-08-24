@@ -420,11 +420,15 @@ function getLikelyLocation(value = "") {
  * series of patterns (explicit "Location:"/"Office:"/"Based in ..." labels,
  * then "Remote/Hybrid/On-site in ...") in priority order and returning the
  * first plausible match (checked via isLikelyLocationValue). Returns `""`
- * if nothing plausible is found. Runs against the full input with no length
- * cap, so an unusually large description scans in full.
+ * if nothing plausible is found. Input is capped before regex evaluation to
+ * keep untrusted, unusually large descriptions from causing excessive work.
  */
+const MAX_LOCATION_SIGNAL_SCAN_LENGTH = 20_000
+
 export function inferLocationSignalFromText(description = "") {
-  const text = description.replace(/\r\n/g, "\n")
+  const text = description
+    .slice(0, MAX_LOCATION_SIGNAL_SCAN_LENGTH)
+    .replace(/\r\n/g, "\n")
   const patterns = [
     /\bLocation\s*[:|-]\s*([A-Z][A-Za-z .'-]+,\s*(?:United Kingdom|UK|Ireland|Germany|France|Spain|Portugal|Italy|Netherlands|Belgium|Switzerland|Austria|Poland|Sweden|Norway|Denmark|Finland|Europe))(?:\s|$)/i,
     /\bLocation\s*[:|-]\s*([^\n<]+)/i,

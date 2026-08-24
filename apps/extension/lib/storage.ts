@@ -672,19 +672,34 @@ export async function updateApplicationSyncState(
 }
 
 export async function saveAccountSession(session: AccountSession) {
-  await chrome.storage.local.set({ [ACCOUNT_SESSION_KEY]: session })
+  await chrome.storage.session.set({ [ACCOUNT_SESSION_KEY]: session })
+  await chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
 }
 
 export async function getAccountSession(): Promise<AccountSession | null> {
-  const result = await chrome.storage.local.get(ACCOUNT_SESSION_KEY)
-  const session = result[ACCOUNT_SESSION_KEY] as
+  const sessionResult = await chrome.storage.session.get(ACCOUNT_SESSION_KEY)
+  const session = sessionResult[ACCOUNT_SESSION_KEY] as
     | Partial<AccountSession>
     | undefined
-  return session ? normalizeAccountSession(session) : null
+  if (session) return normalizeAccountSession(session)
+
+  const legacyResult = await chrome.storage.local.get(ACCOUNT_SESSION_KEY)
+  const legacySession = legacyResult[ACCOUNT_SESSION_KEY] as
+    | Partial<AccountSession>
+    | undefined
+  if (!legacySession) return null
+
+  const normalizedSession = normalizeAccountSession(legacySession)
+  await chrome.storage.session.set({ [ACCOUNT_SESSION_KEY]: normalizedSession })
+  await chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
+  return normalizedSession
 }
 
 export async function clearAccountSession() {
-  await chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
+  await Promise.all([
+    chrome.storage.session.remove(ACCOUNT_SESSION_KEY),
+    chrome.storage.local.remove(ACCOUNT_SESSION_KEY)
+  ])
 }
 
 export async function clearLegacyOpenAISettings() {
