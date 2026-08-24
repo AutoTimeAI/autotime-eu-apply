@@ -1,5 +1,11 @@
 "use client"
 
+// Client-side grid for the /admin/feature-flags page. Renders one row per
+// flag key with a column per environment, showing the effective
+// enabled/disabled state (override if one exists, otherwise the default)
+// and, when `canWrite` is true, a toggle button per cell that POSTs to
+// /api/admin/feature-flags with an `expectedVersion` for optimistic-
+// concurrency conflict detection.
 import { useState } from "react"
 import type {
   AdminFeatureFlagKey,
@@ -12,6 +18,14 @@ function formatTimestamp(value: string | undefined): string {
   return value ? new Date(value).toLocaleString("en-GB") : "Default, no override"
 }
 
+/**
+ * Renders the feature-flag grid (flag x environment). Toggling a cell (only
+ * available when `canWrite` is true) calls `toggle`, which POSTs the
+ * flipped value with the current override's `version` as
+ * `expectedVersion`; a "conflict" outcome from the server (someone else
+ * changed it since this grid loaded) surfaces an error instead of applying
+ * the change.
+ */
 export function AdminFeatureFlagsGrid({
   canWrite,
   defaults,

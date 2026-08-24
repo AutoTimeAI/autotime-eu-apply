@@ -1,5 +1,11 @@
 "use client"
 
+// Client-side status panel for the /admin/market-data page. Polls
+// GET /api/admin/market-data on a 15s interval (toggleable) to keep the
+// most recent refresh-request status current, and — when `canRefresh` is
+// true — offers a button that POSTs to /api/admin/market-data/refresh to
+// request a new ESCO refresh (rate-limited server-side to roughly one per
+// minute, and deduplicated via a per-click idempotency key).
 import { useEffect, useState } from "react"
 import type { AdminMarketRefreshRequest } from "../../../lib/admin-market-data"
 
@@ -9,6 +15,13 @@ function formatTimestamp(value: string | null): string {
 
 const POLL_INTERVAL_MS = 15_000
 
+/**
+ * Renders the market-data refresh status panel: the most recent refresh
+ * request's status/timestamps (or "Not scheduled" if none exists), with
+ * auto-refresh polling and, when `canRefresh` is true, a "Request ESCO
+ * refresh" button (`requestRefresh`) that surfaces a "duplicate" outcome
+ * from the server as a distinct notice rather than an error.
+ */
 export function AdminMarketRefreshStatus({
   canRefresh,
   initialRequest,

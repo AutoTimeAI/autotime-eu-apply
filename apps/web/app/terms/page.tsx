@@ -1,3 +1,7 @@
+// Public /terms legal page. Static, server-rendered terms-of-service text
+// (acceptable use, billing/cancellation, AI-output responsibility,
+// liability, governing law) with no dynamic data fetching or auth
+// requirement.
 import { PublicNav } from "../../components/PublicNav"
 
 const acceptableUse = [

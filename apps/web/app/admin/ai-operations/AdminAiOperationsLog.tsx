@@ -1,5 +1,9 @@
 "use client"
 
+// Client-side live log panel for the /admin/ai-operations page. Polls
+// GET /api/admin/ai-operations on a 15s interval (toggleable) to keep the
+// list of recent AI-provider failures (operational_logs entries tagged
+// area="ai") current, plus a manual "Refresh now" button.
 import { useEffect, useState } from "react"
 import type { AdminProviderFailure } from "../../../lib/admin-ai-operations"
 
@@ -9,6 +13,13 @@ function formatTimestamp(value: string): string {
 
 const POLL_INTERVAL_MS = 15_000
 
+/**
+ * Renders the list of recent AI-provider failures, auto-refreshing every
+ * `POLL_INTERVAL_MS` while `autoRefresh` is checked (default on) and
+ * supporting an immediate manual refresh. Each entry shows its timestamp,
+ * area, error code, severity level and message (plus HTTP status when
+ * present).
+ */
 export function AdminAiOperationsLog({
   initialFailures,
 }: {

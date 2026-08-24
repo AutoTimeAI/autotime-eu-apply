@@ -1,3 +1,9 @@
+// Public pricing page at /pricing. Shows the Free vs Pro feature comparison,
+// an FAQ, and (for signed-in users) their current plan, remaining AI-call
+// allowance and purchased AI-credit balance, sourced from Stripe price IDs
+// resolved via readPricingConfiguration. Server component, force-dynamic
+// because it depends on the current session; publicly viewable, but the
+// account-specific panels only populate when a session is present.
 import { PublicNav } from "../../components/PublicNav";
 import { ProfileProtocolLock } from "../../components/ProfileProtocolLock";
 import { PricingCards } from "../../components/PricingCard";
@@ -28,6 +34,12 @@ type PricingAccount = {
   remainingAiCalls: number | null;
 };
 
+/**
+ * Resolves the current account's plan, purchased AI-credit balance and
+ * remaining monthly AI-call allowance for the pricing page's account panel.
+ * Prefers the test-auth override before the real Supabase session, and
+ * returns null (rendering the page as signed-out) on any lookup failure.
+ */
 async function getPricingAccount(): Promise<PricingAccount | null> {
   try {
     const testUser = getTestAuthUser();
@@ -122,6 +134,13 @@ const proFeatures = [
   { label: "Priority workflow support", included: true },
 ];
 
+/**
+ * Renders the pricing page: Free/Pro feature comparison cards, a plan-gate
+ * explainer panel showing remaining AI calls and purchased credits, and an
+ * FAQ. Stripe price IDs are read via readPricingConfiguration; when that
+ * returns null (env not configured) `billingAvailable` is false and the
+ * checkout CTAs are disabled downstream in PricingCards.
+ */
 export default async function PricingPage() {
   const account = await getPricingAccount();
   const prices = readPricingConfiguration(getStripePriceEnv, () => {

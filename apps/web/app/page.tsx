@@ -1,3 +1,10 @@
+// Public marketing/landing page served at "/". Explains what EU Apply does
+// (the "EU Fit Engine" positioning, workflow steps, country playbook, demo
+// fit-score sample) to signed-out visitors, and adapts its call-to-action
+// links ("Start free" / "Continue workflow") once a session is detected.
+// Server component rendered per-request (force-dynamic) because it looks up
+// the current user to decide whether to link to /dashboard or /login; it
+// does not itself gate access to anything.
 import Link from "next/link";
 
 import { PublicNav } from "../components/PublicNav";
@@ -14,6 +21,13 @@ type PublicAccount = {
   plan: SubscriptionPlan;
 };
 
+/**
+ * Resolves the currently signed-in account (if any) for the landing page's
+ * nav and CTA links. Prefers the test-auth override (used in QA/e2e
+ * environments) before falling back to the real Supabase session, and
+ * swallows any lookup error by returning null so the page renders as
+ * signed-out rather than failing.
+ */
 async function getPublicAccount(): Promise<PublicAccount | null> {
   try {
     const testUser = getTestAuthUser();
@@ -256,6 +270,12 @@ const euFitSignalRail = [
   ["Action", "Priority, reframe, CV fix and interview proof"],
 ] as const;
 
+/**
+ * Renders the public landing page: hero video, workflow-step overview,
+ * "EU Fit Engine" sample analysis, country playbook and closing CTA band.
+ * All of the arrays above (workflowSteps, signalCards, readinessProfile,
+ * etc.) are static marketing/demo content, not live data.
+ */
 export default async function HomePage() {
   const account = await getPublicAccount();
 

@@ -1,3 +1,10 @@
+// Root layout for the entire Next.js app-router tree. Every route (public
+// marketing pages, auth, admin, dashboard) is rendered inside this shared
+// <html>/<body> shell, so this is where global stylesheets, page metadata
+// (title/description/OpenGraph/Twitter cards) and app-wide client providers
+// (analytics consent, PostHog, client-side error/fallback reporting) are
+// wired up once instead of per-route. Server component; it has no auth
+// checks of its own since access control happens further down the tree.
 import "./globals.css"
 import "./phase-8-public.css"
 import "./phase-9-admin.css"
@@ -44,6 +51,12 @@ export const metadata: Metadata = {
   }
 }
 
+/**
+ * Wraps every page in the shared <html>/<body> shell and mounts the
+ * app-wide client providers (PostHog analytics, the analytics-consent
+ * banner, and the client fallback error reporter) inside a Suspense
+ * boundary so they don't block initial render of the page content.
+ */
 export default function RootLayout({
   children
 }: {

@@ -1,3 +1,10 @@
+// /diagnostics page: a runtime readiness dashboard listing which env vars
+// are configured (never their values, only "Configured"/"Missing") and a
+// static rundown of what each major flow (sign-in, dashboard, Stripe
+// billing, AI features, cloud sync, extension connect) depends on. Server
+// component; requires a signed-in user (redirects to /login otherwise) who
+// passes `isAdminUser` (redirects to /dashboard otherwise) — same
+// "overview:read" admin-permission check used elsewhere.
 import { redirect } from "next/navigation"
 import { isAdminUser } from "../../lib/admin-access"
 import { getEnvReadiness } from "../../lib/diagnostics"
@@ -39,6 +46,12 @@ const scenarioChecks = [
   }
 ]
 
+/**
+ * Renders the diagnostics dashboard. Resolves the current user (test-auth
+ * override or Supabase session), redirects unauthenticated visitors to
+ * /login and non-admins to /dashboard, then shows env-var readiness (via
+ * `getEnvReadiness`) and the static scenario-coverage checklist.
+ */
 export default async function DiagnosticsPage() {
   const testUser = getTestAuthUser()
   let user = testUser

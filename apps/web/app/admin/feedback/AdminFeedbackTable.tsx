@@ -1,5 +1,8 @@
 "use client"
 
+// Client-side table for the /admin/feedback page. Polls
+// GET /api/admin/feedback on a 15s interval (toggleable) to keep the
+// beta-feedback list current, with a manual "Refresh now" fallback.
 import { useEffect, useState } from "react"
 import type { AdminFeedbackRow } from "../../../lib/admin-feedback"
 
@@ -9,6 +12,12 @@ function formatTimestamp(value: string): string {
 
 const POLL_INTERVAL_MS = 15_000
 
+/**
+ * Renders the feedback table (status, category, product area, rating,
+ * message, submitted-at per row), auto-refreshing every `POLL_INTERVAL_MS`
+ * while `autoRefresh` is checked (default on) and supporting an immediate
+ * manual refresh.
+ */
 export function AdminFeedbackTable({
   initialFeedback,
 }: {

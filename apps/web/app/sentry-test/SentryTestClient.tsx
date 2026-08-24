@@ -1,7 +1,18 @@
 "use client"
 
+// Client-only button panel for /sentry-test: lets a developer manually
+// trigger a thrown error, a captured test message, or a breadcrumb-then-
+// error, to confirm Sentry is receiving client-side events. Never rendered
+// in production (the parent page 404s there first).
 import * as Sentry from "@sentry/nextjs"
 
+/**
+ * Renders three buttons that each exercise a different Sentry capture path:
+ * an uncaught thrown error, a `Sentry.captureMessage` call (skipped when
+ * `NODE_ENV === "production"` as a belt-and-braces check on top of the
+ * parent page's own production guard), and a breadcrumb recorded just
+ * before throwing an error.
+ */
 export function SentryTestClient() {
   const captureTestMessage = () => {
     if (process.env.NODE_ENV === "production") {
