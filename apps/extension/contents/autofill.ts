@@ -4,7 +4,7 @@
 // Covers three jobs: (1) detecting/parsing job posting details from the
 // current page (detectJobPage, plus a large block of per-platform selector
 // heuristics), (2) the floating, draggable "Track Job" shadow-DOM widget
-// that shows those details, reads the account session (getAccountSession)
+// that shows those details, reads non-secret connection state
 // to reflect connection state, and lets the user save/sync the job, and
 // (3) autofilling saved profile/reusable-answer/application-content values
 // into visible form fields (including the LinkedIn Easy Apply modal).
@@ -19,27 +19,6 @@ import {
   type ApplicationRecord
 } from "../lib/storage"
 
-async function getAccountSession(): Promise<AccountSession | null> {
-  const response = await chrome.runtime.sendMessage({
-    type: "AUTOTIME_GET_ACCOUNT_STATE"
-  }) as {
-    connected?: boolean
-    email?: string
-    plan?: "free" | "pro"
-    provider?: AccountSession["provider"]
-  } | undefined
-
-  return response?.connected
-    ? {
-        authToken: "connected",
-        email: response.email ?? "Connected account",
-        expiresAt: 0,
-        plan: response.plan === "pro" ? "pro" : "free",
-        provider: response.provider ?? "email",
-        refreshToken: ""
-      }
-    : null
-}
 import {
   DISCONNECTED_STATE,
   getConnectionState,
