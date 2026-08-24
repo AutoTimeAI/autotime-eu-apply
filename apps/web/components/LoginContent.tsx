@@ -1,5 +1,6 @@
 "use client";
 
+/** Runs email and OAuth sign-in flows with bounded, user-facing diagnostics. */
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { reportClientIssue } from "../lib/client-diagnostics";
@@ -372,6 +373,7 @@ function LoginForm() {
   );
 }
 
+/** Renders the interactive login experience behind the server login page. */
 export function LoginContent() {
   return (
     <Suspense fallback={null}>

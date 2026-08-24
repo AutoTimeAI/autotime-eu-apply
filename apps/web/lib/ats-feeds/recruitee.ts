@@ -1,3 +1,6 @@
+// Client for Recruitee's public offers API. One of several per-company ATS
+// feed clients in this directory that all implement ATSFeedFetcher and
+// normalise their provider-specific response into NormalisedJob.
 import type { ATSFeedFetcher, FetchLike, NormalisedJob } from "./types";
 
 type RecruiteeOffer = {
@@ -11,6 +14,7 @@ type RecruiteeOffer = {
   locations?: Array<{ city?: string; country?: string }>;
 };
 
+/** Fetches and normalises open postings from a company's Recruitee job board. */
 export class RecruiteeFeed implements ATSFeedFetcher {
   private readonly fetchImpl: FetchLike;
 
@@ -18,6 +22,12 @@ export class RecruiteeFeed implements ATSFeedFetcher {
     this.fetchImpl = fetchImpl;
   }
 
+  /**
+   * Fetches all offers for `companySlug`'s Recruitee board and maps them to
+   * NormalisedJob. Location is built from the offer's own city/country fields,
+   * falling back to its first `locations` entry. Throws if the request fails.
+   * Offers missing a title or url are dropped.
+   */
   async fetchJobs(companySlug: string): Promise<NormalisedJob[]> {
     const response = await this.fetchImpl(`https://${encodeURIComponent(companySlug)}.recruitee.com/api/offers/`, { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`Recruitee feed failed (${response.status})`);

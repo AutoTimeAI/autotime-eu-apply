@@ -1,7 +1,20 @@
+// "Career Direction" / role-pathways discovery: given a candidate's confirmed
+// skill evidence and preferences, recommends ESCO-classified occupations
+// they could realistically move into, backed by observed European job-market
+// data rather than an AI guess. Covers the ESCO occupation catalogue (with a
+// bundled offline fixture + a real ESCO API client + a resilient wrapper
+// that falls back to the fixture), the scoring/discovery algorithm, and the
+// Zod schemas for persisting a user's saved lane selection and in-progress
+// discovery state. Consumed by apps/web's Role Pathways feature
+// (apps/web/lib/role-intelligence.ts, apps/web/lib/role-pathways-storage.ts,
+// apps/web/components/RolePathwaysExperience.tsx).
 import { z } from "zod";
 
+/** Bumped whenever laneSelectionSchema/rolePathwaysProgressSchema's shape changes, so stored data from an older schema version can be detected and migrated/discarded rather than silently misread. */
 export const ROLE_PATHWAYS_SCHEMA_VERSION = 1;
+/** Version tag for the bundled offline ESCO fixture data (cachedEscoTechnologySubset) - bump when the fixture rows change. */
 export const ESCO_CACHE_VERSION = "esco-fixture-2026.1";
+/** How strongly a piece of competency evidence should count: ranges from verified professional work down to a self-declared, unconfirmed claim. */
 export const evidenceStrengthSchema = z.enum([
   "professional",
   "production-project",
@@ -10,6 +23,7 @@ export const evidenceStrengthSchema = z.enum([
   "education",
   "self-declared",
 ]);
+/** One confirmed or claimed piece of evidence that a candidate has a specific competency (e.g. "SQL"), including where it came from and how strong/recent it is. */
 export const competencyEvidenceSchema = z
   .object({
     competencyId: z.string().min(1),
@@ -22,6 +36,7 @@ export const competencyEvidenceSchema = z
     durationMonths: z.number().int().min(0).max(600).optional(),
   })
   .strict();
+/** The candidate's stated preferences for a role-pathways search: target countries, work style, coding/stakeholder appetite, working model, languages, and domain areas of interest. */
 export const rolePreferencesSchema = z
   .object({
     countries: z.array(z.enum(["Ireland", "Germany", "Netherlands"])).min(1),
@@ -52,6 +67,7 @@ export const rolePreferencesSchema = z
 const namedSkillSchema = z
   .object({ id: z.string(), label: z.string() })
   .strict();
+/** A single ESCO (European Skills, Competences, Qualifications and Occupations) occupation record: identity, titles, essential/optional skills, and its relations to broader/narrower/related occupations. */
 export const escoOccupationSchema = z
   .object({
     id: z.string().min(1),
@@ -80,6 +96,7 @@ const jobCompetencySchema = z
     sourceText: z.string(),
   })
   .strict();
+/** A job posting normalised for role-pathways market analysis: ESCO occupation mapping, competencies, requirements, and sponsorship/work-authorisation evidence extracted from the posting text, each traceable to a sourceText excerpt. */
 export const normalisedEuropeanJobSchema = z
   .object({
     id: z.string(),
@@ -263,11 +280,13 @@ export const cachedEscoTechnologySubset = fixtureRows.map(
     }),
 );
 
+/** Common interface for anything that can supply ESCO occupation data, so callers can swap between the bundled fixture, a live API, and a resilient fallback wrapper without changing call sites. */
 export interface EscoProvider {
   metadata(): { provider: string; version: string; lastSynchronisedAt: string };
   search(query: string): Promise<EscoOccupation[]>;
   technologyOccupations(): Promise<EscoOccupation[]>;
 }
+/** Serves ESCO occupation data purely from the bundled offline fixture (cachedEscoTechnologySubset) - no network calls, always available. */
 export class CachedEscoProvider implements EscoProvider {
   metadata() {
     return {
@@ -290,6 +309,7 @@ export class CachedEscoProvider implements EscoProvider {
     );
   }
 }
+/** Queries the real ESCO REST API for occupation search/technology-occupation results. `fetcher` is injectable (default `fetch`) for testing; throws if the API responds with a non-OK status. */
 export class ApiEscoProvider implements EscoProvider {
   private readonly endpoint: string;
   private readonly fetcher: typeof fetch;
@@ -318,6 +338,7 @@ export class ApiEscoProvider implements EscoProvider {
     return escoOccupationSchema.array().parse(body._embedded?.results ?? []);
   }
 }
+/** Wraps a primary EscoProvider (typically ApiEscoProvider, or null) with a fallback (default: CachedEscoProvider) - any error or a missing primary transparently falls through to the fallback, so callers always get a result even when the live ESCO API is down. */
 export class ResilientEscoProvider implements EscoProvider {
   private readonly primary: EscoProvider | null;
   private readonly fallback: EscoProvider;
@@ -350,6 +371,7 @@ export class ResilientEscoProvider implements EscoProvider {
     }
   }
 }
+/** Aggregated, observed European vacancy data for one occupation in one country (built by aggregateMarketEvidence), used to ground market-readiness claims in real postings rather than a static assumption. */
 export type MarketEvidence = {
   country: string;
   observedVacancies: number;
@@ -364,6 +386,7 @@ export type MarketEvidence = {
   freshness: string;
   sourceCoverage: string[];
 };
+/** One scored occupation recommendation from discoverRolePathways: capability/market/preference scores, a facts-vs-inferences-vs-unknowns breakdown (kept separate deliberately, so the UI never presents an inference as a confirmed fact), and the supporting market evidence. */
 export type RoleRecommendation = {
   occupation: EscoOccupation;
   capabilityScore: number;
@@ -423,6 +446,7 @@ const specialisedGates: Record<string, string[][]> = {
 };
 const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 const unique = (values: string[]) => [...new Set(values)].sort();
+/** Filters `jobs` to the given occupation/country pair and summarises them into a MarketEvidence record (vacancy counts, recurring competencies, working models, sponsorship mentions, etc.). Returns a zeroed-out/empty record - not an error - when no matching jobs are found. */
 export function aggregateMarketEvidence(
   occupationId: string,
   country: string,
@@ -490,6 +514,18 @@ function preferenceScore(role: EscoOccupation, preferences: RolePreferences) {
     score += 10;
   return clamp(score);
 }
+/**
+ * Scores how viable one ESCO occupation is for a candidate, combining
+ * confirmed competency evidence (coverage/practicality/recency of matched
+ * essential skills), observed market evidence for that occupation/country,
+ * and preference alignment. Certain occupation families (see
+ * `specialisedGates`) require at least one confirmed skill from each gate
+ * group before `gatePassed` is true, which in turn caps `transitionDistance`
+ * at "major retraining required" regardless of the raw capability score.
+ * `mobilityGoverned` only toggles between "potentially viable" and
+ * "insufficient information" for `mobilityStatus` - it does not otherwise
+ * change scoring.
+ */
 export function scoreOccupation(
   role: EscoOccupation,
   evidence: CompetencyEvidence[],
@@ -595,6 +631,7 @@ export function scoreOccupation(
     gatePassed,
   };
 }
+/** Scores every candidate occupation via scoreOccupation and ranks them by a weighted blend of capability (65%), preference alignment (20%), and market readiness (15%), breaking ties by occupation id for a stable order. */
 export function discoverRolePathways(
   occupations: EscoOccupation[],
   evidence: CompetencyEvidence[],
@@ -625,6 +662,7 @@ export function discoverRolePathways(
         a.occupation.id.localeCompare(b.occupation.id),
     );
 }
+/** A user's finalised Career Direction choice: one primary lane, up to two secondary lanes, and an optional explorer lane, all required to be distinct occupations. Stamped with the schema/catalogue versions in effect at save time. */
 export const laneSelectionSchema = z
   .object({
     schemaVersion: z.literal(ROLE_PATHWAYS_SCHEMA_VERSION),

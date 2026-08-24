@@ -1,5 +1,11 @@
 "use client"
 
+// Lets an already-authenticated user attach a second OAuth sign-in method
+// (Google/GitHub) to the same Supabase account, so either provider opens the
+// same AutoTime profile. Rendered inside Settings; kept as its own module
+// because it owns its own async identity-loading and Supabase link-flow
+// state, separate from the rest of the settings panel.
+
 import { useEffect, useMemo, useState } from "react"
 import { reportClientIssue } from "../lib/client-diagnostics"
 import { getStatusTone } from "../lib/status-tone"
@@ -40,6 +46,19 @@ function getIdentityLinkErrorMessage(errorMessage: string) {
   return `Failed: ${errorMessage}. Enable Manual Linking in Supabase Auth settings if it is not already enabled.`
 }
 
+/**
+ * Client component that lists the OAuth providers linked to the signed-in
+ * account and lets the user start Supabase's `linkIdentity` flow for any
+ * provider not yet linked. Loads current identities on mount via
+ * `supabase.auth.getUserIdentities()`, then redirects the browser to the
+ * provider's consent screen (via `window.location.assign`) to complete
+ * linking.
+ *
+ * @param compact - Renders a condensed layout (e.g. for embedding in a
+ *   smaller panel) when true.
+ * @param returnTo - Path to send the user back to after the OAuth linking
+ *   redirect completes.
+ */
 export function AccountIdentityLinker({
   compact = false,
   returnTo = "/dashboard/settings"

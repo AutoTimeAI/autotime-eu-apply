@@ -1,3 +1,8 @@
+// Public /compatibility page. Publishes a dated evidence table of which job
+// boards/ATS platforms the browser extension can capture, autofill, or read
+// as a native feed for, sourced from the shared PLATFORM_COVERAGE dataset,
+// plus a form for visitors to report a platform that isn't working. Server
+// component, revalidated hourly; no auth required.
 import type { Metadata } from "next";
 import { PLATFORM_COVERAGE, getPublicCoverageSummary, isCoverageStale, type CoverageStatus } from "shared";
 import { CompatibilityReportForm } from "../../components/CompatibilityReportForm";
@@ -9,6 +14,13 @@ export const revalidate = 3600;
 
 const labels: Record<CoverageStatus, string> = { verified:"Verified",partial:"Partial",manual_only:"Manual only",unsupported:"Not supported",unverified:"Unverified",not_applicable:"Not applicable" };
 
+/**
+ * Renders the platform-compatibility table: a summary strip (platform
+ * count, verified capture integrations, verified native feeds) followed by
+ * a per-platform row of capture/autofill/native-feed status pulled from
+ * `PLATFORM_COVERAGE`, flagging rows as stale via `isCoverageStale` when
+ * their `lastVerifiedAt` date is more than 30 days old.
+ */
 export default function CompatibilityPage() {
   const now = new Date();
   const summary = getPublicCoverageSummary(now);

@@ -1,5 +1,13 @@
 "use client"
 
+// Full extension<->dashboard account-linking flow, reached at
+// /extension/connect?extensionId=... (typically opened by the extension
+// itself). Pings the installed extension over chrome.runtime messaging,
+// reads the signed-in Supabase session, sends the auth/refresh tokens and
+// plan to the extension via a AUTOTIME_CONNECT_ACCOUNT message, and records
+// the connection server-side. Logs a running diagnostic step list so users
+// (and support) can see exactly where a failed connection attempt stopped.
+
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { reportClientIssue } from "../lib/client-diagnostics"
@@ -163,6 +171,16 @@ function formatProviderLabel(provider: string): string {
   }
 }
 
+/**
+ * Client component that drives the extension-connect handshake. Reads
+ * `extensionId` from the query string; on mount (if present) it
+ * automatically pings the extension, resolves the current Supabase session,
+ * fetches account plan/provider via `/api/account/me`, sends a
+ * `AUTOTIME_CONNECT_ACCOUNT` runtime message to the extension with the auth
+ * tokens, and records the connection via `/api/sync/extension`. Surfaces a
+ * "sign in first" link when there's no session, and step-by-step install
+ * guidance when Chrome can't find the extension at all.
+ */
 export default function ExtensionConnect() {
   const searchParams = useSearchParams()
   const extensionId = searchParams.get("extensionId") ?? ""

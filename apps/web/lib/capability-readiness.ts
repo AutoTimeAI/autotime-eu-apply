@@ -1,3 +1,13 @@
+/**
+ * Encodes, per product capability (analysing a job, preparing an
+ * application, assessing mobility, etc.), exactly which pieces of user
+ * evidence/preferences/context are required vs. merely recommended before
+ * that capability can be used - and derives the single "what should this
+ * user do next on Home" recommendation from that same readiness state.
+ * Centralizing this here means every surface that gates a feature or
+ * explains why it's unavailable reads from one deterministic rule set
+ * instead of each screen inventing its own readiness logic.
+ */
 export type ProductCapability =
   | "view_dashboard"
   | "discover_pathways"
@@ -114,6 +124,19 @@ function result(
   };
 }
 
+/**
+ * Evaluates whether `capability` is usable given the user's current
+ * `input` (evidence, preferences, job/application/autofill context).
+ * Returns "needs_information" if any required item is missing,
+ * "ready_with_limitations" if only recommended (non-blocking) items are
+ * missing, or "ready" otherwise - along with the specific missing
+ * requirements, an explanation string, and (only when something required is
+ * missing) a suggested next action carrying `returnTo` so the user can come
+ * back to where they started. Each capability has its own hard-coded
+ * required/recommended rule set; capabilities not explicitly matched by an
+ * earlier branch fall through to the "approve_application_answers" rules at
+ * the end of the function.
+ */
 export function evaluateCapabilityReadiness(
   capability: ProductCapability,
   input: CapabilityReadinessInput,
@@ -687,6 +710,18 @@ const homeActions: Record<HomeNextActionId, HomeNextAction> = {
   },
 };
 
+/**
+ * Picks the single highest-priority action to surface on Home, evaluated
+ * as a fixed priority cascade: outstanding interview attention items first
+ * (soon/incomplete, awaiting final review, awaiting outcome, progressed
+ * without a next stage), then the onboarding funnel (career evidence,
+ * career lane, target country, first saved job), then job/application
+ * follow-through (unanalysed job, a job needing a Consider-state decision,
+ * an application needing review, preparing an application, a ready
+ * application to submit, a due follow-up, any interview), finally falling
+ * back to "add a job" if nothing else applies. Always returns exactly one
+ * action - never null.
+ */
 export function getHomeNextAction(
   context: HomeNextActionContext,
 ): HomeNextAction {
@@ -711,6 +746,11 @@ export function getHomeNextAction(
   return homeActions.add_job;
 }
 
+/**
+ * Maps a numeric evidence-coverage score to a human-readable guidance
+ * label: "Strong evidence coverage" (85+), "Good evidence coverage" (60+),
+ * "Enough to explore" (25+), or "Getting started" otherwise.
+ */
 export function getProfileGuidanceLevel(score: number) {
   if (score >= 85) return "Strong evidence coverage";
   if (score >= 60) return "Good evidence coverage";

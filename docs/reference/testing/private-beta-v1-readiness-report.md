@@ -1,12 +1,13 @@
 # Private Beta v1 Readiness Report
 
-Last updated: 2026-05-24
+Last updated: 2026-08-24
 
 ## Executive Summary
 
-AutoTime EU Apply Private Beta v1 has completed internal technical readiness
-testing, including browser E2E verification. The product is ready for
-founder-led early users, but full beta validation is not complete until
+AutoTime EU Apply Private Beta v1 has completed its internal automated
+startup-quality gate, including security hardening, production builds,
+browser E2E verification, and live production smoke. The product is ready for
+controlled founder-led early users, but full beta validation is not complete until
 Sentry live verification, early-user UAT, and outcome usefulness/trust
 validation are completed.
 
@@ -19,20 +20,21 @@ application kit, and waitlist / feedback.
 
 | Scope | Current Percentage | Meaning |
 | --- | --- | --- |
-| Internal technical readiness | 80-85% complete | Build, web build, browser E2E and Sentry privacy/config checks are verified for private beta. |
-| Overall beta validation | 65-70% complete | Production smoke now passes, but real early-user UAT, Sentry dashboard live verification and outcome validation are still pending. |
-| Public launch readiness | Not ready yet | Public launch requires production smoke, UAT evidence, live monitoring spot-checks and stronger outcome-quality validation. |
+| Internal technical readiness | Complete | Lint, all workspace typechecks, unit/security/privacy coverage, extension and web production builds, 87 browser cases, and production smoke are verified. |
+| Overall beta validation | 75% complete | Real early-user UAT, Sentry dashboard live verification, and outcome validation are still pending. |
+| Public launch readiness | Not ready yet | Public launch also requires ICO registration, a manual Chrome Web Store pass, and real email and Stripe verification. |
 
 ## Readiness Table
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Build/web build | Complete | Passed after rerun outside Windows EPERM sandbox file-lock. |
-| Browser E2E | Complete, 10/10 passed | Full Playwright browser suite passed with 0 failures, including extension-synced LinkedIn tracked-job reflection. |
+| Build/web/extension build | Complete | Current production builds passed on 2026-08-24. |
+| Browser E2E | Complete, 87/87 verified | The full run passed 86 cases and exposed one action-hierarchy visual-contract failure; commit `f53415ec` fixed it and its focused rerun passed. |
 | Core beta flow | Complete | Job import -> EU fit -> application kit -> waitlist / feedback is browser verified. |
 | Sentry config/privacy tests | Complete for beta | Error-only replay and privacy redaction are configured and tested. |
 | Product-level Sentry observability | Partial/basic to moderate | Config, breadcrumbs and test routes exist; live dashboard spot-check remains pending. |
-| Production smoke | Complete | `pnpm smoke:web` passed against `https://autotime-eu-apply.vercel.app` on 2026-05-24 after enabling Node system CA trust and updating current Private Beta v1 markers. |
+| Extension security boundaries | Complete | Commit `23954b9b` adds CSV formula neutralisation, bounded location parsing, session-only tokens, and background-only authenticated requests; tests and build passed. |
+| Production smoke | Complete | `pnpm smoke:web` passed against `https://autotime-eu-apply.vercel.app` on 2026-08-24. |
 | Sentry dashboard live spot-check | Pending Manual Evidence | Sentry dashboard/insights are accessible, but live production event verification remains pending until an actual AutoTime EU Apply issue is opened and checked for environment, breadcrumbs, replay, stack trace, and sensitive data. |
 | Founder-led UAT | Pending | 3 to 5 selected early users still need to complete guided sessions. |
 | Outcome usefulness/trust | Pending real-user validation | Application kit usefulness and EU fit trust need UAT feedback. |
@@ -40,7 +42,7 @@ application kit, and waitlist / feedback.
 
 ## Final Beta Verdict
 
-Private Beta v1 — Founder-led early-user ready with browser E2E and production smoke verified. Full beta validation pending until Sentry live dashboard verification and founder-led UAT are completed.
+Private Beta v1 — Technical GO for controlled founder-led early users. Full beta validation remains pending until Sentry live dashboard verification, founder-led UAT, and outcome validation are completed; public launch has additional external gates listed above.
 
 ## Completed Areas
 
@@ -71,5 +73,5 @@ Private Beta v1 — Founder-led early-user ready with browser E2E and production
 
 ## Final Release Decision
 
-Founder-led early-user ready with browser E2E and production smoke verified.
-Full beta validation remains pending.
+Technical GO for controlled founder-led early users, with the automated gate complete.
+Full beta validation and public-launch certification remain pending on the named external evidence gates.

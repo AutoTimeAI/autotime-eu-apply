@@ -1,3 +1,16 @@
+/**
+ * /dashboard/extension — Chrome extension connection status and setup page.
+ *
+ * Server component (`force-dynamic`). Requires an authenticated Supabase
+ * user (redirects to /login otherwise) and is further gated inside
+ * `ProfileProtocolLock`. Uses the admin Supabase client to read, in
+ * parallel, the user's extension connections, recent sync events, count of
+ * applications captured via the extension, and the most recently captured
+ * application. From those it derives connection health, a "reconnect"
+ * prompt state, and a confidence rating for whether extension parsing is
+ * working, then renders install instructions plus recent connection and
+ * sync-event history.
+ */
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { InstalledExtensionConnectButton } from "../../../components/InstalledExtensionConnectButton"
@@ -7,6 +20,7 @@ import { createServerClient } from "../../../lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 
+/** Formats an ISO timestamp as "24 Aug 2026, 14:30" (en-GB); returns "Not recorded" when absent. */
 function formatDate(value: string | null | undefined) {
   if (!value) {
     return "Not recorded"
@@ -18,6 +32,7 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value))
 }
 
+/** Converts a snake_case sync-event entity type (e.g. "job_listing") into a title-cased label ("Job Listing"). */
 function formatEventLabel(value: string) {
   return value
     .split("_")
@@ -25,6 +40,7 @@ function formatEventLabel(value: string) {
     .join(" ")
 }
 
+/** Renders a captured-jobs count as a string, or "Unavailable" if the count query failed (null). */
 function formatCount(value: number | null) {
   if (typeof value !== "number") {
     return "Unavailable"
@@ -33,6 +49,12 @@ function formatCount(value: number | null) {
   return `${value}`
 }
 
+/**
+ * Loads the signed-in user's extension connections, sync events, and
+ * extension-captured application stats, derives health/reconnect/confidence
+ * states from them, and renders the extension setup and status page.
+ * Redirects to /login if there is no authenticated user.
+ */
 export default async function DashboardExtensionPage() {
   const supabase = await createServerClient()
   const {

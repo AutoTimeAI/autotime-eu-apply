@@ -1,5 +1,12 @@
 "use client"
 
+// Next.js App Router error boundary for the app/ route segment. When a
+// rendering error is thrown anywhere under this segment (short of a root
+// layout failure, which global-error.tsx handles instead), Next.js swaps
+// the failed subtree for this fallback UI. Reports the error to Sentry and
+// to AutoTime's own client-diagnostics endpoint, then offers the user a
+// "Try again" reset or an escape hatch back to the dashboard. Client
+// component (error boundaries must run on the client).
 import * as Sentry from "@sentry/nextjs"
 import { useEffect } from "react"
 import {
@@ -7,6 +14,12 @@ import {
   reportClientIssue
 } from "../lib/client-diagnostics"
 
+/**
+ * Error boundary fallback rendered when a route segment throws during
+ * render. Logs the error to Sentry and to the client-diagnostics reporter
+ * (tagged area "dashboard") on mount, then shows a recovery UI with a
+ * `reset()` retry button and a link back to /dashboard.
+ */
 export default function ErrorFallback({
   error,
   reset

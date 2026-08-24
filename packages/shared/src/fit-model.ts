@@ -1,3 +1,12 @@
+// The local (non-AI) fit-scoring engine: given a CandidateProfile and a
+// JobAnalysisDraft, it derives a role/skill fit score (evaluateAutoTimeFitScore),
+// a legacy country/work-right evaluation (evaluateCountryFit, deprecated -
+// see international/orchestration.ts for the current replacement), and the
+// mock EU-fit summary / application positioning content shown to the
+// candidate when no live AI provider is configured. Both apps call into this
+// so "what does AutoTime think of this job" is computed identically whether
+// scored from the extension or the web app, and so a free/offline mode
+// always has a deterministic answer to fall back to.
 import type {
   AIProvider,
   ApplicationPositioningPack,
@@ -8,6 +17,7 @@ import type {
 } from "./types.ts"
 import { getCountryRule, type CountryRule } from "./country-rules.ts"
 
+/** Standard disclaimer attached to every fit score, clarifying it is a guidance signal, not a guarantee. */
 export const AUTOTIME_FIT_SCORE_DISCLAIMER =
   "This score is a guidance signal based on your provided CV/profile and the job description. It does not guarantee interviews, offers, or employer decisions."
 
@@ -23,6 +33,7 @@ export const AUTOTIME_OFFICIAL_SOURCE_NOTE =
 export const AUTOTIME_APPLICATION_DRAFT_REVIEW_NOTE =
   "Application drafts should be reviewed and personalised before submission."
 
+/** Picks which AI backend to use for content generation: only returns "openai" if it was explicitly requested and a key is actually available, otherwise always falls back to "mock" (never silently picks a provider the caller didn't ask for). */
 export function resolveAIProvider({
   requestedProvider,
   openAIKeyAvailable = false
@@ -37,8 +48,15 @@ export function resolveAIProvider({
   return "mock"
 }
 
+/** Whether the candidate is applying as a foreign national (sponsorship/work-right checks apply) or as a native/already-authorised candidate. */
 export type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 
+// The following hand-written types mirror their z.infer counterparts in
+// schemas.ts (fitComponentKeySchema, countryFitEvaluationSchema, etc.).
+// They're kept as plain type aliases here rather than importing the
+// inferred types because this module predates schemas.ts's coverage of the
+// legacy country-fit shapes; treat schemas.ts as the shape of record if the
+// two ever drift.
 export type FitComponentKey =
   | "skillMatch"
   | "atsCompatibility"
@@ -120,6 +138,7 @@ type FitContext = {
   outcomeSignals?: OutcomeLearningSignals
 }
 
+/** Aggregate counts of past application outcomes, fed into evaluateCountryFit so repeated sponsorship/work-right rejections gradually lower future scores for the same pattern. */
 export type OutcomeLearningSignals = {
   totalTracked: number
   interviews: number
@@ -661,6 +680,18 @@ function getConfidence(components: FitComponent[]) {
   return strong >= 1 ? "Medium" : "Low"
 }
 
+/**
+ * The primary role/skill fit engine: purely local, keyword/overlap-based
+ * scoring of a CandidateProfile against a JobAnalysisDraft (no AI call).
+ * Weighs role/title alignment, skill coverage, seniority, domain relevance,
+ * location/work-setup match, CV evidence depth, and application readiness
+ * into a 0-100 score, then applies penalties for missing skill evidence,
+ * work-authorisation risk, seniority mismatch, or thin CV evidence.
+ * Deterministic and safe to run offline/without an AI provider - this is
+ * what backs the "mock" fit review shown when no live AI is configured, and
+ * what orchestrateJobDecision (international/orchestration.ts) treats as the
+ * authoritative role-fit input.
+ */
 export function evaluateAutoTimeFitScore({
   profile,
   job
@@ -1105,6 +1136,14 @@ function getLanguageBarrierScore({
   return clampScore(80 - (matched.length / visibleLanguageSignals.length) * 55)
 }
 
+/**
+ * Combines a (legacy) CountryFitEvaluation and an AutoTimeFitReview into the
+ * single EUFitEngineResult shown to the candidate - the "mock"/offline
+ * equivalent of what an AI provider would otherwise generate. Despite the
+ * name, this is also the fallback used whenever no live AI provider is
+ * configured, not only in demo mode: `provider: "mock"` prefixes the trust
+ * note with AUTOTIME_DEMO_ANALYSIS_LABEL so the UI can flag it as such.
+ */
 export function createMockEUFitEngineResult({
   evaluation,
   fitReview,
@@ -1181,6 +1220,13 @@ export function createMockEUFitEngineResult({
   }
 }
 
+/**
+ * Builds the offline/template equivalent of an AI-generated
+ * ApplicationPositioningPack (cover letter angle, motivation/strengths
+ * answers, follow-up suggestion, etc.) purely from the fit result, job, and
+ * profile - no live AI call. Prefers the candidate's saved reusableAnswers
+ * where available before falling back to a templated sentence.
+ */
 export function createMockApplicationPositioningPack({
   fitResult,
   job,

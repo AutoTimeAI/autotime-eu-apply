@@ -1,3 +1,17 @@
+/**
+ * GET /api/account/me
+ *
+ * Returns a minimal profile summary (email, subscription plan, auth
+ * provider) for the currently signed-in user.
+ *
+ * Auth: requires a valid session — resolved via `getRequestUser`. Requests
+ * without an authenticated user (or without an email on the user record)
+ * receive 401.
+ *
+ * Behaviour: looks up the user's plan via `getUserPlan` (feature-gate
+ * lookup) and reads the auth provider from `user.app_metadata.provider`,
+ * defaulting to `"email"` when absent.
+ */
 import { type NextRequest, NextResponse } from "next/server"
 import { getUserPlan } from "../../../../lib/feature-gate"
 import { getRequestUser } from "../../../../lib/api-auth"
@@ -32,6 +46,15 @@ function jsonResponse(
   return NextResponse.json(body, { status: body.status })
 }
 
+/**
+ * Returns `{ email, plan, provider }` for the authenticated caller.
+ *
+ * Responses:
+ * - 200: account summary data.
+ * - 401: no authenticated user, or user has no email.
+ * - 503: backing configuration unavailable.
+ * - 500: unexpected error.
+ */
 export async function GET(
   request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AccountMeData>>> {

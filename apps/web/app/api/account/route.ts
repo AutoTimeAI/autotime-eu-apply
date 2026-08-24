@@ -1,3 +1,4 @@
+/** Permanently deletes the authenticated account and its owned product data. */
 import { type NextRequest, NextResponse } from "next/server"
 import { getRequestUser } from "../../../lib/api-auth"
 import {

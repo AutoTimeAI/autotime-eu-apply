@@ -1,5 +1,8 @@
 "use client"
 
+// Client-side table for the /admin/audit-log page. Polls
+// GET /api/admin/audit-log on a 15s interval (toggleable) to keep the
+// admin-actions audit trail current, with a manual "Refresh now" fallback.
 import { useEffect, useState } from "react"
 import type { AdminAuditEvent } from "../../../lib/admin-audit"
 
@@ -17,6 +20,11 @@ function formatMetadata(metadata: AdminAuditEvent["metadata"]): string {
 
 const POLL_INTERVAL_MS = 15_000
 
+/**
+ * Renders the audit-log table (action, target, actor, metadata, timestamp
+ * per row), auto-refreshing every `POLL_INTERVAL_MS` while `autoRefresh` is
+ * checked (default on) and supporting an immediate manual refresh.
+ */
 export function AdminAuditLogTable({
   initialEvents,
 }: {

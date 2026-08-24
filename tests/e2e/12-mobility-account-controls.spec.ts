@@ -1,3 +1,8 @@
+// Complements 11-mobility-persistence.spec.ts by covering account-level
+// side effects rather than sync mechanics: deleting the account profile
+// (from Settings) cascades to removing the browser's local mobility copy,
+// but signing out does not; and a "Remove from this browser" action for the
+// active user must not touch another account's mobility storage key.
 import { expect, test, type Route } from "@playwright/test";
 import { sampleUser } from "../fixtures/sample-user";
 import { seedReadyDashboardProfile } from "./helpers";

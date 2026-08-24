@@ -1,3 +1,11 @@
+// Shared constants/data for the side panel UI: the `Section` union that
+// drives navigation and status-message wiring in main.tsx, empty-draft
+// defaults for each editable form, the onboarding step copy, and the
+// section-nav grouping/labels. Note: as of this codebase, `main.tsx` sets
+// `renderLegacyTools = false`, so the multi-section nav (SectionNav,
+// Onboarding, and the per-section components this file's `sections`/
+// `onboardingSteps` describe) is currently dead in the rendered UI, kept
+// for a possible future return to the full multi-section layout.
 import type {
   ApplicationContentDraft,
   ApplicationStatus,

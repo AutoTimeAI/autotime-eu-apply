@@ -1,3 +1,18 @@
+/**
+ * GET/PATCH /api/account/settings
+ *
+ * Reads and updates the caller's account preferences (AI tone, default
+ * region, notifications toggle), stored in the `account_settings` table.
+ *
+ * Auth: requires a valid session — resolved via `getRequestUser`. Requests
+ * without a recognised user receive 401.
+ *
+ * Behaviour: degrades gracefully if the `account_settings` table has not
+ * been migrated yet (`isMissingAccountSettingsTable`) — GET returns the
+ * hard-coded `defaultSettings` with an explanatory `error` message and
+ * status 200, and PATCH echoes back the requested values with status 202
+ * instead of persisting them.
+ */
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { getRequestUser } from "../../../../lib/api-auth"
@@ -70,6 +85,16 @@ function isMissingAccountSettingsTable(error: {
   )
 }
 
+/**
+ * Returns the caller's current account settings, or defaults if none are
+ * stored (or if the `account_settings` table is not yet deployed).
+ *
+ * Responses:
+ * - 200: settings data (persisted or default).
+ * - 401: no authenticated user.
+ * - 500: unexpected read error.
+ * - 503: backing configuration unavailable.
+ */
 export async function GET(
   request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AccountSettingsData>>> {
@@ -142,6 +167,25 @@ export async function GET(
   }
 }
 
+/**
+ * Validates the request body against `settingsSchema` (all fields
+ * optional) and upserts the merged settings for the caller, keyed on
+ * `user_id`.
+ *
+ * Request body (JSON, all optional): `aiTone` (one of
+ * "concise"|"coaching"|"detailed"), `defaultRegion` (1-120 char string),
+ * `notificationsEnabled` (boolean). Omitted fields fall back to the
+ * existing stored value, then to `defaultSettings`.
+ *
+ * Responses:
+ * - 200: updated settings persisted and returned.
+ * - 202: `account_settings` table not yet deployed — requested values are
+ *   echoed back but not persisted.
+ * - 400: request body fails schema validation.
+ * - 401: no authenticated user.
+ * - 500: unexpected read/write error.
+ * - 503: backing configuration unavailable.
+ */
 export async function PATCH(
   request: NextRequest,
 ): Promise<NextResponse<ApiResponse<AccountSettingsData>>> {

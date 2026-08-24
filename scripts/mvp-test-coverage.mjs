@@ -1,3 +1,4 @@
+/** Enforces that MVP requirements remain represented in the automated test inventory. */
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
@@ -98,10 +99,10 @@ const requiredPackageScripts = [
 ]
 
 const requiredEvidenceFiles = [
-  "docs/extension-smoke-test.md",
-  "docs/v2-smoke-test.md",
-  "docs/release-readiness.md",
-  "docs/founder-validation-report.md",
+  "docs/reference/extension-smoke-test.md",
+  "docs/reference/v2-smoke-test.md",
+  "docs/reference/release-readiness.md",
+  "docs/reference/founder-validation-report.md",
   "scripts/mvp-automation-toolkit.mjs",
   "scripts/release-check.mjs",
   "scripts/validation-run.mjs",

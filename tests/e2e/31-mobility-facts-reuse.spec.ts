@@ -1,3 +1,10 @@
+// Confirms the saved International mobility profile (current/target
+// countries, sponsorship-required) is the single source of truth reused
+// elsewhere in the app, rather than something the user has to re-enter:
+// Career Direction pre-fills its target-country and support-need
+// preferences from it, and job analysis consults it (instead of a legacy
+// per-dashboard sponsorship flag) so a vacancy that can't sponsor correctly
+// resolves to Skip when the mobility profile says sponsorship is required.
 import { expect, test, type Page } from "@playwright/test";
 
 const userId = "00000000-0000-4000-8000-000000000001";

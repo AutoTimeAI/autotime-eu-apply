@@ -209,7 +209,7 @@ test("LinkedIn scoring requires browser-icon action and explicit risk acknowledg
     readFile(new URL("../apps/extension/lib/match-overlay.ts", import.meta.url), "utf8"),
     readFile(new URL("../apps/extension/entrypoints/autotime.content.ts", import.meta.url), "utf8"),
     readFile(new URL("../apps/extension/entrypoints/background/index.ts", import.meta.url), "utf8"),
-    readFile(new URL("../docs/job-aggregation-compliance.md", import.meta.url), "utf8"),
+    readFile(new URL("../docs/reference/job-aggregation-compliance.md", import.meta.url), "utf8"),
   ]);
   assert.match(background, /chrome\.action\.onClicked/);
   assert.match(background, /AUTOTIME_LINKEDIN_MATCH_REQUEST/);

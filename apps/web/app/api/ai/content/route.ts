@@ -1,3 +1,4 @@
+/** Generates evidence-constrained application content for an authenticated user. */
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import {

@@ -27,8 +27,8 @@ test("creates a validation report with build metadata", () => {
     tester: "Rajan",
     chromeVersion: "124.0.0.0",
     operatingSystem: "Windows",
-    automatedReportPath: "`docs/automation-runs/run.md`",
-    releaseCheckPath: "`docs/release-runs/run.md`"
+    automatedReportPath: "`docs/reports/automation-runs/run.md`",
+    releaseCheckPath: "`docs/reports/release-runs/run.md`"
   })
 
   assert.match(report, /- Date: 2026-05-04/)
@@ -39,11 +39,11 @@ test("creates a validation report with build metadata", () => {
   assert.match(report, /- Operating system: Windows/)
   assert.match(
     report,
-    /- Automated release check: `docs\/release-runs\/run\.md`/
+    /- Automated release check: `docs\/reports\/release-runs\/run\.md`/
   )
   assert.match(
     report,
-    /- MVP automation report: `docs\/automation-runs\/run\.md`/
+    /- MVP automation report: `docs\/reports\/automation-runs\/run\.md`/
   )
 })
 
@@ -54,9 +54,9 @@ test("includes the automated and manual testing gates", () => {
   assert.match(report, /`pnpm release:check` passed/)
   assert.match(report, /`SKIP_LIVE_SMOKE=1 pnpm test:mvp` passed/)
   assert.match(report, /## Extension Smoke Test/)
-  assert.match(report, /docs\/extension-smoke-test\.md/)
+  assert.match(report, /docs\/reference\/extension-smoke-test\.md/)
   assert.match(report, /## V2 Dashboard Smoke Test/)
-  assert.match(report, /docs\/v2-smoke-test\.md/)
+  assert.match(report, /docs\/reference\/v2-smoke-test\.md/)
 })
 
 test("keeps LinkedIn and live platform validation explicit", () => {
@@ -82,10 +82,10 @@ test("includes export evidence and release decision sections", () => {
 })
 
 test("finds the latest markdown report in a report directory", () => {
-  const latest = findLatestReportPath("docs/release-runs")
+  const latest = findLatestReportPath("docs/reports/release-runs")
 
   assert.ok(latest.endsWith(".md"))
-  assert.match(latest, /docs[\\/]release-runs[\\/]/)
+  assert.match(latest, /docs[\\/]reports[\\/]release-runs[\\/]/)
 })
 
 let failed = 0

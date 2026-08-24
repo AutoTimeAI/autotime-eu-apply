@@ -1,5 +1,12 @@
 "use client";
 
+// Renders the /dashboard/settings account-management panels: sign-out,
+// billing (checkout/portal), browser-backup export, GDPR-style account data
+// export/deletion, and lightweight AI/notification preferences. Kept as one
+// component because these are all "manage my account" actions that share a
+// single status-message area, even though each talks to a different API
+// route.
+
 import { useEffect, useState } from "react";
 import { getStatusTone } from "../lib/status-tone";
 import {
@@ -32,6 +39,17 @@ function getUserScopedStorageKey(baseKey: string, userId: string) {
   return `${baseKey}:${userId}`;
 }
 
+/**
+ * Renders the full settings page: account/sign-out, plan & billing
+ * (routes to Stripe checkout or the billing portal depending on `plan`),
+ * data & privacy (local backup export, delete synced profile/mobility
+ * data), GDPR export/full-account-deletion, and AI/notification
+ * preferences (auto-saved on blur/change via
+ * `PATCH /api/account/settings`). Destructive actions (`deleteAccountProfile`,
+ * `deleteAccount`) require a native `confirm()` before proceeding, and
+ * account-profile deletion deletes mobility data first so a failure there
+ * doesn't leave orphaned mobility data referencing a deleted profile.
+ */
 export function SettingsControls({
   email,
   plan,

@@ -1,8 +1,19 @@
 "use client";
 
+// Public form (used on the /compatibility marketing/support page) that lets
+// visitors report an ATS/job-site platform the browser extension does not
+// support or mishandles. Submits to /api/compatibility/reports. Includes a
+// hidden honeypot field ("company") to deter basic bot submissions.
+
 import { useState, type FormEvent } from "react";
 import { PLATFORM_NAMES } from "shared";
 
+/**
+ * Self-contained compatibility-report form: collects platform, site URL,
+ * problem category, optional description and optional diagnostic (user
+ * agent) consent, then POSTs to `/api/compatibility/reports`. Manages its
+ * own submit/status state and resets the form on success.
+ */
 export function CompatibilityReportForm() {
   const [status, setStatus] = useState("");
   const [sending, setSending] = useState(false);

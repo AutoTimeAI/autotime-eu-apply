@@ -1,3 +1,16 @@
+/**
+ * /dashboard/settings — account controls hub: plan/billing, sync status,
+ * extension connection state, and data controls.
+ *
+ * Server component (`force-dynamic`). Authenticates via the test-auth user
+ * or a Supabase session, redirecting to /login if neither is present. Under
+ * test-auth it skips the real database calls entirely and uses fixed
+ * zero/empty stand-in values; otherwise it loads the user's plan, remaining
+ * AI call allowance, profile save timestamp, tracked-application count, and
+ * active extension connection (via the admin Supabase client) in parallel.
+ * Renders an overview card grid plus `AccountIdentityLinker` and
+ * `SettingsControls` for the actual account/plan controls.
+ */
 import { redirect } from "next/navigation";
 import { AccountIdentityLinker } from "../../../components/AccountIdentityLinker";
 import { SettingsControls } from "../../../components/SettingsControls";
@@ -8,6 +21,7 @@ import { getTestAuthUser } from "../../../lib/test-auth";
 
 export const dynamic = "force-dynamic";
 
+/** Formats an ISO timestamp as "24 Aug 2026, 14:30" (en-GB); returns "Not recorded" when absent. */
 function formatDate(value: string | null | undefined) {
   if (!value) {
     return "Not recorded";
@@ -19,6 +33,12 @@ function formatDate(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
+/**
+ * Authenticates the user (test-auth user first, then Supabase session;
+ * redirects to /login if neither exists), loads plan/usage/sync data
+ * (stubbed to empty values in test-auth mode), and renders the settings
+ * overview cards alongside `AccountIdentityLinker` and `SettingsControls`.
+ */
 export default async function DashboardSettingsPage() {
   const testUser = getTestAuthUser();
   let user = testUser;

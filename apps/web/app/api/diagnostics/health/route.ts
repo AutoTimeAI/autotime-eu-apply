@@ -1,3 +1,4 @@
+/** Reports secret-free integration readiness to authenticated administrators. */
 import { NextResponse } from "next/server"
 import { isAdminUser } from "../../../../lib/admin-access"
 import { getEnvReadiness } from "../../../../lib/diagnostics"

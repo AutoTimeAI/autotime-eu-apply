@@ -1,3 +1,11 @@
+// Hand-maintained, honesty-first registry of every job board / ATS / network
+// AutoTime claims to support, and exactly what "support" means for each one
+// (capture, autofill, native-feed status) plus a public-facing limitation
+// string. This is the source of truth behind ats-detector.ts's ATS/API
+// detection and the public coverage disclosures shown in the web app (e.g.
+// apps/web/lib/coverage-report.ts, apps/web/app/admin/market-data). Keep
+// `PLATFORM_NAMES`/`domains`/status fields in sync with reality - this table
+// is read as a factual claim, not aspirational status.
 export const COVERAGE_STATUSES = [
   "verified", "partial", "manual_only", "unsupported", "unverified", "not_applicable",
 ] as const;
@@ -16,6 +24,7 @@ export const PLATFORM_NAMES = [
 
 export type PlatformName = (typeof PLATFORM_NAMES)[number];
 
+/** One row of the coverage table: what a platform is, and the truthful, per-capability status of AutoTime's support for it. */
 export type PlatformCoverage = {
   platform: PlatformName;
   slug: string;
@@ -64,10 +73,12 @@ export const PLATFORM_COVERAGE: readonly PlatformCoverage[] = [
   { platform:"Personio",slug:"personio",category:"ats",domains:["jobs.personio.de","jobs.personio.com"],atsKey:"personio",expectedCaptureMode:"api-reference",capture:"verified",autofill:"partial",nativeFeed:"verified",lastVerifiedAt:VERIFIED_AT,fixture:fixture("personio"),liveCheckUrl:"https://personio.jobs.personio.de/xml",publicLimitation:"Native public feed and reviewed field filling; employer-specific forms can differ." },
 ] as const;
 
+/** ATS keys (e.g. "greenhouse", "lever") with a verified native public feed - the platforms ats-detector.ts treats as API-covered. */
 export const API_COVERED_ATS = PLATFORM_COVERAGE
   .filter((item) => item.category === "ats" && item.nativeFeed === "verified")
   .map((item) => item.atsKey!) as readonly string[];
 
+/** Identifies which known platform a job URL belongs to by hostname (exact or subdomain match, "www." stripped); null if unrecognised. */
 export function getCoveragePlatform(jobUrl: string): PlatformName | null {
   try {
     const hostname = new URL(jobUrl).hostname.toLowerCase().replace(/^www\./, "");
@@ -77,11 +88,13 @@ export function getCoveragePlatform(jobUrl: string): PlatformName | null {
   } catch { return null; }
 }
 
+/** True once a `lastVerifiedAt` date (YYYY-MM-DD) is more than `days` old (default 30) - or if it can't be parsed at all, which is treated as stale. */
 export function isCoverageStale(lastVerifiedAt: string, now = new Date(), days = 30) {
   const verified = new Date(`${lastVerifiedAt}T00:00:00.000Z`).getTime();
   return !Number.isFinite(verified) || now.getTime() - verified > days * 86_400_000;
 }
 
+/** Aggregate counts (platforms tracked, still-current entries, verified capture/native-feed counts) for the public coverage disclosure page. */
 export function getPublicCoverageSummary(now = new Date()) {
   const current = PLATFORM_COVERAGE.filter((item) => !isCoverageStale(item.lastVerifiedAt, now));
   return {

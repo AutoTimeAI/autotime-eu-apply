@@ -1,3 +1,8 @@
+// First-run onboarding walkthrough: steps the user through
+// `onboardingSteps` (constants.ts), persisting completion in
+// `chrome.storage.local` under `onboardedStorageKey` so it only shows once.
+// Part of the legacy multi-section side panel layout, currently unreached
+// since `main.tsx` sets `renderLegacyTools = false`.
 import { useEffect, useState } from "react"
 import {
   onboardingSteps,
@@ -9,6 +14,7 @@ type OnboardingProps = {
   onNavigate: (section: Section) => void
 }
 
+/** Renders the current onboarding step (or nothing, once dismissed or already completed) and advances/dismisses it on CTA click, calling `onNavigate` to jump the side panel to the step's target section. */
 export function Onboarding({ onNavigate }: OnboardingProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isVisible, setIsVisible] = useState(false)

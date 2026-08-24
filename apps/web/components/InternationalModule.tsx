@@ -1,5 +1,14 @@
 "use client";
 
+// Top-level shell for the "Countries" / International Applications area
+// (mobility, sponsorship and work-permission evidence). Owns the currently
+// selected country and the tab-like `section` state, and composes the five
+// international/* sub-views (overview, per-country workspace, mobility
+// profile form + sync panel, sponsor-employer guidance, official sources)
+// around a single `MobilityProfile` and derived `InternationalAssessment`.
+// Deliberately framed as decision support, not immigration advice — see the
+// footer disclaimer rendered on every section.
+
 import { useEffect, useMemo, useState } from "react";
 import {
   assessInternationalJob,
@@ -25,6 +34,16 @@ import {
 } from "./international/model";
 import { useDashboardPlan } from "./UserNav";
 
+/**
+ * Renders the International/mobility workspace: loads the user's saved
+ * `MobilityProfile` from local storage on mount (flagging a status message
+ * if it was migrated from a legacy format), derives an
+ * `InternationalAssessment` for the selected country + pasted job text via
+ * `assessInternationalJob` (recomputed with `useMemo` as inputs change),
+ * and switches between five sections via `InternationalSectionNavigation`.
+ * Saving the mobility profile also notifies `useMobilityPersistence` so it
+ * can offer to sync the change to the account.
+ */
 export function InternationalModule() {
   const { userId } = useDashboardPlan();
   const [section, setSection] = useState<InternationalSection>("overview");

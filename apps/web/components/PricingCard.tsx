@@ -1,5 +1,14 @@
 "use client";
 
+// Renders the /pricing page's plan cards (Free / Pro Monthly / Pro
+// Quarterly) plus a one-off AI credit-pack purchase panel. Each paid card
+// starts a Stripe Checkout session (or opens the billing portal if the
+// account is already paid) via the corresponding API route; a signed-out
+// click sends the user to /login first. Billing can be centrally disabled
+// (`billingAvailable`/`getBillingControlState`), in which case the CTA is
+// replaced with an explanatory disabled state instead of a broken checkout
+// attempt.
+
 import { useState } from "react";
 import { z } from "zod";
 import { reportClientIssue } from "../lib/client-diagnostics";
@@ -221,6 +230,12 @@ function PricingCard({
   );
 }
 
+/**
+ * Renders the three-card pricing grid (Free / Pro Monthly / Pro Quarterly)
+ * plus the credit-pack panel. Free is always a plain link (dashboard or
+ * login); the two Pro cards switch between "checkout" (not yet paid) and
+ * "portal" (already paid, `accountPlan === "pro"`) actions automatically.
+ */
 export function PricingCards({
   accountPlan = null,
   billingAvailable = true,

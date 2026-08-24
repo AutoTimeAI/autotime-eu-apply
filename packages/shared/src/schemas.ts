@@ -1,5 +1,17 @@
+// Zod schemas for every persisted/synced domain object in AutoTime EU Apply:
+// candidate profile, job analysis, fit/positioning results, application
+// records, evidence, outcomes, and the aggregate dashboard state. These are
+// the runtime validators that guard the boundary between the extension's
+// local-first storage, the web app's cloud sync (Supabase), and AI-generated
+// content, so both apps parse/validate against the exact same shapes.
+// `types.ts` derives its exported TS types from these via `z.infer`, so this
+// file is the single source of truth - edit schemas here, not the types.
 import { z } from "zod"
 
+// Accepts either a comma-joined string or a string array for list-like text
+// fields (used by candidateProfileSchema.targetRoles) and always normalises
+// the stored value back down to a single trimmed, comma-joined string. This
+// lets both apps write list data without agreeing on one input shape.
 const flexibleStringListToStringSchema = z
   .union([z.string(), z.array(z.string())])
   .transform((value) =>
@@ -8,6 +20,7 @@ const flexibleStringListToStringSchema = z
       : value
   )
 
+/** Lifecycle stage of a single tracked job application. */
 export const applicationStatusSchema = z.enum([
   "Saved",
   "Checking fit",
@@ -19,6 +32,7 @@ export const applicationStatusSchema = z.enum([
   "Archived"
 ])
 
+/** Why an application ended up in its current outcome state; feeds the outcome-learning signals in fit-model.ts. */
 export const applicationOutcomeReasonSchema = z.enum([
   "Unknown",
   "Interview secured",
@@ -31,6 +45,7 @@ export const applicationOutcomeReasonSchema = z.enum([
   "Role closed"
 ])
 
+/** Coarse apply/skip guidance bucket derived from a fit score. */
 export const jobRecommendationSchema = z.enum([
   "High Priority",
   "Worth Applying",
@@ -45,8 +60,15 @@ export const workModeSchema = z.enum([
   "unknown"
 ])
 
+/** Which AI backend produced (or should produce) generated content; "mock" is the offline/no-API-key fallback. */
 export const aiProviderSchema = z.enum(["mock", "openai", "anthropic"])
 
+/**
+ * A job posting scraped/parsed off a job board or ATS page (extension
+ * content-script capture), before any candidate-specific fit scoring is
+ * applied. `*Signals` arrays hold raw phrases detected in the posting text
+ * that country-rules.ts and fit-model.ts later interpret.
+ */
 export const normalisedJobSchema = z.object({
   sourceType: z.string(),
   sourceName: z.string(),
@@ -78,6 +100,12 @@ export const normalisedJobSchema = z.object({
   ])
 })
 
+/**
+ * A structured, AI/derived summary of how ready a candidate is to apply
+ * abroad - distinct from candidateProfileSchema (the raw user-entered
+ * profile). Used where a normalised readiness snapshot is needed rather
+ * than free-text profile fields.
+ */
 export const candidateReadinessProfileSchema = z.object({
   currentLocation: z.string(),
   workAuthorisationStatus: z.string(),
@@ -99,6 +127,7 @@ export const candidateReadinessProfileSchema = z.object({
   ])
 })
 
+/** Traffic-light strength rating for one fit component (see fitComponentKeySchema). */
 export const fitComponentStatusSchema = z.enum([
   "strong",
   "medium",
@@ -106,6 +135,7 @@ export const fitComponentStatusSchema = z.enum([
   "blocker"
 ])
 
+/** The fixed set of sub-scores that make up a legacy country-fit evaluation (see evaluateCountryFit in fit-model.ts). */
 export const fitComponentKeySchema = z.enum([
   "skillMatch",
   "atsCompatibility",
@@ -124,6 +154,7 @@ export const fitComponentSchema = z.object({
   evidence: z.array(z.string())
 })
 
+/** Apply/skip guidance for a specific target country, as produced by the legacy evaluateCountryFit engine. */
 export const countryFitDecisionSchema = z.enum([
   "Apply now",
   "Stretch application",
@@ -131,6 +162,7 @@ export const countryFitDecisionSchema = z.enum([
   "Improve profile first"
 ])
 
+/** Whether AI content generation (cover letters, answers, etc.) is allowed to proceed for this job/country pairing. */
 export const contentGenerationGateSchema = z.enum([
   "ready",
   "stretch",
@@ -152,6 +184,11 @@ export const autoTimeScoreBreakdownItemSchema = z.object({
   rationale: z.string()
 })
 
+/**
+ * Full output of evaluateAutoTimeFitScore (see fit-model.ts): the role/skill
+ * fit score, its weighted breakdown, and the matched/missing/risk signal
+ * lists surfaced to the candidate.
+ */
 export const autoTimeFitReviewSchema = z.object({
   fitScore: z.number(),
   fitLabel: autoTimeFitLabelSchema,
@@ -166,6 +203,11 @@ export const autoTimeFitReviewSchema = z.object({
   disclaimer: z.string()
 })
 
+/**
+ * @deprecated Mirrors the return shape of the deprecated evaluateCountryFit
+ * (fit-model.ts). Prefer InternationalAssessment (international/types.ts)
+ * plus orchestrateJobDecision for new country/work-right decisions.
+ */
 export const countryFitEvaluationSchema = z.object({
   overallScore: z.number(),
   decision: countryFitDecisionSchema,
@@ -186,6 +228,13 @@ export const countryFitEvaluationSchema = z.object({
   learningPrompt: z.string()
 })
 
+/**
+ * Combined EU-fit summary shown to the candidate for a single job: fit
+ * score, apply decision, sponsorship/relocation/language reality checks, and
+ * the trust/compliance disclaimers required alongside any AI-assisted
+ * output. Produced by createMockEUFitEngineResult in fit-model.ts (or an AI
+ * provider following the same contract).
+ */
 export const euFitEngineResultSchema = z.object({
   euFitScore: z.number(),
   applyDecision: countryFitDecisionSchema,
@@ -212,6 +261,7 @@ export const euFitEngineResultSchema = z.object({
   complianceNote: z.string()
 })
 
+/** Ready-to-use application angles (cover letter, motivation, strengths, etc.) derived from a fit result. */
 export const applicationPositioningPackSchema = z.object({
   recruiterSummaryAngle: z.string(),
   bestApplicationAngle: z.string(),
@@ -225,6 +275,14 @@ export const applicationPositioningPackSchema = z.object({
   complianceNote: z.string()
 })
 
+/**
+ * The user's own profile as entered in onboarding: identity/contact info,
+ * work-right/sponsorship situation, and free-text CV evidence. This is the
+ * primary input to fit-model.ts scoring and to
+ * international/migration.ts's conversion into a MobilityProfile.
+ * `targetRoles` accepts a string or array on input (flexibleStringListToStringSchema)
+ * but is always stored as a single comma-joined string.
+ */
 export const candidateProfileSchema = z.object({
   fullName: z.string(),
   email: z.string(),
@@ -246,6 +304,7 @@ export const candidateProfileSchema = z.object({
   experienceHighlights: z.string()
 })
 
+/** Candidate's saved stock answers to recurring application questions, reused across jobs to avoid re-writing them each time. */
 export const reusableAnswersSchema = z.object({
   sponsorshipAnswer: z.string(),
   relocationAnswer: z.string(),
@@ -257,6 +316,7 @@ export const reusableAnswersSchema = z.object({
   availabilityAnswer: z.string()
 })
 
+/** Draft AI/template-generated application content before it has been saved/submitted. */
 export const applicationContentDraftSchema = z.object({
   coverLetter: z.string(),
   profileSummary: z.string(),
@@ -265,11 +325,18 @@ export const applicationContentDraftSchema = z.object({
   availabilityAnswer: z.string()
 })
 
+/** A content draft frozen at the point it was saved to an application record, with a timestamp for audit/history. */
 export const applicationContentSnapshotSchema =
   applicationContentDraftSchema.extend({
     savedAt: z.string()
   })
 
+/**
+ * Working state for a single job the candidate is currently analysing:
+ * captured posting fields plus the (optional) fit-scoring output once
+ * evaluateAutoTimeFitScore has run. All scoring fields are optional because
+ * this schema also represents the pre-analysis state.
+ */
 export const jobAnalysisDraftSchema = z.object({
   jobTitle: z.string(),
   company: z.string(),
@@ -298,6 +365,14 @@ export const jobAnalysisDraftSchema = z.object({
   scoreFactors: z.array(z.string()).optional()
 })
 
+/**
+ * A persisted, tracked job application: identity/source fields, current
+ * status, and a snapshot of the fit/positioning data at save time. This is
+ * the row shape stored per-application in local storage (extension) and
+ * synced to the cloud (web app), so it's intentionally denormalised
+ * (duplicates jobAnalysisDraftSchema's scoring fields) rather than
+ * referencing a job record.
+ */
 export const applicationRecordSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -329,6 +404,7 @@ export const applicationRecordSchema = z.object({
   contentSnapshot: applicationContentSnapshotSchema.optional()
 })
 
+/** Where a piece of supporting evidence for a decision came from (used to keep AI/rule output traceable to a real source). */
 export const evidenceSourceTypeSchema = z.enum([
   "profile",
   "cv",
@@ -338,6 +414,12 @@ export const evidenceSourceTypeSchema = z.enum([
   "system_rule"
 ])
 
+/**
+ * One auditable evidence entry backing a specific check (e.g. "sponsorship
+ * confirmed") - what was checked, whether it was found, where it came from,
+ * and the stated limit of what that evidence can prove. Used to keep
+ * AI-assisted claims traceable and honest rather than asserted outright.
+ */
 export const evidenceRecordSchema = z.object({
   id: z.string(),
   applicationId: z.string().optional(),
@@ -355,6 +437,13 @@ export const evidenceRecordSchema = z.object({
   createdAt: z.string()
 })
 
+/**
+ * What actually happened for a tracked application (interview, rejection,
+ * etc.), recorded alongside the decision context that was in effect when it
+ * was saved. This is the feedback loop that lets fit-model.ts's outcome
+ * learning signals (sponsorshipBlocks, workRightBlocks, ...) become stricter
+ * over time.
+ */
 export const outcomeRecordSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
@@ -375,6 +464,7 @@ export const outcomeRecordSchema = z.object({
   updatedAt: z.string()
 })
 
+/** A generated interview-prep pack for one application: likely questions, talking points, and a final checklist. */
 export const interviewPrepPackSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
@@ -391,6 +481,12 @@ export const interviewPrepPackSchema = z.object({
   updatedAt: z.string()
 })
 
+/**
+ * The full companion-dashboard state: everything needed to reconstruct a
+ * candidate's session in one object. This is the top-level shape synced
+ * between the extension's local storage and the web app's cloud storage
+ * (see apps/web/lib/cloud-sync.ts and apps/extension/lib/v2-dashboard.ts).
+ */
 export const companionDashboardStateSchema = z.object({
   profile: candidateProfileSchema,
   reusableAnswers: reusableAnswersSchema,

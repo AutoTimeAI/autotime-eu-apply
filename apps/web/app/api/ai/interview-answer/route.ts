@@ -1,3 +1,4 @@
+/** Coaches an interview answer using supplied candidate and job evidence. */
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import {

@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
+"""Runs and redacts the cross-platform MVP validation command suite."""
 """
 AutoTime AI MVP Python test runner.
 
 This runner is intentionally narrow and founder-first:
 - runs local repo/build/report checks
-- writes sanitized evidence under docs/automation-runs/
+- writes sanitized evidence under docs/reports/automation-runs/
 - optionally starts the local web dashboard for a simple HTTP smoke check
 - never automates LinkedIn
 - never clicks or submits application forms
 - never stores API keys, cookies, browser storage, or private profile data
 
 It complements the existing Node-based MVP gates. Live job-site evidence remains
-manual and must be recorded in docs/founder-validation-runs/.
+manual and must be recorded in docs/reports/founder-validation-runs/.
 """
 
 from __future__ import annotations
@@ -540,7 +541,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--out",
         default=None,
-        help="Output report directory. Default: docs/automation-runs/python-smoke-<timestamp>.",
+        help="Output report directory. Default: docs/reports/automation-runs/python-smoke-<timestamp>.",
     )
     return parser.parse_args(argv)
 
@@ -551,7 +552,7 @@ def main(argv: list[str]) -> int:
     report_dir = (
         Path(args.out).expanduser().resolve()
         if args.out
-        else repo / "docs" / "automation-runs" / f"python-smoke-{now_slug()}"
+        else repo / "docs" / "reports" / "automation-runs" / f"python-smoke-{now_slug()}"
     )
 
     data: dict[str, Any] = {
@@ -641,10 +642,10 @@ def main(argv: list[str]) -> int:
 
     data["extension_output"] = check_extension_output(repo)
     data["latest_paths"] = {
-        "latest_release_run": find_latest_file(repo / "docs" / "release-runs"),
-        "latest_automation_run": find_latest_file(repo / "docs" / "automation-runs"),
+        "latest_release_run": find_latest_file(repo / "docs" / "reports" / "release-runs"),
+        "latest_automation_run": find_latest_file(repo / "docs" / "reports" / "automation-runs"),
         "latest_founder_validation_run": find_latest_file(
-            repo / "docs" / "founder-validation-runs"
+            repo / "docs" / "reports" / "founder-validation-runs"
         ),
         "python_report_dir": str(report_dir),
     }

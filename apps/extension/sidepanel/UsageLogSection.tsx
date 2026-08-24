@@ -1,3 +1,7 @@
+// "Usage Log" panel: lists AI feature calls (job analysis, content
+// generation) with their estimated cost, and a running total. Part of the
+// legacy multi-section side panel layout, currently unreached since
+// `main.tsx` sets `renderLegacyTools = false`.
 import type { Ref } from "react"
 import type { AIUsageLogEntry } from "../lib/storage"
 import { getStatusClassName } from "./utils"
@@ -13,6 +17,7 @@ function formatCost(value: number) {
   return `$${value.toFixed(4)}`
 }
 
+/** Renders the AI usage log entries with a total estimated cost, or an empty state, plus a clear-log action. */
 export function UsageLogSection({
   entries,
   onClear,

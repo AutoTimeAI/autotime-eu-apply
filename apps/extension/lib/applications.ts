@@ -109,7 +109,7 @@ export function mergeDashboardApplications(
 // one of these characters is neutralized by prefixing a single quote before
 // the value is quoted, which forces spreadsheet apps to treat it as literal
 // text instead of evaluating it.
-const FORMULA_INJECTION_LEADING_CHARS = /^[=+\-@\t\r]/
+const FORMULA_INJECTION_LEADING_CHARS = /^[\u0000-\u0020]*[=+\-@]/
 
 function sanitizeCsvCell(value: string | undefined) {
   const text = value ?? ""

@@ -1,3 +1,4 @@
+/** Exports the authenticated user's account data in a privacy-safe response. */
 import { type NextRequest, NextResponse } from "next/server"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {

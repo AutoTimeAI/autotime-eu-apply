@@ -1,3 +1,7 @@
+/**
+ * Defines the protected admin shell and permission-aware navigation shared by
+ * operations pages. Child pages still enforce their narrower permissions.
+ */
 import type { ReactNode } from "react";
 import {
   hasAdminPermission,
@@ -17,6 +21,10 @@ const items: Array<[string, string, AdminPermission]> = [
   ["Audit Log", "/admin/audit-log", "audit:read"],
 ] as const;
 
+/**
+ * Requires baseline overview access, then redirects authentication and
+ * authorization failures to the dedicated admin sign-in experience.
+ */
 export default async function AdminLayout({
   children,
 }: {

@@ -1,3 +1,9 @@
+// Phase 1 coverage for the International applications page
+// (/dashboard/international): country-specific evidence ledgers, switching
+// the hiring country, the "no sponsorship" vacancy-wording detector, the
+// one-time legacy-profile migration into the mobility form (scoped per
+// user id so it can't leak across accounts), and a mobile layout pass.
+// Desktop and mobile screenshots are captured for visual review.
 import { expect, test, type Page } from "@playwright/test";
 import { dashboardStorageKey, seedReadyDashboardProfile } from "./helpers";
 import {

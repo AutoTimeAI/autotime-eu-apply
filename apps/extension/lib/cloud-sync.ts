@@ -1,3 +1,8 @@
+// HTTP client for the AutoTime web dashboard's `/api/sync/*` endpoints.
+// Every call here requires a bearer AccountSession authToken, so callers
+// must already hold a session (see lib/session.ts's getActiveSession /
+// withFreshSession). All requests are bounded by a fixed timeout so a stuck
+// fetch can't leave a caller (e.g. Track Job) hanging forever.
 import { mergeDashboardApplications } from "./applications"
 import { appUrl } from "./openai"
 import type {
@@ -44,6 +49,7 @@ type DashboardSyncResponse = {
   synced: true
 }
 
+/** Thrown when a dashboard sync/scoring request fails; carries the HTTP `status` so callers (e.g. lib/session.ts) can detect a 401 and retry after a token refresh. */
 export class SyncRequestError extends Error {
   status: number
 
@@ -71,6 +77,7 @@ async function parseSyncResponse<T>(response: Response): Promise<T> {
   return body.data
 }
 
+/** POSTs the candidate profile to `/api/sync/profile`. Throws if not signed in or if the request fails. */
 export async function syncProfileToDashboard({
   profile,
   session
@@ -96,6 +103,7 @@ export async function syncProfileToDashboard({
   await parseSyncResponse<ProfileSyncResponse>(response)
 }
 
+/** GETs the profile currently stored on the dashboard for the signed-in account, or `null` if none is set. Throws if not signed in or if the request fails. */
 export async function loadProfileFromDashboard(session: AccountSession | null) {
   if (!session?.authToken.trim()) {
     throw new Error("Sign in before loading profile from dashboard.")
@@ -113,6 +121,17 @@ export async function loadProfileFromDashboard(session: AccountSession | null) {
   return data.profile
 }
 
+/**
+ * Syncs local applications to the dashboard: reads the dashboard's current
+ * workflow state, merges it with `applications` via
+ * `mergeDashboardApplications` (dashboard wins on conflicts), then POSTs
+ * the merged applications list back. `resurrectUrlKeys` lets a caller
+ * un-delete a dashboard application that matches one of these normalized
+ * URL keys (used when the user re-tracks a job they'd previously removed
+ * from the dashboard). See the inline comment below for why evidence
+ * records, outcome records, and interview prep packs are always sent as
+ * empty arrays rather than echoed back.
+ */
 export async function syncApplicationsToDashboard({
   applications,
   resurrectUrlKeys,

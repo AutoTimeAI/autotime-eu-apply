@@ -1,3 +1,4 @@
+/** Validates secrets and integration settings that must remain server-only. */
 import "server-only"
 import { z } from "zod"
 import { ConfigurationUnavailableError } from "./configuration-error.ts"
@@ -11,6 +12,7 @@ function requireServerValue(integration: string, value: unknown): string {
   return parsed.data
 }
 
+/** Returns validated privileged Supabase credentials. */
 export function getSupabaseServiceRoleEnv(): {
   serviceRoleKey: string
   url: string
@@ -25,12 +27,14 @@ export function getSupabaseServiceRoleEnv(): {
   }
 }
 
+/** Returns the validated Stripe secret key. */
 export function getStripeSecretEnv(): { secretKey: string } {
   return {
     secretKey: requireServerValue("billing", process.env.STRIPE_SECRET_KEY),
   }
 }
 
+/** Returns validated Stripe price identifiers. */
 export function getStripePriceEnv(): {
   creditPack: string
   proMonthly: string
@@ -50,6 +54,7 @@ export function getStripePriceEnv(): {
   }
 }
 
+/** Returns the validated Stripe webhook signing secret. */
 export function getStripeWebhookEnv(): { webhookSecret: string } {
   return {
     webhookSecret: requireServerValue(
@@ -59,10 +64,12 @@ export function getStripeWebhookEnv(): { webhookSecret: string } {
   }
 }
 
+/** Returns the validated OpenAI API key. */
 export function getOpenAIEnv(): { apiKey: string } {
   return { apiKey: requireServerValue("AI", process.env.OPENAI_API_KEY) }
 }
 
+/** Returns the validated Resend API key. */
 export function getResendEnv(): { apiKey: string } {
   return { apiKey: requireServerValue("email", process.env.RESEND_API_KEY) }
 }

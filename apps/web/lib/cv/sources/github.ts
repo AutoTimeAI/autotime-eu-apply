@@ -1,3 +1,7 @@
+// CV import source: builds CVEnrichment content from a candidate's public
+// GitHub activity. One of three "enrich from X" sources in this directory
+// (alongside LinkedIn export and portfolio scraping) that all produce the
+// shared CVEnrichment shape for the CV builder to merge in.
 import type { CVEnrichment } from "../types";
 
 type GitHubRepo = {
@@ -12,18 +16,32 @@ type GitHubRepo = {
 
 type GitHubCommit = { commit?: { author?: { date?: string }; message?: string } };
 
+/** Builds standard GitHub REST/GraphQL request headers, adding a bearer token if one is supplied. */
 const githubHeaders = (token?: string) => ({
   Accept: "application/vnd.github+json",
   "User-Agent": "AutoTime-EU-Apply",
   ...(token ? { Authorization: `Bearer ${token}` } : {}),
 });
 
+/** Fetches `url` from the GitHub API and parses the JSON body, throwing with a user-facing message on a non-OK response. */
 async function githubJson<T>(url: string, token?: string): Promise<T> {
   const response = await fetch(url, { headers: githubHeaders(token) });
   if (!response.ok) throw new Error(`GitHub returned ${response.status}. Check the username or token.`);
   return response.json() as Promise<T>;
 }
 
+/**
+ * Builds CV experience/skills content from a GitHub user's public, non-fork
+ * repositories. Selects up to 5 "featured" repos: pinned repos via GraphQL
+ * when a `token` is supplied (an optional-access nicety — falls back silently
+ * to the top 5 by star count if the GraphQL call fails or no token is given),
+ * otherwise the top 5 by star count. For each featured repo it inspects
+ * languages, README (truncated, markdown-stripped, first 240 chars), and the
+ * 5 most recent commits by that author to build a one-line summary bullet.
+ * `notes` in the result explicitly flags that repo language is a suggestion,
+ * not proof of professional proficiency, since it's inferred rather than
+ * user-confirmed.
+ */
 export async function enrichCvFromGitHub(username: string, token?: string): Promise<CVEnrichment> {
   const repos = (await githubJson<GitHubRepo[]>(
     `https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=pushed&per_page=30&type=owner`,

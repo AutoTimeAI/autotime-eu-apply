@@ -1,3 +1,4 @@
+/** Accepts bounded public ATS compatibility reports with abuse and SSRF controls. */
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { coverageReportSchema, getCoverageRequesterHash, normalizeCoverageReportUrl } from "../../../../lib/coverage-report";

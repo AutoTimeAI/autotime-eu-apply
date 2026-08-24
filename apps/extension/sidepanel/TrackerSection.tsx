@@ -1,3 +1,10 @@
+// "Tracker" panel: editable form to log/update an application's role,
+// company, URL, status, next action, and notes, plus an "Import Current Job
+// Page" shortcut. Saving here both writes the tracker draft and
+// creates/updates the matching ApplicationRecord (see
+// `saveTrackerApplication` in main.tsx). Part of the legacy multi-section
+// side panel layout, currently unreached since `main.tsx` sets
+// `renderLegacyTools = false`.
 import type { Ref } from "react"
 import type { ApplicationStatus, TrackerDraft } from "../lib/storage"
 import type { TrackerIssue } from "../lib/validation"
@@ -19,6 +26,7 @@ type TrackerSectionProps = {
   statusRef: Ref<HTMLParagraphElement>
 }
 
+/** Renders the tracker draft form with per-field validation messages (shown only after `saveAttempted`) and the import/save actions. */
 export function TrackerSection({
   draft,
   issues,

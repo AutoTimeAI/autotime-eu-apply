@@ -1,3 +1,17 @@
+/**
+ * POST /api/profile/import-cv
+ *
+ * Extracts plain text from an uploaded CV file (DOCX or text-based PDF)
+ * for use in the profile-import flow. Does not persist anything itself —
+ * just returns extracted text.
+ *
+ * Auth: requires a valid session — resolved via `getRequestUser`. Requests
+ * without a recognised user receive 401.
+ *
+ * Behaviour: accepts a `multipart/form-data` upload (`file` field),
+ * restricted to `.docx`/`.pdf` extensions and a 5 MB size cap
+ * (`maxCvFileBytes`).
+ */
 import { type NextRequest, NextResponse } from "next/server"
 import { getRequestUser } from "../../../../lib/api-auth"
 import {
@@ -20,6 +34,20 @@ function jsonResponse(body: ApiResponse): NextResponse<ApiResponse> {
   return NextResponse.json(body, { status: body.status })
 }
 
+/**
+ * Extracts text from an uploaded CV file for the authenticated caller.
+ *
+ * Request: `multipart/form-data` with a `file` field (`.docx` or `.pdf`,
+ * up to 5 MB).
+ *
+ * Responses:
+ * - 200: `{ data: { text }, error: null, status: 200 }`.
+ * - 400: missing file, or unsupported extension.
+ * - 401: no authenticated user.
+ * - 413: file exceeds the 5 MB limit.
+ * - 422: file could not be parsed/read.
+ * - 503: backing configuration unavailable.
+ */
 export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<ApiResponse>> {

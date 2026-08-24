@@ -1,5 +1,11 @@
 "use client"
 
+// Top navigation bar for marketing/public pages (home, pricing,
+// compatibility) that adapts based on whether a user session was resolved
+// server-side and passed in as `user`. Signed-in visitors get the
+// dashboard-oriented nav items plus the account menu (UserNav); signed-out
+// visitors get a minimal marketing nav with a sign-in CTA.
+
 import Link from "next/link"
 import { UserNav } from "./UserNav"
 import type { SubscriptionPlan } from "../lib/supabase/types"
@@ -44,6 +50,14 @@ function isActiveSignedInNavItem(
   )
 }
 
+/**
+ * Renders the site header navigation. When `user` is present it shows the
+ * signed-in workflow links (Home, Extension, Plans, Compatibility,
+ * Settings) with active-path highlighting plus the `UserNav` account menu;
+ * otherwise it shows a minimal public nav with a Sign in link. `currentPath`
+ * drives `aria-current`/active styling and is expected to be the current
+ * pathname from the server.
+ */
 export function PublicNav({ currentPath, user }: PublicNavProps) {
   return (
     <nav className="product-nav" aria-label="Primary">

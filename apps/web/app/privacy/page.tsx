@@ -1,3 +1,6 @@
+// Public /privacy legal page. Static, server-rendered privacy-policy text
+// (data collected, sub-processors used, GDPR rights, retention) with no
+// dynamic data fetching or auth requirement.
 import { PublicNav } from "../../components/PublicNav"
 
 const dataItems = [

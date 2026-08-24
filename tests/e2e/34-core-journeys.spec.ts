@@ -1,3 +1,12 @@
+// End-to-end coverage of three named "core journeys" that each combine
+// several features, using route mocking (rather than local-storage seeding)
+// so real onboarding/profile/tailoring API round trips are exercised:
+//   Journey A - fresh-user onboarding through both the CV-upload branch and
+//     the build-a-new-CV branch (which hands off to the CV tailor).
+//   Journey B - the ESCO skills questionnaire producing explainable
+//     skill-overlap job matches after a fixed number of answer rounds.
+//   Journey C - required-field validation blocking CV export, and CV
+//     tailoring being driven by a job tracked from the Jobs list.
 import { expect, test, type Page, type Route } from "@playwright/test";
 
 type ProfileState = Record<string, unknown> & {

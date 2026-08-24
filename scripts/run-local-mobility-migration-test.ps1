@@ -1,13 +1,39 @@
+# Runs the mobility-profiles migration safety test suite against a
+# disposable local PostgreSQL container. Not wired to a package.json script;
+# invoke directly, e.g.
+# `powershell -File scripts/run-local-mobility-migration-test.ps1`.
+#
+# Requires Docker on PATH. Side effects: creates (and always removes, even on
+# failure, via the `finally` block) a `postgres:16-alpine` container named
+# `autotime-mobility-migration-test`, plus a local
+# `.tmp-mobility-migration-test` scratch directory holding a generated
+# bootstrap SQL file. Applies
+# `supabase/migrations/20260729120000_mobility_profiles_entry_gate.sql`
+# against several throwaway databases (each bootstrapped with a minimal
+# `auth` schema, `auth.uid()`, and a pre-existing sentinel table used to
+# detect unwanted side effects) to verify: clean application succeeds and
+# creates the expected policies/trigger/foreign key, re-applying fails, and
+# applying against a pre-existing conflicting table/policy/trigger fails
+# without modifying the pre-existing objects (atomic rollback). On success
+# prints a compact JSON summary object to stdout; throws (non-zero exit) on
+# the first failed assertion.
 $ErrorActionPreference = "Stop"
 $container = "autotime-mobility-migration-test"
 $tempRoot = Join-Path (Get-Location) ".tmp-mobility-migration-test"
 $workspace = (Resolve-Path -LiteralPath ".").Path
 
+# Runs a single SQL command in database $database via
+# `docker exec ... psql -c`, stopping on first error. Returns an object with
+# ExitCode and combined Output (never throws itself).
 function Invoke-ContainerPsql([string]$database, [string]$command) {
   $output = & docker exec $container psql -v ON_ERROR_STOP=1 -U postgres -d $database -c $command 2>&1
   [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = ($output -join "`n") }
 }
 
+# Applies the copied migration file (`/tmp/mobility.sql` inside the
+# container) to database $database via `docker exec ... psql -f`. Never
+# throws — always returns { ExitCode, Output } so callers can assert
+# success/failure.
 function Apply-Migration([string]$database) {
   $previousPreference = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
@@ -17,6 +43,9 @@ function Apply-Migration([string]$database) {
   [pscustomobject]@{ ExitCode = $exitCode; Output = ($output -join "`n") }
 }
 
+# Creates database $database in the container and applies the generated
+# `/tmp/bootstrap.sql` (the minimal auth schema/sentinel table) to it. Throws
+# if either step fails.
 function New-TestDatabase([string]$database) {
   & docker exec $container createdb -U postgres $database | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Could not create $database" }

@@ -1,3 +1,4 @@
+/** Converts a user-provided LinkedIn data-export ZIP into structured CV enrichment. */
 import type { CVEnrichment } from "../types";
 
 // The overall zip is capped at 25MB compressed, but that only bounds the
@@ -49,6 +50,7 @@ function value(row: Record<string, string>, ...keys: string[]) {
   return "";
 }
 
+/** Parses bounded LinkedIn CSV exports without contacting LinkedIn directly. */
 export async function enrichCvFromLinkedInZip(file: File): Promise<CVEnrichment> {
   if (file.size > 25 * 1024 * 1024) throw new Error("LinkedIn export must be 25 MB or smaller.");
   const { default: JSZip } = await import("jszip");

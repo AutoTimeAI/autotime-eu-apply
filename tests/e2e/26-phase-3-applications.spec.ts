@@ -1,3 +1,4 @@
+// Exercises application preparation, review, readiness, and status transitions.
 import { expect, test, type Page } from "@playwright/test";
 import { expectNoSeriousViolations } from "./helpers/axe";
 import { mkdir } from "node:fs/promises";

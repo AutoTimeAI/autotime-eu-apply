@@ -1,7 +1,15 @@
+/**
+ * Validation and privacy helpers for user-submitted "platform compatibility"
+ * reports (e.g. "the extension didn't detect this ATS platform correctly").
+ * Includes an SSRF guard that rejects URLs pointing at localhost/private
+ * network ranges, and a salted-hash function so a reporter's IP is never
+ * stored in the clear.
+ */
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { PLATFORM_NAMES } from "shared";
 
+/** Zod schema for a coverage report submission; `company` is a honeypot field that must stay empty. */
 export const coverageReportSchema = z.object({
   platform: z.enum(PLATFORM_NAMES),
   siteUrl: z.string().trim().url().max(2000),
@@ -12,6 +20,7 @@ export const coverageReportSchema = z.object({
   company: z.string().max(0).optional().default(""),
 });
 
+/** Returns true if `hostname` is a bare IPv4 literal in a private/loopback/link-local/reserved range. */
 function isPrivateIpv4(hostname: string) {
   const match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (!match) return false;
@@ -22,11 +31,19 @@ function isPrivateIpv4(hostname: string) {
     (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31);
 }
 
+/** Returns true if `hostname` is a bracketed/bare IPv6 literal that is loopback, unspecified, or a unique-local/link-local range. */
 function isPrivateIpv6(hostname: string) {
   const value = hostname.replace(/^\[|\]$/g, "").toLowerCase();
   return value === "::" || value === "::1" || value.startsWith("fc") || value.startsWith("fd") || /^fe[89ab]/.test(value);
 }
 
+/**
+ * Parses and normalizes a submitted site URL, throwing "unsupported_url" for
+ * a non-http(s) scheme or embedded credentials, and "private_url" for
+ * localhost/.local/private-IP hostnames (an SSRF guard, since this URL may
+ * later be fetched or displayed by internal tooling). Strips query string
+ * and fragment and lowercases/trims the hostname before returning it.
+ */
 export function normalizeCoverageReportUrl(value: string) {
   const url = new URL(value);
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error("unsupported_url");
@@ -38,6 +55,7 @@ export function normalizeCoverageReportUrl(value: string) {
   return url.toString();
 }
 
+/** Returns a SHA-256 hash of `secret:ip`, so a reporter's IP can be deduplicated/rate-limited without storing it in the clear. */
 export function getCoverageRequesterHash(ip: string, secret: string) {
   return createHash("sha256").update(`${secret}:${ip}`).digest("hex");
 }

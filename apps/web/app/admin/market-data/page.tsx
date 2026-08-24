@@ -1,3 +1,7 @@
+/**
+ * Surfaces governed market-data versions and refresh status while keeping the
+ * refresh capability behind a permission separate from read access.
+ */
 import { ESCO_CACHE_VERSION, ROLE_PATHWAYS_SCHEMA_VERSION } from "shared"
 import {
   hasAdminPermission,
@@ -6,6 +10,7 @@ import {
 import { getLatestAdminMarketRefreshRequest } from "../../../lib/admin-market-data"
 import { AdminMarketRefreshStatus } from "./AdminMarketRefreshStatus"
 
+/** Loads version and refresh state for an authorised market-data reader. */
 export default async function Page() {
   const principal = await requireAdminPageAccess("market_data:read")
   const canRefresh = hasAdminPermission(principal.membership, "market_data:refresh")

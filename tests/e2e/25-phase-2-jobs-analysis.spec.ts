@@ -1,3 +1,4 @@
+// Exercises saved-job capture, evidence-led analysis, and decision states.
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { expectNoSeriousViolations } from "./helpers/axe";

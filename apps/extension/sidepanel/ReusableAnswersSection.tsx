@@ -1,3 +1,9 @@
+// "Optional Answers" panel: editable form for reusable answers to common
+// application questions (sponsorship, relocation, work authorisation,
+// notice period, salary, motivation, strengths, availability), used by
+// autofill's textarea detection. Part of the legacy multi-section side
+// panel layout, currently unreached since `main.tsx` sets
+// `renderLegacyTools = false`.
 import type { Ref } from "react"
 import type { ReusableAnswers } from "../lib/storage"
 import type { ReusableAnswerIssue } from "../lib/validation"
@@ -17,6 +23,7 @@ type ReusableAnswersSectionProps = {
   statusRef: Ref<HTMLParagraphElement>
 }
 
+/** Renders the optional-answers form with per-field validation messages (shown only after `saveAttempted`, and only for answers that are non-empty but too short) and the save action. */
 export function ReusableAnswersSection({
   answers,
   issues,

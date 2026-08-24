@@ -1,3 +1,4 @@
+/** Normalises a company's public Personio XML feed into the shared job shape. */
 import type { ATSFeedFetcher, FetchLike, NormalisedJob } from "./types";
 
 // Personio's own hosted XML, not user input, but still externally-fetched
@@ -14,6 +15,7 @@ const MAX_XML_LENGTH = 5_000_000;
 function text(node: string, tag: string): string {
   return node.match(new RegExp(`<${tag}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`, "i"))?.[1]?.trim() ?? "";
 }
+/** Fetches Personio postings from either supported regional feed domain. */
 export class PersonioFeed implements ATSFeedFetcher {
   private readonly fetchImpl: FetchLike; private readonly domain: "de" | "com";
   constructor(fetchImpl: FetchLike = fetch, domain: "de" | "com" = "de") { this.fetchImpl = fetchImpl; this.domain = domain; }

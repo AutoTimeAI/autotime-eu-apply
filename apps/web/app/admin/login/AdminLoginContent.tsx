@@ -1,5 +1,11 @@
 "use client"
 
+// Client-side sign-in form used by the /admin/login page. Starts the same
+// Google OAuth flow as the regular sign-in, but points the callback's
+// `redirectTo` at /admin so admin-permission enforcement happens back in
+// /auth/callback (which itself redirects to /admin/login?adminDenied=1 if
+// the signed-in user isn't an admin). Also offers a "Reset admin session"
+// sign-out action for clearing a session that was denied admin access.
 import { Suspense, useState } from "react"
 import { getCanonicalAppUrl } from "../../../lib/env"
 import { createBrowserClient } from "../../../lib/supabase/client"
@@ -101,6 +107,11 @@ function AdminLoginForm({ initialStatus }: { initialStatus: string | null }) {
   )
 }
 
+/**
+ * Renders the admin sign-in form inside a Suspense boundary, seeded with an
+ * `initialStatus` message (e.g. "Admin access only.") supplied by the
+ * server-rendered /admin/login page.
+ */
 export function AdminLoginContent({
   initialStatus,
 }: {

@@ -1,3 +1,4 @@
+/** Reads and advances the authenticated user's evidence-led ESCO questionnaire. */
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";

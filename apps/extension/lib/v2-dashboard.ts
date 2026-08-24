@@ -1,3 +1,9 @@
+// Builds the "V2 dashboard state" JSON bundle for the manual export feature
+// (Applications section's "Export V2 Dashboard JSON" button) - a snapshot
+// of profile, reusable answers, latest job analysis, and all applications,
+// validated against the shared `companionDashboardStateSchema` so the
+// exported file is guaranteed to match what the web dashboard expects to
+// import.
 import {
   companionDashboardStateSchema,
   type CompanionDashboardState
@@ -51,6 +57,14 @@ const emptyJobAnalysis: JobAnalysisDraft = {
   notes: ""
 }
 
+/**
+ * Assembles a CompanionDashboardState from whatever the caller has saved so
+ * far, substituting empty defaults for `profile`/`reusableAnswers`/
+ * `jobAnalysis` when `null`, and parses the result through
+ * `companionDashboardStateSchema` (throws if it somehow doesn't validate).
+ * `interviewPrepPacks` is always `[]` - the extension doesn't manage that
+ * data, only the dashboard does.
+ */
 export function createV2DashboardState({
   applications,
   jobAnalysis,

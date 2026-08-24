@@ -1,3 +1,4 @@
+/** Shared generated-style database and domain types for typed Supabase access. */
 export type Json =
   | string
   | number

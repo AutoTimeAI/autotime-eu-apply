@@ -1,3 +1,4 @@
+/** Runs the release-blocking static, unit, build, and smoke checks in order. */
 import { spawnSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
@@ -85,7 +86,7 @@ const finishedAt = new Date()
 const commitSha = getGitValue(["rev-parse", "HEAD"])
 const branch = getGitValue(["branch", "--show-current"])
 const shortStamp = finishedAt.toISOString().replace(/[:.]/g, "-")
-const reportDir = join("docs", "release-runs")
+const reportDir = join("docs", "reports", "release-runs")
 const reportPath = join(reportDir, `${shortStamp}.md`)
 
 mkdirSync(reportDir, { recursive: true })
@@ -117,7 +118,7 @@ const report = [
   "## Manual Checks Still Required",
   "",
   "- [ ] Load or reload `apps/extension/.output/chrome-mv3` in Chrome.",
-  "- [ ] Complete `docs/extension-smoke-test.md`.",
+  "- [ ] Complete `docs/reference/extension-smoke-test.md`.",
   "- [ ] Confirm no flow submits an application form.",
   "- [ ] Confirm saved content insertion requires an explicit click.",
   "- [ ] Validate LinkedIn manual copy/paste on a live UK/EU job; do not use import, autofill, saved-content insertion, or current-tab capture on LinkedIn.",
@@ -126,7 +127,7 @@ const report = [
   "- [ ] Validate Workday import on a live UK/EU job.",
   "- [ ] Export Applications CSV.",
   "- [ ] Export Validation Metrics CSV.",
-  "- [ ] Run `pnpm validation:new` and complete the generated `docs/founder-validation-runs/...` report.",
+  "- [ ] Run `pnpm validation:new` and complete the generated `docs/reports/founder-validation-runs/...` report.",
   "",
   "## Result",
   "",

@@ -1,5 +1,10 @@
 "use client"
 
+// Dismissible free-plan usage banner shown when the user is approaching
+// their monthly AI-analysis limit. Dismissal is remembered per browser tab
+// session only (sessionStorage), so the nudge reappears on the next fresh
+// session rather than being suppressed permanently.
+
 import { useEffect, useState } from "react"
 
 type UpgradeBannerProps = {
@@ -8,6 +13,12 @@ type UpgradeBannerProps = {
 
 const dismissedKey = "autotime-upgrade-banner-dismissed"
 
+/**
+ * Shows a "you have N AI analyses left, upgrade to Pro" banner unless it
+ * was already dismissed in this session. Starts hidden (`isDismissed`
+ * defaults `true`) until the sessionStorage check resolves, avoiding a
+ * flash of the banner before dismissal state is known.
+ */
 export function UpgradeBanner({ remainingCalls }: UpgradeBannerProps) {
   const [isDismissed, setIsDismissed] = useState(true)
 

@@ -1,3 +1,4 @@
+/** Orchestrates repeatable MVP checks and emits a redacted validation report. */
 import { spawnSync } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
@@ -150,7 +151,7 @@ const finishedAt = new Date()
 const commitSha = getGitValue(["rev-parse", "HEAD"])
 const branch = getGitValue(["branch", "--show-current"])
 const shortStamp = finishedAt.toISOString().replace(/[:.]/g, "-")
-const reportDir = join("docs", "automation-runs")
+const reportDir = join("docs", "reports", "automation-runs")
 const reportPath = join(reportDir, `${shortStamp}.md`)
 
 mkdirSync(reportDir, { recursive: true })
@@ -201,13 +202,13 @@ const report = [
   "## Manual Evidence Still Required",
   "",
   "- [ ] Load or reload `apps/extension/.output/chrome-mv3` in Chrome.",
-  "- [ ] Complete `docs/extension-smoke-test.md`.",
-  "- [ ] Complete `docs/v2-smoke-test.md` against the deployed dashboard.",
+  "- [ ] Complete `docs/reference/extension-smoke-test.md`.",
+  "- [ ] Complete `docs/reference/v2-smoke-test.md` against the deployed dashboard.",
   "- [ ] Validate LinkedIn manual copy/paste on a live UK/EU job.",
   "- [ ] Validate Greenhouse, Lever, and Workday import on live UK/EU jobs.",
   "- [ ] Export Applications CSV.",
   "- [ ] Export Validation Metrics CSV.",
-  "- [ ] Record final values in the current `docs/founder-validation-runs/...` validation report.",
+  "- [ ] Record final values in the current `docs/reports/founder-validation-runs/...` validation report.",
   "",
   "## Result",
   "",

@@ -1,3 +1,12 @@
+/**
+ * Bridges the locally-stored CandidateProfile (from the shared package)
+ * into an optional, explicitly-consented Supabase "profiles" sync. Every
+ * step - readiness checks, payload construction, and the actual sync
+ * action - is deliberately gated and observable (readiness flags,
+ * blockers, issues) rather than silently syncing, since profile data is
+ * sensitive and sync must only happen after an authenticated session,
+ * explicit user action, and consent all line up.
+ */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import {
   getCandidateProfileBridgeIssues,
@@ -120,6 +129,13 @@ function trimToNullable(value: string) {
   return trimmed.length > 0 ? trimmed : null
 }
 
+/**
+ * Determines whether cloud sync is enabled and fully configured (feature
+ * flag on, Supabase URL and anon key both present), and derives the set of
+ * human-readable UI labels and blocking `issues` from that state. Purely a
+ * function of the given `env`, so it's testable without touching real
+ * process.env or a network call.
+ */
 export function getCloudSyncReadiness(
   env: CloudSyncEnv
 ): CloudSyncReadiness {
@@ -148,6 +164,12 @@ export function getCloudSyncReadiness(
   }
 }
 
+/**
+ * Builds a Supabase client for cloud sync only if getCloudSyncReadiness
+ * reports `configured`; otherwise returns `{ ready: false, client: null }`
+ * alongside the same readiness details, so callers can render a
+ * not-ready state without ever holding a half-configured client.
+ */
 export function createCloudSyncClient(env: CloudSyncEnv): CloudSyncClientResult {
   const readiness = getCloudSyncReadiness(env)
 
@@ -172,6 +194,14 @@ export function createCloudSyncClient(env: CloudSyncEnv): CloudSyncClientResult 
   }
 }
 
+/**
+ * Reads the current Supabase auth session from an already-built client
+ * result. Returns a "blocked" state (not an error) if the client itself
+ * isn't ready, an error-message state if `auth.getSession()` fails, or an
+ * authenticated/unauthenticated state describing the session - note that
+ * detecting a session here is explicitly not the same as consenting to
+ * sync; the returned `message` says so.
+ */
 export async function getCloudSyncSessionState(
   clientResult: CloudSyncClientResult | { ready: true; client: SessionClient }
 ): Promise<CloudSyncSessionState> {
@@ -208,6 +238,14 @@ export async function getCloudSyncSessionState(
   }
 }
 
+/**
+ * Validates a CandidateProfile (via the shared bridge-issue checker) and
+ * `userId`, and if both are valid, maps the profile's camelCase fields
+ * into the snake_case Supabase `profiles` row shape (trimming strings,
+ * converting blanks to null for optional fields). Returns `{ ready: false,
+ * issues }` rather than throwing when validation fails, so callers can
+ * surface the specific missing/invalid fields to the user.
+ */
 export function createProfileSyncPayload({
   profile,
   userId,
@@ -259,6 +297,15 @@ export function createProfileSyncPayload({
   }
 }
 
+/**
+ * The full pre-sync gate: combines readiness, session, explicit user
+ * action, and consent into a list of `blockers`, and additionally requires
+ * a valid payload (built via createProfileSyncPayload, using
+ * `session.userEmail` as the user id). Returns `ready: true` with the
+ * payload only when every one of those conditions holds; otherwise returns
+ * `ready: false` with a combined message listing all blockers plus any
+ * payload validation issues.
+ */
 export function prepareProfileSyncAction({
   readiness,
   session,
@@ -304,6 +351,15 @@ export function prepareProfileSyncAction({
   }
 }
 
+/**
+ * Performs the actual authenticated write: builds the sync payload,
+ * upserts it into `profiles` (keyed on user_id), records a `sync_events`
+ * row describing whether this was a create or update, and - only for an
+ * extension-sourced sync - stamps `last_synced_at` on the caller's active
+ * (non-revoked) extension connection(s). Any failure at any step returns
+ * `{ success: false, error }` rather than throwing; callers should not
+ * assume partial steps were rolled back.
+ */
 export async function syncProfile(
   client: SupabaseClient<Database>,
   userId: string,
@@ -422,6 +478,11 @@ function rowToCandidateProfile(
   }
 }
 
+/**
+ * Reads the synced `profiles` row for `userId` and maps it back into a
+ * CandidateProfile (nullable string columns become empty strings, except
+ * the row itself, which is null if no profile has been synced yet).
+ */
 export async function readSyncedProfile(
   client: SupabaseClient<Database>,
   userId: string
@@ -456,6 +517,14 @@ export async function readSyncedProfile(
   }
 }
 
+/**
+ * Browser-environment convenience wrapper around getCloudSyncReadiness that
+ * reads the relevant NEXT_PUBLIC_* env vars itself. When
+ * NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY is "true" it forces sync off
+ * (for E2E test isolation); otherwise it defaults the enabled flag to
+ * "true" in production (either via NEXT_PUBLIC_AUTOTIME_ENV or
+ * NODE_ENV) when NEXT_PUBLIC_AUTOTIME_CLOUD_SYNC_ENABLED itself is unset.
+ */
 export function getBrowserCloudSyncReadiness() {
   const e2eLocalOnly =
     process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true"
@@ -475,6 +544,11 @@ export function getBrowserCloudSyncReadiness() {
   })
 }
 
+/**
+ * Browser-environment convenience wrapper around createCloudSyncClient,
+ * using the same env-var resolution (including the E2E-local-only
+ * override and the production default) as getBrowserCloudSyncReadiness.
+ */
 export function createBrowserCloudSyncClient() {
   const e2eLocalOnly =
     process.env.NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY === "true"

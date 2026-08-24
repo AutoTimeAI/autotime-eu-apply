@@ -1,3 +1,12 @@
+// Client for AutoTime's backend AI endpoints (`/api/ai/analyse` and
+// `/api/ai/content`), which proxy OpenAI on the user's behalf so the raw
+// OpenAI key never lives in the extension. Also defines `appUrl` (the
+// single source of truth for the AutoTime web app's origin, imported
+// throughout the extension for dashboard links and API calls) and helpers
+// to normalize/sanitize the AI's JSON responses into the app's draft types,
+// plus a local per-model USD cost estimate (the backend itself reports
+// approximateCostUsd: 0 today - the pricing table here is a placeholder for
+// when/if the extension estimates cost client-side again).
 import type {
   ApplicationContentDraft,
   CandidateProfile,
@@ -88,6 +97,7 @@ function getOpenAIStatusHint(status: number) {
   return "try again or use the local fallback."
 }
 
+/** Converts an error from an AI request into a user-facing message, special-casing a JSON parse failure (SyntaxError) with a clearer explanation than the raw error text. */
 export function getOpenAIErrorMessage(error: unknown) {
   if (error instanceof SyntaxError) {
     return "AutoTime AI returned a response that was not valid JSON."
@@ -119,6 +129,7 @@ function toRecommendation(value: unknown): JobAnalysisDraft["recommendation"] {
     : "Stretch"
 }
 
+/** Coerces a partial/untrusted AI response into a complete ApplicationContentDraft, defaulting any missing or non-string field to `""`. */
 export function normalizeAIApplicationContent(
   value: Partial<ApplicationContentDraft>
 ): ApplicationContentDraft {
@@ -131,6 +142,7 @@ export function normalizeAIApplicationContent(
   }
 }
 
+/** Coerces a partial/untrusted AI response into the scored subset of JobAnalysisDraft: clamps `fitScore` to 0-100 (defaulting to 50), validates `recommendation` against the known enum (defaulting to "Stretch"), and defaults array/string fields. */
 export function normalizeAIJobAnalysis(
   value: Partial<JobAnalysisDraft>
 ): Pick<
@@ -161,6 +173,7 @@ export function normalizeAIJobAnalysis(
   }
 }
 
+/** Estimates USD cost for an OpenAI call from token usage and a local per-model price table (`modelPricesPerMillionTokens`), defaulting to the gpt-4.1-mini rate for unknown models. Currently unused by the live AI calls below, which get cost from the backend response instead. */
 export function estimateOpenAICostUsd(model: string, usage?: OpenAIUsage) {
   const prices =
     modelPricesPerMillionTokens[model] ?? modelPricesPerMillionTokens["gpt-4.1-mini"]
@@ -236,6 +249,12 @@ async function createBackendResponse<T>({
   }
 }
 
+/**
+ * Requests AI-generated application content from `/api/ai/content`.
+ * Requires `authToken` (throws otherwise). Runs the raw response through
+ * `normalizeAIApplicationContent` before returning it, so callers always
+ * get a well-formed draft even if the backend's JSON is partial.
+ */
 export async function generateAIApplicationContentDraft({
   authToken,
   profile,
@@ -260,6 +279,12 @@ export async function generateAIApplicationContentDraft({
   }
 }
 
+/**
+ * Requests an AI-generated job fit analysis from `/api/ai/analyse`.
+ * Requires `authToken` (throws otherwise). Runs the raw response through
+ * `normalizeAIJobAnalysis` before returning it. `profile` may be `null` if
+ * the user hasn't saved a profile yet.
+ */
 export async function generateAIJobAnalysis({
   authToken,
   draft,

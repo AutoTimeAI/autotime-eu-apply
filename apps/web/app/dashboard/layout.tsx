@@ -1,3 +1,13 @@
+/**
+ * Root layout for every route under /dashboard.
+ *
+ * Server component: authenticates the request (test-auth override first,
+ * then a real Supabase session) and redirects unauthenticated visitors to
+ * /login. On success it loads the user's plan and admin status and wraps
+ * all dashboard page content in `DashboardShell` (the shared nav/chrome).
+ * Also pulls in the CSS bundles used across the various dashboard phases
+ * (foundations, brand, jobs, applications, interviews, profile, etc).
+ */
 import "./phase-1-foundations.css";
 import "./phase-1-brand.css";
 import "./phase-1-home-states.css";
@@ -16,6 +26,13 @@ import { createServerClient } from "../../lib/supabase/server";
 import { getTestAuthUser } from "../../lib/test-auth";
 import { DashboardShell } from "../../components/DashboardShell";
 
+/**
+ * Authenticates the current user (test-auth user takes priority over a
+ * Supabase session), redirects to /login when neither is present, then
+ * loads the user's plan and admin flag and renders `DashboardShell` around
+ * `children`. Re-throws any error from the plan/admin lookups after logging
+ * it, so the surrounding Next.js error boundary handles the failure.
+ */
 export default async function DashboardLayout({
   children,
 }: {

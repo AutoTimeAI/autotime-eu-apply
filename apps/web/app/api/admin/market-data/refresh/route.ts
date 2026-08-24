@@ -1,3 +1,18 @@
+/**
+ * POST /api/admin/market-data/refresh
+ *
+ * Requests an ESCO market-data refresh via the `admin_request_market_
+ * refresh` Postgres RPC.
+ *
+ * Auth: admin-only. Requires the `market_data:refresh` permission via
+ * `requireAdminRequest`, plus a same-origin check (`isSameOriginMutation`)
+ * that rejects cross-origin requests with 403.
+ *
+ * Behaviour: requires explicit confirmation in the body plus a caller-
+ * supplied idempotency key, and the RPC itself can report a "rate_limited"
+ * outcome (surfaced as 429) if refreshes are being requested too
+ * frequently.
+ */
 import { NextResponse } from "next/server";
 import {
   AdminAuthorizationError,
@@ -7,6 +22,21 @@ import {
 import { createAdminClient } from "../../../../../lib/supabase/admin";
 import { safeAdminError } from "../../../../../lib/admin-safe-response";
 
+/**
+ * Validates and submits a market-data refresh request.
+ *
+ * Request body (JSON): `confirm` (must be exactly `true`), `provider`
+ * (must be exactly `"esco"`), `idempotencyKey` (string, 12-80 chars,
+ * `[a-zA-Z0-9_-]`).
+ *
+ * Responses:
+ * - 202: `{ data, error: null, status: 202 }` refresh request accepted.
+ * - 400: missing/invalid confirmation, provider, or idempotency key.
+ * - 403: cross-origin request.
+ * - 429: RPC reports the request is rate-limited.
+ * - non-2xx: sanitized error via `safeAdminError` for RPC/unexpected
+ *   failures.
+ */
 export async function POST(request: Request) {
   try {
     const principal = await requireAdminRequest(request, "market_data:refresh");

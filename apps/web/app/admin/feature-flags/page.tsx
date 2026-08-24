@@ -1,3 +1,7 @@
+/**
+ * Provides the governed feature-flag console, separating read access from the
+ * stronger permission required to mutate durable overrides.
+ */
 import {
   hasAdminPermission,
   requireAdminPageAccess,
@@ -5,6 +9,7 @@ import {
 import { getAdminFeatureFlagsOverview } from "../../../lib/admin-feature-flags"
 import { AdminFeatureFlagsGrid } from "./AdminFeatureFlagsGrid"
 
+/** Loads flag state and derives whether the current operator may edit it. */
 export default async function Page() {
   const principal = await requireAdminPageAccess("feature_flags:read")
   const canWrite = hasAdminPermission(principal.membership, "feature_flags:write")

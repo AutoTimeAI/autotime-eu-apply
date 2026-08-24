@@ -1,3 +1,10 @@
+// Covers the local-storage <-> account sync lifecycle for the mobility
+// profile served through /api/sync/mobility on the International page's
+// "My mobility" panel: consent gating before any upload, declining consent
+// staying local-only, reconciling server vs. browser conflicts without a
+// silent overwrite, retrying a failed upload, the distinction between
+// removing the browser copy / deleting the account copy / sync being
+// disabled, and failing closed when offline or when sync is unavailable.
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { sampleUser } from "../fixtures/sample-user";
 

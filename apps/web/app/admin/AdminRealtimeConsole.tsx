@@ -1,8 +1,20 @@
 "use client";
 
+// Client-side console rendered by the /admin overview page (admin/page.tsx).
+// Shows operational metrics, any data-source warnings, and a recent
+// admin-actions audit feed, seeded from the server-fetched initial overview
+// and refreshable on demand via GET /api/admin/overview (which re-runs the
+// same "overview:read" authorization check server-side).
 import { useState } from "react";
 import type { AdminOverview } from "../../lib/admin-monitoring";
 
+/**
+ * Renders the admin operations overview: metric cards, data-source
+ * warnings, and a recent-admin-actions list (or an "Not authorised"/"Not
+ * instrumented" placeholder depending on `overview.recentActions.status`).
+ * The "Refresh" button re-fetches /api/admin/overview and replaces the
+ * displayed overview with the new response.
+ */
 export function AdminRealtimeConsole({
   initialOverview,
 }: {

@@ -1,3 +1,13 @@
+// Lightweight node:assert unit test (no test runner/framework) for
+// lib/interview-prep.ts, which builds an interview preparation pack either
+// locally (no AI) or via OpenAI. Covers: the local fallback pack generated
+// from profile/job/application evidence; the guardrail that blocks
+// generation entirely when the underlying evidence (CV, job description,
+// application notes) is too thin; normalizing a partial/malformed AI
+// response against the local fallback pack (dropping non-string entries,
+// falling back field-by-field); estimating OpenAI token cost; the
+// canUseWebAI budget/API-key gate; and generating a pack end-to-end from a
+// mocked OpenAI fetch response.
 import assert from "node:assert/strict"
 import {
   canUseWebAI,

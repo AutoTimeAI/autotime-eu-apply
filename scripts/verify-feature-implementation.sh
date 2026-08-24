@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Runs the Unix feature-verification checklist and reports each command outcome.
 # Repository-only verification for feature-spec phases 1-11.
 # Live APIs, credentials, deployed migrations, and browser checks remain manual.
 set -uo pipefail
@@ -56,9 +57,9 @@ check_file 'ESCO questionnaire API' apps/web/app/api/esco/questionnaire/route.ts
 check_file 'ESCO single-job score API' apps/web/app/api/esco/score-job/route.ts
 check_file 'Extension ESCO overlay' apps/extension/lib/match-overlay.ts
 check_file 'Overlap-only ESCO correction' supabase/migrations/20260811120000_defer_esco_vector_matching.sql
-check_file 'Feature audit' docs/autotime-feature-spec-audit.md
-check_file 'Compliance policy' docs/job-aggregation-compliance.md
-check_file 'Ingestion deployment guide' docs/job-ingestion-deployment.md
+check_file 'Feature audit' docs/reference/autotime-feature-spec-audit.md
+check_file 'Compliance policy' docs/reference/job-aggregation-compliance.md
+check_file 'Ingestion deployment guide' docs/reference/job-ingestion-deployment.md
 check_file 'Cron SQL' supabase/cron/job-ingestion.sql
 check_file 'Deployment helper' scripts/deploy-job-ingestion.ps1
 
@@ -82,5 +83,5 @@ run_gate 'production extension build' 'pnpm --filter extension build'
 run_gate 'production web build' 'pnpm build:web'
 
 echo "PASS: ${PASS}  FAIL: ${FAIL}"
-echo 'See docs/verify-feature-implementation.md for manual and live checks.'
+echo 'See docs/reference/verify-feature-implementation.md for manual and live checks.'
 [[ "$FAIL" -eq 0 ]]

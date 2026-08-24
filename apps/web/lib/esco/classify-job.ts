@@ -1,3 +1,4 @@
+/** Deterministically maps job text to the closest supplied ESCO occupation. */
 export type EscoOccupationCandidate = {
   id: string;
   preferredLabel: string;
@@ -17,6 +18,7 @@ const words = (value: string) =>
       .split(/\s+/)
       .filter((word) => word.length > 2),
   );
+/** Scores exact-title and token-overlap matches without an external model call. */
 export function classifyJobToEsco(
   title: string,
   description: string,

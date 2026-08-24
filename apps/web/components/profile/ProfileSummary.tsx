@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ProductEmptyState, ProductPageHeader } from "../product-ui";
+import { safeHttpUrl } from "../../lib/content-security";
 
 type Profile = {
   alert_frequency: "daily" | "weekly" | "off";
@@ -48,7 +49,8 @@ export default function ProfileSummary() {
     ["LinkedIn", profile.linkedin_url],
     ["GitHub", profile.github_url],
     ["Portfolio", profile.portfolio_url],
-  ].filter((entry): entry is [string, string] => Boolean(entry[1]));
+  ].map(([label, url]) => [label, safeHttpUrl(url)] as const)
+    .filter((entry): entry is readonly [string, string] => Boolean(entry[1]));
 
   async function updateAlertFrequency(
     frequency: Profile["alert_frequency"],

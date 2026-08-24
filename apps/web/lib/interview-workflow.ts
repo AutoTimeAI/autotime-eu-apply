@@ -1,3 +1,4 @@
+/** Models evidence-grounded interview preparation, readiness, stages, and outcomes. */
 import type {
   ApplicationWorkspace,
   JobRecord,
@@ -252,6 +253,7 @@ const references = (
     : []),
 ];
 
+/** Generates sourced interview questions from the application and job evidence. */
 export function generateInterviewQuestions(
   interview: Pick<InterviewRecord, "id" | "stage">,
   application: ApplicationWorkspace,
@@ -317,6 +319,7 @@ export function generateInterviewQuestions(
   });
 }
 
+/** Creates a new interview record linked to an owned application and job. */
 export function createInterview(input: {
   userId: string;
   application: ApplicationWorkspace;
@@ -389,6 +392,7 @@ export function createInterview(input: {
   };
 }
 
+/** Derives the interview signals used to prioritise the dashboard home action. */
 export function getInterviewHomeSignals(
   state: InterviewWorkflowState | undefined,
   now = Date.now(),
@@ -429,6 +433,7 @@ export function getInterviewHomeSignals(
   };
 }
 
+/** Calculates readiness and blockers from the interview's current preparation state. */
 export function getInterviewReadiness(interview: InterviewRecord): {
   label: InterviewReadiness;
   blockers: string[];
@@ -536,6 +541,7 @@ function readinessAreas(interview: InterviewRecord) {
     ]);
 }
 
+/** Saves an evidence-aware answer and invalidates stale final review when needed. */
 export function saveInterviewAnswer(
   interview: InterviewRecord,
   questionId: string,
@@ -601,6 +607,7 @@ export function saveInterviewAnswer(
   };
 }
 
+/** Applies a permitted interview-status transition. */
 export function transitionInterview(
   interview: InterviewRecord,
   status: InterviewStatus,
@@ -622,6 +629,7 @@ export function transitionInterview(
   return { ...interview, status, updatedAt: new Date().toISOString() };
 }
 
+/** Marks final preparation review complete after readiness validation. */
 export function completeInterviewFinalReview(interview: InterviewRecord) {
   return {
     ...interview,
@@ -630,6 +638,7 @@ export function completeInterviewFinalReview(interview: InterviewRecord) {
   };
 }
 
+/** Regenerates preparation while retaining an auditable preparation history. */
 export function refreshInterviewPreparation(
   interview: InterviewRecord,
   application: ApplicationWorkspace,
@@ -669,6 +678,7 @@ export function refreshInterviewPreparation(
   };
 }
 
+/** Creates the next-stage interview after a progressed outcome. */
 export function createNextInterviewStage(
   previous: InterviewRecord,
   application: ApplicationWorkspace,
@@ -687,6 +697,7 @@ export function createNextInterviewStage(
   });
 }
 
+/** Records a terminal or progressed outcome with its supporting details. */
 export function recordInterviewOutcome(
   interview: InterviewRecord,
   outcome: InterviewOutcome,

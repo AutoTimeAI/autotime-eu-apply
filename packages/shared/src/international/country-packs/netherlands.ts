@@ -1,3 +1,8 @@
+// Netherlands' CountryPack: Highly Skilled Migrant / EU Blue Card pathways,
+// required evidence (notably IND recognised-sponsor status), and citations
+// to the Immigration and Naturalisation Service (IND). assessInternationalJob
+// (../assessment.ts) specifically checks this pack's id ("netherlands") to
+// require recognised-sponsor register evidence before a decision.
 import type { CountryPack } from "../types.ts";
 
 export const netherlandsCountryPack: CountryPack = {

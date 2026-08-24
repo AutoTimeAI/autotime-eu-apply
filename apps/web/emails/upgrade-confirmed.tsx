@@ -1,3 +1,9 @@
+/**
+ * Transactional "upgrade confirmed" email, built with @react-email/components
+ * so it can be rendered to HTML for sending (e.g. after a successful Stripe
+ * plan upgrade) and previewed via the React Email tooling. Confirms the new
+ * plan is active and states the current billing period end date.
+ */
 import {
   Body,
   Container,
@@ -39,6 +45,7 @@ const textStyle = {
   margin: "0 0 16px"
 }
 
+/** Formats a Date as e.g. "24 August 2026" (en-GB, long month) for the billing-period-end line. */
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -47,6 +54,10 @@ function formatDate(date: Date): string {
   }).format(date)
 }
 
+/**
+ * Renders the upgrade-confirmation email body for the given `plan` name and
+ * `periodEnd` (current billing period end date).
+ */
 export default function UpgradeConfirmedEmail({
   periodEnd,
   plan
