@@ -1,3 +1,8 @@
+/**
+ * Transactional "welcome" email sent after signup, built with
+ * @react-email/components. Introduces the AutoTime workspace and nudges the
+ * new user toward saving their profile and checking a job description.
+ */
 import {
   Body,
   Container,
@@ -38,6 +43,9 @@ const textStyle = {
   margin: "0 0 16px"
 }
 
+/**
+ * Renders the welcome email body, greeting the user by `name`.
+ */
 export default function WelcomeEmail({ name }: WelcomeEmailProps) {
   return (
     <Html>
