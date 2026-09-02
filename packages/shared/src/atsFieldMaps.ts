@@ -2,13 +2,17 @@
 // last name, email, phone) on each ATS's own hosted application form,
 // keyed by the same atsKey used in platform-coverage.ts / ats-detector.ts.
 //
-// STATUS: unverified. These selectors are written from public knowledge of
-// each platform's typical DOM structure, not from live-tested fixtures -
-// there are none in the repo yet. Extend
-// scripts/verify-platform-coverage-live.mjs's Playwright pattern to check
-// these against real hosted application forms before flipping any
+// STATUS as of the first live run (scripts/verify-ats-field-maps-live.mjs,
+// 2026-09-02): Greenhouse and Lever's selectors are live-confirmed correct.
+// Recruitee's were live-confirmed WRONG (see the `recruitee` entry below -
+// the original guess assumed separate bracket-notation first/last fields;
+// the real form is one dot-notation `candidate.name` field) and have been
+// corrected from real DOM evidence. Ashby and SmartRecruiters are
+// deliberately absent from ATS_FIELD_MAPS - see the comment directly above
+// it for why. Personio remains untested (no fixture set). Do not flip any
 // platform's `autofill` status in platform-coverage.ts from "partial" to
-// "verified".
+// "verified" based on this map alone; that's a broader claim than "these
+// four fields have a selector."
 //
 // Design is fail-safe by construction: getAtsFieldMap() only ever supplies
 // candidate selectors, and the caller in contents/autofill.ts
@@ -30,15 +34,27 @@ export type AtsFieldMap = Partial<Record<AtsProfileFieldKey, readonly string[]>>
 
 /**
  * ATS platforms whose hosted form asks for ONE combined "full name" field
- * rather than separate first/last inputs (Lever, Ashby). Filling only
- * `firstName` into that field would silently drop the candidate's surname -
- * worse than not autofilling at all - so firstName/lastName are
- * deliberately omitted from ATS_FIELD_MAPS for these platforms until a
- * dedicated combined-name fill path exists. Tracked here so the gap is a
- * documented decision, not a silent omission.
+ * rather than separate first/last inputs (Lever, Ashby, Recruitee - the
+ * Recruitee case live-confirmed 2026-09-02: `candidate.name`, not separate
+ * `candidate.first_name`/`candidate.last_name` as originally guessed).
+ * Filling only `firstName` into that field would silently drop the
+ * candidate's surname - worse than not autofilling at all - so
+ * firstName/lastName are deliberately omitted from ATS_FIELD_MAPS for
+ * these platforms until a dedicated combined-name fill path exists.
+ * Tracked here so the gap is a documented decision, not a silent omission.
  */
-export const SINGLE_NAME_FIELD_ATS: readonly string[] = ["lever", "ashby"]
+export const SINGLE_NAME_FIELD_ATS: readonly string[] = ["lever", "ashby", "recruitee"]
 
+// Ashby and SmartRecruiters are deliberately NOT mapped below. Both were
+// live-checked 2026-09-02 and their actual application forms render inside
+// an <iframe> (Ashby: its embedded apply widget; SmartRecruiters: its
+// "oneclick-ui" apply flow) - confirmed via zero top-level <input> elements
+// plus a live iframe count on both. contents/autofill.ts's
+// fillProfileFieldsViaAtsMap only ever queries the top-level `document` (or
+// the LinkedIn Easy Apply modal), so no selector - however correct its text
+// - can ever match there. Re-adding entries for either platform requires
+// frame-aware querying in the caller first, not just better selector
+// guesses.
 export const ATS_FIELD_MAPS: Partial<Record<string, AtsFieldMap>> = {
   greenhouse: {
     firstName: ["#first_name", "input[name='job_application[first_name]']", "input[autocomplete='given-name']"],
@@ -51,22 +67,14 @@ export const ATS_FIELD_MAPS: Partial<Record<string, AtsFieldMap>> = {
     email: ["input[name='email']", "input[type='email']"],
     phone: ["input[name='phone']", "input[type='tel']"]
   },
-  ashby: {
-    // Single "Name" field - see SINGLE_NAME_FIELD_ATS above.
-    email: ["input[name='_systemfield_email']", "input[type='email']"],
-    phone: ["input[name='_systemfield_phone']", "input[type='tel']"]
-  },
-  smartrecruiters: {
-    firstName: ["input[name='firstName']", "[data-test='firstName-input'] input", "input[autocomplete='given-name']"],
-    lastName: ["input[name='lastName']", "[data-test='lastName-input'] input", "input[autocomplete='family-name']"],
-    email: ["input[name='email']", "[data-test='email-input'] input", "input[type='email']"],
-    phone: ["input[name='phoneNumber']", "[data-test='phoneNumber-input'] input", "input[type='tel']"]
-  },
   recruitee: {
-    firstName: ["input[name='candidate[first_name]']", "input[autocomplete='given-name']"],
-    lastName: ["input[name='candidate[last_name]']", "input[autocomplete='family-name']"],
-    email: ["input[name='candidate[email]']", "input[type='email']"],
-    phone: ["input[name='candidate[phone]']", "input[type='tel']"]
+    // Single "Full name" field (`candidate.name`) - see
+    // SINGLE_NAME_FIELD_ATS above. Fields are hidden until the page's own
+    // "Apply" control is clicked; a real candidate reaches that state
+    // before invoking AutoTime, and verify-ats-field-maps-live.mjs
+    // simulates the click for the same reason.
+    email: ["input[name='candidate.email']", "input[type='email']"],
+    phone: ["input[name='candidate.phone']", "input[type='tel']"]
   },
   personio: {
     // Personio forms are configured per-employer with dynamic field IDs -

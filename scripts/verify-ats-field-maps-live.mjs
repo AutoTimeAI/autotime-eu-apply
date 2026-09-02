@@ -42,6 +42,34 @@ try {
       const blocked = [401, 403, 405, 429].includes(response?.status() ?? 0);
       const reachable = Boolean(response && response.status() < 400);
 
+      // Some ATS forms (confirmed: Recruitee) render the identity fields
+      // hidden until an on-page "Apply" control is clicked - a real
+      // candidate reaches that state naturally before invoking AutoTime,
+      // so simulate it here rather than checking a state no real user
+      // would trigger autofill from. A missing/unclickable button is a
+      // no-op, not an error. Text-based, not role-based: a role-based query
+      // on Recruitee matched a different "Apply"-labelled control (likely
+      // "Apply with Indeed") that doesn't reveal the native form.
+      //
+      // Clicking right after domcontentloaded silently no-ops on at least
+      // one platform (confirmed: Recruitee) - the click registers but the
+      // framework's event handler isn't attached yet, so nothing reveals.
+      // A full "networkidle" wait fixes that but isn't safe as the primary
+      // load strategy: at least one platform (confirmed: Lever) never
+      // reaches network-idle within 30s at all - likely a persistent
+      // analytics/chat-widget connection - which timed out the whole check.
+      // So: load fast and reliably, then give hydration a short, capped,
+      // best-effort window that can't block the rest of the check if a
+      // platform never truly idles.
+      if (reachable) {
+        await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
+        const applyControl = page.getByText("Apply", { exact: false }).first();
+        if (await applyControl.isVisible({ timeout: 2_000 }).catch(() => false)) {
+          await applyControl.click({ timeout: 2_000 }).catch(() => {});
+          await page.waitForTimeout(1_000);
+        }
+      }
+
       const fields = reachable
         ? await page.evaluate((fieldMap) => {
             const isFillable = (el) =>

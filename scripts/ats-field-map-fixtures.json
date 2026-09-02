@@ -1,8 +1,6 @@
 {
-  "greenhouse": "https://job-boards.greenhouse.io/REPLACE_WITH_LIVE_COMPANY/jobs/REPLACE_WITH_LIVE_JOB_ID",
-  "lever": "https://jobs.lever.co/REPLACE_WITH_LIVE_COMPANY/REPLACE_WITH_LIVE_JOB_ID",
-  "ashby": "https://jobs.ashbyhq.com/REPLACE_WITH_LIVE_COMPANY/REPLACE_WITH_LIVE_JOB_ID",
-  "smartrecruiters": "https://jobs.smartrecruiters.com/REPLACE_WITH_LIVE_COMPANY/REPLACE_WITH_LIVE_JOB_ID",
-  "recruitee": "https://REPLACE_WITH_LIVE_COMPANY.recruitee.com/o/REPLACE_WITH_LIVE_JOB_SLUG",
+  "greenhouse": "https://job-boards.greenhouse.io/planetscale/jobs/4107018009",
+  "lever": "https://jobs.lever.co/erg/3a0eecd3-420c-4312-a55b-3c905d4c27ac/apply",
+  "recruitee": "https://resourcefultalentgroup.recruitee.com/o/senior-full-stack-engineer",
   "personio": "https://REPLACE_WITH_LIVE_COMPANY.jobs.personio.de/job/REPLACE_WITH_LIVE_JOB_ID"
 }
