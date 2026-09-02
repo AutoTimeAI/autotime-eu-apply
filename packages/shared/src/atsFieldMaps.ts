@@ -11,11 +11,17 @@
 // "verified".
 //
 // Design is fail-safe by construction: getAtsFieldMap() only ever supplies
-// candidate selectors, and the caller in contents/autofill.ts only fills a
-// field if querySelector actually resolves AND the input passes the normal
-// canFill() checks. A wrong, stale, or missing selector here just falls
-// through to the existing generic label-text detector - it cannot cause a
-// regression, only a missed optimisation.
+// candidate selectors, and the caller in contents/autofill.ts
+// (fillProfileFieldsViaAtsMap) only fills a field when a selector resolves
+// to EXACTLY ONE fillable input on the page (querySelectorAll + canFill(),
+// not querySelector's first-match). A selector matching zero inputs, a
+// disabled/readonly/hidden one, or - critically - more than one (e.g. the
+// generic `input[type='email']` fallback matching both the applicant's own
+// email and an unrelated "referred by" email field) is never guessed at;
+// it's skipped and falls through to the next selector or, ultimately, the
+// existing generic label-text detector. A wrong, stale, ambiguous, or
+// missing selector here cannot cause a regression, only a missed
+// optimisation.
 import { detectATS } from "./ats-detector.ts"
 
 export type AtsProfileFieldKey = "firstName" | "lastName" | "email" | "phone"

@@ -1315,11 +1315,17 @@ function fillProfileFieldsViaAtsMap(
     }
 
     for (const selector of selectors) {
-      const input = root.querySelector<HTMLInputElement>(selector)
-      if (input && canFill(input)) {
-        setControlValue(input, value)
+      // querySelectorAll, not querySelector: a selector matching more than
+      // one fillable input (most likely the generic `input[type='email']`/
+      // `input[type='tel']` fallbacks, e.g. a form with a separate
+      // "referred by" email field) is ambiguous - skip it rather than
+      // guessing via DOM order, and let the next selector or the generic
+      // label-text detector take it instead.
+      const matches = Array.from(root.querySelectorAll<HTMLInputElement>(selector)).filter(canFill)
+      if (matches.length === 1) {
+        setControlValue(matches[0], value)
         filledFields.push(field)
-        filledInputs.add(input)
+        filledInputs.add(matches[0])
         break
       }
     }
