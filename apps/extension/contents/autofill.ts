@@ -53,7 +53,7 @@ import {
   type ReusableAnswerField,
   type ProfileField
 } from "../lib/autofill"
-import { getAtsApplyNavigationUrl, getAtsFieldMap } from "shared"
+import { getAtsApplicationFormUrl, getAtsFieldMap } from "shared"
 
 type AutofillResponse = {
   filledFields: string[]
@@ -2712,7 +2712,7 @@ function bindWidgetEvents(
       return
     }
 
-    const applyUrl = getAtsApplyNavigationUrl(window.location.href)
+    const applyUrl = getAtsApplicationFormUrl(window.location.href)
     if (applyUrl) {
       // A real navigation is about to destroy this content script's
       // execution context, so nothing after this point in THIS instance

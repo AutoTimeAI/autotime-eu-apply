@@ -11,9 +11,11 @@
 //     content script to push local applications to the dashboard
 //   - AUTOTIME_NAVIGATE_AND_AUTOFILL: internal message from the draggable
 //     widget's Autofill button, used only for ATSes whose application form
-//     lives at a different URL than the current page (currently: Lever's
-//     `/apply` sibling path - see getAtsApplyNavigationUrl). Navigates the
-//     tab, waits for it to load, re-injects the content script (a real
+//     lives at a different URL than the current page (Lever's `/apply`,
+//     Ashby's `/application` - see getAtsApplicationFormUrl in
+//     packages/shared/src/atsFieldMaps.ts, which the widget's click handler
+//     calls to produce the `url` this message carries). Navigates the tab,
+//     waits for it to load, re-injects the content script (a real
 //     navigation destroys whatever content script was running before -
 //     it can't drive this itself), and relays the fill result back to the
 //     new page via AUTOTIME_AUTOFILL_RESULT. Has to live here rather than
@@ -26,7 +28,6 @@
 //   - onInstalled / onStartup / storage.onChanged: retries any
 //     applications that failed to sync to the dashboard earlier
 import { defineBackground } from "wxt/utils/define-background"
-import { getAtsApplyNavigationUrl } from "shared"
 import { appUrl } from "../../lib/openai"
 import {
   deleteApplication,
@@ -361,12 +362,22 @@ function waitForTabLoad(tabId: number, timeoutMs = 15_000): Promise<void> {
  * Navigates `tabId` to the ATS's real application-form URL, waits for it to
  * load, re-injects the content script (it doesn't survive/auto-reinject
  * after a real navigation), and runs+relays autofill on the new page. Used
- * only when getAtsApplyNavigationUrl found a URL to navigate to - the
+ * only when getAtsApplicationFormUrl found a URL to navigate to - the
  * common case (form already on the current page) never touches this.
  */
 async function navigateAndAutofill(tabId: number, applyUrl: string) {
   await chrome.tabs.update(tabId, { url: applyUrl })
   await waitForTabLoad(tabId)
+  // waitForTabLoad only confirms the browser's own "complete" status - the
+  // network/document-ready point, not that the ATS's client-side app has
+  // finished rendering the actual form fields into the DOM. Confirmed live
+  // 2026-09-02 on Ashby: immediately after "complete", the email input
+  // exists, is visible, and is empty (canFillInput's own criteria), yet the
+  // fill still finds nothing - the field genuinely isn't attached/settled
+  // yet at that exact instant. A short fixed settle delay is the only tool
+  // available here (unlike a test script, the extension has no
+  // network-idle-equivalent signal to wait on instead).
+  await new Promise((resolve) => setTimeout(resolve, 1_200))
   await chrome.scripting.executeScript({
     target: { tabId },
     files: ["content-scripts/autotime.js"]

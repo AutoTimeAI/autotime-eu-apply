@@ -18,7 +18,19 @@ const supportedJobBoardHostPermissions = [
   "https://eures.ec.europa.eu/*",
   "https://*.eurotechjobs.com/*",
   "https://*.xing.com/*",
-  "https://*.welcometothejungle.com/*"
+  "https://*.welcometothejungle.com/*",
+  // Lever and Ashby's application forms live at a separate same-origin
+  // path (/apply, /application) from the job posting page - the widget's
+  // navigate-then-reinject autofill flow (see getAtsApplicationFormUrl in
+  // packages/shared/src/atsFieldMaps.ts) needs chrome.scripting.executeScript
+  // to work on that path *without* a fresh user gesture, since it's
+  // triggered by the background service worker after chrome.tabs.update(),
+  // not by a new toolbar click. activeTab's grant is scoped to the
+  // gesture-invoked page and isn't documented to survive an
+  // extension-initiated navigation to a new document, so these need an
+  // explicit, permanent grant rather than relying on that ambiguity.
+  "https://jobs.lever.co/*",
+  "https://jobs.ashbyhq.com/*"
 ]
 
 export default defineConfig({

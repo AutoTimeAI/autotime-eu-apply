@@ -25,7 +25,9 @@ export default defineContentScript({
     "https://eures.ec.europa.eu/*",
     "https://*.eurotechjobs.com/*",
     "https://*.xing.com/*",
-    "https://*.welcometothejungle.com/*"
+    "https://*.welcometothejungle.com/*",
+    "https://jobs.lever.co/*",
+    "https://jobs.ashbyhq.com/*"
   ],
   registration: "runtime",
   main() {
