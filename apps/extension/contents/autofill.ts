@@ -53,6 +53,7 @@ import {
   type ReusableAnswerField,
   type ProfileField
 } from "../lib/autofill"
+import { getAtsFieldMap } from "shared"
 
 type AutofillResponse = {
   filledFields: string[]
@@ -1295,6 +1296,36 @@ function isAutofillResponse(value: ParentNode | AutofillResponse): value is Auto
   return "filledFields" in value
 }
 
+function fillProfileFieldsViaAtsMap(
+  root: ParentNode,
+  profileValues: Record<ProfileField, string>,
+  filledFields: string[],
+  filledInputs: Set<HTMLInputElement>
+) {
+  const atsMap = getAtsFieldMap(window.location.href)
+  if (!atsMap) {
+    return
+  }
+
+  for (const field of Object.keys(atsMap) as ProfileField[]) {
+    const value = profileValues[field]
+    const selectors = atsMap[field]
+    if (!value || !selectors) {
+      continue
+    }
+
+    for (const selector of selectors) {
+      const input = root.querySelector<HTMLInputElement>(selector)
+      if (input && canFill(input)) {
+        setControlValue(input, value)
+        filledFields.push(field)
+        filledInputs.add(input)
+        break
+      }
+    }
+  }
+}
+
 async function autofillProfile(): Promise<AutofillResponse> {
   const root = getAutofillRoot()
 
@@ -1315,9 +1346,14 @@ async function autofillProfile(): Promise<AutofillResponse> {
   const profileValues = profile ? getFieldValues(profile) : null
   const answerValues = answers ? getReusableAnswerValues(answers) : null
   const filledFields: string[] = []
+  const filledInputs = new Set<HTMLInputElement>()
+
+  if (profileValues) {
+    fillProfileFieldsViaAtsMap(root, profileValues, filledFields, filledInputs)
+  }
 
   root.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
-    if (!profileValues || !canFill(input)) {
+    if (!profileValues || filledInputs.has(input) || !canFill(input)) {
       return
     }
 
