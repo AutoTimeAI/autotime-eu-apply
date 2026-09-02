@@ -88,7 +88,7 @@ import {
   createV2DashboardState,
   v2DashboardStateToJson
 } from "../lib/v2-dashboard"
-import { getAtsApplyNavigationUrl, getCandidateProfileBridgeIssues } from "shared"
+import { getCandidateProfileBridgeIssues } from "shared"
 import {
   emptyApplicationContentDraft,
   emptyJobAnalysisDraft,
@@ -564,42 +564,6 @@ function SidePanelApp() {
     setTimeout(() => setApplicationsStatus(""), 2500)
   }
 
-  /**
-   * Waits for a tab navigation to finish. Used before re-injecting the
-   * content script after a same-origin navigate-then-reinject step (see
-   * handleAutofillCurrentPage) - a real page navigation destroys whatever
-   * content script was previously running in that tab, so nothing can
-   * signal "done" from inside the page itself; the side panel has to poll
-   * the tab's own status from outside it instead.
-   */
-  const waitForTabLoad = (tabId: number, timeoutMs = 15000) =>
-    new Promise<void>((resolve, reject) => {
-      let settled = false
-      const finish = (fn: () => void) => {
-        if (settled) return
-        settled = true
-        chrome.tabs.onUpdated.removeListener(listener)
-        clearTimeout(timeout)
-        fn()
-      }
-      const listener = (
-        updatedTabId: number,
-        changeInfo: chrome.tabs.TabChangeInfo
-      ) => {
-        if (updatedTabId === tabId && changeInfo.status === "complete") {
-          finish(resolve)
-        }
-      }
-      const timeout = setTimeout(
-        () => finish(() => reject(new Error("Timed out waiting for the application page to load"))),
-        timeoutMs
-      )
-      chrome.tabs.onUpdated.addListener(listener)
-      chrome.tabs.get(tabId).then((tab) => {
-        if (tab.status === "complete") finish(resolve)
-      }).catch(() => finish(() => reject(new Error("Tab closed before it finished loading"))))
-    })
-
   const ensureContentScriptReady = async (tabId: number) => {
     try {
       await chrome.tabs.sendMessage(tabId, {
@@ -947,21 +911,6 @@ function SidePanelApp() {
     }
 
     try {
-      // Lever's application form only exists at the sibling `/apply` path,
-      // not the base posting URL - some fixtures/links already point
-      // there, some don't. This has to navigate-then-reinject from here
-      // (outside the page) rather than clicking an in-page "Apply" control
-      // from inside the content script: a real navigation destroys that
-      // script's execution context before anything after the click could
-      // run, so the content script itself can never drive this. See
-      // getAtsApplyNavigationUrl's own comment for the full reasoning.
-      const applyUrl = activeTab.url ? getAtsApplyNavigationUrl(activeTab.url) : null
-      if (applyUrl) {
-        setStatus("Opening the application form…")
-        await chrome.tabs.update(activeTab.id, { url: applyUrl })
-        await waitForTabLoad(activeTab.id)
-      }
-
       await ensureContentScriptReady(activeTab.id)
       const response = (await chrome.tabs.sendMessage(activeTab.id, {
         type: "AUTOTIME_AUTOFILL_PROFILE"

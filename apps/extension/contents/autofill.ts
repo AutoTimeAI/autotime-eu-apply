@@ -53,7 +53,7 @@ import {
   type ReusableAnswerField,
   type ProfileField
 } from "../lib/autofill"
-import { getAtsFieldMap } from "shared"
+import { getAtsApplyNavigationUrl, getAtsFieldMap } from "shared"
 
 type AutofillResponse = {
   filledFields: string[]
@@ -97,6 +97,7 @@ const emptyPlatformSelectorHints: PlatformSelectorHints = {
   title: []
 }
 let showAutotimeWidget: (() => void) | null = null
+let setAutotimeWidgetStatus: ((status: string) => void) | null = null
 let autoShowMonitorStarted = false
 const noJobDescriptionMessage =
   "No job description found. Update your description and click the button below to retrieve insights."
@@ -1506,7 +1507,9 @@ function getWidgetMarkup({
           : "Use the Connect button in this widget to link your dashboard account."
         : normalizedStatus.includes("already tracked")
           ? "This role is already saved locally in the extension."
-          : "Check the visible job page and try again."
+          : /^(autofilling|opening the application form|filled \d|no obvious empty fields|no saved profile)/.test(normalizedStatus)
+            ? "Review every autofilled field before submitting - AutoTime never submits forms for you."
+            : "Check the visible job page and try again."
 
   return `
     <style>
@@ -1987,6 +1990,7 @@ function getWidgetMarkup({
         </div>
         <div class="header-actions" aria-label="Widget actions">
           <button class="header-action-button" data-autotime-track-job type="button">${captureMode === "api-reference" ? "SAVE REFERENCE" : "TRACK JOB"}</button>
+          <button class="header-action-button" data-autotime-autofill type="button">AUTOFILL</button>
           <button class="header-action-button header-dashboard-button" data-autotime-open-dashboard data-autotime-dashboard-url="${escapeHtml(dashboardUrl)}" type="button">${isDashboardConnected ? "Dashboard" : "Connect"}</button>
         </div>
       </div>
@@ -2285,19 +2289,17 @@ function initializeMovableJobWidget() {
 
   showAutotimeWidget = showWidget
 
+  const setStatus = (nextStatus: string) => {
+    status = nextStatus
+    render()
+  }
+  setAutotimeWidgetStatus = setStatus
+
   function render() {
     host.dataset.autotimeMinimized = String(isMinimized)
     host.dataset.autotimeClosed = String(isClosed)
     shadow.innerHTML = getWidgetMarkup({ accountSession, details, status })
-    bindWidgetEvents(
-      host,
-      shadow,
-      () => details,
-      (nextStatus) => {
-        status = nextStatus
-        render()
-      }
-    )
+    bindWidgetEvents(host, shadow, () => details, setStatus)
   }
 
   shadow.addEventListener(widgetToggleEventName, (event) => {
@@ -2383,6 +2385,13 @@ function initializeMovableJobWidget() {
   window.addEventListener("resize", handleResize)
 }
 
+/** Shared between the widget's own Autofill click and the AUTOTIME_AUTOFILL_RESULT relay from a background-driven navigation. */
+function formatAutofillStatus(response: AutofillResponse): string {
+  if (response.message) return response.message
+  if (response.filledFields.length === 0) return "No obvious empty fields found"
+  return `Filled ${response.filledFields.length} field${response.filledFields.length === 1 ? "" : "s"}`
+}
+
 function bindWidgetEvents(
   host: HTMLDivElement,
   shadow: ShadowRoot,
@@ -2399,6 +2408,9 @@ function bindWidgetEvents(
   )
   const dashboardButton = shadow.querySelector<HTMLButtonElement>(
     "[data-autotime-open-dashboard]"
+  )
+  const autofillButton = shadow.querySelector<HTMLButtonElement>(
+    "[data-autotime-autofill]"
   )
   const resizeHandle = shadow.querySelector<HTMLElement>(
     "[data-autotime-resize-widget]"
@@ -2670,7 +2682,7 @@ function bindWidgetEvents(
     bindResizeHandle(resizeHandle)
   }
 
-  ;[trackButton, dashboardButton].forEach((button) => {
+  ;[trackButton, dashboardButton, autofillButton].forEach((button) => {
     button?.addEventListener("pointerdown", (event) => {
       event.stopPropagation()
     })
@@ -2690,6 +2702,43 @@ function bindWidgetEvents(
     void saveDetectedJob(getDetails())
       .then((nextStatus) => setStatus(nextStatus))
       .catch(() => setStatus("Could not track this job."))
+  })
+
+  autofillButton?.addEventListener("click", (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (autofillButton.disabled) {
+      return
+    }
+
+    const applyUrl = getAtsApplyNavigationUrl(window.location.href)
+    if (applyUrl) {
+      // A real navigation is about to destroy this content script's
+      // execution context, so nothing after this point in THIS instance
+      // can ever run - hand off to the background, which survives it and
+      // relays the eventual result to the widget on the new page via
+      // AUTOTIME_AUTOFILL_RESULT (see registerAutotimeContentScript).
+      setStatus("Opening the application form…")
+      void chrome.runtime.sendMessage({
+        type: "AUTOTIME_NAVIGATE_AND_AUTOFILL",
+        url: applyUrl
+      })
+      return
+    }
+
+    autofillButton.disabled = true
+    setStatus("Autofilling…")
+
+    void autofillProfile()
+      .then((response) => {
+        autofillButton.disabled = false
+        setStatus(formatAutofillStatus(response))
+      })
+      .catch(() => {
+        autofillButton.disabled = false
+        setStatus("Could not autofill this page.")
+      })
   })
 
   dashboardButton?.addEventListener("click", (event) => {
@@ -2720,6 +2769,11 @@ function bindWidgetEvents(
  *     into visible textareas
  *   - AUTOTIME_DETECT_JOB_PAGE -> returns detectJobPage() synchronously
  *   - AUTOTIME_SHOW_WIDGET -> shows/creates the floating widget
+ *   - AUTOTIME_AUTOFILL_RESULT -> pushes an autofill result (from a
+ *     background-driven navigate-then-reinject, e.g. Lever's /apply
+ *     redirect) into the widget's status line on a freshly (re)injected
+ *     instance, since the instance that originally requested the fill was
+ *     destroyed by that navigation and can't display its own result
  * All handlers that do async work return `true` to keep the message channel
  * open for `sendResponse`, per the chrome.runtime.onMessage contract.
  */
@@ -2739,6 +2793,15 @@ export function registerAutotimeContentScript() {
 
     if (message?.type === "AUTOTIME_DETECT_JOB_PAGE") {
       sendResponse(detectJobPage())
+      return false
+    }
+
+    if (message?.type === "AUTOTIME_AUTOFILL_RESULT") {
+      const response = (message as { response?: AutofillResponse }).response
+      if (response) {
+        setAutotimeWidgetStatus?.(formatAutofillStatus(response))
+      }
+      sendResponse({ ok: true })
       return false
     }
 

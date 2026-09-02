@@ -23,15 +23,30 @@
 //   - Lever: 1/2 at first. ERG filled correctly; Agate Software's base
 //     posting URL had zero <input> elements because Lever's application
 //     form only exists at the sibling `/apply` path (ERG's fixture already
-//     pointed there; Agate Software's didn't). Closed via
-//     getAtsApplyNavigationUrl() below plus navigate-then-reinject
-//     orchestration in sidepanel/main.tsx's handleAutofillCurrentPage -
-//     see that function's comment for why this lives in the side panel
-//     rather than as an in-page click (a real navigation destroys the
-//     content script's execution context, so nothing after a click that
-//     navigates can ever run there). Still `autofill: "partial"` in
-//     platform-coverage.ts pending live re-verification of both employers
-//     through the fixed flow.
+//     pointed there; Agate Software's didn't).
+//
+//     Investigating how to trigger this at all surfaced a much bigger,
+//     separate finding: NOTHING in the actually-shipped extension could
+//     trigger AUTOTIME_AUTOFILL_PROFILE. Its only sender was
+//     sidepanel/main.tsx, which isn't a registered WXT entrypoint (no
+//     entrypoints/sidepanel/, no HTML output, no sidePanel manifest
+//     permission) - deliberately removed in commit 483e00c4
+//     ("keep draggable job panel only", 2026-05-10). Autofill had had no
+//     reachable trigger in the real product since then. Fixed by adding an
+//     AUTOFILL button to the widget that IS shipped
+//     (getWidgetMarkup/bindWidgetEvents in contents/autofill.ts) instead of
+//     reviving the side panel.
+//
+//     Closed via getAtsApplyNavigationUrl() below, called from that
+//     button's click handler. When navigation is needed, the click can't
+//     drive it itself (see the function's own comment: navigating destroys
+//     the content script's execution context), so it hands off to
+//     entrypoints/background/index.ts's navigateAndAutofill(), which
+//     navigates, waits for load, re-injects the content script, runs the
+//     fill, and relays the result to the widget on the new page via
+//     AUTOTIME_AUTOFILL_RESULT. Re-verified through the real built
+//     extension, clicking the actual widget button, for both employers -
+//     promoted to `autofill: "verified"` in platform-coverage.ts.
 //   - Recruitee: 1 clean pass (Resourceful Talent Group: email filled
 //     correctly; phone correctly left untouched because it already had a
 //     non-empty default value - canFill() properly refusing to clobber
@@ -147,10 +162,13 @@ export function getAtsFieldMap(jobUrl: string): AtsFieldMap | null {
  * Because Lever's `/apply` suffix is a fixed, predictable, same-origin
  * convention rather than something that needs discovering by clicking
  * around the page, resolving the target URL directly and having the
- * caller navigate + re-inject (see contents/autofill.ts's comment on
- * fillProfileFieldsViaAtsMap and sidepanel/main.tsx's
- * handleAutofillCurrentPage) is both simpler and doesn't depend on guessed
- * button text.
+ * caller navigate + re-inject is both simpler and doesn't depend on
+ * guessed button text. In practice: the widget's Autofill button (see
+ * contents/autofill.ts's bindWidgetEvents) calls this, and when it
+ * returns non-null, hands off to entrypoints/background/index.ts's
+ * navigateAndAutofill() - the click itself can't drive the navigation,
+ * since navigating destroys its own execution context before anything
+ * after the click could run.
  */
 export function getAtsApplyNavigationUrl(jobUrl: string): string | null {
   if (detectATS(jobUrl) !== "lever") return null
