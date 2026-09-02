@@ -20,15 +20,18 @@
 //   - Greenhouse: 2/2 employers (PlanetScale, Cloudflare) filled all 4
 //     fields correctly. Promoted to `autofill: "verified"` in
 //     platform-coverage.ts on this evidence.
-//   - Lever: 1/2. ERG filled correctly; Agate Software's posting hides its
-//     form behind an on-page "Apply" click that neither the field map nor
-//     autofillProfile currently handles (confirmed: 0 <input> elements
-//     exist until that click). This is a real product gap on at least some
-//     Lever-hosted employers, not a test artifact - the extension has no
-//     "reveal the form first" step today. Left at "partial" pending either
-//     a decision to add that step (a real UX change - clicking something
-//     on the page unprompted - not just a selector fix) or more evidence
-//     that it's rare.
+//   - Lever: 1/2 at first. ERG filled correctly; Agate Software's base
+//     posting URL had zero <input> elements because Lever's application
+//     form only exists at the sibling `/apply` path (ERG's fixture already
+//     pointed there; Agate Software's didn't). Closed via
+//     getAtsApplyNavigationUrl() below plus navigate-then-reinject
+//     orchestration in sidepanel/main.tsx's handleAutofillCurrentPage -
+//     see that function's comment for why this lives in the side panel
+//     rather than as an in-page click (a real navigation destroys the
+//     content script's execution context, so nothing after a click that
+//     navigates can ever run there). Still `autofill: "partial"` in
+//     platform-coverage.ts pending live re-verification of both employers
+//     through the fixed flow.
 //   - Recruitee: 1 clean pass (Resourceful Talent Group: email filled
 //     correctly; phone correctly left untouched because it already had a
 //     non-empty default value - canFill() properly refusing to clobber
@@ -123,4 +126,41 @@ export function isSingleNameFieldAts(jobUrl: string): boolean {
 /** The field map for `jobUrl`'s ATS, or null if unmapped/unrecognised. */
 export function getAtsFieldMap(jobUrl: string): AtsFieldMap | null {
   return ATS_FIELD_MAPS[detectATS(jobUrl)] ?? null
+}
+
+/**
+ * Lever's base posting URL (`jobs.lever.co/<company>/<id>`) never has the
+ * application form on it - only the sibling `/apply` path does. Some
+ * postings (e.g. ERG) are already linked/fixtured with `/apply`, so the
+ * form is present immediately; others (confirmed 2026-09-02: Agate
+ * Software) are not, and the extension finds zero fields to fill unless
+ * something navigates there first.
+ *
+ * This was originally going to be solved with a generic "click a button
+ * matching this text" reveal mechanism, modelled on Recruitee's
+ * click-to-reveal form. That doesn't work for Lever specifically: Agate
+ * Software's "Apply for this job" control is a real `<a href=".../apply">`,
+ * not a JS toggle - clicking it triggers a full page navigation, which
+ * destroys the content script's execution context before anything after
+ * the click can run (a runtime-registered content script isn't
+ * manifest-declared and doesn't re-inject itself into the new document).
+ * Because Lever's `/apply` suffix is a fixed, predictable, same-origin
+ * convention rather than something that needs discovering by clicking
+ * around the page, resolving the target URL directly and having the
+ * caller navigate + re-inject (see contents/autofill.ts's comment on
+ * fillProfileFieldsViaAtsMap and sidepanel/main.tsx's
+ * handleAutofillCurrentPage) is both simpler and doesn't depend on guessed
+ * button text.
+ */
+export function getAtsApplyNavigationUrl(jobUrl: string): string | null {
+  if (detectATS(jobUrl) !== "lever") return null
+  try {
+    const url = new URL(jobUrl)
+    const trimmedPath = url.pathname.replace(/\/+$/, "")
+    if (/\/apply$/i.test(trimmedPath)) return null
+    url.pathname = `${trimmedPath}/apply`
+    return url.toString()
+  } catch {
+    return null
+  }
 }
