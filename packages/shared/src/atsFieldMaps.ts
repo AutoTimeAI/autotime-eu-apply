@@ -2,17 +2,46 @@
 // last name, email, phone) on each ATS's own hosted application form,
 // keyed by the same atsKey used in platform-coverage.ts / ats-detector.ts.
 //
-// STATUS as of the first live run (scripts/verify-ats-field-maps-live.mjs,
-// 2026-09-02): Greenhouse and Lever's selectors are live-confirmed correct.
-// Recruitee's were live-confirmed WRONG (see the `recruitee` entry below -
-// the original guess assumed separate bracket-notation first/last fields;
-// the real form is one dot-notation `candidate.name` field) and have been
-// corrected from real DOM evidence. Ashby and SmartRecruiters are
-// deliberately absent from ATS_FIELD_MAPS - see the comment directly above
-// it for why. Personio remains untested (no fixture set). Do not flip any
-// platform's `autofill` status in platform-coverage.ts from "partial" to
-// "verified" based on this map alone; that's a broader claim than "these
-// four fields have a selector."
+// STATUS as of the selector-presence live run
+// (scripts/verify-ats-field-maps-live.mjs, 2026-09-02): Greenhouse and
+// Lever's selectors are live-confirmed correct. Recruitee's were
+// live-confirmed WRONG (see the `recruitee` entry below - the original
+// guess assumed separate bracket-notation first/last fields; the real form
+// is one dot-notation `candidate.name` field) and have been corrected from
+// real DOM evidence. Ashby and SmartRecruiters are deliberately absent from
+// ATS_FIELD_MAPS - see the comment directly above it for why. Personio
+// remains untested (no fixture set).
+//
+// A second, deeper pass (2026-09-02) went beyond selector-presence: built
+// the real extension, loaded it in a real browser via Playwright, seeded a
+// real profile, and drove the actual shipped fillProfileFieldsViaAtsMap
+// code path (not a standalone re-implementation) against 2 different real
+// employers per platform, checking real post-fill DOM values.
+//   - Greenhouse: 2/2 employers (PlanetScale, Cloudflare) filled all 4
+//     fields correctly. Promoted to `autofill: "verified"` in
+//     platform-coverage.ts on this evidence.
+//   - Lever: 1/2. ERG filled correctly; Agate Software's posting hides its
+//     form behind an on-page "Apply" click that neither the field map nor
+//     autofillProfile currently handles (confirmed: 0 <input> elements
+//     exist until that click). This is a real product gap on at least some
+//     Lever-hosted employers, not a test artifact - the extension has no
+//     "reveal the form first" step today. Left at "partial" pending either
+//     a decision to add that step (a real UX change - clicking something
+//     on the page unprompted - not just a selector fix) or more evidence
+//     that it's rare.
+//   - Recruitee: 1 clean pass (Resourceful Talent Group: email filled
+//     correctly; phone correctly left untouched because it already had a
+//     non-empty default value - canFill() properly refusing to clobber
+//     existing input, not a failure), 1 inconclusive result (Novakid
+//     Teachers: the same "Apply" simulation that worked in isolated
+//     testing didn't reveal filled values in the full run - not yet root
+//     -caused). Left at "partial"; the inconclusive result isn't strong
+//     enough evidence either way.
+//
+// Do not flip any platform's `autofill` status based on selector-presence
+// alone (this map, or its live-check) - that's a narrower claim than
+// "verified." A promotion needs the deeper real-extension-flow evidence
+// described above, across more than one real employer.
 //
 // Design is fail-safe by construction: getAtsFieldMap() only ever supplies
 // candidate selectors, and the caller in contents/autofill.ts
