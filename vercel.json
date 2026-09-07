@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "pnpm install --frozen-lockfile",
   "services": {
     "web": {
-      "root": "apps/web/"
+      "root": "apps/web/",
+      "installCommand": "pnpm install --frozen-lockfile"
     },
     "analytics": {
       "root": "apps/analytics/",
