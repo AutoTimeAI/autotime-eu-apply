@@ -1,16 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm build:web",
-  "outputDirectory": "apps/web/.next",
-  "experimentalServices": {
+  "services": {
     "web": {
-      "entrypoint": "apps/web",
-      "routePrefix": "/"
+      "root": "apps/web/"
     },
     "analytics": {
-      "entrypoint": "apps/analytics/main.py",
-      "routePrefix": "/analytics"
+      "root": "apps/analytics/",
+      "entrypoint": "main:app",
+      "framework": "fastapi"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/analytics/(.*)", "destination": { "service": "analytics" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
 }
