@@ -10,16 +10,44 @@ distinct going forward.
 ## 1. Server-side automated listing ingestion (`job_listings` table)
 
 Only these sources are permitted for automated, unattended, bulk ingestion
-into `job_listings`: EURES, published ATS APIs with a verified native public
-feed (currently Greenhouse, Lever, Ashby, SmartRecruiters, Recruitee, and
-Personio - see the `nativeFeed: "verified"` entries in
-`packages/shared/src/platform-coverage.ts`), and licensed aggregator APIs
+into `job_listings`: EURES, ATS APIs with a verified native public feed
+(currently Greenhouse, Lever, Ashby, SmartRecruiters, Recruitee, Personio,
+BambooHR, Teamtailor, and Jobvite - see the `nativeFeed: "verified"` entries
+in `packages/shared/src/platform-coverage.ts`; the last three are the
+reverse-engineered-endpoint exception below, not officially published APIs),
+and licensed aggregator APIs
 configured by the operator (Adzuna and Jooble). Provider credentials stay
 server-side. Confirm current provider terms and quotas before enabling
 scheduled production sync.
 
 Do not add a new automated bulk-ingestion source without a published API,
-native feed, or licensed aggregator agreement.
+native feed, or licensed aggregator agreement - the exception below is a
+deliberate, logged, product-owner call, not a precedent to extend casually.
+
+### Reverse-engineered feed exception (BambooHR, Teamtailor, Jobvite)
+
+- Product-owner exception (2026-09-08): BambooHR's `careers/list`,
+  Teamtailor's `jobs.json`, and Jobvite's `CompanyJobs/Xml.aspx` are
+  undocumented, unauthenticated endpoints - not officially published APIs -
+  confirmed live against 2 real employers each before building
+  (`apps/web/lib/ats-feeds/bamboohr.ts`, `teamtailor.ts`, `jobvite.ts`,
+  mirrored in `supabase/functions/sync-job-sources/index.ts`). Approved
+  knowingly as an exception to the published-API rule above because all
+  three are read-only, return only already-public job listing data (no auth
+  bypass, no scraping of gated content), and are stable enough that
+  multiple independent third-party tools already rely on the same shapes.
+  If any endpoint starts returning errors or a materially different shape,
+  that's a signal it changed or was intentionally closed off - stop syncing
+  that platform and re-evaluate, don't work around the change.
+- Jobvite specifically: its old JSON endpoint
+  (`api/company/{slug}/jobs`) is confirmed dead. The working XML endpoint
+  needs an opaque per-company `companyEId` that is NOT the public
+  careers-page slug - originally logged as an unsolved blocker, then
+  resolved the same pass: the id is embedded directly in the public
+  careers page's own HTML/JS (`companyEId: '<id>'`), readable with a plain
+  unauthenticated fetch of `jobs.jobvite.com/{slug}/jobs`, no browser
+  rendering needed. `JobviteFeed.fetchJobs()` does this as an explicit
+  two-step lookup.
 
 ## 2. Extension-side, user-initiated single-page capture
 
@@ -36,8 +64,9 @@ doc previously did. Check that file directly for the current, reviewed set.
 As of its `VERIFIED_AT` date, the three modes are:
 
 - **`manual-only`**: LinkedIn (see the exception below), plus any platform
-  reviewed and intentionally kept manual (currently BambooHR, Teamtailor,
-  Jobvite). No automatic capture at all.
+  reviewed and intentionally kept manual. BambooHR, Teamtailor, and Jobvite
+  moved to `api-reference` on 2026-09-08 once their native feed was
+  verified; see the exception above.
 - **`api-reference`**: the verified-native-feed ATS platforms above, plus
   EURES/Adzuna/Jooble. The extension records only a URL/platform reference -
   no page content is read.

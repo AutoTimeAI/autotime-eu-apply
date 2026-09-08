@@ -36,6 +36,11 @@ async function retry(url: string, init?: RequestInit) { for (let i=0;i<3;i++) { 
 // bound, so this caps it the same way apps/web/lib/ats-feeds/personio.ts
 // does. Far beyond any realistic careers feed; only bites in a pathological case.
 const MAX_PERSONIO_XML_LENGTH = 5_000_000;
+// Same discipline for Jobvite's two fetched documents - a careers page
+// (small listing page, capped lower) and its XML feed (capped the same as
+// Personio's, since it's the same "every open posting in one response" shape).
+const MAX_JOBVITE_CAREERS_PAGE_LENGTH = 2_000_000;
+const MAX_JOBVITE_XML_LENGTH = 5_000_000;
 type Job = { title:string; company:string; location:string; url:string; postedDate:string|null; descriptionRaw:string; atsPlatform:string; source:string };
 // identity_hash must include location, not just title+company - the same
 // role advertised concurrently in two different cities is two genuinely
@@ -51,6 +56,27 @@ async function feed(platform:string, slug:string, company:string): Promise<Job[]
   if(platform==="ashby") { const d=await (await retry(`https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}`)).json(); return (d.jobs??[]).map((j:Record<string,unknown>)=>({title:clean(j.title),company,location:clean(j.location),url:clean(j.jobUrl),postedDate:clean(j.publishedAt)||null,descriptionRaw:clean(j.descriptionPlain),atsPlatform:platform,source:platform})); }
   if(platform==="personio") { const xml=(await (await retry(`https://${encodeURIComponent(slug)}.jobs.personio.de/xml`)).text()).slice(0,MAX_PERSONIO_XML_LENGTH); const text=(n:string,t:string)=>n.match(new RegExp(`<${t}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${t}>`,"i"))?.[1]?.trim()??""; return [...xml.matchAll(/<position(?:\s[^>]*)?>([\s\S]*?)<\/position>/gi)].map((m)=>({title:text(m[1],"name"),company,location:text(m[1],"office"),url:text(m[1],"url")||`https://${slug}.jobs.personio.de/job/${text(m[1],"id")}`,postedDate:text(m[1],"createdAt")||null,descriptionRaw:text(m[1],"jobDescriptions"),atsPlatform:platform,source:platform})); }
   if(platform==="smartrecruiters") { const d=await (await retry(`https://api.smartrecruiters.com/v1/companies/${encodeURIComponent(slug)}/postings?limit=100&destination=PUBLIC`)).json(); return (d.content??[]).map((j:Record<string,unknown>)=>{const location=(j.location??{}) as Record<string,unknown>;const organisation=(j.company??{}) as Record<string,unknown>;return{title:clean(j.name),company:clean(organisation.name)||company,location:[clean(location.city),clean(location.region),clean(location.country)].filter(Boolean).join(", "),url:j.id?`https://jobs.smartrecruiters.com/${slug}/${encodeURIComponent(String(j.id))}`:"",postedDate:clean(j.releasedDate)||null,descriptionRaw:"",atsPlatform:platform,source:platform};}); }
+  // Recruitee was added to company_ats_slugs's allowed platform list
+  // (20260818160000_add_recruitee_feed.sql) and to platform-coverage.ts's
+  // nativeFeed:"verified" claim, but this dispatcher never got a matching
+  // branch - meaning any configured Recruitee company would silently sync
+  // zero jobs forever, with no error surfaced. Mirrors
+  // apps/web/lib/ats-feeds/recruitee.ts's shape.
+  if(platform==="recruitee") { const d=await (await retry(`https://${encodeURIComponent(slug)}.recruitee.com/api/offers/`)).json(); return (d.offers??[]).map((j:Record<string,unknown>)=>{const loc=(j.locations as Record<string,unknown>[]|undefined)?.[0];return{title:clean(j.title),company,location:[clean(j.city)||clean(loc?.city),clean(j.country)||clean(loc?.country)].filter(Boolean).join(", "),url:clean(j.careers_url)||clean(j.careers_apply_url),postedDate:clean(j.created_at)||null,descriptionRaw:clean(j.description),atsPlatform:platform,source:platform};}); }
+  // BambooHR and Teamtailor: undocumented-but-stable public endpoints, not
+  // officially published APIs - allowed here only as the deliberate,
+  // logged exception in docs/reference/job-aggregation-compliance.md
+  // ("Reverse-engineered feed exception", 2026-09-08). Mirrors
+  // apps/web/lib/ats-feeds/bamboohr.ts and teamtailor.ts.
+  if(platform==="bamboohr") { const d=await (await retry(`https://${encodeURIComponent(slug)}.bamboohr.com/careers/list`)).json(); return (d.result??[]).map((j:Record<string,unknown>)=>{const location=(j.location??{}) as Record<string,unknown>;return{title:clean(j.jobOpeningName),company,location:[clean(location.city),clean(location.state)].filter(Boolean).join(", "),url:j.id!=null?`https://${slug}.bamboohr.com/careers/${j.id}`:"",postedDate:null,descriptionRaw:"",atsPlatform:platform,source:platform};}); }
+  if(platform==="teamtailor") { const d=await (await retry(`https://${encodeURIComponent(slug)}.teamtailor.com/jobs.json`)).json(); return (d.items??[]).map((j:Record<string,unknown>)=>{const posting=(j._jobposting??{}) as Record<string,unknown>;const address=((posting.jobLocation as Record<string,unknown>[]|undefined)?.[0]?.address??{}) as Record<string,unknown>;return{title:clean(j.title),company,location:[clean(address.addressLocality),clean(address.addressRegion)||clean(address.addressCountry)].filter(Boolean).join(", "),url:clean(j.url),postedDate:typeof j.date_published==="string"?j.date_published:null,descriptionRaw:clean(j.content_html),atsPlatform:platform,source:platform};}); }
+  // Jobvite: same reverse-engineered-endpoint exception as BambooHR/
+  // Teamtailor above, plus its own two-step fetch - the real feed needs an
+  // opaque companyEId that isn't the public careers-page slug, discovered
+  // by scanning that page's own embedded JS (`companyEId: '<id>'`). The old
+  // JSON endpoint (api/company/{slug}/jobs) is confirmed dead. Mirrors
+  // apps/web/lib/ats-feeds/jobvite.ts.
+  if(platform==="jobvite") { const careersHtml=(await (await retry(`https://jobs.jobvite.com/${encodeURIComponent(slug)}/jobs`)).text()).slice(0,MAX_JOBVITE_CAREERS_PAGE_LENGTH); const companyEId=careersHtml.match(/companyEId:\s*'([^']+)'/)?.[1]; if(!companyEId) throw new Error(`Jobvite careers page for ${slug} has no discoverable companyEId`); const xml=(await (await retry(`https://app.jobvite.com/CompanyJobs/Xml.aspx?c=${encodeURIComponent(companyEId)}`)).text()).slice(0,MAX_JOBVITE_XML_LENGTH); const text=(n:string,t:string)=>n.match(new RegExp(`<${t}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${t}>`,"i"))?.[1]?.trim()??""; return [...xml.matchAll(/<job>([\s\S]*?)<\/job>/gi)].map((m)=>({title:text(m[1],"title"),company,location:text(m[1],"location"),url:text(m[1],"detail-url"),postedDate:text(m[1],"date")||null,descriptionRaw:text(m[1],"description"),atsPlatform:platform,source:platform})); }
   return [];
 }
 async function aggregatorJobs(): Promise<{ jobs: Job[]; providers: Record<string,string> }> { const jobs:Job[]=[]; const providers:Record<string,string>={}; const queries=(Deno.env.get("JOB_SYNC_QUERIES")??"software engineer,data engineer").split(",").map((v)=>v.trim()).filter(Boolean); const countries=(Deno.env.get("JOB_SYNC_COUNTRIES")??"gb,ie,de,nl,fr").split(",").map((v)=>v.trim()).filter(Boolean); const adzunaId=Deno.env.get("ADZUNA_APP_ID"),adzunaKey=Deno.env.get("ADZUNA_APP_KEY");

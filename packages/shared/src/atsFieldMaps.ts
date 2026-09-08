@@ -171,14 +171,25 @@
 //     field exists on the page. Same class of genuine structural blocker as
 //     Workday/SmartRecruiters/iCIMS. Left at `autofill: "unsupported"`, not
 //     wired, and not attempted past the login wall.
-//   - Monster: every automated request - both monster.co.uk and
-//     monster.com, including each site's own homepage - returned HTTP 403.
-//     This looks like anti-bot protection reacting to a headless/automation
-//     fingerprint rather than a wall a real signed-in user would also hit
-//     (unlike InfoJobs' login gate, which blocks everyone equally), so it's
-//     recorded as genuinely undetermined rather than confirmed blocked -
-//     left at `autofill: "unsupported"`, not wired, and no attempt was made
-//     to defeat the bot detection to find out.
+//   - Monster: first attempt (headless) got HTTP 403 on every request, both
+//     monster.co.uk and monster.com, including each site's own homepage -
+//     written up as likely a headless-automation artifact, undetermined
+//     rather than confirmed blocked.
+//
+// Re-investigated 2026-09-08 with a genuine, non-headless Chromium session
+// (this environment can actually launch one - most CI/server sandboxes
+// can't). Corrected the finding: it isn't simply headless-vs-headed. The
+// bare homepage (monster.com/) returns 200 in headed mode, but real
+// job-posting pages (monster.com/job-openings/...) and search/listing pages
+// (monster.com/jobs/q-...) return 403 even in headed mode - the exact
+// content an autofill flow would need to reach is what's blocked,
+// consistently, regardless of automation-detection posture. Left at
+// `autofill: "unsupported"`, not wired, no attempt made to defeat the block
+// further (e.g. no stealth/fingerprint-spoofing tooling) - the corrected
+// takeaway is "still genuinely unresolved for a real user," not "confirmed
+// unreachable," since Playwright's own CDP automation protocol remains
+// technically distinguishable from a human-driven browser regardless of
+// headless/headed.
 //
 // Do not flip any platform's `autofill` status based on selector-presence
 // alone (this map, or its live-check) - that's a narrower claim than

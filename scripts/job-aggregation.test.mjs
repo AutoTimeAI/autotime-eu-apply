@@ -8,6 +8,9 @@ import { AshbyFeed } from "../apps/web/lib/ats-feeds/ashby.ts";
 import { PersonioFeed } from "../apps/web/lib/ats-feeds/personio.ts";
 import { SmartRecruitersFeed } from "../apps/web/lib/ats-feeds/smartrecruiters.ts";
 import { RecruiteeFeed } from "../apps/web/lib/ats-feeds/recruitee.ts";
+import { BambooHRFeed } from "../apps/web/lib/ats-feeds/bamboohr.ts";
+import { TeamtailorFeed } from "../apps/web/lib/ats-feeds/teamtailor.ts";
+import { JobviteFeed } from "../apps/web/lib/ats-feeds/jobvite.ts";
 import { buildOutreachInstructions } from "../apps/web/lib/outreach-drafter.ts";
 import { classifyJobToEsco } from "../apps/web/lib/esco/classify-job.ts";
 import { buildQuestionnaireContext } from "../apps/web/lib/esco/questionnaire-context.ts";
@@ -63,6 +66,53 @@ test("caps an oversized Personio feed before regex-scanning it, instead of scann
 test("normalises Recruitee public careers offers and drops incomplete entries", async () => {
   const jobs = await new RecruiteeFeed(json({ offers: [{ title: "Engineer", careers_url: "https://acme.recruitee.com/o/engineer", city: "Dublin", country: "Ireland", created_at: "2026-08-18T10:00:00Z", description: "Build reliable systems" }, { title: "Missing URL" }] })).fetchJobs("acme");
   assert.deepEqual(jobs, [{ title: "Engineer", company: "acme", location: "Dublin, Ireland", url: "https://acme.recruitee.com/o/engineer", postedDate: "2026-08-18T10:00:00Z", atsPlatform: "recruitee", descriptionRaw: "Build reliable systems" }]);
+});
+test("normalises BambooHR careers list and derives the per-job url from its id", async () => {
+  // Shape confirmed live against a real employer (avalanche.bamboohr.com/careers/list, 2026-09-08).
+  const jobs = await new BambooHRFeed(json({ meta: { totalCount: 1 }, result: [
+    { id: "25", jobOpeningName: "Finance Assistant & Human Resources Coordinator", location: { city: "Revelstoke", state: "British Columbia" } },
+    { jobOpeningName: "Missing id" },
+  ] })).fetchJobs("avalanche");
+  assert.deepEqual(jobs, [{
+    title: "Finance Assistant & Human Resources Coordinator", company: "avalanche",
+    location: "Revelstoke, British Columbia", url: "https://avalanche.bamboohr.com/careers/25",
+    postedDate: null, atsPlatform: "bamboohr", descriptionRaw: "",
+  }]);
+});
+test("normalises Teamtailor's public jobs feed from its schema.org job-location extension", async () => {
+  // Shape confirmed live against a real employer (recruitgo.teamtailor.com/jobs.json, 2026-09-08).
+  const jobs = await new TeamtailorFeed(json({ items: [
+    {
+      title: "HR and Payroll Administrator", url: "https://recruitgo.teamtailor.com/jobs/7874956-hr-and-payroll-administrator",
+      date_published: "2026-06-09T11:33:35+08:00", content_html: "<p>About Us</p>",
+      _jobposting: { jobLocation: [{ address: { addressLocality: "Quezon City", addressCountry: "PH" } }] },
+    },
+    { title: "Missing url" },
+  ] })).fetchJobs("recruitgo");
+  assert.deepEqual(jobs, [{
+    title: "HR and Payroll Administrator", company: "recruitgo",
+    location: "Quezon City, PH", url: "https://recruitgo.teamtailor.com/jobs/7874956-hr-and-payroll-administrator",
+    postedDate: "2026-06-09T11:33:35+08:00", atsPlatform: "teamtailor", descriptionRaw: "<p>About Us</p>",
+  }]);
+});
+test("discovers Jobvite's opaque companyEId from the public careers page, then normalises its XML feed", async () => {
+  // Shape confirmed live against 2 real employers (jobs.jobvite.com/panynj,
+  // jobs.jobvite.com/pragmaticplay, 2026-09-08) - the old JSON endpoint is
+  // dead, and companyEId isn't the same as the careers-page slug, so it must
+  // be discovered from the page's own embedded JS on every call.
+  const fetchImpl = async (url) => {
+    if (String(url).includes("/jobs.jobvite.com/")) return new Response("<script>var companyEId: 'qATaVfwi',</script>");
+    if (String(url).includes("Xml.aspx")) {
+      return new Response(`<?xml version="1.0" encoding="UTF-8"?><result><job><id>ojslAfwq</id><title>Attorney</title><location>New York, NY, United States</location><date>9/4/2026</date><detail-url><![CDATA[http://app.jobvite.com/CompanyJobs/Job.aspx?c=qATaVfwi&j=ojslAfwq]]></detail-url><description>Role details</description></job><job><title>Missing detail-url</title></job></result>`);
+    }
+    throw new Error(`unexpected url in test: ${url}`);
+  };
+  const jobs = await new JobviteFeed(fetchImpl).fetchJobs("panynj");
+  assert.deepEqual(jobs, [{
+    title: "Attorney", company: "panynj", location: "New York, NY, United States",
+    url: "http://app.jobvite.com/CompanyJobs/Job.aspx?c=qATaVfwi&j=ojslAfwq",
+    postedDate: "9/4/2026", atsPlatform: "jobvite", descriptionRaw: "Role details",
+  }]);
 });
 test("outreach prompt retains human-sent constraints", () => {
   const prompt = buildOutreachInstructions({ channel: "linkedin_note", contactType: "recruiter" });
