@@ -123,6 +123,26 @@ export const SINGLE_NAME_FIELD_ATS: readonly string[] = ["lever", "ashby", "recr
 // user's non-automated browser session may not trigger it the same way;
 // automating a bypass is out of scope) before anything else here is
 // possible.
+//
+// Workday and iCIMS are also deliberately NOT mapped, for the same class of
+// reason, each live-checked 2026-09-08 with Playwright against a real
+// posting:
+//   - Workday (workday.wd5.myworkdayjobs.com, the platform's own tenant):
+//     "Apply" opens a "Start Your Application" modal offering Autofill with
+//     Resume / Apply Manually / Use My Last Application. Apply Manually
+//     leads straight to an account gate (Sign in with Apple / Google /
+//     email) - zero candidate-profile inputs exist on the page before that
+//     sign-in completes. There is no unauthenticated form to map selectors
+//     against.
+//   - iCIMS (careers-vhb.icims.com, a real employer, req #6300
+//     "Transportation Data Analytics Lead"): clicking "Apply" on a real
+//     job posting navigates to a login page gated behind an hCaptcha
+//     challenge. The only inputs present are the email field and the
+//     CAPTCHA's own hidden response textarea - no name/phone fields, no
+//     path to the real candidate form without passing the CAPTCHA first.
+// Both are structurally blocked before any candidate-profile field is ever
+// rendered, not merely unmapped - the same "needs a way past the wall
+// first" situation as SmartRecruiters above, not a selector-writing task.
 export const ATS_FIELD_MAPS: Partial<Record<string, AtsFieldMap>> = {
   greenhouse: {
     firstName: ["#first_name", "input[name='job_application[first_name]']", "input[autocomplete='given-name']"],
