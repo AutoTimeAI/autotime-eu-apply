@@ -1,3 +1,32 @@
+// MV3 background service worker. Raw account tokens live in
+// chrome.storage.session and are used only by trusted extension contexts;
+// content scripts receive non-secret connection state and proxy authenticated
+// scoring/sync operations through this worker.
+// Responsibilities:
+//   - toolbar icon click: sends AUTOTIME_SHOW_WIDGET to the active tab (via
+//     chrome.tabs.sendMessage, falling back to chrome.scripting.executeScript
+//     if no listener responds), and AUTOTIME_LINKEDIN_MATCH_REQUEST on
+//     LinkedIn job pages
+//   - AUTOTIME_SYNC_APPLICATIONS: internal message from the side panel or a
+//     content script to push local applications to the dashboard
+//   - AUTOTIME_NAVIGATE_AND_AUTOFILL: internal message from the draggable
+//     widget's Autofill button, used only for ATSes whose application form
+//     lives at a different URL than the current page (Lever's `/apply`,
+//     Ashby's `/application` - see getAtsApplicationFormUrl in
+//     packages/shared/src/atsFieldMaps.ts, which the widget's click handler
+//     calls to produce the `url` this message carries). Navigates the tab,
+//     waits for it to load, re-injects the content script (a real
+//     navigation destroys whatever content script was running before -
+//     it can't drive this itself), and relays the fill result back to the
+//     new page via AUTOTIME_AUTOFILL_RESULT. Has to live here rather than
+//     in the content script for exactly that reason: this is the only
+//     context that survives the navigation the widget's click triggers.
+//   - onMessageExternal: the AUTOTIME_CONNECT_ACCOUNT / AUTOTIME_PING
+//     handshake the AutoTime web dashboard uses (via externally_connectable
+//     in wxt.config.ts) to hand the extension a signed-in session, answered
+//     with AUTOTIME_ACCOUNT_CONNECTED
+//   - onInstalled / onStartup / storage.onChanged: retries any
+//     applications that failed to sync to the dashboard earlier
 import { defineBackground } from "wxt/utils/define-background"
 import { appUrl } from "../../lib/openai"
 import {
@@ -43,6 +72,7 @@ type InternalMessage = {
   payload?: unknown
   resurrectUrlKeys?: unknown
   type?: unknown
+  url?: unknown
 }
 
 type InternalResponse = {
@@ -293,6 +323,75 @@ async function showWidgetInTab(tab: chrome.tabs.Tab) {
   })
 }
 
+/**
+ * Waits for `tabId` to finish loading. Only the background survives the
+ * navigation this is waiting on - a page's own content script is destroyed
+ * the instant the browser unloads it, so nothing running inside the tab
+ * can signal "done" from in there.
+ */
+function waitForTabLoad(tabId: number, timeoutMs = 15_000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const finish = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      chrome.tabs.onUpdated.removeListener(listener)
+      clearTimeout(timeout)
+      fn()
+    }
+    const listener = (updatedTabId: number, changeInfo: chrome.tabs.OnUpdatedInfo) => {
+      if (updatedTabId === tabId && changeInfo.status === "complete") {
+        finish(resolve)
+      }
+    }
+    const timeout = setTimeout(
+      () => finish(() => reject(new Error("Timed out waiting for the application page to load"))),
+      timeoutMs
+    )
+    chrome.tabs.onUpdated.addListener(listener)
+    chrome.tabs
+      .get(tabId)
+      .then((tab) => {
+        if (tab.status === "complete") finish(resolve)
+      })
+      .catch(() => finish(() => reject(new Error("Tab closed before it finished loading"))))
+  })
+}
+
+/**
+ * Navigates `tabId` to the ATS's real application-form URL, waits for it to
+ * load, re-injects the content script (it doesn't survive/auto-reinject
+ * after a real navigation), and runs+relays autofill on the new page. Used
+ * only when getAtsApplicationFormUrl found a URL to navigate to - the
+ * common case (form already on the current page) never touches this.
+ */
+async function navigateAndAutofill(tabId: number, applyUrl: string) {
+  await chrome.tabs.update(tabId, { url: applyUrl })
+  await waitForTabLoad(tabId)
+  // waitForTabLoad only confirms the browser's own "complete" status - the
+  // network/document-ready point, not that the ATS's client-side app has
+  // finished rendering the actual form fields into the DOM. Confirmed live
+  // 2026-09-02 on Ashby: immediately after "complete", the email input
+  // exists, is visible, and is empty (canFillInput's own criteria), yet the
+  // fill still finds nothing - the field genuinely isn't attached/settled
+  // yet at that exact instant. A short fixed settle delay is the only tool
+  // available here (unlike a test script, the extension has no
+  // network-idle-equivalent signal to wait on instead).
+  await new Promise((resolve) => setTimeout(resolve, 1_200))
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["content-scripts/autotime.js"]
+  })
+  await chrome.tabs.sendMessage(tabId, { type: "AUTOTIME_SHOW_WIDGET" })
+  const response = await chrome.tabs.sendMessage(tabId, {
+    type: "AUTOTIME_AUTOFILL_PROFILE"
+  })
+  await chrome.tabs.sendMessage(tabId, {
+    type: "AUTOTIME_AUTOFILL_RESULT",
+    response
+  })
+}
+
 export default defineBackground(() => {
   chrome.action.onClicked.addListener((tab) => {
     void showWidgetInTab(tab).then(() => {
@@ -305,7 +404,7 @@ export default defineBackground(() => {
   chrome.runtime.onMessage.addListener(
     (
       message: InternalMessage,
-      _sender,
+      sender,
       sendResponse: (response: InternalResponse) => void
     ) => {
       if (message?.type === "AUTOTIME_GET_CONNECTION_STATE") {
@@ -313,6 +412,40 @@ export default defineBackground(() => {
           sendResponse({ ok: true, state: toConnectionState(session) })
         })
         return true
+      }
+
+      if (message?.type === "AUTOTIME_NAVIGATE_AND_AUTOFILL") {
+        const tabId = sender.tab?.id
+        const applyUrl = typeof message.url === "string" ? message.url : null
+
+        if (!tabId || !applyUrl) {
+          sendResponse({ error: "Missing tab or target URL", ok: false })
+          return false
+        }
+
+        void navigateAndAutofill(tabId, applyUrl).catch(async (error: unknown) => {
+          await logDiagnosticEvent({
+            area: "widget",
+            event: "navigate-and-autofill-failed",
+            message: getErrorMessage(error),
+            status: "error"
+          })
+          await chrome.tabs
+            .sendMessage(tabId, {
+              type: "AUTOTIME_AUTOFILL_RESULT",
+              response: {
+                filledFields: [],
+                message: "Could not open the application form automatically"
+              }
+            })
+            .catch(() => undefined)
+        })
+        // Fire-and-forget: the tab this ack would reach is about to
+        // navigate away, so there's nothing meaningful to wait for here.
+        // The eventual result reaches the new page via
+        // AUTOTIME_AUTOFILL_RESULT instead, sent by navigateAndAutofill.
+        sendResponse({ ok: true })
+        return false
       }
 
       if (message?.type === "AUTOTIME_SCORE_JOB") {

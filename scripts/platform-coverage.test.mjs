@@ -39,7 +39,12 @@ test("freshness and aggregate claims exclude stale records", () => {
   assert.equal(isCoverageStale("2026-08-01", new Date("2026-08-30T00:00:00Z")), false);
   assert.equal(isCoverageStale("2026-08-01", new Date("2026-09-01T00:00:01Z")), true);
   assert.deepEqual(getPublicCoverageSummary(new Date("2026-08-18T00:00:00Z")), { platforms: 26, currentPlatforms: 26, captureVerified: 6, nativeFeeds: 6 });
-  assert.equal(getPublicCoverageSummary(new Date("2026-10-01T00:00:00Z")).currentPlatforms, 0);
+  // Greenhouse/Lever/Ashby carry a later per-platform lastVerifiedAt
+  // ("2026-09-02") from their real-extension verification, so 2026-10-01
+  // isn't far enough past every record's date to be a true "all stale"
+  // reference point - only far enough past the shared VERIFIED_AT one.
+  // 2026-11-01 is >30 days past the latest lastVerifiedAt in the table.
+  assert.equal(getPublicCoverageSummary(new Date("2026-11-01T00:00:00Z")).currentPlatforms, 0);
 });
 
 test("autofill remains reviewed and cannot submit an external application", async () => {
