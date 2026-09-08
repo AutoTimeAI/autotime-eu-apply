@@ -9,8 +9,9 @@
 // guess assumed separate bracket-notation first/last fields; the real form
 // is one dot-notation `candidate.name` field) and have been corrected from
 // real DOM evidence. SmartRecruiters is deliberately absent from
-// ATS_FIELD_MAPS - see the comment directly above it for why. Personio
-// remains untested (no fixture set).
+// ATS_FIELD_MAPS - see the comment directly above it for why. Personio's
+// selectors at that point were an untested guess (fixture unset) - since
+// corrected from real evidence; see the third pass below.
 //
 // A second, deeper pass (2026-09-02) went beyond selector-presence: built
 // the real extension, loaded it in a real browser via Playwright, seeded a
@@ -75,6 +76,45 @@
 //     not to need it. 2/2 real employers (Ashby's own careers posting,
 //     Inductive Automation LLC) filled correctly after the fix - promoted
 //     to `autofill: "verified"` in platform-coverage.ts.
+//
+// A third pass (2026-09-08) covered BambooHR, Teamtailor, Jobvite and
+// Personio, per the same "real code path, 2 real employers, real post-fill
+// DOM values" bar - only here the fill/detection mechanics were driven via
+// a faithful transcription of fillProfileFieldsViaAtsMap/canFill/
+// setControlValue and the generic detectField fallback (scripts/
+// tmp-deep-verify.mjs, not committed - a scratch harness, not a permanent
+// script), rather than the real built extension + widget button click used
+// above, since none of these four need the navigate-then-reinject flow
+// that made a real extension build necessary for Lever/Ashby - the ATS map
+// / getAtsFieldMap() lookup itself is imported live from this file, not
+// retyped.
+//   - Personio: the "dynamic per-employer field IDs" premise for the old
+//     selectors here was never actually tested and turned out to be wrong.
+//     2/2 real employers (JobLeads, voiio - German-language) filled all 4
+//     fields via the identical stable field-first_name/last_name/email/
+//     phone ids. Promoted to `autofill: "verified"`.
+//   - BambooHR: 2/2 real, non-trial employers (Avalanche Canada, REI
+//     Engineers - found via BambooHR's own public careers/list API,
+//     filtering out tenants where company-info.inTrial is true; a
+//     "digitalocean" subdomain looked promising but turned out to be an
+//     unrelated trial sandbox, not the real company) filled all 4 fields
+//     after clicking "Apply for This Job". Promoted to `autofill:
+//     "verified"`.
+//   - Teamtailor: 2/2 real employers (RecruitGo, Sleep Cycle AB) filled all
+//     4 fields, but only after real investigation of a false start - the
+//     page loads showing a quick "log in with email" widget
+//     (POSTs to /en/auto_join) and a cookie banner, not the real form; an
+//     early one-off success without clicking anything turned out to be
+//     non-reproducible (3/3 fresh reloads afterwards showed only the
+//     collapsed widget), not a real "no click needed" state. The actual
+//     form only appears after accepting cookies and clicking the page's
+//     own "Apply"-labelled button (wording varies per employer). Promoted
+//     to `autofill: "verified"`.
+//   - Jobvite: 2/2 real employers (Pragmatic Play/ARRISE, Port Authority of
+//     NY & NJ), but with no entry in ATS_FIELD_MAPS at all - see the
+//     comment above the map's closing brace for why, and why that's
+//     correct rather than a gap. Promoted to `autofill: "verified"` on the
+//     generic-detector evidence.
 //
 // Do not flip any platform's `autofill` status based on selector-presence
 // alone (this map, or its live-check) - that's a narrower claim than
@@ -175,13 +215,72 @@ export const ATS_FIELD_MAPS: Partial<Record<string, AtsFieldMap>> = {
     phone: ["input[name='candidate.phone']", "input[type='tel']"]
   },
   personio: {
-    // Personio forms are configured per-employer with dynamic field IDs -
-    // only autocomplete-attribute selectors are reliable across tenants.
-    firstName: ["input[autocomplete='given-name']"],
-    lastName: ["input[autocomplete='family-name']"],
-    email: ["input[autocomplete='email']", "input[type='email']"],
-    phone: ["input[autocomplete='tel']", "input[type='tel']"]
+    // The "dynamic per-employer field IDs" premise below was never actually
+    // tested (this file's own STATUS note above said so) and turned out to
+    // be wrong: live-checked 2026-09-08 against 2 real employers on
+    // Personio's own hosted form builder (JobLeads: jobleads.jobs.personio.de
+    // /job/2730769/apply; voiio, a German-language tenant: voiio.jobs.personio
+    // .de/job/340007/apply) and both use the identical stable
+    // `field-first_name`/`field-last_name`/`field-email`/`field-phone` id
+    // convention regardless of employer or form language. id-based selectors
+    // first since they're marginally more specific; name-based as a fallback.
+    firstName: ["#field-first_name", "input[name='first_name']", "input[autocomplete='given-name']"],
+    lastName: ["#field-last_name", "input[name='last_name']", "input[autocomplete='family-name']"],
+    email: ["#field-email", "input[name='email']", "input[autocomplete='email']", "input[type='email']"],
+    phone: ["#field-phone", "input[name='phone']", "input[autocomplete='tel']", "input[type='tel']"]
+  },
+  bamboohr: {
+    // Live-checked 2026-09-08 against 2 real, non-trial employers found via
+    // BambooHR's own public careers/list API (filtering out any tenant with
+    // company-info.inTrial === true, since some claimed subdomains - e.g.
+    // "digitalocean" - turn out to be unrelated trial sandboxes, not the
+    // named company): Avalanche Canada (avalanche.bamboohr.com/careers/25)
+    // and REI Engineers (rei.bamboohr.com/careers/42). Both use the same
+    // stable #firstName/#lastName/#email/#phone ids after clicking the
+    // real "Apply for This Job" button. An invisible reCAPTCHA is present
+    // but only gates submission (a hidden g-recaptcha-response textarea),
+    // not the visible fields - AutoTime never submits forms anyway.
+    firstName: ["#firstName", "input[name='firstName']"],
+    lastName: ["#lastName", "input[name='lastName']"],
+    email: ["#email", "input[name='email']"],
+    phone: ["#phone", "input[name='phone']"]
+  },
+  teamtailor: {
+    // Live-checked 2026-09-08 against 2 real employers: RecruitGo
+    // (recruitgo.teamtailor.com, an English-language recruiting agency) and
+    // Sleep Cycle AB (sleepcycleab.teamtailor.com, Swedish). Both use
+    // Teamtailor's standard Rails-form field naming, but the fields are
+    // hidden by default - the page loads showing only a "log in with your
+    // email" quick-apply widget (POSTs to /en/auto_join, not the real
+    // application) plus a cookie-consent banner. The real form only
+    // appears after clicking the page's own "Apply"-labelled button
+    // (exact text varies per employer's customisation - "Apply for this
+    // job" vs plain "Apply" - matched here by a case-insensitive prefix,
+    // not an exact string), same click-before-autofill assumption already
+    // accepted for Recruitee above.
+    firstName: ["#candidate_first_name", "input[name='candidate[first_name]']"],
+    lastName: ["#candidate_last_name", "input[name='candidate[last_name]']"],
+    email: ["#candidate_email", "input[name='candidate[email]']"],
+    phone: ["#candidate_phone", "input[name='candidate[phone]']"]
   }
+  // Jobvite is deliberately NOT mapped here, but not for the same reason as
+  // SmartRecruiters/Workday/iCIMS above - its form IS reachable without any
+  // auth/CAPTCHA wall. Live-checked 2026-09-08 against 2 real employers
+  // (Pragmatic Play/ARRISE: jobs.jobvite.com/pragmaticplay/job/oywYyfwk;
+  // Port Authority of NY & NJ: jobs.jobvite.com/panynj/job/osPFAfwg, after
+  // dismissing a cookie banner and an "I Accept"/"I Decline" data-consent
+  // gate that precedes the form on every posting): the four core fields
+  // ARE present with real `<label for>` associations ("First Name*",
+  // "Last Name*", "Email*"/"Email Address*", "Phone*"), but their `id`/
+  // `name` attributes (e.g. "jv-field-yp5v0fwJ") are opaque, per-form-
+  // template-generated tokens that differ completely between the two
+  // employers checked - confirmed unusable as a cross-tenant selector, not
+  // merely assumed. Adding an entry keyed to one employer's tokens would
+  // match zero fields on any other employer - dead weight, not coverage.
+  // getControlText() already reads control.labels (the native label-for
+  // resolution), so the existing generic label-text detector in
+  // fillProfileFieldsViaAtsMap's caller correctly reaches these fields via
+  // their real <label> text without a platform-specific map at all.
 }
 
 /** True if `jobUrl`'s ATS asks for one combined name field rather than first/last. */

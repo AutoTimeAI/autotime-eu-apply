@@ -19,6 +19,21 @@ const supportedJobBoardHostPermissions = [
   "https://*.eurotechjobs.com/*",
   "https://*.xing.com/*",
   "https://*.welcometothejungle.com/*",
+  // BambooHR, Teamtailor, Jobvite and Personio's application forms live on
+  // the same page as the job posting (no navigation needed, just a
+  // same-page "Apply" click the widget doesn't drive itself - the same
+  // click-before-autofill assumption already accepted for Recruitee) -
+  // live-verified 2026-09-08 against 2 real employers each, autofill
+  // promoted to "verified" in platform-coverage.ts on that evidence. Jobvite
+  // has no packages/shared/src/atsFieldMaps.ts entry (its field ids are
+  // opaque per-form-template tokens, unusable across employers - confirmed,
+  // not assumed) but reaches the same fields via real <label for>
+  // associations and the existing generic label-text detector.
+  "https://*.bamboohr.com/*",
+  "https://*.teamtailor.com/*",
+  "https://jobs.jobvite.com/*",
+  "https://*.jobs.personio.de/*",
+  "https://*.jobs.personio.com/*",
   // Lever and Ashby's application forms live at a separate same-origin
   // path (/apply, /application) from the job posting page - the widget's
   // navigate-then-reinject autofill flow (see getAtsApplicationFormUrl in

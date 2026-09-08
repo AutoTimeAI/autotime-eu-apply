@@ -26,6 +26,11 @@ export default defineContentScript({
     "https://*.eurotechjobs.com/*",
     "https://*.xing.com/*",
     "https://*.welcometothejungle.com/*",
+    "https://*.bamboohr.com/*",
+    "https://*.teamtailor.com/*",
+    "https://jobs.jobvite.com/*",
+    "https://*.jobs.personio.de/*",
+    "https://*.jobs.personio.com/*",
     "https://jobs.lever.co/*",
     "https://jobs.ashbyhq.com/*"
   ],
