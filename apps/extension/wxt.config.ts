@@ -45,7 +45,23 @@ const supportedJobBoardHostPermissions = [
   // extension-initiated navigation to a new document, so these need an
   // explicit, permanent grant rather than relying on that ambiguity.
   "https://jobs.lever.co/*",
-  "https://jobs.ashbyhq.com/*"
+  "https://jobs.ashbyhq.com/*",
+  // Wellfound: real, un-gated on-page apply form (name/email, no phone),
+  // live-verified 2026-09-08 against 2 real employer postings via the
+  // existing generic label-text detector (no ATS-specific selector map -
+  // it's a job board, not an ATS). The single combined "Full Name" field is
+  // correctly left unfilled by the generic detector rather than guessed at.
+  // InfoJobs and Monster were investigated the same pass and deliberately
+  // NOT added here: InfoJobs' apply control navigates straight to a
+  // candidate login page before any form renders (confirmed live - a real
+  // structural gate, same class as Workday/SmartRecruiters/iCIMS, not a
+  // gap to bypass); Monster returned 403 to every automated request,
+  // including its own homepage, for both monster.co.uk and monster.com -
+  // likely anti-bot protection reacting to headless/automation signatures
+  // rather than a real-user-facing wall, so it's undetermined either way
+  // rather than confirmed blocked. Neither should be re-added without new
+  // real evidence, and neither should be chased past a detection wall.
+  "https://*.wellfound.com/*"
 ]
 
 export default defineConfig({

@@ -55,7 +55,8 @@
 //     Teachers: the same "Apply" simulation that worked in isolated
 //     testing didn't reveal filled values in the full run - not yet root
 //     -caused). Left at "partial"; the inconclusive result isn't strong
-//     enough evidence either way.
+//     enough evidence either way. Root-caused and promoted in the fourth
+//     pass below (2026-09-08).
 //   - Ashby (2026-09-02, second pass): initially misdiagnosed as blocked by
 //     a cross-origin iframe (embedded-media.ashbyhq.com) - that iframe is
 //     real but irrelevant, confirmed empty of input fields via Playwright's
@@ -115,6 +116,69 @@
 //     comment above the map's closing brace for why, and why that's
 //     correct rather than a gap. Promoted to `autofill: "verified"` on the
 //     generic-detector evidence.
+//
+// A fourth pass (2026-09-08) went back to close the Recruitee gap left open
+// by the second pass, using the same scratch harness approach as the third
+// pass (scripts/tmp-deep-verify.mjs, not committed).
+//   - Recruitee: root-caused the earlier "inconclusive" Novakid Teachers
+//     result - it wasn't a selector problem. That posting has two separate
+//     on-page "Apply" controls: a real navigation <a> to a sibling
+//     `/c/new` page, and a same-page <button> that actually toggles the
+//     hidden form open (a wrapping <div> goes from display:none to
+//     rendered). A naive "click whatever text matches /^apply/i first"
+//     simulation - exactly what the second pass and the CI live-check
+//     script both do - can land on the link by DOM order and silently
+//     never reveal anything, which is what produced the inconclusive
+//     result; it was a verification-harness gap, not a real product gap
+//     (a real candidate looking at the page clicks the control that
+//     visibly leads to the form, so the ambiguity doesn't exist for them).
+//     Preferring an exact-text <button> match over the generic text match
+//     fixed it: 2/2 real employers (Resourceful Talent Group, Novakid
+//     Teachers) now fill email correctly and correctly leave phone alone
+//     when it already has a non-empty default. Promoted to `autofill:
+//     "verified"`.
+//
+//     Separately, and NOT specific to Recruitee: Novakid's posting has a
+//     custom open question ("referral name... please provide the full
+//     name and surname of the active Novakid teacher who referred you")
+//     whose text contains the word "surname" - enough to trip the shared
+//     generic label-text detector's lastName match (detectFieldFromText in
+//     apps/extension/lib/autofill.ts) and fill the candidate's own last
+//     name into a question about a different person. This is a pre-
+//     existing false-positive risk in the generic fallback itself, live on
+//     every platform that reaches it (not introduced by or scoped to this
+//     pass) - documented here rather than silently left, but not fixed as
+//     part of this narrower Recruitee-promotion task.
+//
+// The same fourth pass (2026-09-08) also covered Wellfound, InfoJobs and
+// Monster - job boards, not ATSes, so none of them get an ATS_FIELD_MAPS
+// entry; the question was only whether the existing generic detector
+// reaches real fillable fields on each, via the real fillProfileFieldsViaAtsMap
+// / autofillProfile() fallback path (same scratch harness).
+//   - Wellfound: 2/2 real employer postings (Wexus Win Works, and a second
+//     distinct posting) have a real, un-gated on-page apply form (behind a
+//     cookie banner and an "Apply Now" click) with separate email and
+//     combined "Full Name" fields, no phone field on either. Email filled
+//     correctly both times; "Full Name" was correctly left untouched -
+//     it's a single field, and the generic detector only recognises
+//     "first name"/"last name" phrasing, not a bare "full name" label, so
+//     it safely doesn't guess. Promoted to `autofill: "verified"` in
+//     platform-coverage.ts; wired into wxt.config.ts/autotime.content.ts
+//     (see the comment there for the full reasoning, mirrored here).
+//   - InfoJobs: its "Inscribirme en esta oferta" control navigates straight
+//     to /candidate/candidate-login/ - a real candidate-login wall reached
+//     identically by a human or by automation, before any application
+//     field exists on the page. Same class of genuine structural blocker as
+//     Workday/SmartRecruiters/iCIMS. Left at `autofill: "unsupported"`, not
+//     wired, and not attempted past the login wall.
+//   - Monster: every automated request - both monster.co.uk and
+//     monster.com, including each site's own homepage - returned HTTP 403.
+//     This looks like anti-bot protection reacting to a headless/automation
+//     fingerprint rather than a wall a real signed-in user would also hit
+//     (unlike InfoJobs' login gate, which blocks everyone equally), so it's
+//     recorded as genuinely undetermined rather than confirmed blocked -
+//     left at `autofill: "unsupported"`, not wired, and no attempt was made
+//     to defeat the bot detection to find out.
 //
 // Do not flip any platform's `autofill` status based on selector-presence
 // alone (this map, or its live-check) - that's a narrower claim than

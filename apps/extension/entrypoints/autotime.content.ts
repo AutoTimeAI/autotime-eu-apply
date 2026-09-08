@@ -32,7 +32,8 @@ export default defineContentScript({
     "https://*.jobs.personio.de/*",
     "https://*.jobs.personio.com/*",
     "https://jobs.lever.co/*",
-    "https://jobs.ashbyhq.com/*"
+    "https://jobs.ashbyhq.com/*",
+    "https://*.wellfound.com/*"
   ],
   registration: "runtime",
   main() {
