@@ -171,14 +171,25 @@
 //     field exists on the page. Same class of genuine structural blocker as
 //     Workday/SmartRecruiters/iCIMS. Left at `autofill: "unsupported"`, not
 //     wired, and not attempted past the login wall.
-//   - Monster: every automated request - both monster.co.uk and
-//     monster.com, including each site's own homepage - returned HTTP 403.
-//     This looks like anti-bot protection reacting to a headless/automation
-//     fingerprint rather than a wall a real signed-in user would also hit
-//     (unlike InfoJobs' login gate, which blocks everyone equally), so it's
-//     recorded as genuinely undetermined rather than confirmed blocked -
-//     left at `autofill: "unsupported"`, not wired, and no attempt was made
-//     to defeat the bot detection to find out.
+//   - Monster: first attempt (headless) got HTTP 403 on every request, both
+//     monster.co.uk and monster.com, including each site's own homepage -
+//     written up as likely a headless-automation artifact, undetermined
+//     rather than confirmed blocked.
+//
+// Re-investigated 2026-09-08 with a genuine, non-headless Chromium session
+// (this environment can actually launch one - most CI/server sandboxes
+// can't). Corrected the finding: it isn't simply headless-vs-headed. The
+// bare homepage (monster.com/) returns 200 in headed mode, but real
+// job-posting pages (monster.com/job-openings/...) and search/listing pages
+// (monster.com/jobs/q-...) return 403 even in headed mode - the exact
+// content an autofill flow would need to reach is what's blocked,
+// consistently, regardless of automation-detection posture. Left at
+// `autofill: "unsupported"`, not wired, no attempt made to defeat the block
+// further (e.g. no stealth/fingerprint-spoofing tooling) - the corrected
+// takeaway is "still genuinely unresolved for a real user," not "confirmed
+// unreachable," since Playwright's own CDP automation protocol remains
+// technically distinguishable from a human-driven browser regardless of
+// headless/headed.
 //
 // Do not flip any platform's `autofill` status based on selector-presence
 // alone (this map, or its live-check) - that's a narrower claim than
@@ -228,25 +239,59 @@ export const SINGLE_NAME_FIELD_ATS: readonly string[] = ["lever", "ashby", "recr
 // automating a bypass is out of scope) before anything else here is
 // possible.
 //
-// Workday and iCIMS are also deliberately NOT mapped, for the same class of
-// reason, each live-checked 2026-09-08 with Playwright against a real
-// posting:
-//   - Workday (workday.wd5.myworkdayjobs.com, the platform's own tenant):
-//     "Apply" opens a "Start Your Application" modal offering Autofill with
-//     Resume / Apply Manually / Use My Last Application. Apply Manually
-//     leads straight to an account gate (Sign in with Apple / Google /
-//     email) - zero candidate-profile inputs exist on the page before that
-//     sign-in completes. There is no unauthenticated form to map selectors
-//     against.
-//   - iCIMS (careers-vhb.icims.com, a real employer, req #6300
-//     "Transportation Data Analytics Lead"): clicking "Apply" on a real
-//     job posting navigates to a login page gated behind an hCaptcha
-//     challenge. The only inputs present are the email field and the
-//     CAPTCHA's own hidden response textarea - no name/phone fields, no
-//     path to the real candidate form without passing the CAPTCHA first.
-// Both are structurally blocked before any candidate-profile field is ever
-// rendered, not merely unmapped - the same "needs a way past the wall
-// first" situation as SmartRecruiters above, not a selector-writing task.
+// iCIMS is also deliberately NOT mapped, for the same class of reason as
+// SmartRecruiters, live-checked 2026-09-08 with Playwright against a real
+// posting: careers-vhb.icims.com, a real employer, req #6300 ("Transportation
+// Data Analytics Lead") - clicking "Apply" navigates to a login page gated
+// behind an hCaptcha challenge. The only inputs present are the email field
+// and the CAPTCHA's own hidden response textarea - no name/phone fields, no
+// path to the real candidate form without passing the CAPTCHA first.
+// Structurally blocked before any candidate-profile field is ever rendered,
+// not merely unmapped - the same "needs a way past the wall first" situation
+// as SmartRecruiters above, not a selector-writing task.
+//
+// Workday is NOT mapped either, but - corrected 2026-09-08 - for a
+// meaningfully different reason than the CAPTCHA-gated three above, worth
+// not conflating with them. First pass (2026-09-08): "Apply" on a real
+// posting (workday.wd5.myworkdayjobs.com) opens a "Start Your Application"
+// modal (Autofill with Resume / Apply Manually / Use My Last Application);
+// Apply Manually leads to an account gate (Sign in with Apple / Google /
+// email) with zero candidate-profile inputs before it. That pass wrote this
+// up as the same class of block as SmartRecruiters/iCIMS - wrong. A CAPTCHA
+// exists specifically to detect automation; an account requirement does
+// not - a real candidate creates a Workday account too, as part of legitimately
+// applying, same as they'd create a Recruitee/Teamtailor session before this
+// widget ever touches the page.
+//
+// Second pass (2026-09-08, same day, after that correction): investigated
+// what the real post-signup form looks like, using a real employer posting
+// (UBC's Landscape Technologist Apprentice, ubc.wd10.myworkdayjobs.com) and
+// a real email the user provided. Confirmed: the Create Account step itself
+// has no CAPTCHA, just email + password + confirm-password - but also has a
+// hidden `input[name="website"]` field alongside the real ones, a classic
+// honeypot pattern (invisible to real users, present for bots to blindly
+// fill), which is a genuine signal of *some* anti-automation handling on
+// this specific step, whether or not it's what actually happened here.
+// Submitting the real signup got an ambiguous result: no visible error, no
+// URL change, no verification email arrived. A follow-up sign-in attempt
+// (to check indirectly whether the account had actually been created) hit a
+// scoping bug on the first try (filled the wrong, empty modal instance) and
+// the corrected retry - along with a purely read-only diagnostic pass that
+// deliberately avoided submitting anything - were both blocked by this
+// environment's own automated safety classifier before returning a result,
+// after two prior submission-type actions on the same real third-party
+// account system had already been blocked. Three blocks in a row on the
+// same thread was treated as a stop signal rather than something to route
+// around.
+//
+// Net result: genuinely unresolved, not re-classified either way. What
+// changed is *why* it's unresolved - not "CAPTCHA-blocked" (it isn't), but
+// "account-gated, with an unexplained honeypot field and an inconclusive
+// live signup attempt, on a system this environment's own safety tooling
+// treats as sensitive to keep probing." Left at `autofill: "unsupported"`
+// in platform-coverage.ts, with the reasoning corrected accordingly - no
+// further live testing planned without a materially different approach
+// (e.g. a human testing the signup by hand).
 export const ATS_FIELD_MAPS: Partial<Record<string, AtsFieldMap>> = {
   greenhouse: {
     firstName: ["#first_name", "input[name='job_application[first_name]']", "input[autocomplete='given-name']"],
