@@ -24,5 +24,17 @@
   ["Teamtailor","https://careers.acme.teamtailor.com/jobs/123-engineer"],
   ["Recruitee","https://acme.recruitee.com/o/engineer"],
   ["Jobvite","https://jobs.jobvite.com/acme/job/123"],
-  ["Personio","https://acme.jobs.personio.de/job/123"]
+  ["Personio","https://acme.jobs.personio.de/job/123"],
+  ["Landing.jobs","https://landing.jobs/at/acme/software-engineer"],
+  ["Honeypot","https://www.honeypot.io/jobs/123"],
+  ["Jobgether","https://jobgether.com/offer/123-software-engineer"],
+  ["SwissDevJobs","https://swissdevjobs.ch/jobs/Acme-Software-Engineer"],
+  ["NoFluffJobs","https://nofluffjobs.com/pl/job/software-engineer-acme-remote"],
+  ["CEEhiring","https://ceehiring.com/jobs/123"],
+  ["JustJoin.it","https://justjoin.it/job-offer/acme-software-engineer"],
+  ["Jobware","https://www.jobware.de/job/software-engineer-123"],
+  ["Built In","https://builtin.com/job/software-engineer/123"],
+  ["Euro Remote","https://euroremotejobs.com/job/software-engineer/"],
+  ["Remotive","https://remotive.com/remote-jobs/software-development/software-engineer-123"],
+  ["RemoteOK","https://remoteok.com/remote-jobs/remote-software-engineer-acme-123"]
 ]

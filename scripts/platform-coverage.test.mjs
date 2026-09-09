@@ -8,13 +8,13 @@ import { getCoverageRequesterHash, normalizeCoverageReportUrl } from "../apps/we
 const fixtures = JSON.parse(await readFile(new URL("../apps/extension/tests/fixtures/platform-coverage.json", import.meta.url), "utf8"));
 
 test("registry contains every named platform exactly once", () => {
-  assert.equal(PLATFORM_COVERAGE.length, 26);
+  assert.equal(PLATFORM_COVERAGE.length, 38);
   assert.deepEqual([...new Set(PLATFORM_COVERAGE.map((item) => item.platform))].sort(), [...PLATFORM_NAMES].sort());
   assert.equal(new Set(PLATFORM_COVERAGE.flatMap((item) => item.domains)).size, PLATFORM_COVERAGE.flatMap((item) => item.domains).length);
 });
 
 test("sanitized fixtures resolve to the registry and expected capture mode", () => {
-  assert.equal(fixtures.length, 26);
+  assert.equal(fixtures.length, 38);
   for (const [platform, url] of fixtures) {
     const entry = PLATFORM_COVERAGE.find((item) => item.platform === platform);
     assert.ok(entry, `missing registry entry for ${platform}`);
@@ -45,7 +45,7 @@ test("freshness and aggregate claims exclude stale records", () => {
   // exception. iCIMS got the same treatment but only reached
   // nativeFeed:"partial" (confirmed not universal - see that same doc), so
   // it doesn't count here. 10, not the prior 6.
-  assert.deepEqual(getPublicCoverageSummary(new Date("2026-08-18T00:00:00Z")), { platforms: 26, currentPlatforms: 26, captureVerified: 10, nativeFeeds: 10 });
+  assert.deepEqual(getPublicCoverageSummary(new Date("2026-08-18T00:00:00Z")), { platforms: 38, currentPlatforms: 38, captureVerified: 10, nativeFeeds: 10 });
   // Greenhouse/Lever/Ashby carry a later per-platform lastVerifiedAt
   // ("2026-09-02") from their real-extension verification, so 2026-10-01
   // isn't far enough past every record's date to be a true "all stale"
