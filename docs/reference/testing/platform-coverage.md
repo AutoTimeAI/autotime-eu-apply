@@ -1,6 +1,6 @@
 # Platform coverage evidence
 
-The customer-facing matrix at `/compatibility` is generated from the shared 26-platform registry. A status describes one capability only; capture, reviewed autofill and native feeds are not interchangeable claims.
+The customer-facing matrix at `/compatibility` is generated from the shared platform registry (`packages/shared/src/platform-coverage.ts`, 38 platforms as of 2026-09-09). A status describes one capability only; capture, reviewed autofill and native feeds are not interchangeable claims.
 
 Pull requests run sanitized fixture tests. The weekly `Platform coverage evidence` workflow opens public pages read-only, records field-presence booleans, and uploads JSON/HTML evidence for 90 days. It never signs in, fills a form or submits an application.
 
