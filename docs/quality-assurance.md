@@ -255,6 +255,22 @@ stays the single evidenced record of what has and hasn't been checked.
   low-risk gaps (`X-Powered-By` leak, missing
   `Cross-Origin-Opener-Policy`/`Cross-Origin-Resource-Policy`) fixed and
   independently re-confirmed absent in a follow-up scan.
+- **Base64 Disclosure finding, individually verified (2026-09-09)**: previously
+  flagged "near-certain false positive" on reasoning alone; actually opened
+  the `zap-baseline-report` artifact (run `34112493813`) and checked all 7
+  flagged instances instead of trusting that reasoning. None are a real
+  secret: the b64 alphabet constant (`ABCDEFGH...+/`, from a bundled
+  base64 codec, zero information content), the fixed HS256 JWT *header*
+  alone (`{"alg":"HS256","typ":"JWT"}`, identical for every HS256 token
+  ever created, no payload/signature/key) from a bundled JWT-handling
+  library, a Next.js CSS-Modules class name (`compatibility-module__...`,
+  not base64 data at all - a pattern-match false positive, hit 3 times),
+  a minified function name (`_estimateP98LongestInteraction`, same false
+  positive class), and PostHog's client project key (`phc_...`, sourced
+  from `NEXT_PUBLIC_POSTHOG_KEY` - the `NEXT_PUBLIC_` prefix means Next.js
+  deliberately inlines it into the client bundle by design; PostHog's own
+  project keys are write-only/rate-limited and cannot read or export
+  data). Closed with evidence, not reasoning.
 - **`Platform coverage evidence`**: confirmed producing a real
   evidence-refresh diff and pushing it for review.
 
