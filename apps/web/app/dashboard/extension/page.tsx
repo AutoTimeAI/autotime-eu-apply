@@ -13,6 +13,7 @@
  */
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { PLATFORM_COVERAGE } from "shared"
 import { InstalledExtensionConnectButton } from "../../../components/InstalledExtensionConnectButton"
 import { ProfileProtocolLock } from "../../../components/ProfileProtocolLock"
 import { createAdminClient } from "../../../lib/supabase/admin"
@@ -164,7 +165,7 @@ export default async function DashboardExtensionPage() {
             <p className="eyebrow">Chrome extension</p>
             <h1>Extension connection</h1>
             <p>{heroDescription}</p>
-            <p><Link href="/compatibility">View the dated 26-platform compatibility matrix</Link></p>
+            <p><Link href="/compatibility">View the dated {PLATFORM_COVERAGE.length}-platform compatibility matrix</Link></p>
           </div>
           <span className={`extension-health-pill ${healthTone}`}>
             {healthLabel}

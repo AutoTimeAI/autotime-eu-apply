@@ -188,6 +188,22 @@
 .job-evidence-check textarea {
   width: 100%;
 }
+.stamp4-check {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.stamp4-check-verified {
+  color: var(--green);
+  font-weight: 700;
+}
+.stamp4-check-hint {
+  color: var(--muted);
+}
+.stamp4-check-error {
+  color: var(--red);
+}
 .decision-callout {
   display: flex;
   align-items: center;

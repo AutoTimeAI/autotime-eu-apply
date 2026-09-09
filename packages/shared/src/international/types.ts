@@ -95,6 +95,35 @@ export const employerSponsorshipEvidenceSchema = z.object({
   ]),
 });
 
+/**
+ * A precise legal-eligibility check from Stamp4's sponsorship engine
+ * (real statutory salary thresholds, occupation-code mapping) for the
+ * countries it covers (UK, Ireland, Netherlands, Germany) - a distinct,
+ * higher-confidence evidence source alongside employerSponsorshipEvidence's
+ * "official-register" type, not a replacement for the manual
+ * occupationMapping/qualificationEvidence confirmations this module
+ * otherwise relies on. `blockers` is Stamp4's own list of specific reasons
+ * the pathway fails outright (e.g. salary below threshold) - non-empty
+ * means assessInternationalJob treats this as a confirmed blocker, the
+ * same evidentiary weight as employerEvidence's "negative-signal" status.
+ */
+export const stamp4SponsorshipAssessmentSchema = z.object({
+  status: z.enum([
+    "Eligible",
+    "Likely",
+    "Confirmation Required",
+    "Unlikely",
+    "Ineligible",
+  ]),
+  pathway: z.string(),
+  occupationCode: z.string(),
+  occupationConfidence: z.enum(["High", "Medium", "Low"]),
+  salaryDetectedEUR: z.number().nullable(),
+  salaryThresholdEUR: z.number().nullable(),
+  blockers: z.array(z.string()).default([]),
+  checkedAt: z.string().datetime(),
+});
+
 /** All the per-job evidence assessInternationalJob (./assessment.ts) needs to produce an InternationalAssessment: hiring country, mobility profile, job text/duties, salary, and any employer-specific sponsorship evidence. */
 export const internationalAssessmentInputSchema = z.object({
   country: z.string().min(1),
@@ -108,6 +137,7 @@ export const internationalAssessmentInputSchema = z.object({
     .enum(["confirmed", "uncertain", "not-checked"])
     .optional(),
   employerEvidence: employerSponsorshipEvidenceSchema.optional(),
+  stamp4Assessment: stamp4SponsorshipAssessmentSchema.optional(),
 });
 
 export type ApplicantPosition = z.infer<typeof applicantPositionSchema>;
@@ -122,6 +152,9 @@ export type EmployerSponsorshipEvidence = z.infer<
 >;
 export type InternationalAssessmentInput = z.infer<
   typeof internationalAssessmentInputSchema
+>;
+export type Stamp4SponsorshipAssessment = z.infer<
+  typeof stamp4SponsorshipAssessmentSchema
 >;
 /** "full" = a dedicated pack with confirmed pathways and cited sources (see country-packs/ireland.ts etc.); "explorer" = the generic fallback pack for countries without dedicated coverage yet (country-packs/european-explorer.ts). */
 export type CountrySupportLevel = "full" | "explorer";
@@ -164,4 +197,6 @@ export type InternationalAssessment = {
   nextAction: string;
   sources: OfficialSourceCitation[];
   cannotConfirm: string[];
+  /** True when this assessment's salary/occupation evidence came from Stamp4's real statutory-threshold check rather than a manual confirmation - lets the UI show a "verified" tier distinctly from "you confirmed this yourself", the same one-number-tier-visible split as the rest of AutoTime's coverage disclosures. */
+  stamp4Verified: boolean;
 };

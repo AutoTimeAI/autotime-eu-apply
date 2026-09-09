@@ -13,7 +13,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   assessInternationalJob,
   getInternationalCountryPack,
+  isStamp4SponsorshipCovered,
   type MobilityProfile,
+  type Stamp4SponsorshipAssessment,
 } from "shared";
 import {
   emptyMobilityProfile,
@@ -51,6 +53,11 @@ export function InternationalModule() {
   const [selectedCountry, setSelectedCountry] = useState("Ireland");
   const [jobText, setJobText] = useState("");
   const [status, setStatus] = useState("");
+  const [stamp4Assessment, setStamp4Assessment] =
+    useState<Stamp4SponsorshipAssessment | null>(null);
+  const [stamp4CheckState, setStamp4CheckState] = useState<
+    "idle" | "loading" | "error"
+  >("idle");
   const persistence = useMobilityPersistence({ profile, setProfile, userId });
 
   useEffect(() => {
@@ -74,9 +81,49 @@ export function InternationalModule() {
         jobText,
         roleDuties: jobText,
         occupationMapping: "not-checked",
+        stamp4Assessment: stamp4Assessment ?? undefined,
       }),
-    [jobText, profile, selectedCountry],
+    [jobText, profile, selectedCountry, stamp4Assessment],
   );
+
+  // Re-check with Stamp4 is an explicit action (see checkStamp4Thresholds),
+  // not part of the assessment's own useMemo above - that recomputes on
+  // every keystroke as jobText changes, and a fetch on every keystroke would
+  // hammer the service. A previous check's result is only valid for the
+  // country/wording it was run against, so clear it whenever either changes.
+  useEffect(() => {
+    setStamp4Assessment(null);
+    setStamp4CheckState("idle");
+  }, [selectedCountry, jobText]);
+
+  const checkStamp4Thresholds = async () => {
+    if (!jobText.trim()) return;
+    setStamp4CheckState("loading");
+    try {
+      const response = await fetch("/api/international/stamp4-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          countryPackId: pack.id,
+          roleTitle: jobText.trim().split("\n")[0]?.slice(0, 200) || pack.displayName,
+          country: pack.displayName,
+          rawText: jobText,
+        }),
+      });
+      const body = (await response.json()) as {
+        data: Stamp4SponsorshipAssessment | null;
+        error: string | null;
+      };
+      if (!response.ok || body.error) {
+        setStamp4CheckState("error");
+        return;
+      }
+      setStamp4Assessment(body.data);
+      setStamp4CheckState("idle");
+    } catch {
+      setStamp4CheckState("error");
+    }
+  };
 
   const saveProfile = () => {
     try {
@@ -129,6 +176,9 @@ export function InternationalModule() {
           selectedCountry={selectedCountry}
           onCountryChange={setSelectedCountry}
           onJobTextChange={setJobText}
+          stamp4Covered={isStamp4SponsorshipCovered(pack.id)}
+          stamp4CheckState={stamp4CheckState}
+          onCheckStamp4={checkStamp4Thresholds}
         />
       ) : null}
       {section === "mobility" ? (
