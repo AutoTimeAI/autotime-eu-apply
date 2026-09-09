@@ -302,6 +302,42 @@ export const SINGLE_NAME_FIELD_ATS: readonly string[] = ["lever", "ashby", "recr
 // in platform-coverage.ts, with the reasoning corrected accordingly - no
 // further live testing planned without a materially different approach
 // (e.g. a human testing the signup by hand).
+//
+// A sixth pass (2026-09-09) covered the 8 job boards that predate all of the
+// above and had never been live-checked with the same rigor: Stepstone,
+// EuroTechJobs, EuroJobs, NextLevelJobs, WelcomeToTheJungle,
+// NationaleVacaturebank, EuroTopTech, JobTeaser. All 8 carried an inherited
+// `autofill: "not_applicable"` on the pre-existing assumption that they're
+// pure aggregators with no application form of their own - a real signal,
+// not proof, the same way Wellfound looked "nothing here" before someone
+// actually checked. None of these are ATSes, so none get an
+// ATS_FIELD_MAPS entry; the question was only whether that assumption held.
+//   - 5/8 confirmed correct: Stepstone (-> Recruitee), EuroTechJobs (->
+//     jobs.ea.com), NextLevelJobs (-> Greenhouse), NationaleVacaturebank
+//     (its own apply button is literally labelled "apply on employer's
+//     website"), JobTeaser (-> Personio). Each genuinely redirects
+//     off-platform to the employer's real ATS/career site with no in-page
+//     form. `lastVerifiedAt` updated; status unchanged.
+//   - 3/8 were real surprises and moved to `autofill: "unsupported"`:
+//     - EuroJobs: the apply link requires login, and the login page itself
+//       sits behind a Cloudflare Turnstile challenge - confirmed in a real,
+//       non-headless session (the same lesson from today's Monster
+//       reinvestigation: don't assume headless is the only variable). Not
+//       attempted past the challenge.
+//     - WelcomeToTheJungle: genuinely mixed, not uniform. Some postings
+//       redirect to the employer's real external ATS (confirmed: Ashby);
+//       others use WTTJ's own native apply flow, which - unlike Stepstone's
+//       "Ich bin interessiert" gate - has no guest option at all, only
+//       email/password or LinkedIn sign-in. A real, specific blocker for a
+//       genuine subset of postings, not a uniform `not_applicable`.
+//     - EuroTopTech: not an account gate at all - a paid membership wall.
+//       Its own copy: "the first 6 roles stay visible; members unlock all
+//       14,517 matching roles, company names, apply links, and full job
+//       details" (from EUR11/month). Apply links are never visible without
+//       paying, so there's nothing to verify a selector or redirect
+//       against - not attempted past the paywall, same standing rule as
+//       every other real wall this project has documented rather than
+//       worked around.
 export const ATS_FIELD_MAPS: Partial<Record<string, AtsFieldMap>> = {
   greenhouse: {
     firstName: ["#first_name", "input[name='job_application[first_name]']", "input[autocomplete='given-name']"],
