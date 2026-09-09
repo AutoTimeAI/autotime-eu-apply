@@ -94,6 +94,18 @@ test("decoding entities cannot reintroduce a stripped tag (CodeQL js/incomplete-
   assert.equal(text, "Example: alert(1) is dangerous")
 })
 
+test("strips nested/overlapping tags a single non-looped pass would miss (CodeQL's own canonical example)", () => {
+  // CodeQL's own docs for this rule use exactly this shape: removing the
+  // inner match of a nested "<...>" pair can expose a new, still-dangerous
+  // outer one that a single pass never re-scans for.
+  const xml =
+    "<w:document><w:body><w:p><w:r><w:t>Example: &lt;&lt;script&gt;&gt;alert(1)&lt;&lt;/script&gt;&gt; nested</w:t></w:r></w:p></w:body></w:document>"
+  const docx = buildMinimalDocx("word/document.xml", Buffer.from(xml, "utf8"))
+  const text = extractDocxText(docx)
+  assert.equal(text.includes("<script"), false)
+  assert.equal(text.includes("<"), false)
+});
+
 test("rejects a document.xml entry that decompresses past the output cap", () => {
   // A large run of a single repeated byte compresses to a tiny buffer but
   // expands back to its full size on inflate - the zip-bomb shape this

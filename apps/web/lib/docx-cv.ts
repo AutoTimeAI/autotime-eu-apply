@@ -117,20 +117,38 @@ function decodeXmlEntities(value: string): string {
   return value.replace(/&amp;|&lt;|&gt;|&quot;|&apos;/g, (match) => xmlEntities[match])
 }
 
-// Entity-decoding must run BEFORE tag-stripping, not after: a CV can
+// A single replace(/<[^>]+>/g, "") pass is CodeQL's canonical
+// incomplete-multi-character-sanitization example: nested/overlapping
+// angle brackets (e.g. "<<script>>") can survive one pass, since removing
+// the inner match can expose a new, still-dangerous outer one. Looping
+// until a pass makes no further change is the fix the rule's own guidance
+// recommends - the standard, CodeQL-recognised pattern, not a one-off
+// workaround.
+function stripAllTags(value: string): string {
+  let previous: string
+  let current = value
+  do {
+    previous = current
+    current = current.replace(/<[^>]+>/g, "")
+  } while (current !== previous)
+  return current
+}
+
+// Entity-decoding must also run BEFORE tag-stripping, not after: a CV can
 // legitimately contain literal escaped text like "&lt;script&gt;" (e.g.
 // quoting a code snippet). Stripping tags first leaves that text alone
 // (it's not a raw "<...>" tag yet), and decoding afterward turns it into a
-// real "<script>" in the output - the exact "incomplete multi-character
-// sanitization" pattern CodeQL flags (js/incomplete-multi-character-sanitization).
-// Decoding first, then stripping tags as the final step, means anything
-// entities reveal gets caught by the same stripping pass as real markup.
+// real "<script>" in the output - the same vulnerability class, just from
+// entity-decoding instead of nested brackets. Decoding first, then
+// stripping tags (looped) as the final step, means anything entities
+// reveal gets caught by the same exhaustive stripping pass as real markup.
 function documentXmlToText(xml: string): string {
-  return decodeXmlEntities(xml)
-    .replace(/<w:tab\/>/g, "\t")
-    .replace(/<\/w:p>/g, "\n")
-    .replace(/<\/w:tr>/g, "\n")
-    .replace(/<[^>]+>/g, "")
+  return stripAllTags(
+    decodeXmlEntities(xml)
+      .replace(/<w:tab\/>/g, "\t")
+      .replace(/<\/w:p>/g, "\n")
+      .replace(/<\/w:tr>/g, "\n")
+  )
     .split("\n")
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean)
