@@ -12,10 +12,12 @@ distinct going forward.
 Only these sources are permitted for automated, unattended, bulk ingestion
 into `job_listings`: EURES, ATS APIs with a verified native public feed
 (currently Greenhouse, Lever, Ashby, SmartRecruiters, Recruitee, Personio,
-BambooHR, Teamtailor, and Jobvite - see the `nativeFeed: "verified"` entries
-in `packages/shared/src/platform-coverage.ts`; the last three are the
+BambooHR, Teamtailor, Jobvite, and Workday - see the `nativeFeed: "verified"`
+entries in `packages/shared/src/platform-coverage.ts`; the last four are the
 reverse-engineered-endpoint exception below, not officially published APIs),
-and licensed aggregator APIs
+iCIMS's feed for the subset of deployments where it actually works
+(`nativeFeed: "partial"`, same exception, see below for why it isn't
+`"verified"`), and licensed aggregator APIs
 configured by the operator (Adzuna and Jooble). Provider credentials stay
 server-side. Confirm current provider terms and quotas before enabling
 scheduled production sync.
@@ -24,21 +26,24 @@ Do not add a new automated bulk-ingestion source without a published API,
 native feed, or licensed aggregator agreement - the exception below is a
 deliberate, logged, product-owner call, not a precedent to extend casually.
 
-### Reverse-engineered feed exception (BambooHR, Teamtailor, Jobvite)
+### Reverse-engineered feed exception (BambooHR, Teamtailor, Jobvite, Workday, iCIMS)
 
-- Product-owner exception (2026-09-08): BambooHR's `careers/list`,
-  Teamtailor's `jobs.json`, and Jobvite's `CompanyJobs/Xml.aspx` are
-  undocumented, unauthenticated endpoints - not officially published APIs -
-  confirmed live against 2 real employers each before building
-  (`apps/web/lib/ats-feeds/bamboohr.ts`, `teamtailor.ts`, `jobvite.ts`,
-  mirrored in `supabase/functions/sync-job-sources/index.ts`). Approved
-  knowingly as an exception to the published-API rule above because all
-  three are read-only, return only already-public job listing data (no auth
-  bypass, no scraping of gated content), and are stable enough that
-  multiple independent third-party tools already rely on the same shapes.
-  If any endpoint starts returning errors or a materially different shape,
-  that's a signal it changed or was intentionally closed off - stop syncing
-  that platform and re-evaluate, don't work around the change.
+- Product-owner exception (2026-09-08, extended 2026-09-09): BambooHR's
+  `careers/list`, Teamtailor's `jobs.json`, Jobvite's `CompanyJobs/Xml.aspx`,
+  Workday's `wday/cxs/.../jobs`, and iCIMS's `api/jobs` are undocumented,
+  unauthenticated endpoints - not officially published APIs - each
+  confirmed live against real employers before building (2 each for
+  BambooHR/Teamtailor/Jobvite/Workday; iCIMS specifically tested against 5,
+  see below). Mirrored in `apps/web/lib/ats-feeds/*.ts` and
+  `supabase/functions/sync-job-sources/index.ts`. Approved knowingly as an
+  exception to the published-API rule above because all are read-only,
+  return only already-public job listing data (no auth bypass, no scraping
+  of gated content), and are stable enough that multiple independent
+  third-party tools or the platform's own live career site already rely on
+  the same shapes. If any endpoint starts returning errors or a materially
+  different shape, that's a signal it changed or was intentionally closed
+  off - stop syncing that platform and re-evaluate, don't work around the
+  change.
 - Jobvite specifically: its old JSON endpoint
   (`api/company/{slug}/jobs`) is confirmed dead. The working XML endpoint
   needs an opaque per-company `companyEId` that is NOT the public
@@ -48,6 +53,31 @@ deliberate, logged, product-owner call, not a precedent to extend casually.
   unauthenticated fetch of `jobs.jobvite.com/{slug}/jobs`, no browser
   rendering needed. `JobviteFeed.fetchJobs()` does this as an explicit
   two-step lookup.
+- Workday specifically: this is the same public CXS API a real Workday
+  career site's own search box calls (discovered by capturing a real site's
+  own network requests) - entirely separate from the account-gated
+  application form that blocks autofill (see the separate Workday autofill
+  writeup in `atsFieldMaps.ts` - job listings and applying are different
+  surfaces with different access rules). The API rejects any page limit
+  above 20 (HTTP 400, confirmed live), so `WorkdayFeed` paginates by
+  `offset`. `company_ats_slugs.ats_slug` for Workday is
+  `"{tenantHost}:{site}"` (e.g. `"ubc.wd10:ubcstaffjobs"`), both read
+  directly off the company's real public careers URL - Workday's numbered
+  tenant host isn't guessable from the company name alone.
+- iCIMS specifically, and unlike every other platform in this exception:
+  confirmed NOT universal. Tested against 5 real employer career sites -
+  2 ("Jibe-powered" deployments: a university's custom-domain site, and
+  iCIMS's own `hrjobs.icims.com`) expose a real `/api/jobs` JSON endpoint;
+  3 ("classic" iCIMS portals) render everything server-side with no such
+  API at all. A classic site hit with the same path returns HTTP 200 with
+  its normal HTML page (SPA-style fallback routing, not a real 404) -
+  `IcimsFeed` deliberately does NOT special-case this: `response.json()`
+  throwing a SyntaxError on that HTML is the correct, honest per-company
+  failure (surfaced in `sync-job-sources`'s `failures` array), not
+  something to catch and paper over. This inconsistency is why iCIMS is
+  `nativeFeed: "partial"`, not `"verified"` - do not promote it to
+  `"verified"` off a lucky sample; the split is real and confirmed, not a
+  gap in testing.
 
 ## 2. Extension-side, user-initiated single-page capture
 

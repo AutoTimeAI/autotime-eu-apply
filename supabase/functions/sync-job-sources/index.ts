@@ -41,6 +41,14 @@ const MAX_PERSONIO_XML_LENGTH = 5_000_000;
 // Personio's, since it's the same "every open posting in one response" shape).
 const MAX_JOBVITE_CAREERS_PAGE_LENGTH = 2_000_000;
 const MAX_JOBVITE_XML_LENGTH = 5_000_000;
+// Workday's CXS API rejects any page limit above 20 (HTTP 400, confirmed
+// live); iCIMS's Jibe API pages at a fixed 10 regardless of request.
+// Both capped at 25 pages per company - defensive, matching the discipline
+// above, not expected to bite for a normal employer.
+const WORKDAY_PAGE_LIMIT = 20;
+const MAX_WORKDAY_PAGES = 25;
+const ICIMS_PAGE_SIZE = 10;
+const MAX_ICIMS_PAGES = 25;
 type Job = { title:string; company:string; location:string; url:string; postedDate:string|null; descriptionRaw:string; atsPlatform:string; source:string };
 // identity_hash must include location, not just title+company - the same
 // role advertised concurrently in two different cities is two genuinely
@@ -77,6 +85,23 @@ async function feed(platform:string, slug:string, company:string): Promise<Job[]
   // JSON endpoint (api/company/{slug}/jobs) is confirmed dead. Mirrors
   // apps/web/lib/ats-feeds/jobvite.ts.
   if(platform==="jobvite") { const careersHtml=(await (await retry(`https://jobs.jobvite.com/${encodeURIComponent(slug)}/jobs`)).text()).slice(0,MAX_JOBVITE_CAREERS_PAGE_LENGTH); const companyEId=careersHtml.match(/companyEId:\s*'([^']+)'/)?.[1]; if(!companyEId) throw new Error(`Jobvite careers page for ${slug} has no discoverable companyEId`); const xml=(await (await retry(`https://app.jobvite.com/CompanyJobs/Xml.aspx?c=${encodeURIComponent(companyEId)}`)).text()).slice(0,MAX_JOBVITE_XML_LENGTH); const text=(n:string,t:string)=>n.match(new RegExp(`<${t}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${t}>`,"i"))?.[1]?.trim()??""; return [...xml.matchAll(/<job>([\s\S]*?)<\/job>/gi)].map((m)=>({title:text(m[1],"title"),company,location:text(m[1],"location"),url:text(m[1],"detail-url"),postedDate:text(m[1],"date")||null,descriptionRaw:text(m[1],"description"),atsPlatform:platform,source:platform})); }
+  // Workday: same reverse-engineered-endpoint exception as above. `slug` is
+  // "{tenantHost}:{site}" (e.g. "ubc.wd10:ubcstaffjobs") - Workday needs
+  // both the numbered tenant host (not guessable from the company name) and
+  // the site path segment, both read off the real public careers URL. The
+  // CXS API rejects any page limit above 20 (HTTP 400, confirmed live), so
+  // real employers need pagination. Mirrors apps/web/lib/ats-feeds/workday.ts.
+  if(platform==="workday") { const [tenantHost,site]=slug.split(":"); if(!tenantHost||!site) throw new Error(`Workday company slug must be "tenantHost:site", got "${slug}"`); const tenant=tenantHost.split(".")[0]; const baseUrl=`https://${tenantHost}.myworkdayjobs.com`; const jobs:Job[]=[]; for(let page=0;page<MAX_WORKDAY_PAGES;page+=1){ const offset=page*WORKDAY_PAGE_LIMIT; const d=await (await retry(`${baseUrl}/wday/cxs/${tenant}/${site}/jobs`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({appliedFacets:{},limit:WORKDAY_PAGE_LIMIT,offset,searchText:""})})).json(); const postings=(d.jobPostings??[]) as Record<string,unknown>[]; if(postings.length===0)break; for(const j of postings){ if(!j.title||!j.externalPath)continue; jobs.push({title:clean(j.title),company:tenant,location:clean(j.locationsText),url:`${baseUrl}/${site}${j.externalPath}`,postedDate:null,descriptionRaw:"",atsPlatform:platform,source:platform}); } if(postings.length<WORKDAY_PAGE_LIMIT)break; } return jobs; }
+  // iCIMS: same exception, plus NOT universal - only "Jibe-powered" iCIMS
+  // deployments expose this /api/jobs endpoint; "classic" ones (confirmed
+  // live: VHB, Applied Systems, Quest) return their normal HTML page for
+  // this same path instead of a real 404, which makes response.json() throw
+  // a SyntaxError - the correct, honest per-company failure (surfaced in
+  // this function's `failures` array), not a silent zero-result. `slug` is
+  // the exact host of the real career site (custom domain or *.icims.com
+  // subdomain - both work identically when Jibe-powered). Mirrors
+  // apps/web/lib/ats-feeds/icims.ts.
+  if(platform==="icims") { const jobs:Job[]=[]; for(let page=1;page<=MAX_ICIMS_PAGES;page+=1){ const d=await (await retry(`https://${slug}/api/jobs?page=${page}&sortBy=relevance&descending=false&internal=false`)).json(); const postings=(d.jobs??[]) as { data?: Record<string,unknown> }[]; if(postings.length===0)break; for(const entry of postings){ const j=entry.data??{}; const metaData=(j.meta_data??{}) as Record<string,unknown>; const url=clean(metaData.canonical_url); if(!j.title||!url)continue; jobs.push({title:clean(j.title),company,location:clean(j.short_location),url,postedDate:clean(j.posted_date)||null,descriptionRaw:"",atsPlatform:platform,source:platform}); } if(postings.length<ICIMS_PAGE_SIZE)break; } return jobs; }
   return [];
 }
 async function aggregatorJobs(): Promise<{ jobs: Job[]; providers: Record<string,string> }> { const jobs:Job[]=[]; const providers:Record<string,string>={}; const queries=(Deno.env.get("JOB_SYNC_QUERIES")??"software engineer,data engineer").split(",").map((v)=>v.trim()).filter(Boolean); const countries=(Deno.env.get("JOB_SYNC_COUNTRIES")??"gb,ie,de,nl,fr").split(",").map((v)=>v.trim()).filter(Boolean); const adzunaId=Deno.env.get("ADZUNA_APP_ID"),adzunaKey=Deno.env.get("ADZUNA_APP_KEY");
