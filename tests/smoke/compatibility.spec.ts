@@ -5,7 +5,7 @@ test("public compatibility matrix is honest and usable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Know what works before you apply." })).toBeVisible();
   await expect(page.getByRole("table")).toBeVisible();
   await expect(page.getByRole("row", { name: /LinkedIn Manual only Manual only/ })).toBeVisible();
-  await expect(page.getByText("26", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("38", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Report an unsupported site" })).toBeVisible();
   await expect(page.getByText(/AutoTime never submits an external application/)).toBeVisible();
 });
