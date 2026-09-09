@@ -191,6 +191,16 @@
 // technically distinguishable from a human-driven browser regardless of
 // headless/headed.
 //
+// 2026-09-09: Workday's job *listings* separately got a real nativeFeed
+// (its own public, unauthenticated CXS API - see
+// apps/web/lib/ats-feeds/workday.ts and
+// docs/reference/job-aggregation-compliance.md). This doesn't change
+// anything above - listings and applying are different surfaces with
+// different access rules, exactly the "job data is public, the account
+// gate is only on applying" distinction this file's own Workday writeup
+// already made. iCIMS got the same treatment the same day, but only
+// partially - see the compliance doc for why it's `nativeFeed: "partial"`.
+//
 // Do not flip any platform's `autofill` status based on selector-presence
 // alone (this map, or its live-check) - that's a narrower claim than
 // "verified." A promotion needs the deeper real-extension-flow evidence

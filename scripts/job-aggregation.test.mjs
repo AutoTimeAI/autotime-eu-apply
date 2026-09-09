@@ -11,6 +11,8 @@ import { RecruiteeFeed } from "../apps/web/lib/ats-feeds/recruitee.ts";
 import { BambooHRFeed } from "../apps/web/lib/ats-feeds/bamboohr.ts";
 import { TeamtailorFeed } from "../apps/web/lib/ats-feeds/teamtailor.ts";
 import { JobviteFeed } from "../apps/web/lib/ats-feeds/jobvite.ts";
+import { WorkdayFeed } from "../apps/web/lib/ats-feeds/workday.ts";
+import { IcimsFeed } from "../apps/web/lib/ats-feeds/icims.ts";
 import { buildOutreachInstructions } from "../apps/web/lib/outreach-drafter.ts";
 import { classifyJobToEsco } from "../apps/web/lib/esco/classify-job.ts";
 import { buildQuestionnaireContext } from "../apps/web/lib/esco/questionnaire-context.ts";
@@ -113,6 +115,47 @@ test("discovers Jobvite's opaque companyEId from the public careers page, then n
     url: "http://app.jobvite.com/CompanyJobs/Job.aspx?c=qATaVfwi&j=ojslAfwq",
     postedDate: "9/4/2026", atsPlatform: "jobvite", descriptionRaw: "Role details",
   }]);
+});
+test("paginates Workday's CXS API by offset and stops once a page comes back short", async () => {
+  // Shape confirmed live against 2 real tenants (ubc.wd10.myworkdayjobs.com,
+  // nvidia.wd5.myworkdayjobs.com, 2026-09-09) - the API rejects any limit
+  // above 20 with HTTP 400, so pagination is required for real employers.
+  let calls = 0;
+  const fetchImpl = async (url, init) => {
+    calls += 1;
+    assert.equal(init.method, "POST");
+    const body = JSON.parse(init.body);
+    if (body.offset === 0) return new Response(JSON.stringify({ total: 21, jobPostings: Array.from({ length: 20 }, (_, i) => ({ title: `Job ${i}`, externalPath: `/job/Job-${i}_JR${i}`, locationsText: "Remote" })) }));
+    return new Response(JSON.stringify({ total: 0, jobPostings: [{ title: "Job 20", externalPath: "/job/Job-20_JR20", locationsText: "Remote" }] }));
+  };
+  const jobs = await new WorkdayFeed(fetchImpl).fetchJobs("ubc.wd10:ubcstaffjobs");
+  assert.equal(calls, 2);
+  assert.equal(jobs.length, 21);
+  assert.deepEqual(jobs[20], { title: "Job 20", company: "ubc", location: "Remote", url: "https://ubc.wd10.myworkdayjobs.com/ubcstaffjobs/job/Job-20_JR20", postedDate: null, atsPlatform: "workday", descriptionRaw: "" });
+});
+test("rejects a malformed Workday company slug rather than guessing", async () => {
+  await assert.rejects(() => new WorkdayFeed(async () => new Response("{}")).fetchJobs("ubc-only"));
+});
+test("normalises a Jibe-powered iCIMS site's jobs API", async () => {
+  // Shape confirmed live against 2 real Jibe-powered employers
+  // (jobs.uci.edu, hrjobs.icims.com, 2026-09-09) - 3 other real "classic"
+  // iCIMS sites (VHB, Applied Systems, Quest) don't expose this API at all,
+  // which is why iCIMS is "partial", not "verified", in platform-coverage.ts.
+  const fetchImpl = async () => new Response(JSON.stringify({
+    jobs: [
+      { data: { title: "Director", short_location: "Orange, California", posted_date: "2026-08-31T23:18:00+0000", meta_data: { canonical_url: "https://jobs.uci.edu/jobs/150205?lang=en-us" } } },
+      { data: { title: "Missing url" } },
+    ],
+  }));
+  const jobs = await new IcimsFeed(fetchImpl).fetchJobs("jobs.uci.edu");
+  assert.deepEqual(jobs, [{ title: "Director", company: "jobs.uci.edu", location: "Orange, California", url: "https://jobs.uci.edu/jobs/150205?lang=en-us", postedDate: "2026-08-31T23:18:00+0000", atsPlatform: "icims", descriptionRaw: "" }]);
+});
+test("a classic (non-Jibe) iCIMS site throws instead of silently returning zero jobs", async () => {
+  // Confirmed live: a classic site's SPA-fallback routing returns HTTP 200
+  // with its normal HTML page for this same path, not a real 404 -
+  // response.json() throwing a SyntaxError on that is the correct signal.
+  const fetchImpl = async () => new Response("<!DOCTYPE html><html></html>", { status: 200 });
+  await assert.rejects(() => new IcimsFeed(fetchImpl).fetchJobs("careers-vhb.icims.com"));
 });
 test("outreach prompt retains human-sent constraints", () => {
   const prompt = buildOutreachInstructions({ channel: "linkedin_note", contactType: "recruiter" });

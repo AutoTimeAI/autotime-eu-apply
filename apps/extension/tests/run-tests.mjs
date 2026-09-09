@@ -484,8 +484,13 @@ test("detects priority job platforms from urls", () => {
 })
 
 test("narrows extraction to uncovered ATS and unknown sites", () => {
-  for (const url of ["https://boards.greenhouse.io/acme/jobs/1", "https://jobs.lever.co/acme/1", "https://jobs.ashbyhq.com/acme/1", "https://acme.jobs.personio.de/job/1", "https://eures.europa.eu/job/1"]) assert.equal(getJobCaptureMode(url), "api-reference")
-  assert.equal(getJobCaptureMode("https://acme.wd3.myworkdayjobs.com/job/1"), "selector-extraction")
+  // Workday moved from selector-extraction to api-reference on 2026-09-09
+  // once its nativeFeed was live-verified (see platform-coverage.ts) -
+  // isApiCoveredJobUrl now covers it. iCIMS stays selector-extraction:
+  // its nativeFeed landed on "partial", not "verified" (confirmed live,
+  // not every iCIMS deployment exposes the feed), so it deliberately
+  // doesn't qualify.
+  for (const url of ["https://boards.greenhouse.io/acme/jobs/1", "https://jobs.lever.co/acme/1", "https://jobs.ashbyhq.com/acme/1", "https://acme.jobs.personio.de/job/1", "https://eures.europa.eu/job/1", "https://acme.wd3.myworkdayjobs.com/job/1"]) assert.equal(getJobCaptureMode(url), "api-reference")
   assert.equal(getJobCaptureMode("https://careers.icims.com/jobs/1"), "selector-extraction")
   assert.equal(getJobCaptureMode("https://careers.example.com/openings/1"), "selector-extraction")
   assert.equal(getJobCaptureMode("https://linkedin.com/jobs/view/1"), "manual-only")

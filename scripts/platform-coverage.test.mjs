@@ -38,12 +38,14 @@ test("generic extraction preserves visible fixture facts without guessing", () =
 test("freshness and aggregate claims exclude stale records", () => {
   assert.equal(isCoverageStale("2026-08-01", new Date("2026-08-30T00:00:00Z")), false);
   assert.equal(isCoverageStale("2026-08-01", new Date("2026-09-01T00:00:01Z")), true);
-  // BambooHR, Teamtailor, and Jobvite moved capture/nativeFeed to "verified"
-  // on 2026-09-08 once their native feed was live-verified (2 real
-  // employers each) and wired into the real ingestion pipeline - see
+  // BambooHR, Teamtailor, Jobvite (2026-09-08) and Workday (2026-09-09)
+  // moved capture/nativeFeed to "verified" once their native feed was
+  // live-verified and wired into the real ingestion pipeline - see
   // docs/reference/job-aggregation-compliance.md's reverse-engineered feed
-  // exception. 9, not the prior 6.
-  assert.deepEqual(getPublicCoverageSummary(new Date("2026-08-18T00:00:00Z")), { platforms: 26, currentPlatforms: 26, captureVerified: 9, nativeFeeds: 9 });
+  // exception. iCIMS got the same treatment but only reached
+  // nativeFeed:"partial" (confirmed not universal - see that same doc), so
+  // it doesn't count here. 10, not the prior 6.
+  assert.deepEqual(getPublicCoverageSummary(new Date("2026-08-18T00:00:00Z")), { platforms: 26, currentPlatforms: 26, captureVerified: 10, nativeFeeds: 10 });
   // Greenhouse/Lever/Ashby carry a later per-platform lastVerifiedAt
   // ("2026-09-02") from their real-extension verification, so 2026-10-01
   // isn't far enough past every record's date to be a true "all stale"
