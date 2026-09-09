@@ -117,14 +117,20 @@ function decodeXmlEntities(value: string): string {
   return value.replace(/&amp;|&lt;|&gt;|&quot;|&apos;/g, (match) => xmlEntities[match])
 }
 
+// Entity-decoding must run BEFORE tag-stripping, not after: a CV can
+// legitimately contain literal escaped text like "&lt;script&gt;" (e.g.
+// quoting a code snippet). Stripping tags first leaves that text alone
+// (it's not a raw "<...>" tag yet), and decoding afterward turns it into a
+// real "<script>" in the output - the exact "incomplete multi-character
+// sanitization" pattern CodeQL flags (js/incomplete-multi-character-sanitization).
+// Decoding first, then stripping tags as the final step, means anything
+// entities reveal gets caught by the same stripping pass as real markup.
 function documentXmlToText(xml: string): string {
-  return decodeXmlEntities(
-    xml
-      .replace(/<w:tab\/>/g, "\t")
-      .replace(/<\/w:p>/g, "\n")
-      .replace(/<\/w:tr>/g, "\n")
-      .replace(/<[^>]+>/g, "")
-  )
+  return decodeXmlEntities(xml)
+    .replace(/<w:tab\/>/g, "\t")
+    .replace(/<\/w:p>/g, "\n")
+    .replace(/<\/w:tr>/g, "\n")
+    .replace(/<[^>]+>/g, "")
     .split("\n")
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean)

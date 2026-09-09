@@ -81,6 +81,19 @@ test("decodes entities in one pass without double-escaping", () => {
   assert.equal(text, "Rate &lt; 5&gt;/hr &amp; more")
 })
 
+test("decoding entities cannot reintroduce a stripped tag (CodeQL js/incomplete-multi-character-sanitization)", () => {
+  // A CV can legitimately contain literal escaped text like "&lt;script&gt;"
+  // (e.g. quoting a code snippet). If tag-stripping ran before entity
+  // decoding, this survives the strip pass untouched (not a raw tag yet)
+  // and decoding afterward turns it into a real <script> tag in the output.
+  const xml =
+    "<w:document><w:body><w:p><w:r><w:t>Example: &lt;script&gt;alert(1)&lt;/script&gt; is dangerous</w:t></w:r></w:p></w:body></w:document>"
+  const docx = buildMinimalDocx("word/document.xml", Buffer.from(xml, "utf8"))
+  const text = extractDocxText(docx)
+  assert.equal(text.includes("<script"), false)
+  assert.equal(text, "Example: alert(1) is dangerous")
+})
+
 test("rejects a document.xml entry that decompresses past the output cap", () => {
   // A large run of a single repeated byte compresses to a tiny buffer but
   // expands back to its full size on inflate - the zip-bomb shape this
