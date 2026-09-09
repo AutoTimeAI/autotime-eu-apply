@@ -10,6 +10,7 @@ import {
   germanyCountryPack,
   irelandCountryPack,
   netherlandsCountryPack,
+  ukCountryPack,
 } from "./country-packs/index.ts";
 import {
   internationalAssessmentInputSchema,
@@ -22,6 +23,7 @@ const fullCountryPacks = [
   irelandCountryPack,
   germanyCountryPack,
   netherlandsCountryPack,
+  ukCountryPack,
 ];
 /** Countries with generic "explorer" coverage (see country-packs/european-explorer.ts) rather than a dedicated pack - listed for UI display, not used to gate assessInternationalJob's own pack lookup. */
 export const supportedExplorerCountries = [
@@ -120,6 +122,7 @@ export function assessInternationalJob(
       cannotConfirm: [
         "Any permit pathway, threshold, or eligibility conclusion in explorer mode.",
       ],
+      stamp4Verified: false,
     };
   }
 
@@ -133,14 +136,53 @@ export function assessInternationalJob(
     );
   else if (needsSponsorship)
     missingEvidence.push("Vacancy-level sponsorship confirmation");
+
+  // Stamp4's real statutory-threshold check (UK/Ireland/Netherlands/Germany
+  // only - input.stamp4Assessment is absent everywhere else, including
+  // every explorer-mode country) is a distinct, higher-confidence evidence
+  // source: a blocker there (e.g. salary below the real threshold) carries
+  // at least as much weight as the text-signal/manual-flag blockers checked
+  // above, and a clean pass satisfies the salary/occupation-mapping
+  // evidence below without requiring the user to separately confirm them
+  // by hand - reconciling AutoTime's broader text-signal engine with
+  // Stamp4's narrower, precise legal check rather than one overriding the
+  // other (see docs on the sponsorship-engine reconciliation design).
+  const stamp4 = input.stamp4Assessment;
+  let stamp4SatisfiesSalary = false;
+  let stamp4SatisfiesOccupation = false;
+  if (stamp4) {
+    if (stamp4.blockers.length > 0) {
+      confirmedBlockers.push(
+        ...stamp4.blockers.map(
+          (reason) => `Stamp4 legal-eligibility check: ${reason}`,
+        ),
+      );
+    } else {
+      if (stamp4.salaryDetectedEUR !== null && stamp4.salaryThresholdEUR !== null) {
+        evidenceUsed.push(
+          `Stamp4 verified: detected salary ~€${stamp4.salaryDetectedEUR.toLocaleString()} clears the €${stamp4.salaryThresholdEUR.toLocaleString()} statutory threshold for ${stamp4.pathway}.`,
+        );
+        stamp4SatisfiesSalary = true;
+      }
+      if (stamp4.occupationConfidence !== "Low") {
+        evidenceUsed.push(
+          `Stamp4 verified: role maps to ${stamp4.occupationCode} (${stamp4.occupationConfidence.toLowerCase()} confidence).`,
+        );
+        stamp4SatisfiesOccupation = true;
+      }
+    }
+  }
+
   if (input.salary)
     evidenceUsed.push("Salary includes amount, currency and pay period.");
-  else missingEvidence.push("Salary with currency and pay period");
+  else if (!stamp4SatisfiesSalary)
+    missingEvidence.push("Salary with currency and pay period");
   if (!input.contractDurationMonths) missingEvidence.push("Contract duration");
   else evidenceUsed.push("Contract duration supplied by the user or vacancy.");
-  if (input.occupationMapping !== "confirmed")
+  if (input.occupationMapping === "confirmed")
+    evidenceUsed.push("User-confirmed occupation/duties mapping.");
+  else if (!stamp4SatisfiesOccupation)
     missingEvidence.push("Occupation mapping from the role's actual duties");
-  else evidenceUsed.push("User-confirmed occupation/duties mapping.");
   if (pack.id === "germany" && input.qualificationEvidence !== "confirmed")
     missingEvidence.push("Qualification or recognition evidence");
   if (pack.id === "netherlands") {
@@ -155,6 +197,22 @@ export function assessInternationalJob(
     } else
       missingEvidence.push(
         "Recognised-sponsor status for the Dutch employing entity",
+      );
+  }
+  if (pack.id === "uk") {
+    if (
+      input.employerEvidence?.sourceType === "official-register" &&
+      input.employerEvidence.status === "confirmed"
+    ) {
+      evidenceUsed.push(
+        "Employer appears on the Home Office Register of Licensed Sponsors (Skilled Worker route).",
+      );
+      assumptions.push(
+        "Register presence does not guarantee a Certificate of Sponsorship for this vacancy.",
+      );
+    } else
+      missingEvidence.push(
+        "Home Office sponsor-licence confirmation for the Skilled Worker route",
       );
   }
   if (input.employerEvidence?.status === "negative-signal" && needsSponsorship)
@@ -190,5 +248,6 @@ export function assessInternationalJob(
       "Whether a government authority will grant a visa or permit.",
       "Whether an employer will sponsor this particular vacancy.",
     ],
+    stamp4Verified: Boolean(stamp4),
   };
 }

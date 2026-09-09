@@ -9,6 +9,9 @@ export function CountryWorkspace({
   selectedCountry,
   onCountryChange,
   onJobTextChange,
+  stamp4Covered,
+  stamp4CheckState,
+  onCheckStamp4,
 }: {
   assessment: InternationalAssessment;
   jobText: string;
@@ -16,6 +19,9 @@ export function CountryWorkspace({
   selectedCountry: string;
   onCountryChange: (country: string) => void;
   onJobTextChange: (text: string) => void;
+  stamp4Covered: boolean;
+  stamp4CheckState: "idle" | "loading" | "error";
+  onCheckStamp4: () => void;
 }) {
   return (
     <div className="international-content">
@@ -68,6 +74,34 @@ export function CountryWorkspace({
             placeholder="Include sponsorship, work-right, salary, contract, location and language wording."
           />
         </label>
+        {stamp4Covered ? (
+          <div className="stamp4-check">
+            <button
+              type="button"
+              onClick={onCheckStamp4}
+              disabled={!jobText.trim() || stamp4CheckState === "loading"}
+            >
+              {stamp4CheckState === "loading"
+                ? "Checking official thresholds…"
+                : "Check official thresholds"}
+            </button>
+            {stamp4CheckState === "error" ? (
+              <span className="stamp4-check-error">
+                Could not reach the official-threshold check. The evidence
+                below still reflects the wording you pasted.
+              </span>
+            ) : assessment.stamp4Verified ? (
+              <span className="stamp4-check-verified">
+                ✓ Verified against official statutory thresholds
+              </span>
+            ) : (
+              <span className="stamp4-check-hint">
+                Based on vacancy wording only — run a check for a
+                threshold-verified result.
+              </span>
+            )}
+          </div>
+        ) : null}
         <div
           className={`decision-callout ${
             assessment.confirmedBlockers.length ? "blocked" : ""

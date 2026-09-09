@@ -4,9 +4,11 @@ import {
   assessInternationalJob,
   germanyCountryPack,
   irelandCountryPack,
+  isStamp4SponsorshipCovered,
   migrateCandidateProfileToMobilityProfile,
   mobilityProfileSchema,
   netherlandsCountryPack,
+  ukCountryPack,
 } from "../packages/shared/src/international/index.ts";
 
 const baseProfile = mobilityProfileSchema.parse({
@@ -163,6 +165,7 @@ test("official sources contain required governance metadata", () => {
     irelandCountryPack,
     germanyCountryPack,
     netherlandsCountryPack,
+    ukCountryPack,
   ]) {
     for (const source of pack.sources) {
       assert.ok(
@@ -174,6 +177,106 @@ test("official sources contain required governance metadata", () => {
       );
     }
   }
+});
+
+test("UK is a full-support pack, not the explorer fallback", () => {
+  const result = assessInternationalJob({
+    country: "United Kingdom",
+    mobilityProfile: baseProfile,
+    jobText: "",
+    roleDuties: "",
+    occupationMapping: "uncertain",
+  });
+  assert.equal(result.supportLevel, "full");
+  assert.equal(ukCountryPack.pathways[0], "Skilled Worker visa");
+});
+
+test("isStamp4SponsorshipCovered matches exactly the 4 countries Stamp4 has real threshold data for", () => {
+  assert.equal(isStamp4SponsorshipCovered("uk"), true);
+  assert.equal(isStamp4SponsorshipCovered("ireland"), true);
+  assert.equal(isStamp4SponsorshipCovered("netherlands"), true);
+  assert.equal(isStamp4SponsorshipCovered("germany"), true);
+  assert.equal(isStamp4SponsorshipCovered("france"), false);
+  assert.equal(isStamp4SponsorshipCovered("european-explorer"), false);
+});
+
+test("a clean Stamp4 assessment satisfies salary/occupation evidence without a manual confirmation", () => {
+  const result = assessInternationalJob({
+    country: "Ireland",
+    mobilityProfile: baseProfile,
+    jobText: "Systems analyst role",
+    roleDuties: "Business systems analysis",
+    occupationMapping: "not-checked",
+    stamp4Assessment: {
+      status: "Eligible",
+      pathway: "Ireland Critical Skills Employment Permit",
+      occupationCode: "SOC 2135",
+      occupationConfidence: "High",
+      salaryDetectedEUR: 55000,
+      salaryThresholdEUR: 40904,
+      blockers: [],
+      checkedAt: new Date().toISOString(),
+    },
+  });
+  assert.equal(result.stamp4Verified, true);
+  assert.ok(
+    !result.missingEvidence.includes(
+      "Occupation mapping from the role's actual duties",
+    ),
+  );
+  assert.ok(
+    !result.missingEvidence.includes("Salary with currency and pay period"),
+  );
+  assert.ok(
+    result.evidenceUsed.some((item) => /Stamp4 verified.*clears the/.test(item)),
+  );
+});
+
+test("a Stamp4 blocker (e.g. salary below the real threshold) becomes a confirmed blocker, same weight as any other", () => {
+  const result = assessInternationalJob({
+    country: "Netherlands",
+    mobilityProfile: baseProfile,
+    jobText: "Highly skilled migrant role",
+    roleDuties: "Engineering",
+    occupationMapping: "confirmed",
+    salary: { amount: 60000, currency: "EUR", period: "year" },
+    contractDurationMonths: 24,
+    stamp4Assessment: {
+      status: "Ineligible",
+      pathway: "Netherlands Highly Skilled Migrant",
+      occupationCode: "SOC 2135",
+      occupationConfidence: "High",
+      salaryDetectedEUR: 60000,
+      salaryThresholdEUR: 71304,
+      blockers: [
+        "Detected salary €60,000 is below the default €71,304 pathway threshold.",
+      ],
+      checkedAt: new Date().toISOString(),
+    },
+  });
+  assert.equal(result.pathwayStatus, "confirmed-blocker");
+  assert.equal(result.decision, "Skip");
+  assert.ok(
+    result.confirmedBlockers.some((item) =>
+      item.includes("Stamp4 legal-eligibility check"),
+    ),
+  );
+});
+
+test("no Stamp4 data (France/generic-EU, or an unreachable service) leaves the existing text-signal behaviour unchanged", () => {
+  const result = assessInternationalJob({
+    country: "Ireland",
+    mobilityProfile: baseProfile,
+    jobText: "",
+    roleDuties: "",
+    occupationMapping: "uncertain",
+  });
+  assert.equal(result.stamp4Verified, false);
+  assert.ok(
+    result.missingEvidence.includes(
+      "Occupation mapping from the role's actual duties",
+    ),
+  );
 });
 
 test("production international code contains no personal Stamp4 fixtures", async () => {
