@@ -30,7 +30,6 @@ async function assertLanded(
   workflow: Locator,
   label: string,
 ) {
-  await page.waitForLoadState("networkidle");
   await expect(page).toHaveURL(new RegExp(`${path.replaceAll("/", "\\/")}$`));
   await expect(
     page.locator("main, .dashboard-page, .home-experience").first(),
@@ -41,7 +40,6 @@ async function assertLanded(
 }
 
 async function assertAccountMenu(page: Page) {
-  await page.waitForLoadState("networkidle");
   await page.locator(".user-nav-trigger").click();
   await expect(page.locator(".user-nav-menu")).toBeVisible();
   await expect(
@@ -103,14 +101,12 @@ test("mobile grouped navigation remains keyboard reachable", async ({
   }
 
   for (const [label, path] of moreMobileDestinations) {
-    await page.waitForLoadState("networkidle");
     const link = mobileNav.getByRole("link", { name: label, exact: true });
     if (!(await link.isVisible())) {
       await mobileNav.getByText("More").click();
     }
     await expect(link).toBeVisible();
     await link.click();
-    await page.waitForLoadState("networkidle");
     await expect(page).toHaveURL(new RegExp(`${path.replaceAll("/", "\\/")}$`));
     await expect(
       page.locator("main, .dashboard-page, .home-experience").first(),

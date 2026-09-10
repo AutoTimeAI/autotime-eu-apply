@@ -130,6 +130,7 @@ test.beforeAll(async () => {
 test("Apply journey, application readiness and applied record", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await seedProfile(
     page,

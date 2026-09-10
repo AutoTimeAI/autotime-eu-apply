@@ -1,5 +1,9 @@
 import { detectATS } from "./ats-detector.ts";
-import type { ApplicationRecord } from "shared";
+import {
+  assessApplicationApproval,
+  getSubmissionPermission,
+  type ApplicationRecord,
+} from "shared";
 
 export type EvidenceState = "confirmed" | "partial" | "missing" | "conflicting";
 export type JobDecision =
@@ -612,14 +616,14 @@ export function getApplicationReadiness(
   application: ApplicationWorkspace,
   job: JobRecord,
 ) {
-  const blockers = [
-    !job.title.value && "Confirm the role title",
-    !job.employer.value && "Confirm the employer",
-    !application.evidenceConfirmed && "Confirm supporting evidence",
-    !application.consequentialAnswersReviewed && "Review consequential answers",
-    application.unsupportedClaims.length > 0 && "Remove unsupported claims",
-  ].filter(Boolean) as string[];
-  return { blockers, ready: blockers.length === 0 };
+  const assessment = assessApplicationApproval({
+    consequentialAnswersReviewed: application.consequentialAnswersReviewed,
+    employerConfirmed: Boolean(job.employer.value),
+    evidenceConfirmed: application.evidenceConfirmed,
+    roleTitleConfirmed: Boolean(job.title.value),
+    unsupportedClaims: application.unsupportedClaims,
+  });
+  return { blockers: assessment.blockers, ready: assessment.stage === "ready" };
 }
 
 export function getApplicationReviewQueue(state: JobWorkflowState) {
@@ -674,8 +678,21 @@ export function transitionApplication(
     throw new Error("An applied application cannot be moved back to Ready.");
   if (next === "Ready" && !getApplicationReadiness(application, job).ready)
     throw new Error("Resolve every readiness blocker before marking Ready.");
-  if (next === "Applied" && (application.status !== "Ready" || !confirm))
-    throw new Error("Confirm a Ready application before marking it applied.");
+  if (next === "Applied") {
+    const approval = assessApplicationApproval({
+      consequentialAnswersReviewed: application.consequentialAnswersReviewed,
+      employerConfirmed: Boolean(job.employer.value),
+      evidenceConfirmed: application.evidenceConfirmed,
+      roleTitleConfirmed: Boolean(job.title.value),
+      unsupportedClaims: application.unsupportedClaims,
+    });
+    const permission = getSubmissionPermission({
+      approval,
+      currentStatus: application.status,
+      explicitConfirmation: confirm,
+    });
+    if (!permission.allowed) throw new Error(permission.reason ?? "Submission blocked.");
+  }
   if (Math.abs(order.indexOf(next) - order.indexOf(application.status)) > 1)
     throw new Error("Invalid application status transition.");
   return {

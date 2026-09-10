@@ -7,6 +7,10 @@
 // for candidate/job/application data instead of duplicating logic client-side.
 export * from "./schemas.ts"
 export * from "./fit-model.ts"
+export * from "./eu-fit/decision-policy.ts"
+export * from "./evidence/index.ts"
+export * from "./application-preparation/index.ts"
+export * from "./occupations/index.ts"
 export * from "./country-rules.ts"
 export * from "./profile-bridge.ts"
 export * from "./international/index.ts"

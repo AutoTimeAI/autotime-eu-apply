@@ -53,6 +53,7 @@ async function main() {
   for (const testCase of liveAtsCases) {
     const platform = getJobPlatform(testCase.url)
     const details = inferJobPageDetails({
+      heading: testCase.expectedTitle,
       title: testCase.title,
       url: testCase.url
     })

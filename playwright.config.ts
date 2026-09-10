@@ -7,11 +7,20 @@ const isExternalBaseUrl = !/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i.test(
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  outputDir: "artifacts/playwright/full/test-results",
+  globalTeardown: "./scripts/playwright-global-teardown.mjs",
   fullyParallel: false,
-  timeout: 60_000,
+  // Cold route compilation under the disk-safe webpack runner can add tens of
+  // seconds to an otherwise healthy multi-page journey.
+  timeout: 120_000,
   workers: 1,
   retries: process.env.CI ? 2 : 0,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [["list"], ["html", { open: "never", outputFolder: "artifacts/playwright/full/report" }]],
+  expect: {
+    // Hydrated UI assertions should tolerate cold webpack route compilation;
+    // the overall test timeout still catches genuinely stalled journeys.
+    timeout: 30_000,
+  },
   use: {
     baseURL,
     trace: "retain-on-failure",
@@ -27,7 +36,7 @@ export default defineConfig({
   webServer: isExternalBaseUrl
     ? undefined
     : {
-        command: "pnpm dev:web",
+        command: "node scripts/playwright-web-server.mjs 3000 webpack",
         env: {
           AUTOTIME_TEST_AUTH_ENABLED: "true",
           AUTOTIME_TEST_USER_EMAIL: "test.user@example.com",

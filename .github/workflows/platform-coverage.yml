@@ -33,7 +33,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: platform-coverage-${{ github.run_id }}
-          path: coverage-report/
+          path: artifacts/coverage/
           retention-days: 90
       - name: Open or update regression issues
         if: steps.coverage.outcome == 'failure'
@@ -41,7 +41,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const report = JSON.parse(fs.readFileSync('coverage-report/platform-coverage.json', 'utf8'));
+            const report = JSON.parse(fs.readFileSync('artifacts/coverage/platform-coverage.json', 'utf8'));
             for (const failure of report.results.filter(item => item.outcome === 'fail')) {
               const title = `[coverage] ${failure.platform} live verification failed`;
               const body = `Read-only verification failed at ${report.checkedAt}.\n\nReason: ${failure.failureReason}\nHTTP: ${failure.statusCode ?? 'none'}\nDetected: ${failure.detected ?? 'none'}\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nNo application form was filled or submitted.`;

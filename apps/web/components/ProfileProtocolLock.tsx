@@ -11,10 +11,12 @@
 // with the account's synced profile when cloud sync is configured.
 
 import { type ReactNode, useEffect, useState } from "react"
+import {
+  dashboardStorageKey,
+  profileProtocolReadinessEvent
+} from "../platform/persistence/dashboard-state-storage"
 
-const dashboardStorageKey = "autotime-v2-companion-dashboard"
-export const profileProtocolReadinessEvent =
-  "autotime-profile-readiness-updated"
+export { profileProtocolReadinessEvent }
 
 type ProfileProtocolLockProps = {
   children: ReactNode

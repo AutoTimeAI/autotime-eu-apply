@@ -22,6 +22,7 @@ test("a pasted LinkedIn vacancy reflects in the Jobs list within seconds", async
   page
 }) => {
   await page.goto("/dashboard/jobs", { waitUntil: "domcontentloaded" })
+  await expect(page.getByText("Loading your private workflow...")).toHaveCount(0)
 
   const startedAt = Date.now()
   await fillJobImport(page, linkedInJob)
@@ -38,5 +39,5 @@ test("a pasted LinkedIn vacancy reflects in the Jobs list within seconds", async
   await page.reload({ waitUntil: "domcontentloaded" })
   await expect(
     page.getByRole("heading", { name: linkedInJob.title })
-  ).toBeVisible()
+  ).toBeVisible({ timeout: 30_000 })
 })

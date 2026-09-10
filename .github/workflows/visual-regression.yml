@@ -64,6 +64,6 @@ jobs:
         with:
           name: visual-regression-results
           path: |
-            playwright-report/
+            artifacts/playwright/full/report/
             tests/e2e/visual/key-states.spec.ts-snapshots/
           retention-days: 14

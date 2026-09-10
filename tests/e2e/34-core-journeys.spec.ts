@@ -93,8 +93,11 @@ test("Journey A: build-new-CV branch opens the builder and communicates export r
   await page.goto("/dashboard/onboarding");
   await onboardingLoaded;
   await completeStepsBeforeCv(page);
-  await page.getByRole("link", { name: "Build one now" }).click();
-  await expect(page).toHaveURL(/\/dashboard\/cv-tailor\?returnTo=/);
+  await page.waitForLoadState("networkidle");
+  await Promise.all([
+    page.waitForURL(/\/dashboard\/cv-tailor\?returnTo=/, { timeout: 30_000 }),
+    page.getByRole("link", { name: "Build one now" }).click(),
+  ]);
   await expect(page.getByRole("heading", { name: "Your canonical CV" })).toBeVisible();
   await expect(page.locator(".onboarding-validation-alert")).toContainText("Complete the required CV fields");
   await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeDisabled();

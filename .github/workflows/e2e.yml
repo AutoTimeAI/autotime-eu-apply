@@ -84,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-e2e-report
-          path: playwright-report/
+          path: artifacts/playwright/full/report/
           retention-days: 14
 
   accessibility:

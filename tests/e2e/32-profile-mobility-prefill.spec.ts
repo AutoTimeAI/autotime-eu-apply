@@ -170,7 +170,7 @@ test("the note clears once the user edits the pre-filled field", async ({
   await expect(page.getByText("Pre-filled from your saved")).toHaveCount(0);
 
   await page.reload();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   await expect(page.getByLabel("Current country")).toHaveValue("France");
   await expect(page.getByText("Pre-filled from your saved")).toHaveCount(0);
 });

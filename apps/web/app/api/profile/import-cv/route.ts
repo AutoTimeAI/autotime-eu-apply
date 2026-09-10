@@ -117,12 +117,12 @@ export async function POST(
       status: 200,
     })
   } catch (error: unknown) {
+    console.error("CV import parsing failed", {
+      message: error instanceof Error ? error.message : "Unknown failure",
+    })
     return jsonResponse({
       data: null,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not read this CV file.",
+      error: "Could not read this CV file.",
       status: 422,
     })
   }

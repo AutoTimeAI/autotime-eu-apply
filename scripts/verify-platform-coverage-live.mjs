@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "@playwright/test";
 import { PLATFORM_COVERAGE, getCoveragePlatform } from "../packages/shared/src/platform-coverage.ts";
 
-const outputDir = new URL("../coverage-report/", import.meta.url);
+const outputDir = new URL("../artifacts/coverage/", import.meta.url);
 await mkdir(outputDir, { recursive: true });
 const checkedAt = new Date().toISOString();
 const browser = await chromium.launch({ headless: true });

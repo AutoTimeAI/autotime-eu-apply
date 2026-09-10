@@ -111,7 +111,7 @@ test("full pathway flow is green-free with a single primary per stage", async ({
     .getByRole("button", { name: "Extract evidence", exact: true })
     .click();
   const confirmationLabels = page.locator("label.confirm-switch");
-  await expect(confirmationLabels).not.toHaveCount(0);
+  await expect(confirmationLabels).not.toHaveCount(0, { timeout: 30_000 });
   for (let index = 0; index < (await confirmationLabels.count()); index += 1)
     await confirmationLabels.nth(index).click();
   await capture(page, "stage1-evidence-confirmed-1440x900.png");

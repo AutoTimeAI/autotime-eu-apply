@@ -44,16 +44,32 @@ test("Career Direction pre-fills target countries and support need from the save
 
   // Stage 2 (where the prefilled preferences render) is only reachable
   // after evidence is confirmed, so drive the real flow to get there.
-  await page
-    .getByRole("textbox", { name: "CV, project and experience evidence" })
-    .fill(
-      "Backend engineer with 7 years of TypeScript, Node.js, PostgreSQL, REST APIs, AWS, Docker, Kubernetes, CI/CD, production incident response and mentoring.",
-    );
+  const evidence = page.getByRole("textbox", {
+    name: "CV, project and experience evidence",
+  });
+  const extract = page.getByRole("button", {
+    name: "Extract evidence",
+    exact: true,
+  });
+  const evidenceText =
+    "Backend engineer with 7 years of TypeScript, Node.js, PostgreSQL, REST APIs, AWS, Docker, Kubernetes, CI/CD, production incident response and mentoring.";
+  // Initial profile hydration can replace a value entered during a cold route
+  // compile. Re-enter only until React owns the value and enables extraction.
+  await expect
+    .poll(
+      async () => {
+        if ((await evidence.inputValue()) !== evidenceText)
+          await evidence.fill(evidenceText);
+        return extract.isEnabled();
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
   await page
     .getByRole("button", { name: "Extract evidence", exact: true })
     .click();
   const confirmationLabels = page.locator("label.confirm-switch");
-  await expect(confirmationLabels).not.toHaveCount(0);
+  await expect(confirmationLabels).not.toHaveCount(0, { timeout: 30_000 });
   for (let index = 0; index < (await confirmationLabels.count()); index += 1)
     await confirmationLabels.nth(index).click();
   await page

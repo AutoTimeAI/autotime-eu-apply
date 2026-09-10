@@ -5,7 +5,7 @@ file below already exists elsewhere in this repo — nothing was moved — this 
 just organizes and links to it by category so the whole documentation set is
 reachable from one place.
 
-Last consolidated: 2026-08-21.
+Last consolidated: 2026-09-09.
 
 ## Product & system architecture
 
@@ -24,6 +24,11 @@ Last consolidated: 2026-08-21.
 | [product-onboarding-workflow.md](product-onboarding-workflow.md) | Progressive onboarding workflow |
 | [cloud-sync-production-spec.md](cloud-sync-production-spec.md) | Cloud sync production spec |
 | [technical-debt.md](technical-debt.md) | Known technical debt |
+| [reference/repository-organization-policy.md](reference/repository-organization-policy.md) | Canonical separation of code, configuration, durable reports, logs and regenerable artifacts |
+| [reference/roadmap-execution-status.md](reference/roadmap-execution-status.md) | Evidence-based implementation and exit-gate status for phases 0–5 |
+| [reference/domain-modernization-plan.md](reference/domain-modernization-plan.md) | Official engineering direction: incremental EU Fit / evidence / application-preparation domain decomposition, target architecture and phase-by-phase migration rules |
+| [product-core-investment-strategy.md](product-core-investment-strategy.md) ([PDF](AutoTime-EU-Apply-Core-Product-Investment-Strategy.pdf)) | Approved strategy concentrating investment on EU Fit, evidence integrity and application preparation |
+| [future-development-and-profession-expansion-roadmap.md](future-development-and-profession-expansion-roadmap.md) ([PDF](AutoTime-EU-Apply-Future-Development-and-Profession-Expansion-Roadmap.pdf)) | Phased roadmap from Tech/FinTech MVP to a governed multi-profession European platform |
 
 ## Feature modules & product journey
 
@@ -46,6 +51,11 @@ Last consolidated: 2026-08-21.
 | [competitive-feature-audit-verified-2026-08-18.md](competitive-feature-audit-verified-2026-08-18.md) | Competitive feature audit (verified) |
 | [remaining-gaps-reconciliation-2026-08-18.md](remaining-gaps-reconciliation-2026-08-18.md) | Remaining gaps — reconciliation |
 | [strategic-synthesis-reconciliation-2026-08-18.md](strategic-synthesis-reconciliation-2026-08-18.md) | Strategic synthesis — repo reconciliation |
+| [reports/product-engineering-review-2026-09-09.md](reports/product-engineering-review-2026-09-09.md) | Product-engineering review: workflow, strengths, risks, market comparison, motto score and priorities |
+| [reports/cto-assessment-2026-09-09.md](reports/cto-assessment-2026-09-09.md) | CTO assessment: architecture, security, reliability, governance, cost, ownership and launch gates |
+| [reports/repository-structure-and-codebase-inventory-2026-09-09.md](reports/repository-structure-and-codebase-inventory-2026-09-09.md) | Canonical module/folder/config/log map, repository hygiene, ownership and reproducible codebase line counts |
+| [reports/qa-360-defect-assessment-2026-09-09.md](reports/qa-360-defect-assessment-2026-09-09.md) | 360-degree build, browser, API, security, integration and release-gate defect assessment with severities |
+| [reports/release-remediation-progress-2026-09-09.md](reports/release-remediation-progress-2026-09-09.md) | Execution status and remaining owner actions for the approved QA remediation plan |
 | [verify-feature-implementation.md](verify-feature-implementation.md) | Manual verification, phases 1–10 |
 
 ## QA strategy & living test matrices
@@ -131,6 +141,11 @@ Last consolidated: 2026-08-21.
 | [first-time-user-demo-video.md](first-time-user-demo-video.md) | First-time user demo video |
 | [demo-video/](demo-video/) | First-user demo (`autotime-first-user-demo.mp4` + viewer page) |
 | `apps/web/public/demo/autotime-walkthrough-2min-voiced.mp4` | Dashboard Home product walkthrough (added 2026-08-21) |
+
+## Current QA evidence
+
+- [Completed test cases — 9 September 2026](reports/completed-test-cases-2026-09-09.md)
+- [Release remediation progress — 9 September 2026](reports/release-remediation-progress-2026-09-09.md)
 
 ## Dated run archives
 

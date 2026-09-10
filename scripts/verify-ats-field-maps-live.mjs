@@ -20,7 +20,7 @@ import { ATS_FIELD_MAPS } from "../packages/shared/src/atsFieldMaps.ts";
 const fixturesUrl = new URL("./ats-field-map-fixtures.json", import.meta.url);
 const fixtures = JSON.parse(await readFile(fixturesUrl, "utf8"));
 
-const outputDir = new URL("../coverage-report/", import.meta.url);
+const outputDir = new URL("../artifacts/coverage/", import.meta.url);
 await mkdir(outputDir, { recursive: true });
 const checkedAt = new Date().toISOString();
 const browser = await chromium.launch({ headless: true });

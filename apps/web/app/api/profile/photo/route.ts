@@ -63,8 +63,11 @@ export async function POST(request: NextRequest) {
       error: null,
     });
   } catch (error) {
+    console.error("Profile photo upload failed", {
+      message: error instanceof Error ? error.message : "Unknown failure",
+    });
     return NextResponse.json(
-      { data: null, error: error instanceof Error ? error.message : "Photo upload failed" },
+      { data: null, error: "Photo upload failed" },
       { status: 500 },
     );
   }

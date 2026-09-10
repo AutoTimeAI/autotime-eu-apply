@@ -1,6 +1,13 @@
 import assert from "node:assert/strict"
 import { evaluateCountryFit } from "../packages/shared/src/fit-model.ts"
 import { getCountryRule } from "../packages/shared/src/country-rules.ts"
+import {
+  getApplicationPriority,
+  getComponentConfidence,
+  getContentGenerationGate,
+  getCountryFitDecision,
+  getHardBlockers
+} from "../packages/shared/src/eu-fit/decision-policy.ts"
 
 const baseProfile = {
   fullName: "Rajan Patel",
@@ -201,6 +208,91 @@ test("still matches a genuine alias substring inside a longer country name", () 
 
   assert.equal(exact.code, "GB")
   assert.equal(withWords.code, "GB")
+})
+
+test("hard eligibility blockers override an otherwise positive score", () => {
+  const blockers = getHardBlockers([
+    {
+      key: "skillMatch",
+      label: "Skill match",
+      score: 20,
+      status: "blocker",
+      rationale: "Required skills are missing.",
+      evidence: []
+    },
+    {
+      key: "rightToWorkCompatibility",
+      label: "Right-to-work compatibility",
+      score: 20,
+      status: "blocker",
+      rationale: "Required work-right evidence is missing.",
+      evidence: []
+    }
+  ])
+
+  assert.deepEqual(blockers, [
+    "Right-to-work compatibility: Required work-right evidence is missing."
+  ])
+  assert.equal(
+    getCountryFitDecision({ overallScore: 90, hasHardBlockers: true }),
+    "Skip for now"
+  )
+})
+
+test("country-fit decision thresholds preserve their boundary behavior", () => {
+  assert.equal(
+    getCountryFitDecision({ overallScore: 76, hasHardBlockers: false }),
+    "Apply now"
+  )
+  assert.equal(
+    getCountryFitDecision({ overallScore: 75, hasHardBlockers: false }),
+    "Stretch application"
+  )
+  assert.equal(
+    getCountryFitDecision({ overallScore: 58, hasHardBlockers: false }),
+    "Stretch application"
+  )
+  assert.equal(
+    getCountryFitDecision({ overallScore: 57, hasHardBlockers: false }),
+    "Improve profile first"
+  )
+})
+
+test("content gates and application priorities preserve existing thresholds", () => {
+  assert.equal(getContentGenerationGate("Apply now"), "ready")
+  assert.equal(getContentGenerationGate("Stretch application"), "stretch")
+  assert.equal(getContentGenerationGate("Skip for now"), "blocked")
+  assert.equal(getContentGenerationGate("Improve profile first"), "blocked")
+
+  assert.equal(getApplicationPriority(80), "High Priority")
+  assert.equal(getApplicationPriority(79), "Worth Applying")
+  assert.equal(getApplicationPriority(65), "Worth Applying")
+  assert.equal(getApplicationPriority(64), "Stretch")
+  assert.equal(getApplicationPriority(50), "Stretch")
+  assert.equal(getApplicationPriority(49), "Skip")
+})
+
+test("component confidence describes signal clarity without changing decisions", () => {
+  const component = (status) => ({
+    key: "skillMatch",
+    label: "Skill match",
+    score: 50,
+    status,
+    rationale: "Test signal.",
+    evidence: []
+  })
+
+  assert.equal(getComponentConfidence([component("weak")]), "Low")
+  assert.equal(getComponentConfidence([component("strong")]), "Medium")
+  assert.equal(
+    getComponentConfidence([
+      component("strong"),
+      component("strong"),
+      component("strong")
+    ]),
+    "High"
+  )
+  assert.equal(getComponentConfidence([component("blocker")]), "High")
 })
 
 let failed = 0

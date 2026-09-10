@@ -2,21 +2,30 @@ import { defineConfig, devices } from "@playwright/test";
 
 const smokePort = process.env.SMOKE_PORT ?? "3100";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${smokePort}`;
+const projects = process.env.AUTOTIME_CROSS_BROWSER === "true"
+  ? [
+      { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+      { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+      { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    ]
+  : [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }];
 
 export default defineConfig({
   testDir: "./tests/smoke",
+  outputDir: "artifacts/playwright/smoke/test-results",
+  globalTeardown: "./scripts/playwright-global-teardown.mjs",
   fullyParallel: false,
   timeout: 45_000,
   workers: 1,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [["list"], ["html", { open: "never", outputFolder: "artifacts/playwright/smoke/report" }]],
   use: {
     baseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects,
   webServer: {
-    command: `pnpm --filter web exec next dev --hostname 127.0.0.1 --port ${smokePort}`,
+    command: `node scripts/playwright-web-server.mjs ${smokePort}`,
     env: {
       AUTOTIME_TEST_AUTH_ENABLED: "true",
       AUTOTIME_TEST_USER_EMAIL: "smoke.user@example.com",

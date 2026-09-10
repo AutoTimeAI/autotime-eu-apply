@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { NextResponse, type NextRequest } from "next/server"
 import loggingConfig from "../../../config/monitoring/logging.json"
 import { getRequestIp } from "./request-ip"
+import { toPublicApiError } from "./public-api-error"
 import { redactSensitiveUrlText, redactSensitiveValue } from "./sentry-privacy"
 import { createAdminClient } from "./supabase/admin"
 
@@ -224,11 +225,15 @@ export function diagnosticJson<T>({
     logDiagnostic(diagnostic)
   }
 
+  const publicError = toPublicApiError(error, status)
+  const publicDiagnostic =
+    publicError === error ? diagnostic : { ...diagnostic, message: publicError ?? "OK" }
+
   return NextResponse.json(
     {
       data,
-      diagnostic,
-      error,
+      diagnostic: publicDiagnostic,
+      error: publicError,
       status
     },
     { status }

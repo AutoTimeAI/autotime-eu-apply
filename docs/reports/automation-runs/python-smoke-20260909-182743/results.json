@@ -1,0 +1,68 @@
+{
+  "generated_at": "2026-09-09T18:27:43",
+  "repo": "C:\\Development\\Autotime-EU-Apply",
+  "environment": {
+    "python": "3.14.0",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cwd": "C:\\Development\\Autotime-EU-Apply",
+    "node_path": "C:\\Program Files\\nodejs\\node.EXE",
+    "pnpm_path": "C:\\Users\\rajan\\AppData\\Roaming\\npm\\pnpm.CMD"
+  },
+  "safety_boundary": {
+    "automates_linkedin": false,
+    "submits_forms": false,
+    "stores_api_keys": false,
+    "stores_cookies": false,
+    "live_site_evidence_mode": "manual"
+  },
+  "repo_shape": {
+    "repo_path": "C:\\Development\\Autotime-EU-Apply",
+    "exists": true,
+    "package_json_exists": true,
+    "pnpm_lock_exists": true,
+    "pnpm_workspace_exists": true,
+    "apps_dir_exists": true,
+    "docs_dir_exists": true,
+    "scripts_dir_exists": true,
+    "expected_package_scripts": [
+      "build:extension",
+      "dev:web",
+      "market:ready:automated",
+      "market:ready:gate",
+      "validation:new"
+    ],
+    "missing_package_scripts": [],
+    "passed": true
+  },
+  "commands": [],
+  "extension_output": {
+    "path": "C:\\Development\\Autotime-EU-Apply\\apps\\extension\\.output\\chrome-mv3",
+    "exists": true,
+    "required_files": {
+      "manifest.json": true
+    },
+    "manifest": {
+      "name": "AutoTime EU Apply",
+      "version": "0.0.4",
+      "manifest_version": 3,
+      "permissions": [
+        "activeTab",
+        "scripting",
+        "storage"
+      ],
+      "host_permissions_count": 15
+    },
+    "passed": true
+  },
+  "latest_paths": {
+    "latest_release_run": "C:\\Development\\Autotime-EU-Apply\\docs\\reports\\release-runs\\2026-08-15T18-49-35-225Z.md",
+    "latest_automation_run": "C:\\Development\\Autotime-EU-Apply\\docs\\reports\\automation-runs\\2026-05-18T14-41-23-207Z.md",
+    "latest_founder_validation_run": "C:\\Development\\Autotime-EU-Apply\\docs\\reports\\founder-validation-runs\\2026-05-18T14-41-25-892Z-manual-validation.md",
+    "python_report_dir": "C:\\Development\\Autotime-EU-Apply\\docs\\reports\\automation-runs\\python-smoke-20260909-182743"
+  },
+  "web_smoke": {
+    "skipped": true,
+    "reason": "Run with --start-web to test the local dashboard URL."
+  },
+  "overall_passed": true
+}

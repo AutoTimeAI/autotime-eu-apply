@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "lanes": {
+    "local": { "data": "development", "payments": "test", "ai": "mock-or-controlled", "email": "sandbox", "telemetry": "development", "cron": false },
+    "test": { "data": "isolated-test", "payments": "test", "ai": "mock", "email": "mock", "telemetry": "test-or-disabled", "cron": false },
+    "preview": { "data": "development", "payments": "test", "ai": "controlled", "email": "sandbox", "telemetry": "preview", "cron": false },
+    "staging": { "data": "isolated-staging", "payments": "test", "ai": "controlled", "email": "sandbox", "telemetry": "staging", "cron": false },
+    "production": { "data": "production", "payments": "live", "ai": "production", "email": "verified-sender", "telemetry": "production", "cron": true }
+  },
+  "rules": {
+    "secretsLocation": "deployment environment only",
+    "productionDataOutsideProduction": false,
+    "livePaymentsOutsideProduction": false
+  }
+}

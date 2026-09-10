@@ -142,10 +142,13 @@ test("Jobs to Job Detail to Analysis preserves deterministic workflow", async ({
     fullPage: false,
   });
 
-  await page.getByRole("button", { name: "Review and analyse" }).click();
+  await Promise.all([
+    page.waitForURL(/\/dashboard\/jobs\//, { timeout: 30_000 }),
+    page.getByRole("button", { name: "Review and analyse" }).click(),
+  ]);
   await expect(
     page.getByRole("tablist", { name: "Job sections" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   const overviewTab = page.getByRole("tab", { name: "Overview" });
   const analysisTab = page.getByRole("tab", { name: "Analysis" });
   await expect(overviewTab).toHaveAttribute("aria-selected", "true");

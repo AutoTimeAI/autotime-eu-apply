@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Runs and redacts the cross-platform MVP validation command suite."""
 """
 AutoTime AI MVP Python test runner.
 

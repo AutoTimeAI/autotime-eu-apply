@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "boundaries": [
+    { "path": "apps/web", "owner": "web-engineering", "review": ["auth", "billing", "security"] },
+    { "path": "apps/extension", "owner": "extension-engineering", "review": ["permissions", "untrusted-dom", "sync"] },
+    { "path": "apps/analytics", "owner": "analytics-engineering", "review": ["privacy", "internal-api"] },
+    { "path": "packages/shared", "owner": "product-platform", "review": ["decision-policy", "evidence-integrity", "compatibility"] },
+    { "path": "supabase", "owner": "platform-engineering", "review": ["data", "rls", "rollback"] },
+    { "path": "config", "owner": "platform-engineering", "review": ["environment", "security", "operations"] }
+  ]
+}

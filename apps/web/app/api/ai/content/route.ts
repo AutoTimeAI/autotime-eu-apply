@@ -2,15 +2,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import {
-  assessInternationalJob,
   candidateProfileSchema,
-  evaluateAutoTimeFitScore,
-  fetchStamp4SponsorshipAssessment,
-  getInternationalCountryPack,
-  isStamp4SponsorshipCovered,
   jobAnalysisDraftSchema,
-  migrateCandidateProfileToMobilityProfile,
-  orchestrateJobDecision,
   reusableAnswersSchema,
   type ApplicationContentDraft,
 } from "shared"
@@ -35,6 +28,11 @@ import {
   getValidationIssueMessage,
 } from "../../../../lib/diagnostics"
 import { trackApplicationKitGenerated } from "../../../../lib/sentry-breadcrumbs"
+import {
+  ApplicationPreparationBlockedError,
+  prepareApplicationKit,
+} from "../../../../domains/application-preparation/prepare-application-kit"
+import { assessApplicationDecision } from "../../../../platform/application-preparation/decision-adapter"
 
 type ApiResponse<T> = {
   data: T | null
@@ -57,103 +55,6 @@ const requestSchema = z.object({
     })
     .optional(),
 })
-
-function getFirstTargetCountry(
-  profileTargetCountries: string,
-  jobLocation: string,
-) {
-  return (
-    profileTargetCountries
-      .split(",")
-      .map((item) => item.trim())
-      .find(Boolean) ||
-    jobLocation.trim() ||
-    "European Union"
-  )
-}
-
-// The final cross-domain decision this route enforces: role/skill fit
-// (evaluateAutoTimeFitScore, unchanged/live elsewhere) composed with
-// cross-border legal evidence (assessInternationalJob, optionally backed by
-// a live Stamp4 statutory-threshold check for the countries it covers)
-// through orchestrateJobDecision - "the only boundary allowed to issue a
-// final cross-domain job decision" per its own doc comment. Previously this
-// route only consulted the deprecated evaluateCountryFit, which has no
-// Stamp4/international awareness at all - a job could pass this gate while
-// the same job/country got a genuinely different, Stamp4-verified answer on
-// the International Module page. "Skip"/"Insufficient evidence" block
-// generation (matches the old gate's "confirmed blocker" semantics);
-// "Apply"/"Stretch application"/"Investigate first" don't (matches the old
-// gate's "ready"/"stretch" - a hard blocker was the only thing that stopped
-// generation before).
-async function getContentGuardrailIssues(
-  body: z.infer<typeof requestSchema>,
-): Promise<string[]> {
-  const missing = [
-    !body.profile.baseCvText.trim() && "CV text",
-    !body.profile.targetRoles.trim() && "target roles",
-    !body.profile.workRightDetails.trim() && "work-right details",
-    !body.job.jobDescription.trim() && "job description",
-  ].filter(Boolean) as string[]
-
-  const candidatePosition =
-    body.context?.candidatePosition ??
-    (body.profile.sponsorshipNeeded ? "foreign-candidate" : "native-candidate")
-  const targetCountry =
-    body.context?.targetCountry ??
-    getFirstTargetCountry(body.profile.targetCountries, body.job.location)
-
-  const fit = evaluateAutoTimeFitScore({ profile: body.profile, job: body.job })
-
-  const internationalRequirement =
-    candidatePosition === "foreign-candidate" ? "required" : "not-relevant"
-
-  let international
-  if (internationalRequirement === "required") {
-    const mobilityProfile = migrateCandidateProfileToMobilityProfile(body.profile)
-    const countryPack = getInternationalCountryPack(targetCountry)
-
-    let stamp4Assessment
-    if (isStamp4SponsorshipCovered(countryPack.id)) {
-      const baseUrl = process.env.STAMP4_SPONSORSHIP_SERVICE_URL
-      const secret = process.env.STAMP4_SPONSORSHIP_SERVICE_SECRET
-      if (baseUrl && secret) {
-        stamp4Assessment =
-          (await fetchStamp4SponsorshipAssessment(
-            {
-              roleTitle: body.job.jobTitle,
-              country: targetCountry,
-              salary: null,
-              rawText: body.job.jobDescription,
-            },
-            { baseUrl, secret },
-          )) ?? undefined
-      }
-    }
-
-    international = assessInternationalJob({
-      country: targetCountry,
-      mobilityProfile,
-      jobText: body.job.jobDescription,
-      roleDuties: body.job.jobDescription,
-      occupationMapping: "not-checked",
-      stamp4Assessment,
-    })
-  }
-
-  const combined = orchestrateJobDecision({
-    fit,
-    international,
-    internationalRequirement,
-  })
-
-  return [
-    ...missing.map((item) => `Missing required evidence: ${item}.`),
-    ...combined.blockers,
-    (combined.decision === "Skip" || combined.decision === "Insufficient evidence") &&
-      `Content generation is blocked by the cross-border decision gate (${combined.decision}).`,
-  ].filter(Boolean) as string[]
-}
 
 function jsonResponse(
   body: ApiResponse<ContentRouteData>,
@@ -184,41 +85,30 @@ export async function POST(
 
     const body = requestSchema.parse(await request.json())
 
-    await assertAiRouteRateLimit(user.id)
-    const reservationId = await reserveAiCall(user.id)
-
-    const guardrailIssues = await getContentGuardrailIssues(body)
-
-    if (guardrailIssues.length > 0) {
-      await releaseAiCall(reservationId)
-      return diagnosticJson({
-        area: "ai",
-        code: "ai.content.guardrail.blocked",
-        data: null,
-        error: `Content generation blocked: ${guardrailIssues.join(" ")}`,
-        request,
-        status: 422,
-      })
-    }
-
-    trackApplicationKitGenerated({
-      route: "/api/ai/content",
-      status: "started",
-    })
-    let result
-    try {
-      result = await generateContentWithOpenAI(body)
-    } catch (error: unknown) {
-      await releaseAiCall(reservationId)
-      throw error
-    }
-
-    await finalizeAiCall(reservationId, {
-      feature: "application-content",
-      model: result.model,
-      promptTokens: result.promptTokens,
-      completionTokens: result.completionTokens,
-      costUsd: result.costUsd,
+    const result = await prepareApplicationKit({
+      input: body,
+      userId: user.id,
+      ports: {
+        decisions: { assess: assessApplicationDecision },
+        generator: { generate: generateContentWithOpenAI },
+        lifecycle: {
+          generationStarted: () =>
+            trackApplicationKitGenerated({
+              route: "/api/ai/content",
+              status: "started",
+            }),
+        },
+        usage: {
+          assertAllowed: assertAiRouteRateLimit,
+          reserve: reserveAiCall,
+          release: releaseAiCall,
+          finalize: (reservationId, usage) =>
+            finalizeAiCall(reservationId, {
+              feature: "application-content",
+              ...usage,
+            }),
+        },
+      },
     })
 
     return jsonResponse({
@@ -227,6 +117,15 @@ export async function POST(
       status: 200,
     })
   } catch (error: unknown) {
+    if (error instanceof ApplicationPreparationBlockedError)
+      return diagnosticJson({
+        area: "ai",
+        code: "ai.content.guardrail.blocked",
+        data: null,
+        error: error.message,
+        request,
+        status: 422,
+      })
     if (isConfigurationUnavailableError(error))
       return diagnosticJson({
         area: "ai",

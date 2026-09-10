@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const report = JSON.parse(await readFile("coverage-report/registry-update.json", "utf8"));
+const report = JSON.parse(await readFile("artifacts/coverage/registry-update.json", "utf8"));
 const registryPath = "packages/shared/src/platform-coverage.ts";
 let source = await readFile(registryPath, "utf8");
 for (const platform of report.verifiedPlatforms) {

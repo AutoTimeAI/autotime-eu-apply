@@ -144,15 +144,21 @@ test("a clean Stamp4-verified assessment with a strong fit produces Apply", () =
 // content-generation gate the audit found had no Stamp4/international
 // awareness at all - confirms the fix actually wired the real boundary in,
 // not just that orchestrateJobDecision itself works correctly in isolation.
-test("the content-generation gate actually calls orchestrateJobDecision, not the deprecated evaluateCountryFit", async () => {
-  const source = await readFile(
+test("the content-generation gate delegates the combined decision to application-preparation policy", async () => {
+  const route = await readFile(
     new URL("../apps/web/app/api/ai/content/route.ts", import.meta.url),
     "utf8",
   );
-  assert.match(source, /orchestrateJobDecision\(/);
-  assert.match(source, /evaluateAutoTimeFitScore\(/);
-  assert.match(source, /assessInternationalJob\(/);
-  assert.doesNotMatch(source, /evaluateCountryFit\(/);
-  assert.match(source, /combined\.decision === "Skip"/);
-  assert.match(source, /combined\.decision === "Insufficient evidence"/);
+  const adapter = await readFile(
+    new URL("../apps/web/platform/application-preparation/decision-adapter.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(route, /prepareApplicationKit\(\{/);
+  assert.match(route, /decisions:\s*\{ assess: assessApplicationDecision \}/);
+  assert.match(adapter, /orchestrateJobDecision\(\{/);
+  assert.match(adapter, /evaluateAutoTimeFitScore\(\{/);
+  assert.match(adapter, /assessInternationalJob\(\{/);
+  assert.doesNotMatch(route + adapter, /evaluateCountryFit\(/);
+  assert.match(adapter, /decision:\s*combined\.decision/);
+  assert.match(adapter, /blockers:\s*combined\.blockers/);
 });

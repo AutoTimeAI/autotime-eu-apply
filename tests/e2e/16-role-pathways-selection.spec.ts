@@ -30,7 +30,7 @@ test("confirmed backend evidence produces and persists a user-scoped primary lan
   await page.getByRole("button", { name: "Extract evidence", exact: true }).click();
 
   const confirmationLabels = page.locator("label.confirm-switch");
-  await expect(confirmationLabels).not.toHaveCount(0);
+  await expect(confirmationLabels).not.toHaveCount(0, { timeout: 30_000 });
   for (let index = 0; index < (await confirmationLabels.count()); index += 1)
     await confirmationLabels.nth(index).click();
   await expect(

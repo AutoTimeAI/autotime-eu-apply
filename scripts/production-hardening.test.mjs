@@ -123,8 +123,13 @@ test("profile CV AI review validates input before quota checks", () => {
   for (const routePath of routes) {
     const route = read(routePath)
     const parseIndex = route.indexOf("const body = requestSchema.parse")
-    const rateLimitIndex = route.indexOf("await assertAiRouteRateLimit")
-    const featureGateIndex = route.indexOf("await reserveAiCall")
+    const delegated = routePath.endsWith("/content/route.ts")
+    const rateLimitIndex = delegated
+      ? route.indexOf("assertAllowed: assertAiRouteRateLimit")
+      : route.indexOf("await assertAiRouteRateLimit")
+    const featureGateIndex = delegated
+      ? route.indexOf("reserve: reserveAiCall")
+      : route.indexOf("await reserveAiCall")
 
     assert.notEqual(parseIndex, -1, routePath)
     assert.notEqual(rateLimitIndex, -1, routePath)
@@ -301,6 +306,7 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
 
 test("Interview Prep keeps coaching, prep packs and reusable answers separated", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
+  const interviewPolicy = read("apps/web/domains/interviews/interview-buddy-policy.ts")
 
   assert.match(dashboard, /title: "Interview Prep"/)
   assert.match(dashboard, /Turn saved job proof into interview answers and prep packs/)
@@ -317,8 +323,9 @@ test("Interview Prep keeps coaching, prep packs and reusable answers separated",
   )
   assert.match(dashboard, /Interview prep and Proof Library synced/)
   assert.match(dashboard, /Saved prep packs from tracked jobs/)
-  assert.match(dashboard, /const tokens = getMeaningfulTokens\(value\)/)
-  assert.match(dashboard, /tokens\.some\(\(token\) => \/\(\.\)\\1\{3,\}\//)
+  assert.match(dashboard, /validateInterviewBuddyInput/)
+  assert.match(interviewPolicy, /const tokens = getMeaningfulTokens\(value\)/)
+  assert.match(interviewPolicy, /tokens\.some\(\(token\) => \/\(\.\)\\1\{3,\}\//)
 
   const prepStart = dashboard.indexOf("const generateInterviewPrep = async")
   const saveAnswerStart = dashboard.indexOf(
@@ -484,7 +491,6 @@ test("feature readiness supersedes the universal profile lock", () => {
 test("every AI route reserves a call slot before the provider request and releases it on failure", () => {
   const routesAndProviderCalls = [
     ["apps/web/app/api/ai/analyse/route.ts", "analyseJobWithOpenAI"],
-    ["apps/web/app/api/ai/content/route.ts", "generateContentWithOpenAI"],
     ["apps/web/app/api/ai/interview/route.ts", "generateInterviewPrepWithOpenAI"],
     ["apps/web/app/api/ai/interview-answer/route.ts", "generateInterviewAnswerWithOpenAI"],
     ["apps/web/app/api/ai/profile-context/route.ts", "reviewProfileContextWithOpenAI"],
@@ -529,6 +535,19 @@ test("every AI route reserves a call slot before the provider request and releas
       `${routePath}: must not use the old, racy check-then-track functions`,
     )
   }
+
+  const contentRoute = read("apps/web/app/api/ai/content/route.ts")
+  const preparationUseCase = read("apps/web/domains/application-preparation/prepare-application-kit.ts")
+  assert.match(contentRoute, /prepareApplicationKit\(\{/)
+  assert.match(contentRoute, /assertAllowed: assertAiRouteRateLimit/)
+  assert.match(contentRoute, /reserve: reserveAiCall/)
+  assert.match(contentRoute, /release: releaseAiCall/)
+  assert.match(contentRoute, /finalize:\s*\(reservationId, usage\)/)
+  assert.match(contentRoute, /generator:\s*\{ generate: generateContentWithOpenAI \}/)
+  assert.match(preparationUseCase, /const reservationId = await ports\.usage\.reserve\(userId\)/)
+  assert.match(preparationUseCase, /const result = await ports\.generator\.generate\(input\)/)
+  assert.match(preparationUseCase, /await ports\.usage\.release\(reservationId\)/)
+  assert.match(preparationUseCase, /await ports\.usage\.finalize\(reservationId/)
 })
 
 test("the AI-call reservation RPC is atomic per user and refunds a consumed credit on release", () => {

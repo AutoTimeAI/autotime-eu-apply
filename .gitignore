@@ -13,8 +13,14 @@ build
 .idea/
 .claude/settings.local.json
 coverage
+coverage-report/
 playwright-report/
 test-results/
+artifacts/*
+!artifacts/README.md
+.preview-*/
+.tmp*/
+node_modules.quarantine-*/
 .lighthouseci/
 lighthouse-report/
 axe-report/

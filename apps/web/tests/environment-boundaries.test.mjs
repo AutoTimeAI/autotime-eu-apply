@@ -224,6 +224,22 @@ test("Stripe price configuration is independent from its secret", () =>
     assert.throws(getStripeSecretEnv, ConfigurationUnavailableError);
   }));
 
+test("Stripe price configuration requires every actionable product", () =>
+  isolated(() => {
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID = "price_monthly_fixture";
+    assert.throws(getStripePriceEnv, ConfigurationUnavailableError);
+  }));
+
+test("Stripe configuration rejects recognised placeholder values", () =>
+  isolated(() => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_your_key";
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID = "price_offline_monthly";
+    process.env.STRIPE_PRO_QUARTERLY_PRICE_ID = "price_quarterly_fixture";
+    process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID = "price_credit_pack_fixture";
+    assert.throws(getStripeSecretEnv, ConfigurationUnavailableError);
+    assert.throws(getStripePriceEnv, ConfigurationUnavailableError);
+  }));
+
 test("Stripe checkout products distinguish tiers and one-off credits", () =>
   isolated(() => {
     process.env.STRIPE_PRO_MONTHLY_PRICE_ID = "price_monthly_fixture";

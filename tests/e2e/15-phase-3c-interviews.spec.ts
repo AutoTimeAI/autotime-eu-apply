@@ -219,14 +219,19 @@ test("empty state and Applied application create a recruiter screen", async ({
   await creationForm.getByLabel("Stage").selectOption("recruiter_screen");
   await page.getByRole("button", { name: "Create preparation record" }).click();
   await expect(page).toHaveURL(/\/dashboard\/interviews\//);
+  // Let the detail route hydrate the newly persisted record before navigating
+  // back to the list; a cold compile can otherwise race the storage effect.
+  await expect(
+    page.getByRole("heading", { name: "Cloud Engineer" }),
+  ).toBeVisible({ timeout: 30_000 });
   await page.goto("/dashboard/interviews");
   await expect(
     page.getByRole("heading", { name: "Cloud Engineer" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await page.getByRole("link", { name: "Open interview" }).click();
   await expect(
     page.getByRole("heading", { name: "Cloud Engineer" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await page.screenshot({
     path: shots + "/interview-overview-1440.png",
     fullPage: true,

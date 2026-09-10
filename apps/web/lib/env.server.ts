@@ -12,6 +12,17 @@ function requireServerValue(integration: string, value: unknown): string {
   return parsed.data
 }
 
+const placeholderValue =
+  /(?:example|placeholder|offline|changeme|your[-_]|_your_|price_test_|sk_test_your|whsec_your)/i
+
+function requireOperationalValue(integration: string, value: unknown): string {
+  const parsed = requireServerValue(integration, value)
+  if (placeholderValue.test(parsed)) {
+    throw new ConfigurationUnavailableError(integration)
+  }
+  return parsed
+}
+
 /** Returns validated privileged Supabase credentials. */
 export function getSupabaseServiceRoleEnv(): {
   serviceRoleKey: string
@@ -30,7 +41,7 @@ export function getSupabaseServiceRoleEnv(): {
 /** Returns the validated Stripe secret key. */
 export function getStripeSecretEnv(): { secretKey: string } {
   return {
-    secretKey: requireServerValue("billing", process.env.STRIPE_SECRET_KEY),
+    secretKey: requireOperationalValue("billing", process.env.STRIPE_SECRET_KEY),
   }
 }
 
@@ -41,16 +52,18 @@ export function getStripePriceEnv(): {
   proQuarterly: string
 } {
   return {
-    creditPack:
-      process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID?.trim() ||
-      "lookup:autotime_ai_credits_25_gbp_v1",
-    proMonthly: requireServerValue(
+    creditPack: requireOperationalValue(
+      "billing prices",
+      process.env.STRIPE_AI_CREDIT_PACK_PRICE_ID,
+    ),
+    proMonthly: requireOperationalValue(
       "billing prices",
       process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
     ),
-    proQuarterly:
-      process.env.STRIPE_PRO_QUARTERLY_PRICE_ID?.trim() ||
-      "lookup:autotime_pro_quarterly_gbp_v1",
+    proQuarterly: requireOperationalValue(
+      "billing prices",
+      process.env.STRIPE_PRO_QUARTERLY_PRICE_ID,
+    ),
   }
 }
 

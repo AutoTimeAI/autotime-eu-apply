@@ -16,6 +16,26 @@ import type {
   ReusableAnswers
 } from "./types.ts"
 import { getCountryRule, type CountryRule } from "./country-rules.ts"
+import {
+  getApplicationPriority,
+  getComponentConfidence,
+  getContentGenerationGate,
+  getCountryFitDecision,
+  getHardBlockers,
+  type ContentGenerationGate,
+  type CountryFitDecision,
+  type FitComponent,
+  type FitComponentKey,
+  type FitComponentStatus
+} from "./eu-fit/decision-policy.ts"
+
+export type {
+  ContentGenerationGate,
+  CountryFitDecision,
+  FitComponent,
+  FitComponentKey,
+  FitComponentStatus
+} from "./eu-fit/decision-policy.ts"
 
 /** Standard disclaimer attached to every fit score, clarifying it is a guidance signal, not a guarantee. */
 export const AUTOTIME_FIT_SCORE_DISCLAIMER =
@@ -57,33 +77,6 @@ export type CandidateMarketPosition = "foreign-candidate" | "native-candidate"
 // inferred types because this module predates schemas.ts's coverage of the
 // legacy country-fit shapes; treat schemas.ts as the shape of record if the
 // two ever drift.
-export type FitComponentKey =
-  | "skillMatch"
-  | "atsCompatibility"
-  | "sponsorshipLikelihood"
-  | "rightToWorkCompatibility"
-  | "relocationFit"
-  | "countryLocationFit"
-
-export type FitComponentStatus = "strong" | "medium" | "weak" | "blocker"
-
-export type FitComponent = {
-  key: FitComponentKey
-  label: string
-  score: number
-  status: FitComponentStatus
-  rationale: string
-  evidence: string[]
-}
-
-export type CountryFitDecision =
-  | "Apply now"
-  | "Stretch application"
-  | "Skip for now"
-  | "Improve profile first"
-
-export type ContentGenerationGate = "ready" | "stretch" | "blocked"
-
 export type CountryFitEvaluation = {
   overallScore: number
   decision: CountryFitDecision
@@ -208,13 +201,6 @@ const senioritySignals = [
   "principal",
   "manager",
   "head"
-]
-
-const hardBlockerKeys: FitComponentKey[] = [
-  "sponsorshipLikelihood",
-  "rightToWorkCompatibility",
-  "relocationFit",
-  "countryLocationFit"
 ]
 
 function clampScore(score: number) {
@@ -665,21 +651,6 @@ function getCountryLocationFit(
   )
 }
 
-function getConfidence(components: FitComponent[]) {
-  const blockers = components.filter((item) => item.status === "blocker").length
-  const strong = components.filter((item) => item.status === "strong").length
-
-  if (blockers > 0) {
-    return "High"
-  }
-
-  if (strong >= 3) {
-    return "High"
-  }
-
-  return strong >= 1 ? "Medium" : "Low"
-}
-
 /**
  * The primary role/skill fit engine: purely local, keyword/overlap-based
  * scoring of a CandidateProfile against a JobAnalysisDraft (no AI call).
@@ -1000,29 +971,15 @@ export function evaluateCountryFit({
     getRelocationFit(profile, text.job, rule),
     getCountryLocationFit(profile, job, context, rule)
   ]
-  const blockers = components
-    .filter(
-      (item) =>
-        item.status === "blocker" && hardBlockerKeys.includes(item.key)
-    )
-    .map((item) => `${item.label}: ${item.rationale}`)
+  const blockers = getHardBlockers(components)
   const overallScore = clampScore(
     components.reduce((total, item) => total + item.score, 0) / components.length
   )
-  const decision: CountryFitDecision =
-    blockers.length > 0
-      ? "Skip for now"
-      : overallScore >= 76
-        ? "Apply now"
-        : overallScore >= 58
-          ? "Stretch application"
-          : "Improve profile first"
-  const contentGate: ContentGenerationGate =
-    decision === "Apply now"
-      ? "ready"
-      : decision === "Stretch application"
-        ? "stretch"
-        : "blocked"
+  const decision = getCountryFitDecision({
+    overallScore,
+    hasHardBlockers: blockers.length > 0
+  })
+  const contentGate = getContentGenerationGate(decision)
   const positioningAngle =
     contentGate === "ready"
       ? "Lead with matched proof, country readiness, and the strongest role-language overlap before writing content."
@@ -1044,7 +1001,7 @@ export function evaluateCountryFit({
   return {
     overallScore,
     decision,
-    confidence: getConfidence(components),
+    confidence: getComponentConfidence(components),
     contentGate,
     countryRule: {
       code: rule.code,
@@ -1063,24 +1020,6 @@ export function evaluateCountryFit({
         ? "Outcome history is now part of this judgment. Record sponsorship, work-right and interview results so future recommendations become stricter where needed."
         : "After the outcome is known, record whether the country/work-right assumption was correct so future recommendations can become stricter or more confident."
   }
-}
-
-function getApplicationPriority(
-  score: number
-): EUFitEngineResult["applicationPriority"] {
-  if (score >= 80) {
-    return "High Priority"
-  }
-
-  if (score >= 65) {
-    return "Worth Applying"
-  }
-
-  if (score >= 50) {
-    return "Stretch"
-  }
-
-  return "Skip"
 }
 
 function getComponentText(
