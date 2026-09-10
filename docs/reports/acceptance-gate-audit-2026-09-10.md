@@ -1,6 +1,7 @@
 # Acceptance-gate audit — core product investment strategy
 
-**Date:** 10 September 2026 (original audit); updated same day after closing three gaps.
+**Date:** 10 September 2026 (original audit); updated same day across five rounds (see Updates
+1-5 below) closing seven gates and correcting the live-reachability of several others.
 **Scope:** Every acceptance gate and release gate named in
 [product-core-investment-strategy.md](../product-core-investment-strategy.md), checked against
 the actual codebase (not assumed) — file, function and test cited per gate.
@@ -25,7 +26,7 @@ commits for full detail.
 applicationId and duration, no document content, letting abandonment be measured downstream
 without any in-app detection logic.
 
-**Update 4 (same day, after further investigation):** closing gate 19 required tracing every
+**Update 4 (same day, after further investigation):** investigating gate 19 required tracing every
 route that actually reaches `DashboardExperience.tsx` - the component most of the UI-facing gates
 above were implemented against or displayed through - to check whether the UI each gate protects
 is reachable in production routing at all. It is a mix, not uniform, and correcting it here
@@ -47,24 +48,33 @@ reachability is now noted inline below; see
 [technical-debt.md](../reference/technical-debt.md) for the full route map and the standing
 cleanup recommendation.
 
+**Update 5 (same day):** gate 19 was then closed - one continuous Playwright journey
+(`tests/e2e/37-continuous-application-journey.spec.ts`) walking the live `JobApplicationWorkspace`/
+`InterviewsWorkspace` UI from a pasted vacancy through a real `analyseJob()` decision, application
+preparation and readiness, "Applied", a linked interview, and a recorded "offer" outcome that
+provably changes the tracked application's own status - the last confirmed real gap in the
+original audit.
+
 ## Result summary
 
 | Status | Count | Gates |
 | --- | --- | --- |
-| Enforced | 16 | 1, 2, 3, 4, 8, 10, 13, 14, 15, 17, 18, 20, 21, 22, 23, 24 |
+| Enforced | 17 | 1, 2, 3, 4, 8, 10, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24 |
 | Partially enforced | 6 | 5, 7, 9, 11, 12, 16 |
-| Not found / real gap | 1 | 19 |
 | Process gate, not automatable (expected) | 1 | 6 |
 
-16 of 24 gates are now solidly enforced (up from an original 10). The one remaining real gap (#19:
-one continuous E2E journey from vacancy capture through approved kit to outcome status) has no
-open product decision behind it - it just isn't built yet.
+17 of 24 gates are now solidly enforced (up from an original 10), and every gate with a real,
+buildable path to closure has been closed - the only one left unenforced (#6) is a governance
+sign-off process, not something code can satisfy.
 
 **"Enforced" describes code correctness, not production reachability - the two are not the same
-question, and this audit originally only asked the first.** Of the 16 gates counted "Enforced"
-above, only 6 were implemented against `DashboardExperience.tsx` at all (the other 10 - 8, 13, 14,
-15, 18, 20, 21, 22, 23, 24 - don't depend on it, so this question doesn't apply to them). Of those
-6, plus gate 5 (counted "Partially enforced," also `DashboardExperience`-dependent):
+question, and this audit originally only asked the first.** This table is scoped to the 16 gates
+that were already "Enforced" as of Update 4, before gate 19's own closure (Update 5) added a
+17th - gate 19 is a new end-to-end spec against the live `JobApplicationWorkspace`/
+`InterviewsWorkspace`, not `DashboardExperience`-dependent, so it doesn't belong in this table.
+Of the original 16, only 6 were implemented against `DashboardExperience.tsx` at all (the other 10
+- 8, 13, 14, 15, 18, 20, 21, 22, 23, 24 - don't depend on it, so this question doesn't apply to
+them). Of those 6, plus gate 5 (counted "Partially enforced," also `DashboardExperience`-dependent):
 
 | Gate | Enforced-gate location | Live reachability |
 | --- | --- | --- |
@@ -257,10 +267,30 @@ sets - see Update 4 above.
 `scripts/country-fit-model.test.mjs`, `scripts/evidence-integrity.test.mjs`,
 `scripts/application-preparation-policy.test.mjs`, `scripts/decision-quality-evaluation.test.mjs`.
 
-**19. End-to-end verification from vacancy capture through approved kit and outcome status — Not
-found as one journey.** Coverage exists but is split across phase-specific specs
-(`25-phase-2-jobs-analysis`, `26-phase-3-applications`, `27-phase-4-interviews`) — no single
-continuous spec walks capture → decision → kit → outcome as one journey.
+**19. End-to-end verification from vacancy capture through approved kit and outcome status —
+Enforced (closed 10 September 2026).** Added
+`tests/e2e/37-continuous-application-journey.spec.ts`: one Playwright test, no pre-seeded
+decision/status fixture anywhere in it (unlike every other phase spec's `job()`/`application()`
+helpers, which hand-craft `analysisHistory[0].decision` directly) - it seeds only candidate CV
+evidence and walks the live UI through paste a vacancy → real `analyseJob()` decision → prepare an
+application → clear both readiness checks (`getApplicationReadiness`) → mark applied → add an
+interview (`applicationId` carried across the URL) → mark it completed → record an "offer"
+outcome. The terminal assertion reads the tracked application back out of localStorage and checks
+its status became `"Offer"` - proving `recordInterviewOutcome` → `applyInterviewOutcome` actually
+reached back and changed the *application's* status, not just a same-page confirmation message.
+"Approved kit" is scoped to what the live workspace actually enforces today (the evidence/claims
+review gate), not AI-generated kit content - `JobApplicationWorkspace` has no AI kit generation at
+all yet, a separate finding recorded in
+[technical-debt.md](../reference/technical-debt.md#two-independent-live-decision-engines-for-cross-borderhard-blocker-logic).
+Writing this spec surfaced and fixed a real bug in the spec itself (not the app): `page.
+addInitScript` reruns on every navigation for the page's lifetime, and this journey crosses two
+full `window.location.assign` navigations (jobs → application detail → interviews) - without a
+`sessionStorage` seeded-guard (the same pattern `26-phase-3-applications.spec.ts`'s own `seed()`
+already used), the init script's `removeItem` calls silently wiped the just-created job and
+application on the next full navigation, which looked identical to a real data-loss bug in the
+app until isolated. Verified: passed twice in a row (flake check), plus a full re-run of
+`25-phase-2-jobs-analysis`, `26-phase-3-applications` and `27-phase-4-interviews` (11/11) to
+confirm no shared-helper regressions, and `tsc --noEmit` clean for both `web` and `shared`.
 
 **20. Adversarial unsupported-claim tests — Enforced** (same evidence as gate 14; "adversarial" is
 generous for what are deterministic unit cases, but real coverage exists).
@@ -281,7 +311,7 @@ covers field mapping, safe-fill scoping, and CSV/formula-injection neutralizatio
 ## What this means
 
 The strategy document is accurate about *intent* everywhere and, as of the same-day fixes, is now
-backed by solid code and tests in 16 of 24 acceptance gates. The first three closed (3, 5, 10) were
+backed by solid code and tests in 17 of 24 acceptance gates. The first three closed (3, 5, 10) were
 low-risk because none touched what a decision *is* - only what's tracked, shown or flagged around
 it. The next three (1, 2, 4) did touch the decision engine's output shape and behavior, which is
 exactly why they were paused on rather than defaulted: gate 1 changes *whether* a decision is
@@ -289,25 +319,33 @@ produced for an incomplete profile, gate 2 changes the *shape* of blocker data e
 reads, and gate 4 extends a *shared* status enum used across both pillars. Each required an
 explicit product call on the tradeoff (recorded in this repo's conversation history, not assumed)
 before implementation, per the modernization plan's own rule that EU Fit conclusions don't change
-without explicit approval. Gate 17 (preparation-time/abandonment analytics) closed last, low-risk
-and additive like the first three.
+without explicit approval. Gate 17 (preparation-time/abandonment analytics) closed next, low-risk
+and additive like the first three. Gate 19 (one continuous E2E journey) closed last, once the
+DashboardExperience route-mapping investigation below had confirmed the correct live UI to write
+it against.
 
-What's left is a single gap: #19, one continuous E2E spec from vacancy capture through approved
-kit to outcome status - coverage exists today but is split across phase-specific specs. No open
-product decision sits behind it; it just isn't built yet. The moat-analysis document's rank-1 and
-rank-2 candidates (outcome-calibrated decisions, trustworthy mobility guidance) are now
+What's left is a single gate: #6, the per-jurisdiction human sign-off process the strategy
+requires before a country is marketed as supported. That is a governance/QA process, not something
+a code change can close - `docs/reference/roadmap-execution-status.md` already tracks it as
+open. Every gate with a real, buildable path to closure now has one. The moat-analysis document's
+rank-1 and rank-2 candidates (outcome-calibrated decisions, trustworthy mobility guidance) are now
 meaningfully closer to their prerequisites: blockers are structured, evidence has an honest
-"unknown" state, the decision engine no longer fabricates a jurisdiction to compute an answer, and
-preparation time is measured well enough to eventually calibrate against real outcomes.
+"unknown" state, the decision engine no longer fabricates a jurisdiction to compute an answer,
+preparation time is measured well enough to eventually calibrate against real outcomes, and the
+live jobs workspace now has its own general hard-blocker and evidence-status logic (see below) -
+plus one proven, continuous journey confirming the whole live pipeline from capture to outcome
+status is actually connected end to end, not just adjacent screens.
 
 **A caveat that matters more than any single gate:** as Update 4 documents, several of the gates
 above were verified against `DashboardExperience.tsx` UI that turned out to be unreachable in
 production routing (gates 3, 17, and half of 5), and one (gate 2) has no UI consumer of any kind
-yet. "16 of 24 enforced" is an honest description of code correctness; it is not a claim that 16
-of 24 gates are protecting real users today. Separately, and after this audit was written, the
-live jobs workspace (`JobApplicationWorkspace`/`analyseJob`) gained its own general hard-blocker
-and evidence-status logic (commit `a63d9c2a`, see
+yet. "17 of 24 enforced" is an honest description of code correctness; it is not a claim that 17
+of 24 gates are protecting real users today. Separately, and after this audit was originally
+written, the live jobs workspace (`JobApplicationWorkspace`/`analyseJob`) gained its own general
+hard-blocker and evidence-status logic (commit `a63d9c2a`, see
 [quality-assurance.md](../quality-assurance.md)) - genuinely live, but implemented independently
-of gates 1/2's own fixes rather than as a consequence of closing them. The practical takeaway:
+of gates 1/2's own fixes rather than as a consequence of closing them. Gate 19's own new spec is
+the one piece of this document actually proven against that same live workspace end to end,
+which is why its reachability isn't in question the way gates 3/5/17 are. The practical takeaway:
 before citing any gate in this document as evidence of what a real user experiences, check its
 reachability note, not just its "Enforced" label.
