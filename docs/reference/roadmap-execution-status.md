@@ -49,14 +49,20 @@ These are maintainability tasks, not product-phase exit evidence:
    appetite for that higher-risk, prop-threading-heavy work.
 2. Split extension page detection, widget UI and reviewed autofill from `autofill.ts`.
 3. Split dashboard sync request handling from reconciliation and persistence.
-   Step 1 done: the sync route's pure row<->record mappers and legacy-payload
-   normalization moved to `apps/web/domains/sync/`, with new unit test
-   coverage (`scripts/sync-dashboard-mappers.test.mjs`) that didn't exist
-   before (10 September 2026, `route.ts` 1,185 -> 780 lines). The actual
-   reconciliation/persistence sequencing inside POST/DELETE - tombstone
-   resolution, application dedup, upsert ordering - is intentionally
-   untouched: it writes real user data and needs its own characterization
-   tests before being extracted behind a repository interface.
+   Done: the sync route's pure row<->record mappers, legacy-payload
+   normalization, and reconciliation policy (tombstone partitioning,
+   application id mapping, active-child-record filtering, delete-target
+   resolution) all moved to `apps/web/domains/sync/`, with 21 new unit
+   tests (`scripts/sync-dashboard-mappers.test.mjs`,
+   `scripts/sync-dashboard-reconciliation.test.mjs`) that didn't exist
+   before - the route previously had a single string-match assertion as
+   its only coverage (10 September 2026, `route.ts` 1,185 -> 757 lines).
+   The route itself still does the same auth/validate/reconcile/persist
+   steps in the same order; only the decision logic moved out from between
+   the Supabase calls. Persistence sequencing (which table is written in
+   what order, upsert conflict targets) remains inline in the route, since
+   that is the part still coupled to the live Supabase client rather than
+   a pure decision.
 4. Divide global CSS into tokens, foundations and workflow styles.
 
 Each extraction must be independently reviewable and test-protected. A wholesale
