@@ -13,50 +13,70 @@ export const officialCountrySources: Record<string, OfficialSource[]> = {
     {
       label: "GOV.UK Skilled Worker visa",
       url: "https://www.gov.uk/skilled-worker-visa",
-      note: "Verify job, salary, sponsor and document requirements."
+      note: "Verify job, salary, sponsor and document requirements.",
+      reviewedAt: "2026-09-09",
+      ruleVersion: "uk-2026.09"
     },
     {
       label: "GOV.UK sponsor licence guidance",
       url: "https://www.gov.uk/uk-visa-sponsorship-employers",
-      note: "Check employer sponsorship responsibilities and limits."
+      note: "Check employer sponsorship responsibilities and limits.",
+      reviewedAt: "2026-09-09",
+      ruleVersion: "uk-2026.09"
     }
   ],
   Ireland: [
     {
       label: "Ireland Critical Skills Employment Permit",
       url: "https://enterprise.gov.ie/en/what-we-do/workplace-and-skills/employment-permits/permit-types/critical-skills-employment-permit/",
-      note: "Verify eligibility, remuneration and permit requirements."
+      note: "Verify eligibility, remuneration and permit requirements.",
+      reviewedAt: "2026-07-29",
+      ruleVersion: "ie-2026.07"
     },
     {
       label: "Ireland employment permit types",
       url: "https://enterprise.gov.ie/en/what-we-do/workplace-and-skills/employment-permits/permit-types/",
-      note: "Compare permit routes before assuming a role is viable."
+      note: "Compare permit routes before assuming a role is viable.",
+      reviewedAt: "2026-07-29",
+      ruleVersion: "ie-2026.07"
     }
   ],
   Germany: [
     {
       label: "Make it in Germany work visa",
       url: "https://www.make-it-in-germany.com/en/visa-residence/types/work-qualified-professionals",
-      note: "Verify qualification, job offer and work visa requirements."
+      note: "Verify qualification, job offer and work visa requirements.",
+      reviewedAt: "2026-07-29",
+      ruleVersion: "de-2026.07"
     },
     {
       label: "Make it in Germany visa procedure",
       url: "https://www.make-it-in-germany.com/en/visa-residence/procedure/entry-process",
-      note: "Check the visa process and required verification steps."
+      note: "Check the visa process and required verification steps.",
+      reviewedAt: "2026-07-29",
+      ruleVersion: "de-2026.07"
     }
   ],
   Netherlands: [
     {
       label: "IND highly skilled migrant",
       url: "https://ind.nl/en/residence-permits/work/highly-skilled-migrant",
-      note: "Verify recognised sponsor, contract and income requirements."
+      note: "Verify recognised sponsor, contract and income requirements.",
+      reviewedAt: "2026-07-29",
+      ruleVersion: "nl-2026.07"
     },
     {
       label: "IND recognised sponsor background",
       url: "https://ind.nl/en/about-us/background-articles/national-highly-skilled-migrant-scheme",
-      note: "Understand recognised sponsor obligations and register context."
+      note: "Understand recognised sponsor obligations and register context.",
+      reviewedAt: "2026-07-29",
+      ruleVersion: "nl-2026.07"
     }
   ],
+  // No dedicated country pack exists for France yet (see
+  // packages/shared/src/international/country-packs/), so these sources
+  // deliberately carry no reviewedAt/ruleVersion rather than inventing one -
+  // the UI must show this as "not yet freshness-tracked", not as reviewed.
   France: [
     {
       label: "France-Visas salaried employment",

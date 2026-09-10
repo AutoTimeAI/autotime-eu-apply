@@ -52,6 +52,7 @@ import {
   type ProductCapability
 } from "../lib/capability-readiness"
 import { getStatusTone } from "../lib/status-tone"
+import { trackDecisionOverride, trackFactCorrection } from "../lib/analytics"
 import { trackWaitlistSubmitted } from "../lib/sentry-breadcrumbs"
 import { AccountIdentityLinker } from "./AccountIdentityLinker"
 import { CapabilityReadinessNotice } from "./product-ui"
@@ -114,6 +115,7 @@ import {
   getProfileReadinessScore,
   getReadinessScore
 } from "../domains/profile/readiness-score"
+import { getHighRiskProfileFieldReason } from "../domains/profile/high-risk-fields"
 import {
   defaultDashboardState as defaultState,
   emptyJobAnalysis,
@@ -2113,6 +2115,17 @@ export default function HomePage({
     key: K,
     value: ProductContext[K]
   ) => {
+    if (
+      contextSuggestion &&
+      key in contextSuggestion &&
+      contextSuggestion[key as keyof ContextSuggestion] !== value
+    ) {
+      trackFactCorrection({
+        field: String(key),
+        suggestionSource: contextSuggestionSource ?? "unknown"
+      })
+    }
+
     setProductContext((current) => {
       const next = { ...current, [key]: value }
       saveProductContext(next, userId)
@@ -2928,6 +2941,14 @@ export default function HomePage({
         evaluationForTracking,
         reviewForTracking
       )
+
+      if (evaluationForTracking.contentGate !== "ready") {
+        trackDecisionOverride({
+          contentGate: evaluationForTracking.contentGate,
+          decision: evaluationForTracking.decision
+        })
+      }
+
       const nextState = {
         ...state,
         jobAnalysis:
@@ -5557,6 +5578,9 @@ export default function HomePage({
                           }
                         />
                       </label>
+                      <small className="high-risk-field-note">
+                        {getHighRiskProfileFieldReason("fullName")}
+                      </small>
                       <label>
                         Current country
                         <input
@@ -5653,6 +5677,9 @@ export default function HomePage({
                           }
                         />
                       </label>
+                      <small className="high-risk-field-note">
+                        {getHighRiskProfileFieldReason("workRightDetails")}
+                      </small>
                     </section>
 
                     <section
@@ -5677,6 +5704,9 @@ export default function HomePage({
                           }
                         />
                       </label>
+                      <small className="high-risk-field-note">
+                        {getHighRiskProfileFieldReason("baseCvText")}
+                      </small>
                       <label>
                         Experience highlights
                         <textarea
@@ -5690,6 +5720,9 @@ export default function HomePage({
                           }
                         />
                       </label>
+                      <small className="high-risk-field-note">
+                        {getHighRiskProfileFieldReason("experienceHighlights")}
+                      </small>
                       <label>
                         Project or delivery examples
                         <textarea
@@ -5703,6 +5736,9 @@ export default function HomePage({
                           }
                         />
                       </label>
+                      <small className="high-risk-field-note">
+                        {getHighRiskProfileFieldReason("projectSummaries")}
+                      </small>
                     </section>
                   </div>
 
@@ -6560,6 +6596,11 @@ export default function HomePage({
                           >
                             <strong>{source.label}</strong>
                             <span>{source.note}</span>
+                            <small className="official-source-freshness">
+                              {source.reviewedAt
+                                ? `Reviewed ${formatDashboardDate(source.reviewedAt)} (rules ${source.ruleVersion})`
+                                : "Freshness not yet tracked for this country"}
+                            </small>
                           </a>
                         ))}
                       </div>

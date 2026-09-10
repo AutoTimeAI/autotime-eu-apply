@@ -41,9 +41,25 @@ type UpgradeLimitHitProps = {
   remainingCalls: number
 }
 
+type FactCorrectionProps = {
+  /** Which product-context field the user set to a value different from the active AI/local CV suggestion. */
+  field: string
+  /** Where that suggestion came from (matches ContextSuggestionSource: "ai" | "local" | "limit" | "error"). */
+  suggestionSource: string
+}
+
+type DecisionOverrideProps = {
+  /** The fit evaluation's content gate at the moment the user tracked the job anyway ("blocked" | "stretch"). */
+  contentGate: string
+  /** The categorical decision behind that gate, e.g. "Skip for now" or "Stretch application". */
+  decision: string
+}
+
 type AnalyticsEventMap = {
   ai_content_generated: AiContentGeneratedProps
   application_saved: ApplicationSavedProps
+  decision_override: DecisionOverrideProps
+  fact_correction: FactCorrectionProps
   job_analysed: JobAnalysedProps
   subscription_started: SubscriptionStartedProps
   upgrade_clicked: UpgradeClickedProps
@@ -108,4 +124,14 @@ export function trackSubscriptionStarted(
 /** Tracks that a user hit a usage limit for a gated feature, with the calls remaining. */
 export function trackUpgradeLimitHit(props: UpgradeLimitHitProps): void {
   captureEvent("upgrade_limit_hit", props)
+}
+
+/** Tracks that a user manually set a product-context field to a value different from the active CV-derived suggestion for that field - a correction signal, not suppressed to improve a headline accuracy number. */
+export function trackFactCorrection(props: FactCorrectionProps): void {
+  captureEvent("fact_correction", props)
+}
+
+/** Tracks that a user tracked/saved a job despite the fit evaluation's content gate being "blocked" or "stretch" rather than "ready" - an override/disagreement signal. */
+export function trackDecisionOverride(props: DecisionOverrideProps): void {
+  captureEvent("decision_override", props)
 }
