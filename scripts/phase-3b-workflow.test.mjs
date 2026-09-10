@@ -294,4 +294,95 @@ assert.match(component, /getGovernedSourcesForCountry\(/);
 assert.match(component, /Governed sources/);
 assert.match(component, /reviewed \{source\.reviewedAt\}/);
 
+// Live decision-engine gaps: a general cross-border hard-blocker system
+// (previously one regex-based "no sponsorship" check) and an evidence-status
+// signal beyond flat confirmed/partial/missing keyword overlap - both routed
+// through the same proven assessInternationalJob engine that already powers
+// the live /dashboard/international page, not re-implemented here.
+const internationalApplicant = {
+  schemaVersion: 1,
+  currentCountry: "India",
+  targetCountries: ["Ireland"],
+  applicantPosition: "international-applicant",
+  sponsorshipRequired: "yes",
+  relocationPreference: "yes",
+};
+
+const noSponsorshipVacancy = strongVacancy.replace(
+  "We provide visa sponsorship for suitable candidates.",
+  "This role offers no sponsorship.",
+);
+const noSponsorshipJob = extractJob({ description: noSponsorshipVacancy });
+const mobilityBlocked = analyseJob(noSponsorshipJob, strongEvidence, {
+  mobilityProfile: internationalApplicant,
+});
+assert.equal(
+  mobilityBlocked.decision,
+  "Skip",
+  "a confirmed cross-border blocker must Skip even without the legacy sponsorshipRequired flag set",
+);
+assert.match(
+  mobilityBlocked.criticalRisk,
+  /sponsorship or new work permission is not available/i,
+);
+
+// "must have existing right to work" is a real hard-blocker signal the old
+// single sponsorship regex could never catch at all (it only matched
+// cannot/unable to/no + sponsorship wording) - proves this is a genuinely
+// broader system, not the same check renamed.
+const rightToWorkVacancy = strongVacancy.replace(
+  "We provide visa sponsorship for suitable candidates.",
+  "Applicants must have existing right to work in Ireland.",
+);
+const rightToWorkJob = extractJob({ description: rightToWorkVacancy });
+assert.equal(
+  analyseJob(rightToWorkJob, strongEvidence, {
+    mobilityProfile: internationalApplicant,
+  }).decision,
+  "Skip",
+);
+assert.notEqual(
+  analyseJob(rightToWorkJob, strongEvidence, {}).decision,
+  "Skip",
+  "without a mobility profile there was previously no way to catch this wording at all",
+);
+
+// Evidence-status gap: an international applicant whose pathway is not yet
+// confirmed viable (no confirmed blocker, but real evidence gaps like
+// contract duration/occupation mapping this workflow never collects) must
+// surface that as an honest, distinct unknown - not be silently treated the
+// same as "Apply" just because vacancy-requirement keyword coverage is high.
+const mobilityConsider = analyseJob(job, strongEvidence, {
+  mobilityProfile: internationalApplicant,
+});
+assert.notEqual(mobilityConsider.decision, "Skip");
+assert.ok(
+  mobilityConsider.unknowns.includes(
+    "Mobility pathway verification against the governed sources",
+  ),
+);
+
+// A locally work-authorised candidate needs no mobility check at all - the
+// new signal must never add noise for the majority of users it doesn't
+// apply to.
+const localCandidate = {
+  ...internationalApplicant,
+  applicantPosition: "local-work-authorised",
+  sponsorshipRequired: "no",
+};
+const localResult = analyseJob(job, strongEvidence, {
+  mobilityProfile: localCandidate,
+});
+assert.ok(
+  !localResult.unknowns.includes(
+    "Mobility pathway verification against the governed sources",
+  ),
+);
+assert.deepEqual(localResult.decision, apply.decision);
+assert.match(
+  component,
+  /analyseJob\(job, evidence\.text, \{\s*careerLane: job\.lane,\s*sponsorshipRequired,\s*mobilityProfile,\s*\}\)/,
+  "the live workspace's analyse() call site must actually pass its already-loaded mobilityProfile into analyseJob",
+);
+
 console.log("Phase 3B workflow safeguards: PASS");

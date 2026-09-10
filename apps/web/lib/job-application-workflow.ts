@@ -1,9 +1,11 @@
 import { detectATS } from "./ats-detector.ts";
 import {
   assessApplicationApproval,
+  assessInternationalJob,
   getInternationalCountryPack,
   getSubmissionPermission,
   type ApplicationRecord,
+  type MobilityProfile,
   type OfficialSourceCitation,
 } from "shared";
 
@@ -373,10 +375,76 @@ const requirements = (description: string) =>
     )
     .slice(0, 12);
 
+/**
+ * A candidate only needs a cross-border mobility/hard-blocker check when
+ * they are not already locally work-authorised for the vacancy's country -
+ * mirrors the "foreign-candidate" gate in
+ * apps/web/platform/application-preparation/decision-adapter.ts. "unsure"
+ * is included deliberately: when the candidate's own position is unclear,
+ * running the check (rather than skipping it) is the honest default.
+ */
+function needsMobilityCheck(profile: MobilityProfile): boolean {
+  return (
+    profile.applicantPosition === "international-applicant" ||
+    profile.applicantPosition === "sponsorship-required" ||
+    profile.applicantPosition === "unsure" ||
+    profile.sponsorshipRequired === "yes"
+  );
+}
+
+/**
+ * Routes a job + the candidate's mobility profile through the same
+ * evidence-first assessInternationalJob engine that already powers the live
+ * /dashboard/international page (packages/shared/src/international/
+ * assessment.ts) - reused here rather than re-implemented, so
+ * analyseJob's hard-blocker/evidence-status logic never drifts from the
+ * one proven, tested cross-border engine. Returns no blockers/gaps when no
+ * mobility profile was supplied, no target country can be honestly
+ * resolved, or the candidate does not need the check - never guesses.
+ *
+ * Only `confirmedBlockers` (genuine negative evidence: explicit
+ * no-sponsorship wording, a negative employer signal) feed the Skip
+ * decision - assessInternationalJob's `missingEvidence` also lists
+ * structural fields this vacancy-text-only workflow never collects
+ * (contract duration in months, an occupation code mapping), which would
+ * be permanently "missing" for every analysis and just add noise rather
+ * than a real per-job signal. `pathwayStatus` is surfaced instead: a
+ * single honest "still needs verification" unknown when the engine's own
+ * evidence tier is below "potentially viable", pointing at the Governed
+ * sources already shown in this workspace.
+ */
+function assessMobilityBlockers(
+  job: JobRecord,
+  profile: MobilityProfile | undefined,
+): { blockers: string[]; pathwayUnknown: string | null } {
+  if (!profile || !needsMobilityCheck(profile))
+    return { blockers: [], pathwayUnknown: null };
+  const targetCountry = job.facts.country.value || profile.targetCountries[0];
+  if (!targetCountry) return { blockers: [], pathwayUnknown: null };
+  const assessment = assessInternationalJob({
+    country: targetCountry,
+    mobilityProfile: profile,
+    jobText: job.description,
+    roleDuties: job.description,
+  });
+  return {
+    blockers: assessment.confirmedBlockers,
+    pathwayUnknown:
+      assessment.confirmedBlockers.length === 0 &&
+      assessment.pathwayStatus !== "potentially-viable"
+        ? "Mobility pathway verification against the governed sources"
+        : null,
+  };
+}
+
 export function analyseJob(
   job: JobRecord,
   candidateEvidence: string,
-  options: { careerLane?: string; sponsorshipRequired?: boolean } = {},
+  options: {
+    careerLane?: string;
+    sponsorshipRequired?: boolean;
+    mobilityProfile?: MobilityProfile;
+  } = {},
 ): JobAnalysisResult {
   const evidenceTokens = tokens(candidateEvidence);
   // Tracked in parallel with `mapped` (rather than added to the returned
@@ -438,6 +506,7 @@ export function analyseJob(
   const confirmed = mapped.filter((item) => item.state === "confirmed").length;
   const partial = mapped.filter((item) => item.state === "partial").length;
   const missing = mapped.filter((item) => item.state === "missing").length;
+  const mobility = assessMobilityBlockers(job, options.mobilityProfile);
   const unknowns = [
     !job.facts.country.value && "Vacancy country",
     !job.facts.salary.value && "Salary",
@@ -446,13 +515,15 @@ export function analyseJob(
       "Vacancy-specific sponsorship wording",
     !job.title.value && "Role title",
     !job.employer.value && "Employer",
+    mobility.pathwayUnknown,
   ].filter(Boolean) as string[];
   const explicitNoSponsorship =
     /(?:cannot|unable to|no)\s+(?:offer|provide)?\s*(?:visa )?sponsorship/i.test(
       job.facts.sponsorship.value,
     );
   const incompatible = Boolean(
-    options.sponsorshipRequired && explicitNoSponsorship,
+    (options.sponsorshipRequired && explicitNoSponsorship) ||
+      mobility.blockers.length > 0,
   );
   const coverage = mapped.length
     ? Math.round(((confirmed + partial * 0.5) / mapped.length) * 100)
@@ -483,9 +554,10 @@ export function analyseJob(
       : decision === "Consider"
         ? "The role may be viable, but material evidence or vacancy facts need resolution."
         : decision === "Skip"
-          ? incompatible
-            ? "The vacancy wording conflicts with the stated sponsorship requirement."
-            : "Too many material requirements lack confirmed support."
+          ? (mobility.blockers[0] ??
+            (incompatible
+              ? "The vacancy wording conflicts with the stated sponsorship requirement."
+              : "Too many material requirements lack confirmed support."))
           : "There is not enough structured vacancy and candidate evidence for a reliable decision.";
   return {
     capability: mapped,
@@ -497,11 +569,13 @@ export function analyseJob(
           : "Low",
     coverage,
     createdAt: new Date().toISOString(),
-    criticalRisk: incompatible
-      ? "Vacancy wording indicates sponsorship is unavailable."
-      : (mapped.find((item) => item.state === "missing")?.requirement ??
-        unknowns[0] ??
-        "No material blocker confirmed."),
+    criticalRisk:
+      mobility.blockers[0] ??
+      (incompatible
+        ? "Vacancy wording indicates sponsorship is unavailable."
+        : (mapped.find((item) => item.state === "missing")?.requirement ??
+          unknowns[0] ??
+          "No material blocker confirmed.")),
     decision,
     id: crypto.randomUUID(),
     nextAction:

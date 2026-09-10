@@ -651,6 +651,7 @@ function JobDetail({
     const result = analyseJob(job, evidence.text, {
       careerLane: job.lane,
       sponsorshipRequired,
+      mobilityProfile,
     });
     updateJob({
       ...job,
@@ -1004,7 +1005,10 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
                     <p>
                       {item === "Vacancy-specific sponsorship wording"
                         ? "Ask whether this role supports visa sponsorship."
-                        : `Confirm ${item.toLowerCase()} before investing more time.`}
+                        : item ===
+                            "Mobility pathway verification against the governed sources"
+                          ? "Your cross-border mobility evidence is not yet strong enough to confirm this pathway - verify it against the sources below before investing more time."
+                          : `Confirm ${item.toLowerCase()} before investing more time.`}
                     </p>
                   </div>
                 </li>
