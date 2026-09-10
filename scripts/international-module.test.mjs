@@ -9,6 +9,7 @@ import {
   mobilityProfileSchema,
   netherlandsCountryPack,
   ukCountryPack,
+  vacancyRejectsSponsorship,
 } from "../packages/shared/src/international/index.ts";
 
 const baseProfile = mobilityProfileSchema.parse({
@@ -140,6 +141,42 @@ test("negative sponsorship wording is a blocker when sponsorship is needed", () 
   });
   assert.equal(result.pathwayStatus, "confirmed-blocker");
   assert.equal(result.decision, "Skip");
+});
+
+test("vacancyRejectsSponsorship catches real denial phrasing a plain substring list misses", () => {
+  // Regression: sponsorshipRejectionSignals is a literal substring list
+  // (e.g. "no sponsorship", "cannot provide visa sponsorship"), which does
+  // NOT match real vacancy wording where the denial word and "sponsorship"
+  // are separated by another word - "No visa sponsorship is available" has
+  // no literal "no sponsorship" substring ("visa" sits in between), and "We
+  // are unable to provide visa sponsorship" has no literal "unable to
+  // sponsor" or "cannot provide visa sponsorship" substring either. Both
+  // silently fell through to "Apply" for a sponsorship-required candidate
+  // until vacancyRejectsSponsorship gained a permissive regex fallback
+  // alongside the literal list (found via scripts/decision-quality-
+  // evaluation.test.mjs's DQ-012/DQ-029 regressing to 30/32).
+  assert.equal(
+    vacancyRejectsSponsorship("No visa sponsorship is available."),
+    true,
+  );
+  assert.equal(
+    vacancyRejectsSponsorship("We are unable to provide visa sponsorship."),
+    true,
+  );
+  assert.equal(
+    vacancyRejectsSponsorship("We cannot offer sponsorship for this role."),
+    true,
+  );
+  // Must not become over-broad: ordinary positive/neutral sponsorship
+  // wording must not trip the same check.
+  assert.equal(
+    vacancyRejectsSponsorship("We provide visa sponsorship for suitable candidates."),
+    false,
+  );
+  assert.equal(
+    vacancyRejectsSponsorship("Sponsorship information is not stated."),
+    false,
+  );
 });
 
 test("local work-authorised applicants are not blocked by missing sponsorship wording", () => {

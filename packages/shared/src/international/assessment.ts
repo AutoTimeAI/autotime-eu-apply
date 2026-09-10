@@ -58,6 +58,65 @@ function includesAny(text: string, signals: string[]) {
   return signals.some((signal) => normalized.includes(signal));
 }
 
+const sponsorshipRejectionSignals = [
+  "no sponsorship",
+  "unable to sponsor",
+  "cannot sponsor",
+  "cannot provide sponsorship",
+  "cannot provide visa sponsorship",
+  "must have right to work",
+  "must have existing right to work",
+  "existing right to work",
+  "without sponsorship",
+  "eu work rights required",
+]
+
+// A plain substring list cannot catch real vacancy phrasing like "No visa
+// sponsorship is available" or "We are unable to provide visa sponsorship"
+// - the denial word and "sponsorship" are real words apart, not adjacent.
+// This regex is deliberately more permissive than the literal signals list
+// above (matches "cannot/unable to/no", optionally "offer"/"provide",
+// optionally "visa", then "sponsorship" in any of those combinations) and
+// catches every case the literal list also catches, plus the ones it
+// doesn't - so it's additive, not a replacement for the list's other
+// non-sponsorship-worded entries (e.g. "existing right to work").
+const sponsorshipDenialPattern =
+  /(?:cannot|unable to|no)\s+(?:offer|provide)?\s*(?:visa\s+)?sponsorship/i
+
+/** Canonical vacancy-language policy shared by every live decision path. */
+export function vacancyRejectsSponsorship(
+  jobText: string,
+  additionalSignals: string[] = [],
+): boolean {
+  return (
+    sponsorshipDenialPattern.test(jobText) ||
+    includesAny(jobText, [...sponsorshipRejectionSignals, ...additionalSignals])
+  )
+}
+
+/**
+ * Resolves the jurisdiction used for a vacancy assessment. An explicit
+ * caller choice wins; otherwise the vacancy's own country outranks the
+ * candidate's general target-country list. This prevents a saved preference
+ * for one country from silently governing a role located in another.
+ */
+export function resolveAssessmentCountry({
+  explicitCountry,
+  vacancyCountry,
+  profileTargetCountries = [],
+}: {
+  explicitCountry?: string | null
+  vacancyCountry?: string | null
+  profileTargetCountries?: string[]
+}): string | null {
+  return (
+    explicitCountry?.trim() ||
+    vacancyCountry?.trim() ||
+    profileTargetCountries.map((country) => country.trim()).find(Boolean) ||
+    null
+  )
+}
+
 /**
  * Assesses one job's cross-border viability for a candidate, routed by the
  * hiring country's CountryPack. In "explorer" mode (no dedicated pack) it
@@ -80,13 +139,7 @@ export function assessInternationalJob(
   const needsSponsorship =
     input.mobilityProfile.sponsorshipRequired === "yes" ||
     input.mobilityProfile.applicantPosition === "sponsorship-required";
-  const rejectsSponsorship = includesAny(jobText, [
-    "no sponsorship",
-    "unable to sponsor",
-    "cannot sponsor",
-    "must have existing right to work",
-    "eu work rights required",
-  ]);
+  const rejectsSponsorship = vacancyRejectsSponsorship(jobText);
   const supportsSponsorship = includesAny(jobText, [
     "visa sponsorship",
     "permit sponsorship",
@@ -158,7 +211,10 @@ export function assessInternationalJob(
         ),
       );
     } else {
-      if (stamp4.salaryDetectedEUR !== null && stamp4.salaryThresholdEUR !== null) {
+      if (
+        stamp4.salaryDetectedEUR !== null &&
+        stamp4.salaryThresholdEUR !== null
+      ) {
         evidenceUsed.push(
           `Stamp4 verified: detected salary ~€${stamp4.salaryDetectedEUR.toLocaleString()} clears the €${stamp4.salaryThresholdEUR.toLocaleString()} statutory threshold for ${stamp4.pathway}.`,
         );
