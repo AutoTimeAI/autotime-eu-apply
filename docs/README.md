@@ -26,6 +26,7 @@ Last consolidated: 2026-09-09.
 | [technical-debt.md](technical-debt.md) | Known technical debt |
 | [reference/repository-organization-policy.md](reference/repository-organization-policy.md) | Canonical separation of code, configuration, durable reports, logs and regenerable artifacts |
 | [reference/roadmap-execution-status.md](reference/roadmap-execution-status.md) | Evidence-based implementation and exit-gate status for phases 0–5 |
+| [reference/core-foundation-execution.md](reference/core-foundation-execution.md) | Executable core-pillar foundation and strategic engineering sequence |
 | [reference/domain-modernization-plan.md](reference/domain-modernization-plan.md) | Official engineering direction: incremental EU Fit / evidence / application-preparation domain decomposition, target architecture and phase-by-phase migration rules |
 | [product-core-investment-strategy.md](product-core-investment-strategy.md) ([PDF](AutoTime-EU-Apply-Core-Product-Investment-Strategy.pdf)) | Approved strategy concentrating investment on EU Fit, evidence integrity and application preparation |
 | [moat-analysis.md](moat-analysis.md) | Draft: why the three pillars would or wouldn't be hard for a well-funded competitor to copy, ranked by defensibility |
@@ -53,6 +54,10 @@ Last consolidated: 2026-09-09.
 | [remaining-gaps-reconciliation-2026-08-18.md](remaining-gaps-reconciliation-2026-08-18.md) | Remaining gaps — reconciliation |
 | [strategic-synthesis-reconciliation-2026-08-18.md](strategic-synthesis-reconciliation-2026-08-18.md) | Strategic synthesis — repo reconciliation |
 | [reports/product-engineering-review-2026-09-09.md](reports/product-engineering-review-2026-09-09.md) | Product-engineering review: workflow, strengths, risks, market comparison, motto score and priorities |
+| [reports/moat-rd-strategy-2026-09-10.md](reports/moat-rd-strategy-2026-09-10.md) | R&D program for the cross-border decision, evidence and outcome moat |
+| [reports/startup-moat-rd-dossier-2026-09-10.md](reports/startup-moat-rd-dossier-2026-09-10.md) | Founder dossier: moat thesis, corridors, regulatory boundary, architecture, economics and 90-day validation |
+| [reports/claude-code-moat-rd-handoff-2026-09-10.md](reports/claude-code-moat-rd-handoff-2026-09-10.md) | Self-contained handoff for an independent Claude Code moat assessment and Codex/Claude comparison |
+| [reports/claude-code-independent-moat-rd-2026-09-10.md](reports/claude-code-independent-moat-rd-2026-09-10.md) | Independent repository audit and moat assessment, reviewed against both Codex reports with agreements/disagreements cited file-by-file |
 | [reports/cto-assessment-2026-09-09.md](reports/cto-assessment-2026-09-09.md) | CTO assessment: architecture, security, reliability, governance, cost, ownership and launch gates |
 | [reports/repository-structure-and-codebase-inventory-2026-09-09.md](reports/repository-structure-and-codebase-inventory-2026-09-09.md) | Canonical module/folder/config/log map, repository hygiene, ownership and reproducible codebase line counts |
 | [reports/qa-360-defect-assessment-2026-09-09.md](reports/qa-360-defect-assessment-2026-09-09.md) | 360-degree build, browser, API, security, integration and release-gate defect assessment with severities |
