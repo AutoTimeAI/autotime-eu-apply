@@ -115,6 +115,26 @@ test("missing and unresolved links remain unsupported", () => {
   )
 })
 
+test("gate 4: an unknown-status fact is a valid evidence status and cannot silently support a claim", () => {
+  const unknownFact = fact({
+    status: "unknown",
+    subject: "Employer sponsors Skilled Worker visas"
+  })
+
+  assert.equal(unknownFact.status, "unknown")
+
+  const result = assessClaimSupport({
+    claim: "Employer sponsors Skilled Worker visas.",
+    evidence: [unknownFact],
+    links: [{ evidenceId: unknownFact.id, relation: "supports" }]
+  })
+
+  // "unknown" matches none of the specific supported/needs_confirmation/
+  // stale branches, so it must fall through to unsupported exactly like
+  // "missing" does - never invent certainty from an indeterminate fact.
+  assert.equal(result.status, "unsupported")
+})
+
 test("evidence facts reject invalid sources and oversized values", () => {
   assert.throws(() =>
     fact({ source: { kind: "untrusted", label: "Unknown" } })

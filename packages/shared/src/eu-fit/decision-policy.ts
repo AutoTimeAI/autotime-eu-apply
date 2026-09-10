@@ -35,17 +35,51 @@ export const HARD_BLOCKER_COMPONENT_KEYS = [
   "countryLocationFit"
 ] as const satisfies readonly FitComponentKey[]
 
+/**
+ * A hard blocker with the fact that triggered it and whether supporting
+ * evidence was found for that fact - satisfies acceptance gate 2 ("every
+ * hard blocker identifies its triggering fact and evidence status") without
+ * requiring the deeper EvidenceFact/EvidenceStatus model, which this
+ * decision layer does not have access to. `evidenceStatus` is derived from
+ * whether the component's own evidence text is non-empty, not from the
+ * canonical verified/inferred/etc. enum.
+ */
+export type HardBlocker = {
+  key: FitComponentKey
+  label: string
+  rationale: string
+  evidenceStatus: "found" | "missing"
+}
+
+function filterHardBlockerComponents(
+  components: readonly FitComponent[]
+): FitComponent[] {
+  return components.filter(
+    (component) =>
+      component.status === "blocker" &&
+      HARD_BLOCKER_COMPONENT_KEYS.includes(
+        component.key as (typeof HARD_BLOCKER_COMPONENT_KEYS)[number]
+      )
+  )
+}
+
 /** Returns user-facing hard blockers without treating ordinary weak fit as an eligibility blocker. */
 export function getHardBlockers(components: readonly FitComponent[]): string[] {
-  return components
-    .filter(
-      (component) =>
-        component.status === "blocker" &&
-        HARD_BLOCKER_COMPONENT_KEYS.includes(
-          component.key as (typeof HARD_BLOCKER_COMPONENT_KEYS)[number]
-        )
-    )
-    .map((component) => `${component.label}: ${component.rationale}`)
+  return filterHardBlockerComponents(components).map(
+    (component) => `${component.label}: ${component.rationale}`
+  )
+}
+
+/** Structured counterpart to getHardBlockers - same filter, same components, machine-readable shape. */
+export function getStructuredHardBlockers(
+  components: readonly FitComponent[]
+): HardBlocker[] {
+  return filterHardBlockerComponents(components).map((component) => ({
+    key: component.key,
+    label: component.label,
+    rationale: component.rationale,
+    evidenceStatus: component.evidence.length > 0 ? "found" : "missing"
+  }))
 }
 
 /** Applies the legacy country-fit thresholds after hard blockers have been evaluated. */

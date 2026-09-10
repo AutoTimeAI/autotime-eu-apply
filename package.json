@@ -42,6 +42,7 @@
     "test:sync-dashboard-reconciliation": "node --experimental-strip-types --test scripts/sync-dashboard-reconciliation.test.mjs",
     "test:dashboard-color-system": "node --experimental-strip-types --test scripts/dashboard-color-system.test.mjs",
     "test:acceptance-gate-fixes": "node --experimental-strip-types --test scripts/acceptance-gate-fixes.test.mjs",
+    "test:decision-adapter-target-country": "node --experimental-strip-types --test scripts/decision-adapter-target-country.test.mjs",
     "test:role-pathways": "node --experimental-strip-types scripts/role-pathways.test.mjs",
     "test:role-pathways-persistence": "node --experimental-strip-types --test scripts/role-pathways-persistence.test.mjs",
     "test:phase-3a-readiness": "node --experimental-strip-types scripts/phase-3a-readiness.test.mjs",

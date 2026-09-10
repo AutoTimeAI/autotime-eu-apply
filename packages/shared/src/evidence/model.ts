@@ -1,13 +1,24 @@
 import { z } from "zod"
 
-/** Canonical evidence states shared by fit decisions and application content. */
+/**
+ * Canonical evidence states shared by fit decisions and application content.
+ * "missing" means the fact was never supplied; "unknown" means it was asked
+ * about but its truth cannot currently be determined (e.g. a job posting
+ * that does not say whether the employer sponsors visas) - distinct
+ * concepts, per the strategy's "treat an unresolved legal or eligibility
+ * fact as Unknown - verify; never invent certainty." Nothing currently
+ * assigns "unknown" to a fact; assessClaimSupport treats it exactly like
+ * "missing" (falls through to unsupported) since it matches none of the
+ * status-specific branches below.
+ */
 export const evidenceStatusSchema = z.enum([
   "verified",
   "user_declared",
   "inferred",
   "conflicting",
   "stale",
-  "missing"
+  "missing",
+  "unknown"
 ])
 
 export type EvidenceStatus = z.infer<typeof evidenceStatusSchema>

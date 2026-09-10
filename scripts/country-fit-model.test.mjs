@@ -6,7 +6,8 @@ import {
   getComponentConfidence,
   getContentGenerationGate,
   getCountryFitDecision,
-  getHardBlockers
+  getHardBlockers,
+  getStructuredHardBlockers
 } from "../packages/shared/src/eu-fit/decision-policy.ts"
 
 const baseProfile = {
@@ -93,6 +94,15 @@ test("blocks content when sponsorship is required and the role rejects it", () =
   assert.equal(result.decision, "Skip for now")
   assert.equal(result.contentGate, "blocked")
   assert.ok(result.blockers.some((item) => item.includes("Sponsorship")))
+  assert.equal(result.structuredBlockers.length, result.blockers.length)
+  assert.ok(
+    result.structuredBlockers.some((b) => b.key === "sponsorshipLikelihood"),
+  )
+  assert.ok(
+    result.structuredBlockers.every(
+      (b) => b.evidenceStatus === "found" || b.evidenceStatus === "missing",
+    ),
+  )
 })
 
 test("labels uncertain viable roles as stretch applications", () => {
@@ -236,6 +246,53 @@ test("hard eligibility blockers override an otherwise positive score", () => {
   assert.equal(
     getCountryFitDecision({ overallScore: 90, hasHardBlockers: true }),
     "Skip for now"
+  )
+})
+
+test("gate 2: structured hard blockers carry the same triggering fact and rationale as the string blockers, plus an evidence status", () => {
+  const components = [
+    {
+      key: "skillMatch",
+      label: "Skill match",
+      score: 20,
+      status: "blocker",
+      rationale: "Required skills are missing.",
+      evidence: []
+    },
+    {
+      key: "rightToWorkCompatibility",
+      label: "Right-to-work compatibility",
+      score: 20,
+      status: "blocker",
+      rationale: "Required work-right evidence is missing.",
+      evidence: []
+    },
+    {
+      key: "relocationFit",
+      label: "Relocation fit",
+      score: 20,
+      status: "blocker",
+      rationale: "Relocation is required and evidence was found.",
+      evidence: ["Candidate confirmed willingness to relocate."]
+    }
+  ]
+
+  const blockers = getHardBlockers(components)
+  const structuredBlockers = getStructuredHardBlockers(components)
+
+  // Same filter, same two components (skillMatch is not a hard-blocker key).
+  assert.equal(structuredBlockers.length, blockers.length)
+  assert.deepEqual(
+    structuredBlockers.map((b) => `${b.label}: ${b.rationale}`),
+    blockers
+  )
+  assert.deepEqual(
+    structuredBlockers.map((b) => b.key),
+    ["rightToWorkCompatibility", "relocationFit"]
+  )
+  assert.deepEqual(
+    structuredBlockers.map((b) => b.evidenceStatus),
+    ["missing", "found"]
   )
 })
 

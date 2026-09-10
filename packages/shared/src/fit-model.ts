@@ -22,11 +22,13 @@ import {
   getContentGenerationGate,
   getCountryFitDecision,
   getHardBlockers,
+  getStructuredHardBlockers,
   type ContentGenerationGate,
   type CountryFitDecision,
   type FitComponent,
   type FitComponentKey,
-  type FitComponentStatus
+  type FitComponentStatus,
+  type HardBlocker
 } from "./eu-fit/decision-policy.ts"
 
 export type {
@@ -92,6 +94,8 @@ export type CountryFitEvaluation = {
   positioningAngle: string
   nextBestAction: string
   blockers: string[]
+  /** Structured counterpart to `blockers` - same facts, machine-readable shape (gate 2). */
+  structuredBlockers: HardBlocker[]
   evidenceChecklist: string[]
   components: FitComponent[]
   learningPrompt: string
@@ -972,6 +976,7 @@ export function evaluateCountryFit({
     getCountryLocationFit(profile, job, context, rule)
   ]
   const blockers = getHardBlockers(components)
+  const structuredBlockers = getStructuredHardBlockers(components)
   const overallScore = clampScore(
     components.reduce((total, item) => total + item.score, 0) / components.length
   )
@@ -1013,6 +1018,7 @@ export function evaluateCountryFit({
     positioningAngle,
     nextBestAction,
     blockers,
+    structuredBlockers,
     evidenceChecklist,
     components,
     learningPrompt:
