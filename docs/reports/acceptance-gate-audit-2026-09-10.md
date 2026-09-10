@@ -8,41 +8,57 @@ the actual codebase (not assumed) — file, function and test cited per gate.
 path and function/test name as evidence rather than report a gate as met on the strength of intent
 or documentation alone.
 
-**Update (same day):** gates 3, 5 and 10 were closed at low risk (purely additive - no change to
+**Update 1 (same day):** gates 3, 5 and 10 were closed at low risk (purely additive - no change to
 what a decision *is*, only what's tracked/shown/flagged). Gate 5 moved to partial, not full: only
 correction and override are tracked; disagreement has no distinct existing UI action to hook
-without adding new UI, so it remains untracked. See each gate's entry below for what changed and
-what's still missing, and the commit closing them for full detail.
+without adding new UI, so it remains untracked.
+
+**Update 2 (same day):** gates 1, 2 and 4 were then closed after explicit product decisions on
+their tradeoffs (asked and confirmed in conversation, not assumed). Gate 2 turned out not to need
+a policy call - the structured data already existed, it just wasn't exposed. Gate 1 required
+deciding whether to stop a silent fallback (chosen: yes). Gate 4 required deciding what "unknown"
+means and where it lives, since the source document itself is inconsistent about it (chosen: add
+it to the shared evidence model). See each gate's entry below for what changed, and the closing
+commits for full detail.
 
 ## Result summary
 
 | Status | Count | Gates |
 | --- | --- | --- |
-| Enforced | 12 | 3, 8, 10, 13, 14, 15, 18, 20, 21, 22, 23, 24 |
-| Partially enforced | 7 | 1, 5, 7, 9, 11, 12, 16 |
-| Not found / real gap | 4 | 2, 4, 17, 19 |
+| Enforced | 15 | 1, 2, 3, 4, 8, 10, 13, 14, 15, 18, 20, 21, 22, 23, 24 |
+| Partially enforced | 6 | 5, 7, 9, 11, 12, 16 |
+| Not found / real gap | 2 | 17, 19 |
 | Process gate, not automatable (expected) | 1 | 6 |
 
-12 of 24 gates are now solidly backed by code and tests (up from 10). The remaining gaps still
-cluster around making the decision engine's reasoning structured and correctable at the data
-level, not just at the UI/tracking level closed today — see "What this means" below.
+15 of 24 gates are now solidly enforced (up from an original 10). The two remaining real gaps
+(#17: preparation-time/abandonment tracking, #19: one continuous E2E journey) are both narrow,
+additive work with no open product decision behind them - just not built yet.
 
 ## Pillar 1 — EU Fit
 
 **1. "No decision is produced without the minimum required evidence defined by the
-capability-readiness policy."** — **Partially enforced.** `apps/web/lib/capability-readiness.ts`
-(`evaluateCapabilityReadiness`) is real and gates UI actions, but the actual decision engine
-(`orchestrateJobDecision`, `packages/shared/src/international/orchestration.ts:49`) has its own
-independent `missingInternational` check and never calls the capability-readiness policy. The gate
-holds at the UI surface, not inside the engine that produces the decision.
+capability-readiness policy."** — **Enforced (closed 10 September 2026).**
+`apps/web/lib/capability-readiness.ts`'s `assess_mobility` case requires `targetCountry` and
+`workAuthorisationStructured`, but `orchestrateJobDecision` never called it - and the actual
+decision-adapter (`assessApplicationDecision`) went further, silently defaulting a missing target
+country to the literal string `"European Union"` and running a full country-specific mobility
+assessment against that fabricated jurisdiction. Product decision: stop the fallback. When
+international evidence is required and no target country was actually supplied (context, profile,
+or job location), the adapter now returns `"Insufficient evidence"` with `"target country for
+mobility assessment"` in `missingEvidence`, instead of inventing one. A genuinely supplied country
+is unaffected. `candidatePosition`'s own tri-state gap (`sponsorshipNeeded` can't distinguish
+"explicitly false" from "never set") is a separate, larger profile-schema change and remains open.
+Covered by `scripts/decision-adapter-target-country.test.mjs` (5 tests).
 
-**2. "Every hard blocker identifies its triggering fact and evidence status."** — **Not
-enforced.** `getHardBlockers` (`packages/shared/src/eu-fit/decision-policy.ts:39-49`) returns
-`string[]` built as `` `${label}: ${rationale}` `` — a formatted sentence, not a structured
-`{ triggeringFact, evidenceStatus }` record. Every blocker type in the codebase
-(`CombinedJobDecision.blockers`, `InternationalAssessment.confirmedBlockers`) is a bare string
-array. There is nowhere in the code that could programmatically answer "which fact triggered this
-blocker and what is its evidence status" — only a human reading the sentence can.
+**2. "Every hard blocker identifies its triggering fact and evidence status."** — **Enforced
+(closed 10 September 2026).** `getHardBlockers` already filtered `FitComponent[]` down to hard
+blockers with the triggering fact (`component.key`), label and rationale on hand - it just
+collapsed them into a display string. No product decision was needed: added
+`getStructuredHardBlockers`, sharing the same filter, returning `{ key, label, rationale,
+evidenceStatus }` (`"found"`/`"missing"`, derived from whether `component.evidence` is non-empty).
+Exposed as a new additive field, `CountryFitEvaluation.structuredBlockers`, alongside the existing
+`blockers: string[]` - no existing consumer or conclusion changed. Covered by
+`scripts/country-fit-model.test.mjs`.
 
 **3. "Every governed mobility statement exposes source and freshness information."** —
 **Enforced (closed 10 September 2026).** `OfficialSource` (`apps/web/domains/eu-fit/types.ts`) now
@@ -54,12 +70,16 @@ for this country" rather than an invented date — this is the one place the gat
 incomplete, by design rather than by oversight. Covered by
 `scripts/acceptance-gate-fixes.test.mjs`.
 
-**4. "Users can distinguish verified, inferred, user-declared and unknown facts."** — **Real
-gap.** `evidenceStatusSchema` (`packages/shared/src/evidence/model.ts:4-11`) is
-`["verified", "user_declared", "inferred", "conflicting", "stale", "missing"]`. There is no
-`"unknown"` value anywhere in the codebase. `"missing"` is the closest analog but means something
-different (the fact was never supplied, not that its truth is indeterminate). The strategy
-document's own vocabulary isn't fully implemented.
+**4. "Users can distinguish verified, inferred, user-declared and unknown facts."** — **Enforced
+(closed 10 September 2026).** The source document itself is inconsistent here - pillar 2 lists six
+states with no "unknown," pillar 1's gate 4 lists four, replacing several with "unknown." Product
+decision: add `"unknown"` to the shared `evidenceStatusSchema`
+(`packages/shared/src/evidence/model.ts`), meaning a fact was asked about but its truth can't
+currently be determined - distinct from `"missing"` (never supplied). Verified
+`assessClaimSupport`'s existing branch structure already treats any unrecognized status safely:
+`"unknown"` matches none of the conflicting/verified/user_declared/inferred/stale branches and
+falls through to `"unsupported"`, identically to `"missing"` today - zero behavior change for any
+fact that exists now. Covered by `scripts/evidence-integrity.test.mjs`.
 
 **5. "Correction, override and disagreement reasons are measurable."** — **Partially enforced
 (closed 10 September 2026).** `apps/web/lib/analytics.ts` previously defined six event types with
@@ -184,13 +204,19 @@ covers field mapping, safe-fill scoping, and CSV/formula-injection neutralizatio
 ## What this means
 
 The strategy document is accurate about *intent* everywhere and, as of the same-day fixes, is now
-backed by solid code and tests in exactly half its acceptance gates (12 of 24). Closing gates 3, 5
-and 10 was low-risk because none of them touch what a decision *is* - only what's tracked, shown
-or flagged around it. The remaining real gaps (#2, #4, #19) are a different, harder category:
-**making the decision engine's reasoning structured at the data level, not just visible at the UI
-level.** Blockers are still prose, not structured `{ triggeringFact, evidenceStatus }` records
-(#2); there's still no `"unknown"` evidence-status value (#4); there's still no single continuous
-E2E journey from capture through kit to outcome (#19). These are exactly the gaps flagged as
-higher-risk in the scoping conversation for this work - restructuring the decision engine's output
-shape - and they remain the actual foundation the moat-analysis document's rank-1 and rank-2
-candidates (outcome-calibrated decisions, trustworthy mobility guidance) still depend on.
+backed by solid code and tests in 15 of 24 acceptance gates. The first three closed (3, 5, 10) were
+low-risk because none touched what a decision *is* - only what's tracked, shown or flagged around
+it. The next three (1, 2, 4) did touch the decision engine's output shape and behavior, which is
+exactly why they were paused on rather than defaulted: gate 1 changes *whether* a decision is
+produced for an incomplete profile, gate 2 changes the *shape* of blocker data every consumer
+reads, and gate 4 extends a *shared* status enum used across both pillars. Each required an
+explicit product call on the tradeoff (recorded in this repo's conversation history, not assumed)
+before implementation, per the modernization plan's own rule that EU Fit conclusions don't change
+without explicit approval.
+
+What's left (#17, #19) is narrower: preparation-time/abandonment analytics, and one continuous E2E
+spec from capture through kit to outcome. Neither has an open product decision behind it - they're
+just not built yet. The moat-analysis document's rank-1 and rank-2 candidates (outcome-calibrated
+decisions, trustworthy mobility guidance) are now meaningfully closer to their prerequisites:
+blockers are structured, evidence has an honest "unknown" state, and the decision engine no longer
+fabricates a jurisdiction to compute an answer.
