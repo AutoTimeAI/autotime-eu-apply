@@ -21,18 +21,22 @@ means and where it lives, since the source document itself is inconsistent about
 it to the shared evidence model). See each gate's entry below for what changed, and the closing
 commits for full detail.
 
+**Update 3 (same day):** gate 17 was closed - kit-preparation start/save events with an
+applicationId and duration, no document content, letting abandonment be measured downstream
+without any in-app detection logic.
+
 ## Result summary
 
 | Status | Count | Gates |
 | --- | --- | --- |
-| Enforced | 15 | 1, 2, 3, 4, 8, 10, 13, 14, 15, 18, 20, 21, 22, 23, 24 |
+| Enforced | 16 | 1, 2, 3, 4, 8, 10, 13, 14, 15, 17, 18, 20, 21, 22, 23, 24 |
 | Partially enforced | 6 | 5, 7, 9, 11, 12, 16 |
-| Not found / real gap | 2 | 17, 19 |
+| Not found / real gap | 1 | 19 |
 | Process gate, not automatable (expected) | 1 | 6 |
 
-15 of 24 gates are now solidly enforced (up from an original 10). The two remaining real gaps
-(#17: preparation-time/abandonment tracking, #19: one continuous E2E journey) are both narrow,
-additive work with no open product decision behind them - just not built yet.
+16 of 24 gates are now solidly enforced (up from an original 10). The one remaining real gap (#19:
+one continuous E2E journey from vacancy capture through approved kit to outcome status) has no
+open product decision behind it - it just isn't built yet.
 
 ## Pillar 1 — EU Fit
 
@@ -170,9 +174,13 @@ application kit* is safe/well-formed for autofill into those same platforms. Dif
 of the same word "ATS," not yet tested.
 
 **17. "Preparation time and abandonment are measurable without capturing sensitive document
-content in analytics."** — **Real gap.** The privacy half holds (no CV/document text appears in
-any tracked event), but there is no preparation-time or abandonment tracking at all — the metric
-this gate describes isn't being measured, safely or otherwise.
+content in analytics."** — **Enforced (closed 10 September 2026).** Added
+`trackKitPreparationStarted`/`trackKitPreparationSaved` to `analytics.ts`, fired from
+`regenerateKitDraft`/`saveApplicationKitSnapshot` in `DashboardExperience.tsx`. Both events carry
+only an `applicationId` and (for the saved event) a `durationMs` - never CV text or kit content.
+Abandonment is measurable downstream as a started event with no matching saved event for the same
+application, without any explicit in-app abandonment-detection logic. Covered by
+`scripts/acceptance-gate-fixes.test.mjs`.
 
 ## Broader release gates
 
@@ -204,7 +212,7 @@ covers field mapping, safe-fill scoping, and CSV/formula-injection neutralizatio
 ## What this means
 
 The strategy document is accurate about *intent* everywhere and, as of the same-day fixes, is now
-backed by solid code and tests in 15 of 24 acceptance gates. The first three closed (3, 5, 10) were
+backed by solid code and tests in 16 of 24 acceptance gates. The first three closed (3, 5, 10) were
 low-risk because none touched what a decision *is* - only what's tracked, shown or flagged around
 it. The next three (1, 2, 4) did touch the decision engine's output shape and behavior, which is
 exactly why they were paused on rather than defaulted: gate 1 changes *whether* a decision is
@@ -212,11 +220,13 @@ produced for an incomplete profile, gate 2 changes the *shape* of blocker data e
 reads, and gate 4 extends a *shared* status enum used across both pillars. Each required an
 explicit product call on the tradeoff (recorded in this repo's conversation history, not assumed)
 before implementation, per the modernization plan's own rule that EU Fit conclusions don't change
-without explicit approval.
+without explicit approval. Gate 17 (preparation-time/abandonment analytics) closed last, low-risk
+and additive like the first three.
 
-What's left (#17, #19) is narrower: preparation-time/abandonment analytics, and one continuous E2E
-spec from capture through kit to outcome. Neither has an open product decision behind it - they're
-just not built yet. The moat-analysis document's rank-1 and rank-2 candidates (outcome-calibrated
-decisions, trustworthy mobility guidance) are now meaningfully closer to their prerequisites:
-blockers are structured, evidence has an honest "unknown" state, and the decision engine no longer
-fabricates a jurisdiction to compute an answer.
+What's left is a single gap: #19, one continuous E2E spec from vacancy capture through approved
+kit to outcome status - coverage exists today but is split across phase-specific specs. No open
+product decision sits behind it; it just isn't built yet. The moat-analysis document's rank-1 and
+rank-2 candidates (outcome-calibrated decisions, trustworthy mobility guidance) are now
+meaningfully closer to their prerequisites: blockers are structured, evidence has an honest
+"unknown" state, the decision engine no longer fabricates a jurisdiction to compute an answer, and
+preparation time is measured well enough to eventually calibrate against real outcomes.
