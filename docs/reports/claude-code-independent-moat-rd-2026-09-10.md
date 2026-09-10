@@ -4,7 +4,10 @@
 **Commissioned by:** `docs/reports/claude-code-moat-rd-handoff-2026-09-10.md`
 **Reviewed against:** `docs/reports/startup-moat-rd-dossier-2026-09-10.md` (Codex) and
 `docs/reports/moat-rd-strategy-2026-09-10.md` (Codex, referenced but not independently re-derived
-line-by-line in this pass — see the Comparison section for what was and wasn't re-verified)
+line-by-line in this pass — see the Comparison section for what was and wasn't re-verified), plus
+`docs/reports/european-tech-mobility-market-rd-2026-09-10.md` (Codex, a third independent
+19-market research pass that appeared mid-session — cross-checked directly against this session's
+own European Tech Mobility Atlas in Section 15).
 **Method:** direct repository inspection (file reads, greps, reachability tracing — the same method
 used throughout this session's acceptance-gate and technical-debt audits) plus targeted live web
 research for claims this session had not already independently verified. Every "reachable in
@@ -388,6 +391,101 @@ the handoff brief should treat this report's repository findings, not Codex's, a
 where the two disagree on reachability — Codex's dossier was written without the live-tracing work
 this session had already done.
 
+## 15. Addendum — direct verification against a third independent dataset and Codex's key citations
+
+Added after the founder removed the time constraint on this assignment. A fourth document
+appeared mid-session: `docs/reports/european-tech-mobility-market-rd-2026-09-10.md` (Codex,
+19-market coverage, independent of this session's own earlier European Tech Mobility Atlas). Cross-
+referencing all three 19-market datasets against each other, and directly re-verifying two of
+Codex's most load-bearing regulatory citations, surfaced two findings worth recording precisely.
+
+### 15.1 France and Sweden: two "conflicting" figures across the three datasets are both correct — and this is a general problem, not a France/Sweden-specific one
+
+This session's own earlier Atlas recorded France at €39,582/yr and Sweden at SEK 34,470/month.
+The new Codex market-rd document recorded France at €59,373/yr and Sweden at SEK 53,625/month —
+materially different numbers, for the same countries, researched independently the same day.
+
+Direct re-verification (fresh web research, not re-reading either prior document) resolves this:
+**both figures are correct, for two different routes within each country.**
+
+- France: €39,582/yr is the "Talent — Skilled Employee" (*salarié qualifié*) route; €59,373/yr is
+  the EU Blue Card route specifically — exactly 1.5× the same base reference salary. Both are real,
+  current 2026 figures. A candidate earning €45,000 qualifies for the first route but not the
+  second.
+- Sweden: SEK 34,470/month is the standard work-permit route (90% of Sweden's median wage,
+  effective from mid-2026); SEK 53,625/month is the EU Blue Card route (1.25× the average gross
+  salary, effective 15 July 2026) — a ~55% difference. These are two genuinely separate permit
+  types with separate rules, not a data-quality error in either research pass.
+
+**Why this matters more than a two-country footnote:** this is very likely a *systematic* pattern,
+not a coincidence isolated to France and Sweden. Every full-support country this session and Codex
+both researched (Germany, Netherlands, Ireland among them) has, or plausibly has, both a national
+route and a separate EU Blue Card route with its own threshold. A product or country-pack design
+that stores "the salary threshold for country X" as a single value is structurally wrong for any
+country with more than one route — not incomplete, *wrong*, in a way that would produce a
+confidently-stated incorrect answer for whichever route wasn't the one encoded. This is direct,
+freshly-verified evidence in favor of Codex's route-scoped `policy_rule_versions`/country-pack
+design (Section 3 of Codex's dossier; the market-rd document's "country-pack contract") over any
+simpler country-only model — not a hypothetical architecture preference, a concrete example of the
+exact failure it prevents.
+
+**Product implication:** `packages/shared/src/international/country-packs/*.ts` currently models
+`pathways: string[]` as a flat list per country pack (confirmed by direct read of `ireland.ts`,
+`uk.ts`, `germany.ts`, `netherlands.ts` earlier this session) without a distinct threshold per
+pathway — the pathway *names* are there, but nothing in the current schema prevents a future
+contributor from attaching one salary figure to a country that actually has two routes. This is a
+concrete, near-term schema risk worth flagging before any of these packs get their first real
+salary figures encoded.
+
+### 15.2 EU AI Act: Codex's "candidate-side, needs counsel" framing is reasonable but incomplete — and the more specific check is good news
+
+Both Codex documents state that the EU AI Act treats employer-side recruitment/selection systems
+as high-risk (Annex III), that AutoTime is candidate-side, and that this needs counsel review.
+That's correct as far as it goes, but neither document checked the two things that actually bear
+most directly on a product whose subject matter is migration eligibility, not just recruitment:
+
+1. **Annex III does not stop at recruitment.** Point 7 of Annex III separately designates AI
+   systems used for migration, asylum and border-control purposes as high-risk — including,
+   specifically, "AI systems intended to assist ... in the examination of applications for asylum,
+   visa or residence permits ... including related assessments of the reliability of evidence."
+   That description sounds close to what AutoTime's mobility-assessment engine does. Direct
+   verification of this category's actual scope, however, finds it is explicitly limited to systems
+   "intended to be used **by competent public authorities**" — i.e., government immigration bodies
+   examining real applications, not a private tool helping an individual candidate understand their
+   own situation before they apply anywhere. On the specific wording found, this is a meaningfully
+   reassuring result: AutoTime's candidate-facing mobility guidance does not appear to sit inside
+   this category on its face. **This is not a legal conclusion** — "used by a public authority" is
+   exactly the kind of boundary condition (e.g., if a future feature routed structured output
+   directly into a government submission channel) that genuinely needs counsel to confirm stays
+   inapplicable as the product evolves — but it is a specific, sourced, decision-relevant data point
+   neither Codex document surfaced despite it being the single most on-point Annex III category for
+   this specific product's subject matter.
+2. **Article 6(3)'s "profiling override"** (a system that profiles natural persons is always
+   high-risk, no self-assessment exemption available) is real and absolute — but, per direct
+   verification, it only activates for a system that already falls within an Annex III area to
+   begin with. It is not a freestanding trigger. Given point 7 (above) appears not to apply and
+   point 4(a) (recruitment/selection) is scoped to employer-side use Codex already correctly
+   excludes AutoTime from, the profiling override does not appear to independently pull AutoTime
+   into Annex III on the evidence found in this pass — worth confirming with counsel rather than
+   treating as settled, but not a new alarm.
+3. **The UK IAA's criminal-offence claim, independently re-verified:** unregulated provision of
+   immigration advice in the UK is confirmed, via direct search of UK legislation guidance
+   (Immigration and Asylum Act 1999, Sections 84/91), to be a real criminal offence — up to two
+   years' imprisonment on indictment. Codex's caution here was not overstated; if anything this
+   independent check raises confidence in it.
+
+### 15.3 What to do with this
+
+None of this changes Section 6's recommendation — obtain a written jurisdiction-specific scope
+opinion before any personalized UK output, and before treating any EU country's guidance as more
+than general information. What it changes is the specific brief to hand counsel: ask them to
+confirm (a) that Annex III point 7's "competent public authorities" limitation does in fact exclude
+a candidate-facing self-assessment tool as currently scoped, and (b) whether that conclusion would
+change if a future feature ever submitted structured output into an official government channel on
+a candidate's behalf. That's a narrower, cheaper, more answerable question than an open-ended "is
+this high-risk AI" review, and it's the direct product of pushing Codex's already-correct caution
+one level deeper rather than either accepting or dismissing it wholesale.
+
 ## Sources
 
 Repository files cited throughout this report were read directly during this session; line numbers
@@ -404,3 +502,16 @@ and function names are as of 10 September 2026. External sources for Section 7 (
 For Sections 6, 9, 10 and the dossier's regulatory/evaluation/IP citations: see
 `docs/reports/startup-moat-rd-dossier-2026-09-10.md`'s own footnotes — read and assessed critically
 in this report (Section 12) but not independently re-fetched in this pass.
+
+External sources for Section 15 (direct re-verification, added after the founder lifted the time
+constraint):
+
+- [Aventys: "Talent salarié qualifié vs carte bleue européenne 2026"](https://aventys.work/fr/blog/passeport-talent-salarie-qualifie-vs-carte-bleue-europeenne)
+- [Relovisa: "Talent Salarié Qualifié vs EU Blue Card France 2026"](https://relovisa.co/blog/france-talent-salarie-vs-eu-blue-card-2026)
+- [Newland Chase: "Sweden Work Permit Reform in Force from June 1, 2026"](https://newlandchase.com/sweden-work-permit-reform-in-force-from-june-1-2026/)
+- [Swedish Migration Agency: EU Blue Card](https://www.migrationsverket.se/en/you-want-to-apply/work/employee-or-self-employed/eu-blue-cards.html)
+- [UK Government: IAA adviser registration explained](https://www.gov.uk/government/publications/iaa-adviser-registration-explained/iaa-adviser-registration-explained)
+- [Legislation.gov.uk: Immigration and Asylum Act 1999, Part V](https://legislation.gov.uk/ukpga/1999/33/section/91/data.html)
+- [artificialintelligenceact.eu: Annex III, Article 6](https://artificialintelligenceact.eu/annex/3/) · [Article 6](https://artificialintelligenceact.eu/article/6/)
+- [Airia: "The Article 6(3) Filter: Your Escape Valve Has a Catch"](https://airia.com/eu-ai-act-part-3-the-article-63-filter-your-escape-valve-has-a-catch/)
+- [AI Act Service Desk (European Commission): Migration, asylum and border control management](https://ai-act-service-desk.ec.europa.eu/en/migration-asylum-and-border-control-management)
