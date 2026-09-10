@@ -13,7 +13,6 @@ import {
   companionDashboardStateSchema,
   createMockApplicationPositioningPack,
   createMockEUFitEngineResult,
-  evaluateAutoTimeFitScore,
   evaluateCountryFit,
   getCandidateProfileBridgeIssues,
   resolveAIProvider,
@@ -73,6 +72,20 @@ import {
   type TechnicalInterviewFocus
 } from "../domains/interviews/technical-drill-catalogue"
 import type { TechnicalInterviewDifficulty } from "../domains/interviews/technical-interview-policy"
+import {
+  createApplication,
+  getApplicationFitReview,
+  getContentGuardrails,
+  getDecisionBrief,
+  getEvidenceLedgerRows,
+  getJobFitReview,
+  getOfficialSources,
+  getVerificationChecklist,
+  type ContentGuardrail,
+  type DecisionBrief,
+  type OfficialSource,
+  type VerificationChecklistItem
+} from "../domains/eu-fit"
 import {
   defaultDashboardState as defaultState,
   emptyJobAnalysis,
@@ -150,43 +163,11 @@ type ProfileContextReviewResponse = {
   error: string | null
 }
 
-type DecisionBrief = {
-  decision: CountryFitEvaluation["decision"]
-  confidence: "Low" | "Medium" | "High"
-  score: number
-  contentGate: CountryFitEvaluation["contentGate"]
-  rationale: string[]
-  evidenceFound: string[]
-  risks: string[]
-  nextActions: string[]
-  missingInputs: string[]
-}
-
 type ProfileQualitySignal = {
   label: string
   score: number
   status: "ready" | "needs-check" | "blocked"
   detail: string
-}
-
-type OfficialSource = {
-  label: string
-  url: string
-  note: string
-}
-
-type VerificationChecklistItem = {
-  id: string
-  label: string
-  status: "ready" | "needs-check" | "blocked"
-  evidence: string
-  limit: string
-}
-
-type ContentGuardrail = {
-  label: string
-  status: "ready" | "warning" | "blocked"
-  reason: string
 }
 
 type ReadyToApplyItem = {
@@ -480,79 +461,6 @@ const defaultDashboardFocusByView: Record<
   applications: "application-tracker",
   interview: "interview-prep"
 }
-
-
-const officialSourceFallback: OfficialSource[] = [
-  {
-    label: "EU immigration portal",
-    url: "https://immigration-portal.ec.europa.eu/index_en",
-    note: "Use this as a starting point, then verify the hiring country directly."
-  }
-]
-
-const officialCountrySources: Record<string, OfficialSource[]> = {
-  "United Kingdom": [
-    {
-      label: "GOV.UK Skilled Worker visa",
-      url: "https://www.gov.uk/skilled-worker-visa",
-      note: "Verify job, salary, sponsor and document requirements."
-    },
-    {
-      label: "GOV.UK sponsor licence guidance",
-      url: "https://www.gov.uk/uk-visa-sponsorship-employers",
-      note: "Check employer sponsorship responsibilities and limits."
-    }
-  ],
-  Ireland: [
-    {
-      label: "Ireland Critical Skills Employment Permit",
-      url: "https://enterprise.gov.ie/en/what-we-do/workplace-and-skills/employment-permits/permit-types/critical-skills-employment-permit/",
-      note: "Verify eligibility, remuneration and permit requirements."
-    },
-    {
-      label: "Ireland employment permit types",
-      url: "https://enterprise.gov.ie/en/what-we-do/workplace-and-skills/employment-permits/permit-types/",
-      note: "Compare permit routes before assuming a role is viable."
-    }
-  ],
-  Germany: [
-    {
-      label: "Make it in Germany work visa",
-      url: "https://www.make-it-in-germany.com/en/visa-residence/types/work-qualified-professionals",
-      note: "Verify qualification, job offer and work visa requirements."
-    },
-    {
-      label: "Make it in Germany visa procedure",
-      url: "https://www.make-it-in-germany.com/en/visa-residence/procedure/entry-process",
-      note: "Check the visa process and required verification steps."
-    }
-  ],
-  Netherlands: [
-    {
-      label: "IND highly skilled migrant",
-      url: "https://ind.nl/en/residence-permits/work/highly-skilled-migrant",
-      note: "Verify recognised sponsor, contract and income requirements."
-    },
-    {
-      label: "IND recognised sponsor background",
-      url: "https://ind.nl/en/about-us/background-articles/national-highly-skilled-migrant-scheme",
-      note: "Understand recognised sponsor obligations and register context."
-    }
-  ],
-  France: [
-    {
-      label: "France-Visas salaried employment",
-      url: "https://www.france-visas.gouv.fr/en/salaried-employment",
-      note: "Verify work permit and visa route requirements."
-    },
-    {
-      label: "Service-Public work authorisation",
-      url: "https://www.service-public.fr/particuliers/vosdroits/F2728",
-      note: "Check when work authorisation is required in France."
-    }
-  ]
-}
-
 
 
 function getProfileContextForInterview(profile: CandidateProfile) {
@@ -952,113 +860,6 @@ function createJobAnalysisFromApplication(
   }
 }
 
-function mergeAutoTimeFitReview(
-  localReview: AutoTimeFitReview,
-  source: Partial<JobAnalysisDraft> & Partial<ApplicationRecord>
-): AutoTimeFitReview {
-  return {
-    ...localReview,
-    fitScore:
-      typeof source.fitScore === "number" ? source.fitScore : localReview.fitScore,
-    fitLabel: source.fitLabel ?? localReview.fitLabel,
-    confidenceLevel: source.confidenceLevel ?? localReview.confidenceLevel,
-    scoreBreakdown: source.scoreBreakdown?.length
-      ? source.scoreBreakdown
-      : localReview.scoreBreakdown,
-    matchedSignals: source.matchedSignals?.length
-      ? source.matchedSignals
-      : localReview.matchedSignals,
-    missingSignals: source.missingSignals?.length
-      ? source.missingSignals
-      : localReview.missingSignals,
-    riskAreas: source.riskAreas?.length
-      ? source.riskAreas
-      : localReview.riskAreas,
-    suggestedCvPositioning:
-      source.suggestedCvPositioning || localReview.suggestedCvPositioning,
-    suggestedNextAction:
-      source.suggestedNextAction || localReview.suggestedNextAction,
-    shortSummary: source.shortSummary || localReview.shortSummary,
-    disclaimer: source.disclaimer || localReview.disclaimer
-  }
-}
-
-function getJobFitReview({
-  job,
-  profile
-}: {
-  job: JobAnalysisDraft
-  profile: CandidateProfile
-}): AutoTimeFitReview {
-  return mergeAutoTimeFitReview(
-    evaluateAutoTimeFitScore({
-      profile,
-      job
-    }),
-    job
-  )
-}
-
-function getApplicationFitReview({
-  application,
-  profile
-}: {
-  application: ApplicationRecord
-  profile: CandidateProfile
-}): AutoTimeFitReview {
-  const job = createJobAnalysisFromApplication(application)
-
-  return mergeAutoTimeFitReview(
-    evaluateAutoTimeFitScore({
-      profile,
-      job
-    }),
-    application
-  )
-}
-
-function createApplication(
-  job: JobAnalysisDraft,
-  fitEvaluation: CountryFitEvaluation,
-  autoTimeFitReview: AutoTimeFitReview
-): ApplicationRecord {
-  const title = job.jobTitle || "Untitled role"
-  return {
-    id: crypto.randomUUID(),
-    title,
-    roleTitle: title,
-    company: job.company || undefined,
-    url: job.jobUrl || "Manual dashboard entry",
-    source: getHostname(job.jobUrl),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    status: "Saved",
-    nextAction: fitEvaluation.nextBestAction,
-    nextActionDate: "",
-    outcomeReason: "Unknown",
-    notes: [
-      fitEvaluation.decision,
-      fitEvaluation.positioningAngle,
-      job.positioningAngle || job.notes,
-      fitEvaluation.learningPrompt
-    ]
-      .filter(Boolean)
-      .join(" "),
-    fitScore: autoTimeFitReview.fitScore,
-    fitLabel: autoTimeFitReview.fitLabel,
-    confidenceLevel: autoTimeFitReview.confidenceLevel,
-    scoreBreakdown: autoTimeFitReview.scoreBreakdown,
-    matchedSignals: autoTimeFitReview.matchedSignals,
-    missingSignals: autoTimeFitReview.missingSignals,
-    riskAreas: autoTimeFitReview.riskAreas,
-    suggestedCvPositioning: autoTimeFitReview.suggestedCvPositioning,
-    suggestedNextAction: autoTimeFitReview.suggestedNextAction,
-    shortSummary: autoTimeFitReview.shortSummary,
-    disclaimer: autoTimeFitReview.disclaimer,
-    fitDecision: fitEvaluation.decision,
-    contentGate: fitEvaluation.contentGate
-  }
-}
 
 function createApplicationContentSnapshot({
   application,
@@ -1820,269 +1621,6 @@ function normalizeContextSuggestionForApproval({
   }
 }
 
-function getDecisionBrief({
-  autoTimeFitReview,
-  context,
-  state,
-  fitEvaluation,
-  readinessScore
-}: {
-  autoTimeFitReview: AutoTimeFitReview
-  context: ProductContext
-  state: CompanionDashboardState
-  fitEvaluation: CountryFitEvaluation
-  readinessScore: number
-}): DecisionBrief {
-  const missingInputs = [
-    !state.profile.fullName.trim() && "candidate name",
-    !state.profile.baseCvText.trim() && "CV text",
-    !state.profile.workRightDetails.trim() && "work-right details",
-    !state.profile.targetRoles.trim() && "target roles",
-    !state.jobAnalysis.jobDescription.trim() && "job description",
-    !state.jobAnalysis.jobUrl.trim() && "job URL"
-  ].filter(Boolean) as string[]
-  const fitRisks = fitEvaluation.components
-    .filter((item) => item.status === "weak" || item.status === "blocker")
-    .map((item) => `${item.label}: ${item.rationale}`)
-  const evidenceFound = fitEvaluation.components.flatMap((item) =>
-    item.evidence.length
-      ? item.evidence.map((evidence) => `${item.label}: ${evidence}`)
-      : []
-  )
-  const risks = [
-    ...fitRisks,
-    !state.profile.baseCvText.trim() &&
-      "CV text is missing, so skill and ATS checks cannot be verified.",
-    !state.jobAnalysis.jobDescription.trim() &&
-      "Job description is missing, so role classification cannot be verified.",
-    (state.jobAnalysis.gaps?.length ?? 0) > 0 && "Saved role gaps need review."
-  ].filter(Boolean) as string[]
-
-  return {
-    decision: fitEvaluation.decision,
-    confidence: autoTimeFitReview.confidenceLevel,
-    score: autoTimeFitReview.fitScore,
-    contentGate: fitEvaluation.contentGate,
-    rationale: [
-      `Assessment mode: ${getMarketLabel(context)} / ${context.targetCountry}.`,
-      autoTimeFitReview.shortSummary,
-      autoTimeFitReview.suggestedCvPositioning,
-      getUrgencyGuidance(context)
-    ],
-    evidenceFound:
-      autoTimeFitReview.matchedSignals.length > 0
-        ? autoTimeFitReview.matchedSignals
-        : evidenceFound.length > 0
-          ? evidenceFound
-        : [
-            "No supporting evidence has been found yet. Add real profile, work-right and job-description details."
-          ],
-    risks:
-      autoTimeFitReview.riskAreas.length > 0
-        ? autoTimeFitReview.riskAreas
-        : risks.length > 0
-          ? risks
-        : [
-            "No rule-based blocker was detected. This is not employer, visa or legal confirmation."
-          ],
-    nextActions:
-      fitEvaluation.contentGate === "ready"
-        ? [
-            "Save the role into the tracker.",
-            "Generate application content from the approved positioning angle.",
-            "Track next action and prepare interview prompts if shortlisted."
-          ]
-        : fitEvaluation.contentGate === "stretch"
-          ? [
-              "Label this as a stretch application before generating content.",
-              "Clarify the weakest country, work-right or sponsorship signal.",
-              "Apply only if the role is strategically important."
-            ]
-          : [
-              autoTimeFitReview.suggestedNextAction,
-              "Add missing target country, target roles and work-right details.",
-              "Re-check the role before writing application content."
-            ],
-    missingInputs
-  }
-}
-
-function getOfficialSources(targetCountry: string) {
-  return officialCountrySources[targetCountry] ?? officialSourceFallback
-}
-
-function getEvidenceLedgerRows(
-  fitEvaluation: CountryFitEvaluation,
-  missingInputs: string[]
-) {
-  return [
-    ...fitEvaluation.components.map((component) => ({
-      id: component.key,
-      check: component.label,
-      status: component.status,
-      explanation: component.rationale,
-      evidence: component.evidence.length
-        ? component.evidence
-        : ["No direct supporting evidence found yet."],
-      limit:
-        component.status === "strong" || component.status === "medium"
-          ? "Supported by saved text and rule checks, not officially verified."
-          : "Requires user or employer confirmation before relying on this advice."
-    })),
-    ...missingInputs.map((input) => ({
-      id: `missing-${input}`,
-      check: `Missing: ${input}`,
-      status: "missing",
-      explanation: `The ${input} input is required for a stronger decision.`,
-      evidence: ["No user-provided evidence is saved for this input."],
-      limit: "AutoTime must not infer this from unrelated information."
-    }))
-  ]
-}
-
-function getVerificationChecklist({
-  state,
-  fitEvaluation,
-  officialSources,
-  trustState
-}: {
-  state: CompanionDashboardState
-  fitEvaluation: CountryFitEvaluation
-  officialSources: OfficialSource[]
-  trustState: TrustState
-}): VerificationChecklistItem[] {
-  const hasJobDescription = Boolean(state.jobAnalysis.jobDescription.trim())
-  const hasWorkRight = Boolean(state.profile.workRightDetails.trim())
-  const hasTargetCountry = Boolean(state.profile.targetCountries.trim())
-  const hasCv = Boolean(state.profile.baseCvText.trim())
-  const hasOfficialSources = officialSources.length > 0
-  const hasHardBlocker = fitEvaluation.blockers.length > 0
-
-  return [
-    {
-      id: "job-description",
-      label: "Job description saved",
-      status: hasJobDescription ? "ready" : "needs-check",
-      evidence: hasJobDescription
-        ? "Job text is available for role, skill and sponsorship checks."
-        : "No job description has been saved.",
-      limit:
-        "A thin or partial job post can hide sponsorship, location or salary constraints."
-    },
-    {
-      id: "work-right",
-      label: "Work-right position stated",
-      status: hasWorkRight ? "ready" : "blocked",
-      evidence: hasWorkRight
-        ? state.profile.workRightDetails
-        : "No work-right evidence is saved.",
-      limit:
-        "The user must verify work authorisation with official guidance or the employer."
-    },
-    {
-      id: "target-country",
-      label: "Target country confirmed",
-      status: hasTargetCountry ? "ready" : "needs-check",
-      evidence: hasTargetCountry
-        ? state.profile.targetCountries
-        : "No target country is saved in the profile.",
-      limit:
-        "Broad EU or remote roles still need country-specific hiring verification."
-    },
-    {
-      id: "cv-evidence",
-      label: "CV evidence available",
-      status: hasCv ? "ready" : "needs-check",
-      evidence: hasCv
-        ? "CV text is saved and can be compared with role language."
-        : "No CV text is saved.",
-      limit: "Review application content before using it."
-    },
-    {
-      id: "official-source",
-      label: "Official source reviewed",
-      status: trustState.officialSourceReviewed
-        ? "ready"
-        : hasOfficialSources
-          ? "needs-check"
-          : "blocked",
-      evidence: hasOfficialSources
-        ? trustState.officialSourceReviewedAt
-          ? `Reviewed on ${new Date(
-              trustState.officialSourceReviewedAt
-            ).toLocaleDateString()}: ${officialSources
-              .map((source) => source.label)
-              .join(", ")}`
-          : officialSources.map((source) => source.label).join(", ")
-        : "No official verification source is available for this country.",
-      limit:
-        "The app provides links only; the user must verify current requirements."
-    },
-    {
-      id: "blockers",
-      label: "Hard blockers resolved",
-      status: hasHardBlocker ? "blocked" : "ready",
-      evidence: hasHardBlocker
-        ? fitEvaluation.blockers.join(" ")
-        : "No hard blocker was detected by the current rules.",
-      limit:
-        "No detected blocker is not the same as employer, visa or legal approval."
-    }
-  ]
-}
-
-function getContentGuardrails({
-  decisionBrief,
-  verificationChecklist
-}: {
-  decisionBrief: DecisionBrief
-  verificationChecklist: VerificationChecklistItem[]
-}): ContentGuardrail[] {
-  const blockedChecks = verificationChecklist.filter(
-    (item) => item.status === "blocked"
-  )
-  const needsCheck = verificationChecklist.filter(
-    (item) => item.status === "needs-check"
-  )
-
-  return [
-    {
-      label: "Decision gate",
-      status:
-        decisionBrief.contentGate === "blocked"
-          ? "blocked"
-          : decisionBrief.contentGate === "stretch"
-            ? "warning"
-            : "ready",
-      reason:
-        decisionBrief.contentGate === "blocked"
-          ? "Application content is blocked until the strongest risk is resolved."
-          : decisionBrief.contentGate === "stretch"
-            ? "Content can only be drafted with a clear stretch-risk label."
-            : "No content blocker was detected by the current rules."
-    },
-    {
-      label: "Evidence minimum",
-      status:
-        blockedChecks.length > 0
-          ? "blocked"
-          : needsCheck.length > 0
-            ? "warning"
-            : "ready",
-      reason:
-        blockedChecks.length > 0
-          ? "Required checks are blocked."
-          : needsCheck.length > 0
-            ? "Checks still need manual confirmation."
-            : "Core verification checks are ready."
-    },
-    {
-      label: "Content source",
-      status: "ready",
-      reason: "Drafts use saved profile, reusable answers and job text."
-    }
-  ]
-}
 
 function getReadyToApplyChecklist({
   application,
@@ -2391,7 +1929,9 @@ export default function HomePage({
     () =>
       getDecisionBrief({
         autoTimeFitReview,
-        context: resolvedProductContext,
+        targetCountry: resolvedProductContext.targetCountry,
+        marketLabel: getMarketLabel(resolvedProductContext),
+        urgencyGuidance: getUrgencyGuidance(resolvedProductContext),
         state,
         fitEvaluation,
         readinessScore
@@ -2478,6 +2018,7 @@ export default function HomePage({
 
     return getApplicationFitReview({
       application: selectedApplication,
+      job: createJobAnalysisFromApplication(selectedApplication),
       profile: state.profile
     })
   }, [selectedApplication, state.profile])

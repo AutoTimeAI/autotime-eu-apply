@@ -232,6 +232,7 @@ test("Proof Library stays a standalone reusable-proof workspace", () => {
 test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const fitModel = read("packages/shared/src/fit-model.ts")
+  const fitReview = read("apps/web/domains/eu-fit/fit-review.ts")
 
   assert.match(dashboard, /title: "Check EU fit before you apply"/)
   assert.match(
@@ -255,31 +256,25 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   )
   assert.match(dashboard, /setOfficialSourceReviewed\(event\.target\.checked\)/)
 
-  const createApplicationStart = dashboard.indexOf("function createApplication(")
-  const createContentStart = dashboard.indexOf(
-    "function createApplicationContentSnapshot("
-  )
   const saveStart = dashboard.indexOf("const saveApplicationFromJob = async () =>")
   const aiStart = dashboard.indexOf("const runAiJobAnalysis = async () =>")
   const updateStart = dashboard.indexOf("const updateApplication = (")
 
-  assert.notEqual(createApplicationStart, -1)
-  assert.notEqual(createContentStart, -1)
   assert.notEqual(aiStart, -1)
   assert.notEqual(saveStart, -1)
   assert.notEqual(updateStart, -1)
 
-  const createApplicationFlow = dashboard.slice(
-    createApplicationStart,
-    createContentStart
-  )
   const saveFlow = dashboard.slice(saveStart, aiStart)
   const aiFlow = dashboard.slice(aiStart, updateStart)
 
-  assert.match(createApplicationFlow, /nextAction: fitEvaluation\.nextBestAction/)
-  assert.match(createApplicationFlow, /fitScore: autoTimeFitReview\.fitScore/)
-  assert.match(createApplicationFlow, /fitDecision: fitEvaluation\.decision/)
-  assert.match(createApplicationFlow, /contentGate: fitEvaluation\.contentGate/)
+  // createApplication moved to the eu-fit domain module as part of the
+  // Phase 4 dashboard decomposition; the dashboard now only calls it (see
+  // saveFlow below), so its own fit-to-record wiring is checked here.
+  assert.match(fitReview, /export function createApplication\(/)
+  assert.match(fitReview, /nextAction: fitEvaluation\.nextBestAction/)
+  assert.match(fitReview, /fitScore: autoTimeFitReview\.fitScore/)
+  assert.match(fitReview, /fitDecision: fitEvaluation\.decision/)
+  assert.match(fitReview, /contentGate: fitEvaluation\.contentGate/)
 
   assert.match(aiFlow, /requireCapability\("analyse_job"\)/)
   assert.match(aiFlow, /hasJobDraft\(state\.jobAnalysis\)/)

@@ -36,6 +36,12 @@ qualified-review and regulated-profession gates require observed external eviden
 These are maintainability tasks, not product-phase exit evidence:
 
 1. Split `DashboardExperience.tsx` by workflow using characterization tests.
+   EU Fit's pure decision-brief, evidence-ledger, verification-checklist and
+   content-guardrail logic is extracted to `apps/web/domains/eu-fit/`
+   (10 September 2026, `DashboardExperience.tsx` 9,903 -> 9,444 lines); the
+   Analyse Fit view and its remaining capability slices (evidence review,
+   application-preparation, role outcome, dialogs, navigation) are still to
+   move.
 2. Split extension page detection, widget UI and reviewed autofill from `autofill.ts`.
 3. Split dashboard sync request handling from reconciliation and persistence.
 4. Divide global CSS into tokens, foundations and workflow styles.
