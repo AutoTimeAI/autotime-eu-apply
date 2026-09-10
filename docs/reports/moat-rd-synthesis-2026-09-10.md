@@ -78,13 +78,16 @@ Codex's proposed slice ("one Netherlands Highly Skilled Migrant scenario, one ve
 source, one employer verification, one candidate evidence set, one immutable decision, one replay
 test, one expert sign-off record") is the right shape. Freezing it with two amendments:
 
-1. **Add the wiring fix as slice item zero.** Before any new schema work, wire
-   `assessCoreLoopTrace` into a real path — either a release-time integrity check across live
-   application records, or a user-facing "your application history is consistent" signal in
-   `JobApplicationWorkspace`. This costs a day, not a sprint, uses code that already exists and is
-   already tested, and produces the first real operational signal about whether the target
-   architecture's core-loop-integrity concept holds up against live data before committing further
-   schema design time to it.
+1. **Slice item zero — done, same day.** Wired `assessCoreLoopTrace` into `JobApplicationWorkspace`
+   (commit `263dcf2b`): it now runs against every loaded job/application/interview set and reports
+   any detected inconsistency through a new privacy-minimal analytics event
+   (`trackCoreLoopIntegrityIssue` — application ID, enum issue codes, and stage only, never
+   content), observationally rather than as a blocking gate. This was genuinely a same-day fix, not
+   a sprint, confirming the estimate above. What it has not yet produced is the actual operational
+   signal — no real user session has run through it yet, so whether the target architecture's
+   core-loop-integrity concept holds up against live data is still an open question, just now one
+   with real instrumentation in place to answer it rather than a recommendation to build that
+   instrumentation.
 2. **Run the slice against both Netherlands and Germany in parallel, not Netherlands alone.**
    Every report agrees Germany + Netherlands is the beachhead pair; proving the architecture against
    only one of the two doesn't validate that it generalizes across the pair's genuinely different
@@ -119,7 +122,7 @@ reports argues for a different approach. Two gate additions specific to this syn
 
 | Action | Owner | Not closeable by engineering alone |
 | --- | --- | --- |
-| Wire `assessCoreLoopTrace`; extend Stamp4 coverage; build versioned sources/decision snapshots/replay for the frozen slice | Engineering | — |
+| ~~Wire `assessCoreLoopTrace`~~ — done, commit `263dcf2b`; extend Stamp4 coverage; build versioned sources/decision snapshots/replay for the frozen slice | Engineering | — |
 | Confirm Annex III point 7's "competent public authorities" scoping, and whether a future submission-channel feature would change that | Legal/regulatory counsel | Yes — this is the single most concrete open item this synthesis produced |
 | Written jurisdiction scope opinion for personalized UK output | UK immigration counsel | Yes |
 | Named qualified reviewer + first sign-off for Netherlands and Germany routes in the frozen slice | Jurisdiction experts (contracted) | Yes |
@@ -148,6 +151,10 @@ partially in parallel — worth recording precisely what's now true that none of
   session's own technical-debt audit flagged (`resolveAssessmentCountry`, `vacancyRejectsSponsorship`
   shared helpers now present in both `decision-adapter.ts` and `job-application-workflow.ts`,
   observed via file-change evidence mid-session, not yet independently re-verified in full).
+- This synthesis document's own frozen-slice item zero — wiring `assessCoreLoopTrace` — was
+  implemented the same day this synthesis was written (commit `263dcf2b`), not left as a
+  recommendation. Section 4 and the ownership table in Section 6 have been updated in place to
+  reflect this rather than left describing it as still pending.
 
 None of the four source reports' headline recommendations change because of this — but a founder
 reading only the source reports would not know the product's live decision engine had a real
@@ -166,10 +173,12 @@ caveats"):
    faster, and more answerable.
 3. **Decide whether Deel's existence (Section 2 of this document) changes near-term pricing or
    positioning** before the Days 31-60 commercial-validation work Codex's dossier proposes.
-4. **Approve the "wire before you build" sequencing** for capability #3 and #8 specifically — this
-   is a real, if small, deviation from Codex's proposed engineering order (Section 591 of the
-   dossier), and the founder should explicitly sign off on reordering it rather than have it happen
-   implicitly.
+4. **Approve the "wire before you build" sequencing** for the rest of capability #3 and #8 — the
+   pattern has already been demonstrated once (item zero, Section 4, done same-day), but binding
+   decision snapshots to policy/source-revision IDs and building the correction taxonomy are still
+   ahead of it. This is a real, if small, deviation from Codex's proposed engineering order
+   (Section 591 of the dossier), and the founder should explicitly sign off on reordering it rather
+   than have it happen implicitly.
 5. **Assign an owner for the dead-code cleanup** already recommended in
    `docs/reference/technical-debt.md` (deleting `DashboardExperience.tsx`'s unreachable "jobs" tab
    and `activeFocus === "application-answers"` block) — this synthesis's capability-5 decision
