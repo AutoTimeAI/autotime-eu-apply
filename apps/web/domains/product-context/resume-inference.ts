@@ -15,6 +15,8 @@ export type ContextSuggestion = ResolvedProductContext & {
   reasons: string[]
 }
 
+export type ContextSuggestionSource = "ai" | "local" | "limit" | "error" | null
+
 export function resolveProductContext(
   context: ProductContext
 ): ResolvedProductContext {
