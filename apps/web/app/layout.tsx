@@ -5,6 +5,7 @@
 // (analytics consent, PostHog, client-side error/fallback reporting) are
 // wired up once instead of per-route. Server component; it has no auth
 // checks of its own since access control happens further down the tree.
+import "./tokens.css"
 import "./globals.css"
 import "./phase-8-public.css"
 import "./phase-9-admin.css"
