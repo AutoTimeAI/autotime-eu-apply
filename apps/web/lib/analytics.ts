@@ -55,12 +55,26 @@ type DecisionOverrideProps = {
   decision: string
 }
 
+type KitPreparationStartedProps = {
+  /** The tracked application this kit is being prepared for - an id, never CV/kit content. */
+  applicationId: string
+}
+
+type KitPreparationSavedProps = {
+  /** The tracked application this kit was saved for - an id, never CV/kit content. */
+  applicationId: string
+  /** Milliseconds between the first generation attempt and this save, for the strategy's "median vacancy-to-approved-kit time" efficiency metric. */
+  durationMs: number
+}
+
 type AnalyticsEventMap = {
   ai_content_generated: AiContentGeneratedProps
   application_saved: ApplicationSavedProps
   decision_override: DecisionOverrideProps
   fact_correction: FactCorrectionProps
   job_analysed: JobAnalysedProps
+  kit_preparation_saved: KitPreparationSavedProps
+  kit_preparation_started: KitPreparationStartedProps
   subscription_started: SubscriptionStartedProps
   upgrade_clicked: UpgradeClickedProps
   upgrade_limit_hit: UpgradeLimitHitProps
@@ -134,4 +148,16 @@ export function trackFactCorrection(props: FactCorrectionProps): void {
 /** Tracks that a user tracked/saved a job despite the fit evaluation's content gate being "blocked" or "stretch" rather than "ready" - an override/disagreement signal. */
 export function trackDecisionOverride(props: DecisionOverrideProps): void {
   captureEvent("decision_override", props)
+}
+
+/** Tracks that application-kit preparation began for a job. Pairs with trackKitPreparationSaved so abandonment (a started event with no matching saved event) is measurable without any explicit in-app abandonment detection. */
+export function trackKitPreparationStarted(
+  props: KitPreparationStartedProps,
+): void {
+  captureEvent("kit_preparation_started", props)
+}
+
+/** Tracks that an application-kit draft was saved, with the elapsed preparation time. */
+export function trackKitPreparationSaved(props: KitPreparationSavedProps): void {
+  captureEvent("kit_preparation_saved", props)
 }

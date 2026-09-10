@@ -138,3 +138,35 @@ test("gate 5: a decision override is tracked when a job is saved despite a non-r
   assert.match(saveBody, /evaluationForTracking\.contentGate !== "ready"/)
   assert.match(saveBody, /trackDecisionOverride\(\{/)
 })
+
+test("gate 17: kit preparation start and save are tracked with an application id and duration, never document content", async () => {
+  const analytics = await read("apps/web/lib/analytics.ts")
+  const dashboard = await read("apps/web/components/DashboardExperience.tsx")
+
+  assert.match(analytics, /kit_preparation_started: KitPreparationStartedProps/)
+  assert.match(analytics, /kit_preparation_saved: KitPreparationSavedProps/)
+  assert.match(
+    analytics,
+    /export function trackKitPreparationStarted\(\s*props: KitPreparationStartedProps,\s*\): void \{\s*captureEvent\("kit_preparation_started", props\)/,
+  )
+  assert.match(
+    analytics,
+    /export function trackKitPreparationSaved\(props: KitPreparationSavedProps\): void \{\s*captureEvent\("kit_preparation_saved", props\)/,
+  )
+  // The tracked props are an id and a number - never the generated kit text.
+  assert.doesNotMatch(analytics, /KitPreparationSavedProps = \{[^}]*coverLetter/)
+
+  const regenerateStart = dashboard.indexOf("const regenerateKitDraft = async () =>")
+  const regenerateEnd = dashboard.indexOf("const saveApplicationKitSnapshot = () =>")
+  const regenerateBody = dashboard.slice(regenerateStart, regenerateEnd)
+
+  assert.match(regenerateBody, /kitPreparationStartedAtRef\.current\[activeKitApplication\.id\] = Date\.now\(\)/)
+  assert.match(regenerateBody, /trackKitPreparationStarted\(\{ applicationId: activeKitApplication\.id \}\)/)
+
+  const saveStart = dashboard.indexOf("const saveApplicationKitSnapshot = () =>")
+  const saveEnd = dashboard.indexOf("const copyKitField = async")
+  const saveBody = dashboard.slice(saveStart, saveEnd)
+
+  assert.match(saveBody, /trackKitPreparationSaved\(\{/)
+  assert.match(saveBody, /durationMs: Date\.now\(\) - preparationStartedAt/)
+})

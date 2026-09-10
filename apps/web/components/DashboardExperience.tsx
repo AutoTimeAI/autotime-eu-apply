@@ -52,7 +52,12 @@ import {
   type ProductCapability
 } from "../lib/capability-readiness"
 import { getStatusTone } from "../lib/status-tone"
-import { trackDecisionOverride, trackFactCorrection } from "../lib/analytics"
+import {
+  trackDecisionOverride,
+  trackFactCorrection,
+  trackKitPreparationSaved,
+  trackKitPreparationStarted
+} from "../lib/analytics"
 import { trackWaitlistSubmitted } from "../lib/sentry-breadcrumbs"
 import { AccountIdentityLinker } from "./AccountIdentityLinker"
 import { CapabilityReadinessNotice } from "./product-ui"
@@ -747,6 +752,7 @@ export default function HomePage({
   )
   const [trustState, setTrustState] = useState<TrustState>(defaultTrustState)
   const [showFirstRunWalkthrough, setShowFirstRunWalkthrough] = useState(false)
+  const kitPreparationStartedAtRef = useRef<Record<string, number>>({})
   const applicationSyncTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
@@ -2729,6 +2735,11 @@ export default function HomePage({
       return
     }
 
+    if (!kitPreparationStartedAtRef.current[activeKitApplication.id]) {
+      kitPreparationStartedAtRef.current[activeKitApplication.id] = Date.now()
+      trackKitPreparationStarted({ applicationId: activeKitApplication.id })
+    }
+
     const localDraft = createApplicationContentSnapshot({
       application: activeKitApplication,
       job: state.jobAnalysis,
@@ -2820,6 +2831,16 @@ export default function HomePage({
     if (!activeKitApplication || !kitDraft) {
       setStatus("Track a job first, then save application content")
       return
+    }
+
+    const preparationStartedAt =
+      kitPreparationStartedAtRef.current[activeKitApplication.id]
+    if (preparationStartedAt) {
+      trackKitPreparationSaved({
+        applicationId: activeKitApplication.id,
+        durationMs: Date.now() - preparationStartedAt
+      })
+      delete kitPreparationStartedAtRef.current[activeKitApplication.id]
     }
 
     const snapshot = {
