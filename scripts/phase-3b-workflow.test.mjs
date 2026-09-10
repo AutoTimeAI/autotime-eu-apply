@@ -12,6 +12,7 @@ import {
   transitionApplication,
 } from "../apps/web/lib/job-application-workflow.ts";
 import { createInterview } from "../apps/web/lib/interview-workflow.ts";
+import { assessCoreLoopTrace } from "../apps/web/domains/core-loop/traceability.ts";
 
 const strongVacancy = `Job title: Backend Engineer
 Company: Example Payments
@@ -383,6 +384,46 @@ assert.match(
   component,
   /analyseJob\(job, evidence\.text, \{\s*careerLane: job\.lane,\s*sponsorshipRequired,\s*mobilityProfile,\s*\}\)/,
   "the live workspace's analyse() call site must actually pass its already-loaded mobilityProfile into analyseJob",
+);
+
+// Wires assessCoreLoopTrace (apps/web/domains/core-loop/traceability.ts) -
+// previously correct, tested (scripts/core-loop-traceability.test.mjs) and
+// completely uncalled anywhere in the app - into the live workspace as a
+// real, always-on, privacy-minimal integrity check. assessCoreLoopTrace
+// itself imports no bundler-only paths, so it's exercised directly here
+// with a genuinely inconsistent trace (an interview pointing at a
+// different application than the one it's grouped under), the same shape
+// of defect the wiring below now surfaces for every real tracked job.
+const mismatchedInterview = createInterview({
+  userId: "33333333-3333-4333-8333-333333333333",
+  application,
+  job,
+  stage: "recruiter_screen",
+  format: "video",
+});
+const inconsistentTrace = assessCoreLoopTrace({
+  job,
+  application,
+  interviews: [{ ...mismatchedInterview, applicationId: "not-this-application" }],
+});
+assert.equal(inconsistentTrace.valid, false);
+assert.ok(
+  inconsistentTrace.issueCodes.includes("interview-application-mismatch"),
+);
+assert.match(
+  component,
+  /assessCoreLoopTrace\(\{/,
+  "JobApplicationWorkspace must actually call assessCoreLoopTrace against loaded job/application/interview state",
+);
+assert.match(
+  component,
+  /trackCoreLoopIntegrityIssue\(\{/,
+  "a detected core-loop inconsistency must be reported, not silently discarded",
+);
+assert.match(
+  component,
+  /if \(trace\.valid\) continue;/,
+  "the wiring must be observational - it may report an issue, but must never gate/disable UI on trace.valid",
 );
 
 console.log("Phase 3B workflow safeguards: PASS");

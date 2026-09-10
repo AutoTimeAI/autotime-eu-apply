@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ProductEmptyState,
@@ -43,6 +43,8 @@ import {
   buildApplicationKitRequest,
   type OnboardingProfileFields,
 } from "../lib/application-kit-request";
+import { assessCoreLoopTrace } from "../domains/core-loop/traceability";
+import { trackCoreLoopIntegrityIssue } from "../lib/analytics";
 import type { ApplicationContentDraft, ApplicationRecord, MobilityProfile } from "shared";
 
 type View =
@@ -218,6 +220,46 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
     applyLocal(next);
     jobWorkflowSync.sync({ jobs: next.jobs, applications: next.applications });
   };
+
+  // assessCoreLoopTrace (packages/shared's sibling domain,
+  // apps/web/domains/core-loop/traceability.ts) validates
+  // captured -> decided -> preparing -> approved -> applied -> interview ->
+  // outcome continuity without reading any CV, vacancy or generated-document
+  // content - it was already correct and already tested
+  // (scripts/core-loop-traceability.test.mjs) but had no caller anywhere in
+  // the app. This is the first one: a real, always-on check against every
+  // loaded job/application/interview set, reporting only enum issue codes
+  // (never content) so a genuine inconsistency (e.g. an interview linked to
+  // the wrong application) becomes visible instead of silently accumulating.
+  // Deliberately observational, not blocking - this is the first time real
+  // data has ever been checked against this function, so the safe first
+  // move is to see what it finds, not to gate the UI on it.
+  const reportedCoreLoopIssuesRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!ready) return;
+    for (const job of state.jobs) {
+      const application = state.applications.find(
+        (item) => item.jobId === job.id,
+      );
+      if (!application) continue;
+      const trace = assessCoreLoopTrace({
+        job,
+        application,
+        interviews: interviews.filter(
+          (item) => item.jobId === job.id,
+        ),
+      });
+      if (trace.valid) continue;
+      const key = `${application.id}:${trace.issueCodes.join(",")}`;
+      if (reportedCoreLoopIssuesRef.current.has(key)) continue;
+      reportedCoreLoopIssuesRef.current.add(key);
+      trackCoreLoopIntegrityIssue({
+        applicationId: application.id,
+        issueCodes: trace.issueCodes,
+        stage: trace.stage,
+      });
+    }
+  }, [ready, state.jobs, state.applications, interviews]);
 
   if (!ready)
     return view.kind === "applications" || view.kind === "application" ? (

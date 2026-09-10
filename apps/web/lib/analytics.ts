@@ -67,9 +67,19 @@ type KitPreparationSavedProps = {
   durationMs: number
 }
 
+type CoreLoopIntegrityIssueProps = {
+  /** The tracked application the inconsistency was found on - an id, never CV/job/interview content. */
+  applicationId: string
+  /** assessCoreLoopTrace's own issue codes (e.g. "application-job-mismatch") - enum values only. */
+  issueCodes: string[]
+  /** The core-loop stage assessCoreLoopTrace computed for this role at detection time. */
+  stage: string
+}
+
 type AnalyticsEventMap = {
   ai_content_generated: AiContentGeneratedProps
   application_saved: ApplicationSavedProps
+  core_loop_integrity_issue: CoreLoopIntegrityIssueProps
   decision_override: DecisionOverrideProps
   fact_correction: FactCorrectionProps
   job_analysed: JobAnalysedProps
@@ -160,4 +170,11 @@ export function trackKitPreparationStarted(
 /** Tracks that an application-kit draft was saved, with the elapsed preparation time. */
 export function trackKitPreparationSaved(props: KitPreparationSavedProps): void {
   captureEvent("kit_preparation_saved", props)
+}
+
+/** Tracks that assessCoreLoopTrace found a real inconsistency in a tracked application's job/application/interview continuity (e.g. an interview linked to the wrong application) - a data-integrity signal, never the underlying CV/job/interview content. */
+export function trackCoreLoopIntegrityIssue(
+  props: CoreLoopIntegrityIssueProps,
+): void {
+  captureEvent("core_loop_integrity_issue", props)
 }
