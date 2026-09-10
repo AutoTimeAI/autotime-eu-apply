@@ -170,14 +170,16 @@ test("AI review schemas accept list fields as string or array", () => {
 
 test("CV profile detail extraction stays conservative", () => {
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
+  const resumeInference = read("apps/web/domains/product-context/resume-inference.ts")
 
-  assert.match(dashboard, /function inferCandidateDetailsFromResume/)
-  assert.match(dashboard, /roleTitleKeywords/)
-  assert.match(dashboard, /!includesAny\(line, roleTitleKeywords\)/)
-  assert.match(dashboard, /currentCountry = locationLine/)
+  assert.match(resumeInference, /export function inferCandidateDetailsFromResume/)
+  assert.match(resumeInference, /roleTitleKeywords/)
+  assert.match(resumeInference, /!includesAny\(line, roleTitleKeywords\)/)
+  assert.match(resumeInference, /currentCountry = locationLine/)
   assert.match(dashboard, /currentProfile\.fullName\.trim\(\)/)
   assert.match(dashboard, /inferredDetails\.fullName/)
   assert.match(dashboard, /canUseInferredCurrentCountry/)
+  assert.doesNotMatch(resumeInference, /gender|ethnicity|marital|nationality|dateOfBirth/i)
   assert.doesNotMatch(dashboard, /gender|ethnicity|marital|nationality|dateOfBirth/i)
 })
 
