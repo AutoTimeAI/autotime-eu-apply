@@ -138,6 +138,31 @@ test("vacancy evidence check surfaces a blocked decision", async ({
   await capture(page, "country-workspace-blocked-1440x900.png");
 });
 
+test("the evidence ledger discloses what the assessment cannot confirm, not just what it found", async ({
+  page,
+}) => {
+  // assessInternationalJob's cannotConfirm array (packages/shared/src/
+  // international/assessment.ts) previously computed real disclosures -
+  // including, as of this session, an explicit warning when a supplied
+  // salary was never checked against the country's actual current
+  // threshold - that nothing in the live UI rendered. This is the first
+  // assertion that a real user can actually see them.
+  await disableDevelopmentToolbar(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seedMobility(page);
+  await seedReadyDashboardProfile(page);
+  await gotoInternational(page);
+  await page.getByRole("button", { name: "Country workspace" }).click();
+  await page.getByText("Evidence ledger").click();
+  await expect(page.getByText("Cannot confirm", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Whether a government authority will grant a visa or permit."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Whether an employer will sponsor this particular vacancy."),
+  ).toBeVisible();
+});
+
 test("mobility profile form, sponsor guide and official sources", async ({
   page,
 }) => {

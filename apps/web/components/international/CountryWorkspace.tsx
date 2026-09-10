@@ -117,6 +117,7 @@ export function CountryWorkspace({
               { title: "Used", items: assessment.evidenceUsed },
               { title: "Missing", items: assessment.missingEvidence },
               { title: "Blockers", items: assessment.confirmedBlockers },
+              { title: "Cannot confirm", items: assessment.cannotConfirm },
             ]}
           />
         </details>

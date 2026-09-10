@@ -110,6 +110,78 @@ test("missing evidence is never promoted into evidence used", () => {
   assert.notEqual(result.pathwayStatus, "potentially-viable");
 });
 
+test("assessInternationalJob discloses that a supplied salary was never checked against the real threshold", () => {
+  // Country packs deliberately never embed real salary thresholds (they
+  // change and must be verified at the source - see e.g. germany.ts's own
+  // limitations entry), and without a Stamp4 statutory check this function
+  // has no way to compare a candidate's stated salary against the actual
+  // current legal minimum. Before this test existed, a candidate stating a
+  // salary of EUR 1,200/month for the Netherlands (real 2026 threshold:
+  // EUR 5,942/month for age 30+, verified against ind.nl this session) got
+  // "potentially-viable"/"Apply" with the low salary silently counted as
+  // positive evidenceUsed and no disclosure anywhere that the actual
+  // figure was never checked - the exact kind of quiet overconfidence this
+  // engine's own design otherwise avoids.
+  const result = assessInternationalJob({
+    country: "Netherlands",
+    mobilityProfile: sponsorshipProfile,
+    jobText: "We provide visa sponsorship for suitable candidates.",
+    roleDuties: "Junior support role",
+    salary: { amount: 1200, currency: "EUR", period: "month" },
+    contractDurationMonths: 12,
+    occupationMapping: "confirmed",
+    employerEvidence: {
+      employerName: "Example BV",
+      country: "Netherlands",
+      sourceType: "official-register",
+      status: "confirmed",
+    },
+  });
+  assert.equal(result.decision, "Apply");
+  assert.equal(result.stamp4Verified, false);
+  assert.ok(
+    result.cannotConfirm.some((item) =>
+      /salary.*clears the current published minimum/i.test(item),
+    ),
+    "an unverified salary figure must be disclosed in cannotConfirm, not silently treated as clearing confirmation",
+  );
+});
+
+test("a Stamp4-verified salary does not need the disclosure - the real threshold actually was checked", () => {
+  const result = assessInternationalJob({
+    country: "Netherlands",
+    mobilityProfile: sponsorshipProfile,
+    jobText: "We provide visa sponsorship for suitable candidates.",
+    roleDuties: "Senior engineering role",
+    salary: { amount: 90000, currency: "EUR", period: "year" },
+    contractDurationMonths: 12,
+    occupationMapping: "confirmed",
+    employerEvidence: {
+      employerName: "Example BV",
+      country: "Netherlands",
+      sourceType: "official-register",
+      status: "confirmed",
+    },
+    stamp4Assessment: {
+      status: "Eligible",
+      pathway: "Netherlands Highly Skilled Migrant",
+      occupationCode: "SOC 2135",
+      occupationConfidence: "High",
+      salaryDetectedEUR: 90000,
+      salaryThresholdEUR: 71300,
+      blockers: [],
+      checkedAt: new Date().toISOString(),
+    },
+  });
+  assert.equal(result.stamp4Verified, true);
+  assert.equal(
+    result.cannotConfirm.some((item) =>
+      /salary.*clears the current published minimum/i.test(item),
+    ),
+    false,
+  );
+});
+
 test("register presence is entity evidence and not vacancy sponsorship", () => {
   const confirmed = assessInternationalJob({
     country: "Netherlands",

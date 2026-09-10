@@ -150,6 +150,9 @@ export function assessInternationalJob(
   const missingEvidence: string[] = [];
   const confirmedBlockers: string[] = [];
   const assumptions: string[] = [];
+  // Additive to the two fixed disclosures every "full"-support result
+  // already carries (below) - never replaces them.
+  const additionalCannotConfirm: string[] = [];
 
   if (pack.supportLevel === "explorer") {
     if (jobText)
@@ -229,9 +232,24 @@ export function assessInternationalJob(
     }
   }
 
-  if (input.salary)
+  if (input.salary) {
     evidenceUsed.push("Salary includes amount, currency and pay period.");
-  else if (!stamp4SatisfiesSalary)
+    // Presence of a well-formed salary figure is not the same as that
+    // figure clearing the country's actual current legal minimum for this
+    // pathway - country packs deliberately don't embed threshold numbers
+    // (see e.g. germany.ts's own limitations entry, since they change and
+    // must be verified at the source), and without Stamp4's real
+    // statutory-threshold check this function has no way to compare the
+    // candidate's stated salary against one. Silently treating "salary
+    // supplied" as positive evidence without disclosing that the actual
+    // number was never checked is exactly the overconfidence this
+    // engine's own design otherwise avoids - so make the gap explicit
+    // rather than implicit.
+    if (!stamp4SatisfiesSalary)
+      additionalCannotConfirm.push(
+        "Whether the stated salary clears the current published minimum for this pathway - verify the exact figure at the official source before relying on this result.",
+      );
+  } else if (!stamp4SatisfiesSalary)
     missingEvidence.push("Salary with currency and pay period");
   if (!input.contractDurationMonths) missingEvidence.push("Contract duration");
   else evidenceUsed.push("Contract duration supplied by the user or vacancy.");
@@ -303,6 +321,7 @@ export function assessInternationalJob(
     cannotConfirm: [
       "Whether a government authority will grant a visa or permit.",
       "Whether an employer will sponsor this particular vacancy.",
+      ...additionalCannotConfirm,
     ],
     stamp4Verified: Boolean(stamp4),
   };
