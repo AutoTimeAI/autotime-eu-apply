@@ -28,6 +28,7 @@ Last consolidated: 2026-09-09.
 | [reference/roadmap-execution-status.md](reference/roadmap-execution-status.md) | Evidence-based implementation and exit-gate status for phases 0–5 |
 | [reference/domain-modernization-plan.md](reference/domain-modernization-plan.md) | Official engineering direction: incremental EU Fit / evidence / application-preparation domain decomposition, target architecture and phase-by-phase migration rules |
 | [product-core-investment-strategy.md](product-core-investment-strategy.md) ([PDF](AutoTime-EU-Apply-Core-Product-Investment-Strategy.pdf)) | Approved strategy concentrating investment on EU Fit, evidence integrity and application preparation |
+| [moat-analysis.md](moat-analysis.md) | Draft: why the three pillars would or wouldn't be hard for a well-funded competitor to copy, ranked by defensibility |
 | [future-development-and-profession-expansion-roadmap.md](future-development-and-profession-expansion-roadmap.md) ([PDF](AutoTime-EU-Apply-Future-Development-and-Profession-Expansion-Roadmap.pdf)) | Phased roadmap from Tech/FinTech MVP to a governed multi-profession European platform |
 
 ## Feature modules & product journey
