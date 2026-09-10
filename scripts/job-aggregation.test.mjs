@@ -28,9 +28,9 @@ test("detects supported ATS hosts and defaults safely", () => {
 test("application ATS metadata survives shared parsing and cloud mapping", async () => {
   const application = applicationRecordSchema.parse({ id: "app-1", title: "Engineer", url: "https://jobs.lever.co/acme/1", atsPlatform: "lever", createdAt: new Date(0).toISOString(), status: "Saved" });
   assert.equal(application.atsPlatform, "lever");
-  const syncRoute = await readFile(new URL("../apps/web/app/api/sync/dashboard/route.ts", import.meta.url), "utf8");
-  assert.match(syncRoute, /ats_platform: application\.atsPlatform \?\? "unknown"/);
-  assert.match(syncRoute, /atsPlatform: row\.ats_platform/);
+  const rowMappers = await readFile(new URL("../apps/web/domains/sync/row-mappers.ts", import.meta.url), "utf8");
+  assert.match(rowMappers, /ats_platform: application\.atsPlatform \?\? "unknown"/);
+  assert.match(rowMappers, /atsPlatform: row\.ats_platform/);
 });
 test("canonicalises tracking parameters and provides cross-source identity hashes", async () => {
   assert.equal(canonicalJobUrl("https://www.example.com/job/1/?utm_source=x"), "https://example.com/job/1");

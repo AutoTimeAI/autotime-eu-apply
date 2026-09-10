@@ -38,6 +38,7 @@
     "test:web:dashboard-preferences-storage": "node --experimental-strip-types --test apps/web/tests/dashboard-preferences-storage.test.mjs",
     "test:web:product-context-model": "node --experimental-strip-types --test apps/web/tests/product-context-model.test.mjs",
     "test:repository-organization": "node --test scripts/repository-organization.test.mjs",
+    "test:sync-dashboard-mappers": "node --experimental-strip-types --test scripts/sync-dashboard-mappers.test.mjs",
     "test:role-pathways": "node --experimental-strip-types scripts/role-pathways.test.mjs",
     "test:role-pathways-persistence": "node --experimental-strip-types --test scripts/role-pathways-persistence.test.mjs",
     "test:phase-3a-readiness": "node --experimental-strip-types scripts/phase-3a-readiness.test.mjs",
