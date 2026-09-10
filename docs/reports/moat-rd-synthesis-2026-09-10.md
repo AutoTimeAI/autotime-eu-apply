@@ -155,6 +155,17 @@ partially in parallel — worth recording precisely what's now true that none of
   implemented the same day this synthesis was written (commit `263dcf2b`), not left as a
   recommendation. Section 4 and the ownership table in Section 6 have been updated in place to
   reflect this rather than left describing it as still pending.
+- Building the first real scenario for the frozen Netherlands/Germany slice's evaluation corpus
+  found a genuine, previously-undisclosed defect instead of illustrating one: `assessInternationalJob`
+  treated a supplied salary figure as positive evidence toward `Apply` without ever checking it
+  against the country's real threshold. Not yet live-reachable (none of the three live callers
+  currently pass a candidate's salary into this function at all — see
+  `docs/reports/nl-de-decision-engine-deep-dive-2026-09-10.md`), but a real defect in shared code
+  three live surfaces depend on, fixed ahead of the near-term salary-collection addition that would
+  have made it exploitable. The same regression sweep also caught the `vacancyRejectsSponsorship`
+  bug (Section 7 of this document) that *was* live. Both are now fixed, tested, and the disclosure
+  is wired into the live `/dashboard/international` evidence ledger for the first time (commits
+  `8faa691a`, `e0fb0a19`).
 
 None of the four source reports' headline recommendations change because of this — but a founder
 reading only the source reports would not know the product's live decision engine had a real
