@@ -91,8 +91,23 @@ export function orchestrateJobDecision({
           ]
         : []),
     ]),
+    // fit.riskAreas falls back to a single reassuring "No serious blocker
+    // detected..." entry (fit-model.ts) when there are genuinely no risk
+    // areas - the one fit.riskAreas string that always contains "block" on
+    // a clean fit. DashboardExperience.tsx's own risk-area display already
+    // excludes it by this same prefix; without the same exclusion here, a
+    // candidate with a perfectly clean fit review was misclassified as
+    // blocked purely because the all-clear message contains the substring
+    // "block" - discovered via a real end-to-end content-generation run
+    // (docs/reports/acceptance-gate-audit-2026-09-10.md gate 19), not by
+    // any unit test, since every existing fixture passes riskAreas: []
+    // directly rather than exercising this fallback.
     blockers: unique([
-      ...fit.riskAreas.filter((item) => item.toLowerCase().includes("block")),
+      ...fit.riskAreas.filter(
+        (item) =>
+          item.toLowerCase().includes("block") &&
+          !item.startsWith("No serious blocker"),
+      ),
       ...(international?.confirmedBlockers ?? []),
     ]),
     assumptions: unique([

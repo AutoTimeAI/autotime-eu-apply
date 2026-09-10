@@ -45,6 +45,43 @@ test("orchestrateJobDecision follows fit-only decision when international eviden
   );
 });
 
+test("orchestrateJobDecision does not treat fit-model.ts's clean-fit reassurance message as a blocker", () => {
+  // fit-model.ts's evaluateAutoTimeFitScore falls back to exactly this
+  // riskAreas entry when there are genuinely no risk areas - the only
+  // fit.riskAreas string that contains the substring "block" on a clean
+  // fit. A naive `.includes("block")` filter here previously misclassified
+  // it as a real blocker, which - discovered via a live end-to-end
+  // application-kit generation run (gate 19,
+  // docs/reports/acceptance-gate-audit-2026-09-10.md) - wrongly blocked
+  // content generation for every candidate with a perfectly clean fit
+  // review, the most common case, not an edge case.
+  const result = orchestrateJobDecision({
+    fit: goodFit({
+      riskAreas: [
+        "No serious blocker detected. Still verify employer and official requirements.",
+      ],
+    }),
+    internationalRequirement: "not-relevant",
+  });
+  assert.equal(result.decision, "Apply");
+  assert.deepEqual(result.blockers, []);
+});
+
+test("orchestrateJobDecision still treats a genuine fit-driven blocker phrase as blocking", () => {
+  const result = orchestrateJobDecision({
+    fit: goodFit({
+      fitScore: 30,
+      riskAreas: ["Work-right blocker: no confirmed evidence of eligibility."],
+    }),
+    internationalRequirement: "not-relevant",
+  });
+  assert.ok(
+    result.blockers.includes(
+      "Work-right blocker: no confirmed evidence of eligibility.",
+    ),
+  );
+});
+
 test("orchestrateJobDecision returns Insufficient evidence when international evidence is required but missing", () => {
   const result = orchestrateJobDecision({
     fit: goodFit(),
