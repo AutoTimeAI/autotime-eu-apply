@@ -108,8 +108,10 @@ mobility hard blockers:
 
 - `apps/web/platform/application-preparation/decision-adapter.ts`'s `assessApplicationDecision`,
   reached via `/api/ai/content` - called by the browser extension
-  (`apps/extension/lib/openai.ts`) and by `DashboardExperience`'s now-dead "application-answers"
-  kit workspace (redundantly, per above).
+  (`apps/extension/lib/openai.ts`), by `DashboardExperience`'s now-dead "application-answers" kit
+  workspace (redundantly, per above), and - as of the AI kit-generation feature below - by
+  `JobApplicationWorkspace.tsx`'s application detail page too, the same route with a third real
+  caller.
 - `apps/web/lib/job-application-workflow.ts`'s `analyseJob`, called from
   `JobApplicationWorkspace.tsx` - the live jobs/applications workspace most users actually use.
 
@@ -120,7 +122,30 @@ target country from the candidate's saved profile, while `job-application-workfl
 from the vacancy's own extracted country fact first. Nothing currently tests that the two paths
 would reach the same conclusion given the same candidate and job. Unifying them (or at minimum
 adding a cross-path consistency test) is future work, not done as part of either fix, to keep each
-change set scoped to one call site per this repo's modernization rules.
+change set scoped to one call site per this repo's modernization rules. This gap widened slightly
+with the kit-generation feature below (`JobApplicationWorkspace` now triggers *both* paths for the
+same job - `analyseJob` for its own Apply/Consider/Skip decision, and `decision-adapter.ts`
+indirectly via kit generation - which can legitimately disagree on the same job/candidate pair).
+
+## `JobApplicationWorkspace` had no AI-assisted application content - closed
+
+**Origin/status:** identified as part of the `DashboardExperience` route-mapping investigation
+above, then closed the same day. `DashboardExperience`'s dead "application-answers" tab had a
+fully-built AI kit generator (cover letter, profile summary, motivation/strengths/availability
+answers via `/api/ai/content`); `JobApplicationWorkspace` - the page real users actually use - had
+none, just a manual cover-letter textarea. Closed by porting the capability (not the dead tab's
+UI) into `JobApplicationWorkspace`'s application detail page:
+`apps/web/lib/application-kit-request.ts` maps the live workspace's own data shapes onto the
+existing `/api/ai/content` request contract, reusing the already-live generation pipeline rather
+than building a second one. Only the cover letter is persisted (the existing
+`ApplicationWorkspace.coverLetter` column); the other three drafts are shown to copy but not
+saved, to avoid a schema migration for this change. See
+[quality-assurance.md](../quality-assurance.md) for the verification record. Finding and fixing
+this also surfaced and fixed a real, independent bug
+(`packages/shared/src/international/orchestration.ts`'s `orchestrateJobDecision`, commit
+`4a4dc6e3`) that was silently blocking kit generation for any candidate with a clean fit review -
+a defect that predates this session's changes and also affects the browser extension's existing
+use of the same route.
 
 ## Extension
 

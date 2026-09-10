@@ -1080,6 +1080,53 @@ browser extension) already existed alongside this one. See
 `docs/reference/technical-debt.md` for the full route map and the
 non-unified-decision-paths note.
 
+## AI application-kit generation ported to the live jobs workspace - 2026-09-10
+
+Closed the gap the `DashboardExperience` route-mapping investigation
+surfaced: `JobApplicationWorkspace`'s application detail page had no
+AI-assisted content generation at all (a manual cover-letter textarea
+only), while the dead "application-answers" tab had a fully-built
+generator. `apps/web/lib/application-kit-request.ts` maps the live
+workspace's `JobRecord`/cloud-profile-row/`MobilityProfile` data onto the
+exact request shape `/api/ai/content` already expects
+(`CandidateProfile`/`JobAnalysisDraft`/`ReusableAnswers` from
+`packages/shared/src/schemas.ts`), so the already-live generation
+pipeline (`prepareApplicationKit`, `assessApplicationDecision`, OpenAI
+generation, rate-limiting, Sentry breadcrumbs) is reused rather than
+duplicated - no new backend surface. Only the cover letter is persisted
+(`ApplicationWorkspace.coverLetter`, an existing Supabase column); the
+profile summary/motivation/strengths/availability drafts render with
+per-field Copy buttons but are explicitly not saved, avoiding a schema
+migration for this change (same reasoning as the governed-sources and
+mobility-assessment fields earlier this session).
+
+Verified: `tsc --noEmit` clean for `web` and `shared`;
+`scripts/application-kit-request.test.mjs` (6 tests - the mapped request
+validates against the real schemas, missing profile fields become honest
+empty strings rather than fabricated values, work-mode/salary mapping);
+`tests/e2e/38-application-kit-generation.spec.ts` (2 tests, mocking
+`/api/ai/content` directly so both paths are deterministic without a real
+OpenAI key - a successful generation that persists the cover letter and
+confirms the outgoing request actually carried real profile/job data via
+`postDataJSON()`, and a blocked-eligibility 422 shown as an honest status
+message rather than a crash); full re-run of specs 25/26/27/37 (12/12, no
+regressions).
+
+Manually verified against the real dev-server pipeline (live Supabase,
+real rate-limiting, real `assessApplicationDecision` call) beyond what the
+committed specs cover, which surfaced a genuine pre-existing bug: a clean
+fit review (zero real risk areas) was being misclassified as blocked. See
+`packages/shared/src/international/orchestration.ts`'s `orchestrateJobDecision`
+fix (commit `4a4dc6e3`) - a naive `.includes("block")` filter matched
+fit-model.ts's own "No serious blocker detected..." reassurance message
+purely because it contains the substring "block". This is a live,
+independent defect (also reachable today via the browser extension's
+existing use of the same route), not something this feature introduced -
+found only because the feature's live verification exercised the real
+composed pipeline end to end, which no existing unit test did (every
+orchestration-test fixture passes `riskAreas` directly, bypassing
+fit-model.ts's fallback entirely).
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
