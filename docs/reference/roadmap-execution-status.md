@@ -36,14 +36,27 @@ qualified-review and regulated-profession gates require observed external eviden
 These are maintainability tasks, not product-phase exit evidence:
 
 1. Split `DashboardExperience.tsx` by workflow using characterization tests.
-   EU Fit's pure decision-brief, evidence-ledger, verification-checklist and
-   content-guardrail logic is extracted to `apps/web/domains/eu-fit/`
-   (10 September 2026, `DashboardExperience.tsx` 9,903 -> 9,444 lines); the
-   Analyse Fit view and its remaining capability slices (evidence review,
-   application-preparation, role outcome, dialogs, navigation) are still to
-   move.
+   EU Fit, evidence-review, application-preparation, role-outcome,
+   interview-answer-drafting, resume-to-context-inference and profile
+   quality/readiness logic are extracted to their own `apps/web/domains/`
+   modules, plus one piloted JSX extraction (the CV-review suggestion panel
+   to a presentational component), all verified with `tsc`, the full
+   characterization-test sweep, and (for the JSX pilot) a live Playwright
+   visual-regression run (10 September 2026, `DashboardExperience.tsx`
+   9,903 -> 8,345 lines, a 15.7% reduction). Most remaining JSX is either
+   the tab-by-tab workflow panels (large, deeply coupled to dashboard state)
+   or the shared shell - splitting those further is deferred pending
+   appetite for that higher-risk, prop-threading-heavy work.
 2. Split extension page detection, widget UI and reviewed autofill from `autofill.ts`.
 3. Split dashboard sync request handling from reconciliation and persistence.
+   Step 1 done: the sync route's pure row<->record mappers and legacy-payload
+   normalization moved to `apps/web/domains/sync/`, with new unit test
+   coverage (`scripts/sync-dashboard-mappers.test.mjs`) that didn't exist
+   before (10 September 2026, `route.ts` 1,185 -> 780 lines). The actual
+   reconciliation/persistence sequencing inside POST/DELETE - tombstone
+   resolution, application dedup, upsert ordering - is intentionally
+   untouched: it writes real user data and needs its own characterization
+   tests before being extracted behind a repository interface.
 4. Divide global CSS into tokens, foundations and workflow styles.
 
 Each extraction must be independently reviewable and test-protected. A wholesale
