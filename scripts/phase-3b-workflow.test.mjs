@@ -7,6 +7,7 @@ import {
   extractJob,
   getApplicationReadiness,
   getApplicationReviewQueue,
+  getGovernedSourcesForCountry,
   isRestrictedJobUrl,
   transitionApplication,
 } from "../apps/web/lib/job-application-workflow.ts";
@@ -258,5 +259,39 @@ assert.match(extensionStorage, /saved-applications/);
 assert.match(extensionStorage, /ApplicationSyncState/);
 assert.match(proofContract, /evidenceRecordSchema/);
 assert.doesNotMatch(readiness, /PROFILE_EXECUTION_THRESHOLD|90%/);
+
+// Gate 3-equivalent for the live jobs workspace (this system, not the
+// unreachable DashboardExperience jobs tab): governed official sources with
+// freshness, surfaced from the same country-pack data
+// packages/shared/src/international/country-packs/*.ts already maintains.
+const irelandSources = getGovernedSourcesForCountry("Ireland");
+assert.ok(irelandSources.length > 0);
+assert.ok(
+  irelandSources.every(
+    (source) =>
+      source.reviewedAt && source.ruleVersion && source.publisher,
+  ),
+  "every governed source must carry a real publisher, reviewedAt and ruleVersion - never a blank/invented one",
+);
+assert.ok(
+  irelandSources.some((source) =>
+    source.publisher.includes("Enterprise"),
+  ),
+  "Ireland should resolve to its own dedicated country pack, not the generic EU fallback",
+);
+const unknownCountrySources = getGovernedSourcesForCountry(
+  "Genuinely Unsupported Country",
+);
+assert.ok(
+  unknownCountrySources.length > 0,
+  "a country with no dedicated pack must still get honest general EU guidance, never zero sources",
+);
+assert.ok(
+  unknownCountrySources.every((source) => source.jurisdiction === "European Union"),
+  "an unsupported country must fall back to the EU-wide explorer pack, not a fabricated country-specific one",
+);
+assert.match(component, /getGovernedSourcesForCountry\(/);
+assert.match(component, /Governed sources/);
+assert.match(component, /reviewed \{source\.reviewedAt\}/);
 
 console.log("Phase 3B workflow safeguards: PASS");

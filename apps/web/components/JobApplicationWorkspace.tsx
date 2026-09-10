@@ -20,6 +20,7 @@ import {
   extractJob,
   getApplicationReadiness,
   getApplicationReviewQueue,
+  getGovernedSourcesForCountry,
   isRestrictedJobUrl,
   normalizeJobUrl,
   transitionApplication,
@@ -854,6 +855,10 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
     );
   }, [userId]);
   const result = currentAnalysis(job);
+  const governedSources = useMemo(
+    () => getGovernedSourcesForCountry(job.facts.country.value),
+    [job.facts.country.value],
+  );
   if (!result)
     return (
       <ProductEmptyState
@@ -909,6 +914,36 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
             <dd>{result.nextAction}</dd>
           </div>
         </dl>
+      </section>
+      <section
+        className="workflow-section phase-two-official-sources"
+        aria-label="Official verification sources"
+      >
+        <header className="phase-two-section-heading">
+          <div>
+            <p className="product-eyebrow">Official verification</p>
+            <h2>Governed sources</h2>
+          </div>
+        </header>
+        <p>
+          AutoTime does not authorise work-right, visa or sponsorship status.
+          Verify current requirements directly with the sources below before
+          relying on this recommendation.
+        </p>
+        <ul className="phase-two-source-list">
+          {governedSources.map((source) => (
+            <li key={source.url}>
+              <a href={source.url} rel="noreferrer" target="_blank">
+                <strong>{source.title}</strong>
+                <span>{source.publisher}</span>
+              </a>
+              <small>
+                {source.jurisdiction} - reviewed {source.reviewedAt} (rules{" "}
+                {source.ruleVersion})
+              </small>
+            </li>
+          ))}
+        </ul>
       </section>
       <div className="phase-two-analysis-columns">
         <section className="workflow-section phase-two-evidence-section">

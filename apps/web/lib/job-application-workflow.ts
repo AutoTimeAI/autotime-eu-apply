@@ -1,8 +1,10 @@
 import { detectATS } from "./ats-detector.ts";
 import {
   assessApplicationApproval,
+  getInternationalCountryPack,
   getSubmissionPermission,
   type ApplicationRecord,
+  type OfficialSourceCitation,
 } from "shared";
 
 export type EvidenceState = "confirmed" | "partial" | "missing" | "conflicting";
@@ -49,6 +51,24 @@ export type JobAnalysisResult = {
   unknowns: string[];
   version: number;
 };
+
+/**
+ * Governed official (government/EU) sources for a vacancy's hiring country,
+ * with freshness (reviewedAt/ruleVersion) - the same country-pack data
+ * packages/shared/src/international/country-packs/*.ts already maintains
+ * and the EU Fit pillar already surfaces elsewhere. Deliberately computed
+ * fresh from the country string rather than stored on JobAnalysisResult:
+ * it's a pure function of the country, so persisting it would mean
+ * historical analysis snapshots in job_workflow_analysis_snapshots either
+ * need a schema migration or silently go stale relative to country-pack
+ * updates. Falls back to general EU guidance (europeanExplorerPack) when
+ * the country has no dedicated pack yet; never fabricated, never omitted.
+ */
+export function getGovernedSourcesForCountry(
+  country: string,
+): OfficialSourceCitation[] {
+  return getInternationalCountryPack(country).sources;
+}
 
 export type JobRecord = {
   atsPlatform?: string;
