@@ -1023,6 +1023,54 @@ sub-suite, confirming the 28 independently-developed fixes compose
 correctly together and not just individually against `main` at the time
 each was branched.
 
+## Live decision-engine enhancement - 2026-09-10
+
+`analyseJob()` (`apps/web/lib/job-application-workflow.ts`), the engine
+behind `JobApplicationWorkspace` - the actual live jobs UI real users hit,
+not the unreachable `DashboardExperience` jobs tab documented in
+`docs/reports/acceptance-gate-audit-2026-09-10.md` - changed its Apply/
+Consider/Skip conclusions for real users for the first time this session.
+This falls squarely under the standing rule "no changes to EU Fit
+conclusions without explicit product approval," so it is recorded with its
+authorization trail rather than folded silently into the commit history:
+
+- The user first authorized starting real implementation work toward
+  making the (better-designed but dead) EU-Fit engine's capabilities live
+  for actual users ("start coding into tonight's session. I hope we
+  complete asap"), after reviewing a bounded, evidence-based comparison of
+  the two live systems' capabilities against the dead engine's.
+- A first, conclusion-neutral slice (governed mobility-source citations)
+  shipped first (commit `1d586438`), deliberately leaving two gaps in the
+  live decision engine's actual conclusions untouched and named explicitly:
+  a hard-blocker system limited to one regex-based sponsorship check, and
+  no evidence-status model beyond flat confirmed/partial/missing keyword
+  overlap.
+- The user then explicitly authorized touching those two remaining,
+  conclusion-changing gaps directly: "Two gaps remain in the live decision
+  engine, touch it."
+
+Implementation (commit `a63d9c2a`) reused the existing, already-live,
+already-tested `assessInternationalJob` engine
+(`packages/shared/src/international/assessment.ts`, also powering the live
+`/dashboard/international` page) rather than re-implementing either gap:
+`analyseJob` now optionally accepts the candidate's `MobilityProfile` and
+folds its `confirmedBlockers` into the existing Skip/criticalRisk/reason
+fields, and surfaces its pathway-viability tier as a single evidence-status
+unknown - deliberately excluding the engine's structural missing-evidence
+fields (contract duration in months, occupation code) that this
+vacancy-text-only workflow has no way to collect, to avoid manufacturing
+false friction on every analysis. Verified: `tsc --noEmit` clean for both
+`web` and `shared`; `scripts/phase-3b-workflow.test.mjs` extended with 6
+new assertions (a confirmed blocker reachable only via the new mobility
+path, a blocker phrasing the old single regex could never catch at all,
+the new evidence-status unknown, zero added noise for locally
+work-authorised candidates, and the live call-site wiring itself);
+`scripts/decision-quality-evaluation.test.mjs` 32/32 unchanged;
+`scripts/production-hardening.test.mjs` 47/47; job-workflow migration and
+sync suites 15/15; a live Playwright run of
+`25-phase-2-jobs-analysis.spec.ts` passing on both viewports with no
+snapshot changes.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
