@@ -64,6 +64,18 @@ These are maintainability tasks, not product-phase exit evidence:
    that is the part still coupled to the live Supabase client rather than
    a pure decision.
 4. Divide global CSS into tokens, foundations and workflow styles.
+   Step 1 done: the base `:root` design-token block moved to
+   `apps/web/app/tokens.css`, imported before `globals.css` in `layout.tsx`
+   (10 September 2026), verified pixel-identical via the full Playwright
+   visual-regression suite. `globals.css` (still ~10,400 lines) has almost
+   no domain structure - sections are named by chronological "Phase" of
+   feature work, not product domain - so a full split is many more steps
+   than this one. It also has a SECOND `:root` block ("2026 visual system
+   refresh") that deliberately overrides only some tokens, with its own
+   comment documenting a prior teal-leak bug from a previous, less careful
+   override attempt, and a documented relationship to
+   `phase-10-dashboard-blue.css`. That block and the rest of the file are
+   intentionally untouched pending a dedicated, equally-verified step.
 
 Each extraction must be independently reviewable and test-protected. A wholesale
 rewrite would violate the incremental-decomposition policy and create unnecessary
