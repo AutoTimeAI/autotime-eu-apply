@@ -1,6 +1,6 @@
 # Acceptance-gate audit — core product investment strategy
 
-**Date:** 10 September 2026
+**Date:** 10 September 2026 (original audit); updated same day after closing three gaps.
 **Scope:** Every acceptance gate and release gate named in
 [product-core-investment-strategy.md](../product-core-investment-strategy.md), checked against
 the actual codebase (not assumed) — file, function and test cited per gate.
@@ -8,17 +8,24 @@ the actual codebase (not assumed) — file, function and test cited per gate.
 path and function/test name as evidence rather than report a gate as met on the strength of intent
 or documentation alone.
 
+**Update (same day):** gates 3, 5 and 10 were closed at low risk (purely additive - no change to
+what a decision *is*, only what's tracked/shown/flagged). Gate 5 moved to partial, not full: only
+correction and override are tracked; disagreement has no distinct existing UI action to hook
+without adding new UI, so it remains untracked. See each gate's entry below for what changed and
+what's still missing, and the commit closing them for full detail.
+
 ## Result summary
 
 | Status | Count | Gates |
 | --- | --- | --- |
-| Enforced | 10 | 8, 13, 14, 15, 18, 20, 21, 22, 23, 24 |
-| Partially enforced | 7 | 1, 3, 7, 9, 11, 12, 16 |
-| Not found / real gap | 6 | 2, 4, 5, 10, 17, 19 |
+| Enforced | 12 | 3, 8, 10, 13, 14, 15, 18, 20, 21, 22, 23, 24 |
+| Partially enforced | 7 | 1, 5, 7, 9, 11, 12, 16 |
+| Not found / real gap | 4 | 2, 4, 17, 19 |
 | Process gate, not automatable (expected) | 1 | 6 |
 
-10 of 24 gates are solidly backed by code and tests. 6 are gaps the strategy document currently
-overstates as settled. The rest are real but incomplete.
+12 of 24 gates are now solidly backed by code and tests (up from 10). The remaining gaps still
+cluster around making the decision engine's reasoning structured and correctable at the data
+level, not just at the UI/tracking level closed today — see "What this means" below.
 
 ## Pillar 1 — EU Fit
 
@@ -38,12 +45,14 @@ array. There is nowhere in the code that could programmatically answer "which fa
 blocker and what is its evidence status" — only a human reading the sentence can.
 
 **3. "Every governed mobility statement exposes source and freshness information."** —
-**Partially enforced.** A real schema exists — `officialSourceCitationSchema`
-(`packages/shared/src/international/types.ts:42-49`) requires `publisher`, `url`, `jurisdiction`,
-`reviewedAt`, `ruleVersion` — and `orchestrateJobDecision` returns it. But the panel actually
-rendered to users (`DashboardExperience.tsx:6548-6564`, "Official sources") reads from
-`getOfficialSources(targetCountry)`, a different, older helper that only carries `label`/`note`/
-`url` — no freshness or rule-version fields reach the screen a candidate sees.
+**Enforced (closed 10 September 2026).** `OfficialSource` (`apps/web/domains/eu-fit/types.ts`) now
+carries optional `reviewedAt`/`ruleVersion`, populated in `official-sources.ts` from the exact
+review dates/rule versions the country packs already record for UK, Ireland, Germany and
+Netherlands. The "Official sources" panel shows "Reviewed \<date\> (rules \<version\>)" per source.
+France has no dedicated country pack, so its sources deliberately show "Freshness not yet tracked
+for this country" rather than an invented date — this is the one place the gate is still honestly
+incomplete, by design rather than by oversight. Covered by
+`scripts/acceptance-gate-fixes.test.mjs`.
 
 **4. "Users can distinguish verified, inferred, user-declared and unknown facts."** — **Real
 gap.** `evidenceStatusSchema` (`packages/shared/src/evidence/model.ts:4-11`) is
@@ -52,11 +61,14 @@ gap.** `evidenceStatusSchema` (`packages/shared/src/evidence/model.ts:4-11`) is
 different (the fact was never supplied, not that its truth is indeterminate). The strategy
 document's own vocabulary isn't fully implemented.
 
-**5. "Correction, override and disagreement reasons are measurable."** — **Not found.**
-`apps/web/lib/analytics.ts` defines exactly six event types: `job_analysed`, `application_saved`,
-`ai_content_generated`, `upgrade_clicked`, `subscription_started`, `upgrade_limit_hit`. None of
-them fire on a user correcting an inferred fact, overriding a decision, or disagreeing with a
-recommendation. This data literally isn't being collected.
+**5. "Correction, override and disagreement reasons are measurable."** — **Partially enforced
+(closed 10 September 2026).** `apps/web/lib/analytics.ts` previously defined six event types with
+zero real call sites in the app. Added `fact_correction` (fires from `updateProductContext` when a
+user manually sets a product-context field to a value different from the active CV-derived
+suggestion) and `decision_override` (fires from `saveApplicationFromJob` when a job is tracked
+despite a "blocked"/"stretch" content gate) - the first two real analytics call sites in the
+codebase. "Disagreement" specifically still has no distinct existing UI action to hook without
+adding new UI, so it remains untracked. Covered by `scripts/acceptance-gate-fixes.test.mjs`.
 
 **6. "High-risk conclusions receive scenario-based QA and human subject-matter review before
 their jurisdiction is marketed as supported."** — **Process gate, correctly not automated** — but
@@ -88,10 +100,14 @@ resists being flipped to verified," so this holds by absence rather than by a ch
 it will not automatically stay true if someone adds a status-update code path later.
 
 **10. "Edits to identity, employment dates, qualifications, work rights and quantified
-achievements receive high-risk treatment."** — **Real gap.** Zero code references to "high-risk"/
-"highRisk" exist outside the strategy document itself. There is no field-sensitivity
-classification, no escalation path, no review flag tied to editing these specific fields. This is
-prose only.
+achievements receive high-risk treatment."** — **Enforced (closed 10 September 2026).** Added
+`apps/web/domains/profile/high-risk-fields.ts`, classifying `fullName`, `workRightDetails`,
+`sponsorshipNeeded`, `baseCvText`, `experienceHighlights` and `projectSummaries` as high-risk (the
+schema has no discrete "employment dates" or "quantified achievements" fields - that content lives
+inside the three CV/highlights text fields, so those are classified high-risk too) and showing a
+visible reason note under each of these fields in the profile form. Treatment here is UI-level
+transparency, not an automated review/escalation pipeline - there is still no code path that routes
+a high-risk edit to a reviewer. Covered by `scripts/acceptance-gate-fixes.test.mjs`.
 
 **11. "Candidate data deletion, retention and export behavior match published privacy
 commitments."** — **Partially enforced.** Export is real and complete —
@@ -167,12 +183,14 @@ covers field mapping, safe-fill scoping, and CSV/formula-injection neutralizatio
 
 ## What this means
 
-The strategy document is accurate about *intent* everywhere and accurate about *current state* in
-under half of its acceptance gates (10 of 24 solid). The six real gaps cluster in one place:
-**everything about making the decision engine's reasoning legible and correctable is weaker than
-the document claims** — blockers are prose, not structured facts (#2); there's no "unknown" state
-(#4); corrections and overrides aren't tracked at all (#5); high-risk field edits get no special
-treatment (#10). These four gaps are the actual foundation of the moat-analysis document's rank-1
-and rank-2 candidates (outcome-calibrated decisions, trustworthy mobility guidance) — they're
-exactly the parts that need to be true for either moat mechanism to eventually work, and right now
-they aren't fully built.
+The strategy document is accurate about *intent* everywhere and, as of the same-day fixes, is now
+backed by solid code and tests in exactly half its acceptance gates (12 of 24). Closing gates 3, 5
+and 10 was low-risk because none of them touch what a decision *is* - only what's tracked, shown
+or flagged around it. The remaining real gaps (#2, #4, #19) are a different, harder category:
+**making the decision engine's reasoning structured at the data level, not just visible at the UI
+level.** Blockers are still prose, not structured `{ triggeringFact, evidenceStatus }` records
+(#2); there's still no `"unknown"` evidence-status value (#4); there's still no single continuous
+E2E journey from capture through kit to outcome (#19). These are exactly the gaps flagged as
+higher-risk in the scoping conversation for this work - restructuring the decision engine's output
+shape - and they remain the actual foundation the moat-analysis document's rank-1 and rank-2
+candidates (outcome-calibrated decisions, trustworthy mobility guidance) still depend on.
