@@ -1071,6 +1071,15 @@ sync suites 15/15; a live Playwright run of
 `25-phase-2-jobs-analysis.spec.ts` passing on both viewports with no
 snapshot changes.
 
+Follow-up investigation the same day, prompted by closing gate 19,
+corrected the "unreachable `DashboardExperience` jobs tab" framing above:
+only some of `DashboardExperience` is unreachable, not the whole
+component, and a second, independent live decision path
+(`decision-adapter.ts`'s `assessApplicationDecision`, reached via the
+browser extension) already existed alongside this one. See
+`docs/reference/technical-debt.md` for the full route map and the
+non-unified-decision-paths note.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:

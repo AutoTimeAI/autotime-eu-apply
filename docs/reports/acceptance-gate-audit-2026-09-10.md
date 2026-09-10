@@ -25,6 +25,28 @@ commits for full detail.
 applicationId and duration, no document content, letting abandonment be measured downstream
 without any in-app detection logic.
 
+**Update 4 (same day, after further investigation):** closing gate 19 required tracing every
+route that actually reaches `DashboardExperience.tsx` - the component most of the UI-facing gates
+above were implemented against or displayed through - to check whether the UI each gate protects
+is reachable in production routing at all. It is a mix, not uniform, and correcting it here
+matters more than the original
+"16/24 enforced" headline suggests: `DashboardExperience` is rendered by exactly two live page
+files, `apps/web/app/dashboard/autofill-profile/page.tsx` (`focus="autofill-profile"`,
+`view="profile"`) and `apps/web/app/dashboard/insights/page.tsx` (`focus="insights"`,
+`view="applications"`). The first is genuinely live and heavily cross-linked (from
+`HomeExperience.tsx`, `ProfileSummary.tsx`, `InterviewsWorkspace.tsx`, `JobApplicationWorkspace.tsx`,
+and `/dashboard/settings`); the second has no live inbound link anywhere in the app (it appears
+only in `UserNav.tsx`'s non-clickable route-highlighting `aliases` array and in one dead
+self-referential link inside `DashboardExperience` itself, gated by an `activeFocus` value no
+route ever sets). Every other historical "tab" of `DashboardExperience`
+(`currentTab === "jobs"`, `activeFocus === "application-answers"`, `activeFocus === "follow-ups"`)
+has its own dedicated live route shim redirecting elsewhere (`/dashboard/jobs`,
+`/dashboard/applications`, `/dashboard/follow-ups` now render `JobApplicationWorkspace` or
+`OutreachWorkspace` instead) and is unreachable through `DashboardExperience` itself. Per-gate
+reachability is now noted inline below; see
+[technical-debt.md](../reference/technical-debt.md) for the full route map and the standing
+cleanup recommendation.
+
 ## Result summary
 
 | Status | Count | Gates |
@@ -37,6 +59,27 @@ without any in-app detection logic.
 16 of 24 gates are now solidly enforced (up from an original 10). The one remaining real gap (#19:
 one continuous E2E journey from vacancy capture through approved kit to outcome status) has no
 open product decision behind it - it just isn't built yet.
+
+**"Enforced" describes code correctness, not production reachability - the two are not the same
+question, and this audit originally only asked the first.** Of the 16 gates counted "Enforced"
+above, only 6 were implemented against `DashboardExperience.tsx` at all (the other 10 - 8, 13, 14,
+15, 18, 20, 21, 22, 23, 24 - don't depend on it, so this question doesn't apply to them). Of those
+6, plus gate 5 (counted "Partially enforced," also `DashboardExperience`-dependent):
+
+| Gate | Enforced-gate location | Live reachability |
+| --- | --- | --- |
+| 1 | `decision-adapter.ts` → `/api/ai/content` | **Live** (browser extension) |
+| 2 | `fit-model.ts` `structuredBlockers` | **No UI consumer**, live or dead |
+| 3 | `DashboardExperience.tsx` "jobs" tab | **Dead** |
+| 4 | shared `evidenceStatusSchema` | Foundational schema change, not tab-scoped |
+| 5 | `DashboardExperience.tsx` profile + jobs tabs | **Split** - correction live, override dead |
+| 10 | `DashboardExperience.tsx` "autofill-profile" tab | **Live** |
+| 17 | `DashboardExperience.tsx` "application-answers" tab | **Dead** |
+
+So 2 of these 7 gates are genuinely live end to end (1, 10), 1 is split (5), 2 protect only
+unreachable code (3, 17), 1 has no UI consumer at all (2), and 1 is a foundational schema change
+rather than a tab-scoped feature (4). See each gate's own entry below for the citation behind its
+reachability call, and Update 4 above for how the live/dead route map was established.
 
 ## Pillar 1 — EU Fit
 
@@ -52,7 +95,16 @@ or job location), the adapter now returns `"Insufficient evidence"` with `"targe
 mobility assessment"` in `missingEvidence`, instead of inventing one. A genuinely supplied country
 is unaffected. `candidatePosition`'s own tri-state gap (`sponsorshipNeeded` can't distinguish
 "explicitly false" from "never set") is a separate, larger profile-schema change and remains open.
-Covered by `scripts/decision-adapter-target-country.test.mjs` (5 tests).
+Covered by `scripts/decision-adapter-target-country.test.mjs` (5 tests). **Reachability: live.**
+`assessApplicationDecision` is called from `apps/web/app/api/ai/content/route.ts`, which the
+browser extension calls directly (`apps/extension/lib/openai.ts`'s
+`generateAIApplicationContentDraft`) - a real, shipped product surface independent of
+`DashboardExperience`. (Also called from `DashboardExperience`'s own dead "application-answers"
+kit workspace, redundantly.) A separate, independent hard-blocker/evidence-status path for the
+live jobs workspace (`JobApplicationWorkspace`/`analyseJob`) was added later the same day - see
+the "Live decision-engine enhancement - 2026-09-10" entry in
+[quality-assurance.md](../quality-assurance.md); the two decision paths are not yet unified,
+tracked in [technical-debt.md](../reference/technical-debt.md).
 
 **2. "Every hard blocker identifies its triggering fact and evidence status."** — **Enforced
 (closed 10 September 2026).** `getHardBlockers` already filtered `FitComponent[]` down to hard
@@ -62,7 +114,9 @@ collapsed them into a display string. No product decision was needed: added
 evidenceStatus }` (`"found"`/`"missing"`, derived from whether `component.evidence` is non-empty).
 Exposed as a new additive field, `CountryFitEvaluation.structuredBlockers`, alongside the existing
 `blockers: string[]` - no existing consumer or conclusion changed. Covered by
-`scripts/country-fit-model.test.mjs`.
+`scripts/country-fit-model.test.mjs`. **Reachability: no UI consumer at all**, live or dead -
+`structuredBlockers` is read only by its own test file today. "Enforced" here means the
+data-shape capability exists and is correct, not that any user currently sees it.
 
 **3. "Every governed mobility statement exposes source and freshness information."** —
 **Enforced (closed 10 September 2026).** `OfficialSource` (`apps/web/domains/eu-fit/types.ts`) now
@@ -72,7 +126,11 @@ Netherlands. The "Official sources" panel shows "Reviewed \<date\> (rules \<vers
 France has no dedicated country pack, so its sources deliberately show "Freshness not yet tracked
 for this country" rather than an invented date — this is the one place the gate is still honestly
 incomplete, by design rather than by oversight. Covered by
-`scripts/acceptance-gate-fixes.test.mjs`.
+`scripts/acceptance-gate-fixes.test.mjs`. **Reachability: dead.** The "Official sources" panel
+that displays this is inside `DashboardExperience.tsx`'s `currentTab === "jobs"` block (around
+line 6512) - unreachable in production routing (see Update 4 above). Live users of
+`JobApplicationWorkspace` do see governed sources with freshness, but via a separately-added,
+independent path (`getGovernedSourcesForCountry`, commit `1d586438`), not this one.
 
 **4. "Users can distinguish verified, inferred, user-declared and unknown facts."** — **Enforced
 (closed 10 September 2026).** The source document itself is inconsistent here - pillar 2 lists six
@@ -93,6 +151,10 @@ suggestion) and `decision_override` (fires from `saveApplicationFromJob` when a 
 despite a "blocked"/"stretch" content gate) - the first two real analytics call sites in the
 codebase. "Disagreement" specifically still has no distinct existing UI action to hook without
 adding new UI, so it remains untracked. Covered by `scripts/acceptance-gate-fixes.test.mjs`.
+**Reachability: split.** `fact_correction` is live - `updateProductContext`'s call site sits behind
+`showProfileSettingsPanel` (`activeFocus === "autofill-profile" || "settings"`), reachable via the
+live `/dashboard/autofill-profile` route. `decision_override` is dead - `saveApplicationFromJob`'s
+only call site is inside `currentTab === "jobs"`, unreachable in production routing.
 
 **6. "High-risk conclusions receive scenario-based QA and human subject-matter review before
 their jurisdiction is marketed as supported."** — **Process gate, correctly not automated** — but
@@ -132,6 +194,10 @@ inside the three CV/highlights text fields, so those are classified high-risk to
 visible reason note under each of these fields in the profile form. Treatment here is UI-level
 transparency, not an automated review/escalation pipeline - there is still no code path that routes
 a high-risk edit to a reviewer. Covered by `scripts/acceptance-gate-fixes.test.mjs`.
+**Reachability: live.** The profile form these notes render into
+(`currentTab === "profile" && activeFocus === "autofill-profile"`, `DashboardExperience.tsx`
+around line 5374 onward) is reached via `/dashboard/autofill-profile` - a real, heavily
+cross-linked route, not the dead "jobs" tab.
 
 **11. "Candidate data deletion, retention and export behavior match published privacy
 commitments."** — **Partially enforced.** Export is real and complete —
@@ -180,7 +246,10 @@ content in analytics."** — **Enforced (closed 10 September 2026).** Added
 only an `applicationId` and (for the saved event) a `durationMs` - never CV text or kit content.
 Abandonment is measurable downstream as a started event with no matching saved event for the same
 application, without any explicit in-app abandonment-detection logic. Covered by
-`scripts/acceptance-gate-fixes.test.mjs`.
+`scripts/acceptance-gate-fixes.test.mjs`. **Reachability: dead.** Both call sites
+(`DashboardExperience.tsx` lines ~4446/4454 and ~5243/5250) are inside the "Application Kit
+workspace" section gated by `activeFocus === "application-answers"`, which no live route ever
+sets - see Update 4 above.
 
 ## Broader release gates
 
@@ -230,3 +299,15 @@ rank-2 candidates (outcome-calibrated decisions, trustworthy mobility guidance) 
 meaningfully closer to their prerequisites: blockers are structured, evidence has an honest
 "unknown" state, the decision engine no longer fabricates a jurisdiction to compute an answer, and
 preparation time is measured well enough to eventually calibrate against real outcomes.
+
+**A caveat that matters more than any single gate:** as Update 4 documents, several of the gates
+above were verified against `DashboardExperience.tsx` UI that turned out to be unreachable in
+production routing (gates 3, 17, and half of 5), and one (gate 2) has no UI consumer of any kind
+yet. "16 of 24 enforced" is an honest description of code correctness; it is not a claim that 16
+of 24 gates are protecting real users today. Separately, and after this audit was written, the
+live jobs workspace (`JobApplicationWorkspace`/`analyseJob`) gained its own general hard-blocker
+and evidence-status logic (commit `a63d9c2a`, see
+[quality-assurance.md](../quality-assurance.md)) - genuinely live, but implemented independently
+of gates 1/2's own fixes rather than as a consequence of closing them. The practical takeaway:
+before citing any gate in this document as evidence of what a real user experiences, check its
+reachability note, not just its "Enforced" label.
