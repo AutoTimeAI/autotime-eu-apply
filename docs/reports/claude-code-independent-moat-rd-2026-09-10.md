@@ -289,8 +289,19 @@ of this report) and found:
 - **Localyze**, Europe-founded and backed by General Catalyst/Y Combinator, was **acquired by
   Boundless Immigration in October 2025**, creating a combined US+Europe mobility platform — but
   remains strictly B2B (sold to HR/employers), not a direct candidate-facing competitor.
-- **Multiplier, Remote.com's own candidate-facing features, and smaller EU-regional competitors were
-  not verified this pass** — flagged as an explicit research gap rather than assumed absent.
+- **Multiplier and Remote.com, verified after the founder lifted the time constraint on this
+  assignment: both stay employer-initiated, unlike Deel.** Multiplier's visa process is triggered by
+  HR "during onboarding," after an employee has already been hired, and its eligibility check
+  requires the candidate's details to already be "confirmed" by the employer first. Remote.com's
+  equivalent is explicitly scoped as a "pre-employment eligibility check for EOR clients" — run
+  before an offer, but still at the employer's initiative, not the candidate's. Neither offers a
+  genuinely candidate-initiated, no-employer-relationship-required self-assessment the way Deel
+  does. **This narrows, rather than widens, the competitive picture from Section 7's first pass:**
+  Deel is not one of several mobility platforms converging on candidate-facing guidance — on the
+  evidence found, it is currently the outlier. That makes it more important to watch specifically,
+  not less, but it also means the wedge AutoTime is racing against is one company's product
+  decision, not an industry-wide trend every EOR platform is independently arriving at. Smaller
+  EU-regional competitors remain unverified.
 
 **What this changes for the founder decision:** AutoTime's differentiated wedge against Deel
 specifically isn't "we offer mobility guidance" — Deel already does. It's the *combination* Codex's
@@ -515,3 +526,5 @@ constraint):
 - [artificialintelligenceact.eu: Annex III, Article 6](https://artificialintelligenceact.eu/annex/3/) · [Article 6](https://artificialintelligenceact.eu/article/6/)
 - [Airia: "The Article 6(3) Filter: Your Escape Valve Has a Catch"](https://airia.com/eu-ai-act-part-3-the-article-63-filter-your-escape-valve-has-a-catch/)
 - [AI Act Service Desk (European Commission): Migration, asylum and border control management](https://ai-act-service-desk.ec.europa.eu/en/migration-asylum-and-border-control-management)
+- [Multiplier: "Initiate visa process during onboarding"](https://help.usemultiplier.com/hr/immigration/visa/initiate-visa-process-during-onboarding)
+- [Remote.com: "What is a pre-employment eligibility check for EOR clients?"](https://support.remote.com/hc/en-us/articles/31105190595085-What-is-a-pre-employment-eligibility-check-for-EOR-clients)
