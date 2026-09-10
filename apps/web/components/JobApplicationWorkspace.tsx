@@ -39,7 +39,11 @@ import { loadInterviewWorkflow } from "../lib/interview-storage";
 import type { InterviewRecord } from "../lib/interview-workflow";
 import { loadMobilityProfile, saveMobilityProfile } from "../lib/international-mobility-storage";
 import { useJobWorkflowSync } from "../lib/useJobWorkflowSync";
-import type { ApplicationRecord, MobilityProfile } from "shared";
+import {
+  buildApplicationKitRequest,
+  type OnboardingProfileFields,
+} from "../lib/application-kit-request";
+import type { ApplicationContentDraft, ApplicationRecord, MobilityProfile } from "shared";
 
 type View =
   | { kind: "jobs" }
@@ -1369,6 +1373,7 @@ function ApplicationDetail({
   status: string;
   sync: { state: SyncStatusLineState; status: string };
 }) {
+  const { userId } = useDashboardPlan();
   const readiness = getApplicationReadiness(application, job);
   const analysis = currentAnalysis(job);
   const update = (changes: Partial<ApplicationWorkspace>) =>
@@ -1380,6 +1385,61 @@ function ApplicationDetail({
           : item,
       ),
     });
+  const [kitDraft, setKitDraft] = useState<Omit<
+    ApplicationContentDraft,
+    "coverLetter"
+  > | null>(null);
+  const [isGeneratingKit, setIsGeneratingKit] = useState(false);
+  const generateKit = async () => {
+    setIsGeneratingKit(true);
+    onStatus("Generating application kit with AutoTime AI...");
+    try {
+      const onboardingResponse = await fetch("/api/profile/onboarding");
+      const onboardingBody = (await onboardingResponse.json()) as {
+        data: OnboardingProfileFields | null;
+      };
+      const mobilityProfile = loadMobilityProfile(localStorage, userId).profile;
+      const response = await fetch("/api/ai/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          buildApplicationKitRequest({
+            job,
+            profile: onboardingBody.data ?? {},
+            mobilityProfile,
+          }),
+        ),
+      });
+      const body = (await response.json()) as {
+        data: { content?: ApplicationContentDraft; upgradeUrl?: string } | null;
+        error: string | null;
+      };
+      if (!response.ok || !body.data?.content) {
+        onStatus(
+          body.data?.upgradeUrl
+            ? `${body.error ?? "Upgrade required"} to generate an AI kit.`
+            : (body.error ?? "AI kit generation is unavailable right now."),
+        );
+        return;
+      }
+      const { coverLetter, ...rest } = body.data.content;
+      update({ coverLetter, coverLetterRequested: true });
+      setKitDraft(rest);
+      onStatus("Application kit generated with AutoTime AI.");
+    } catch {
+      onStatus("Application kit could not be generated. Try again shortly.");
+    } finally {
+      setIsGeneratingKit(false);
+    }
+  };
+  const copyKitField = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      onStatus(`${label} copied.`);
+    } catch {
+      onStatus(`Could not copy ${label.toLowerCase()}.`);
+    }
+  };
   const setStatus = (next: ApplicationWorkspaceStatus, confirmed = false) => {
     try {
       const changed = transitionApplication(application, next, job, confirmed);
@@ -1583,6 +1643,60 @@ function ApplicationDetail({
                 </small>
               </span>
             </label>
+          </section>
+
+          <section className="phase-three-section phase-three-kit-generation">
+            <header>
+              <p className="product-eyebrow">Application kit</p>
+              <h2>Draft with AutoTime AI</h2>
+            </header>
+            <p>
+              Generates a cover letter, profile summary and answer drafts from
+              your confirmed profile evidence and this vacancy - never
+              invented claims. Review everything before using it; only the
+              cover letter is saved to this application, the rest is shown
+              here to copy.
+            </p>
+            <button
+              className="button-secondary"
+              disabled={isGeneratingKit}
+              onClick={generateKit}
+              type="button"
+            >
+              {isGeneratingKit
+                ? "Generating kit"
+                : "Generate application kit"}
+            </button>
+            {kitDraft ? (
+              <div className="phase-three-kit-draft">
+                {(
+                  [
+                    ["profileSummary", "Profile summary"],
+                    ["motivationAnswer", "Motivation answer"],
+                    ["strengthsAnswer", "Strengths answer"],
+                    ["availabilityAnswer", "Availability answer"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <article key={key} className="phase-three-kit-field">
+                    <header>
+                      <strong>{label}</strong>
+                      <button
+                        className="button-secondary"
+                        onClick={() => copyKitField(label, kitDraft[key])}
+                        type="button"
+                      >
+                        Copy
+                      </button>
+                    </header>
+                    <p>{kitDraft[key]}</p>
+                  </article>
+                ))}
+                <p className="phase-three-kit-note">
+                  The cover letter draft was saved below. These other drafts
+                  are not saved - copy what you want to keep.
+                </p>
+              </div>
+            ) : null}
           </section>
 
           <details className="phase-three-disclosure phase-three-supporting">
