@@ -57,6 +57,7 @@ Last consolidated: 2026-09-09.
 | [reports/repository-structure-and-codebase-inventory-2026-09-09.md](reports/repository-structure-and-codebase-inventory-2026-09-09.md) | Canonical module/folder/config/log map, repository hygiene, ownership and reproducible codebase line counts |
 | [reports/qa-360-defect-assessment-2026-09-09.md](reports/qa-360-defect-assessment-2026-09-09.md) | 360-degree build, browser, API, security, integration and release-gate defect assessment with severities |
 | [reports/release-remediation-progress-2026-09-09.md](reports/release-remediation-progress-2026-09-09.md) | Execution status and remaining owner actions for the approved QA remediation plan |
+| [reports/acceptance-gate-audit-2026-09-10.md](reports/acceptance-gate-audit-2026-09-10.md) | Every acceptance gate in the core-investment strategy checked against actual code/tests, cited file-by-file |
 | [verify-feature-implementation.md](verify-feature-implementation.md) | Manual verification, phases 1–10 |
 
 ## QA strategy & living test matrices
