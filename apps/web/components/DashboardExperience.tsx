@@ -107,6 +107,14 @@ import {
   updateOutcomeRecordFromApplication
 } from "../domains/outcomes"
 import {
+  getProfileQualitySignals,
+  getProfileSignalStatusLabel
+} from "../domains/profile/quality-signals"
+import {
+  getProfileReadinessScore,
+  getReadinessScore
+} from "../domains/profile/readiness-score"
+import {
   defaultDashboardState as defaultState,
   emptyJobAnalysis,
   emptyProfile,
@@ -191,13 +199,6 @@ type ContextSuggestionSource = "ai" | "local" | "limit" | "error" | null
 type ProfileContextReviewResponse = {
   data: { suggestion: ContextSuggestion } | { upgradeUrl: string } | null
   error: string | null
-}
-
-type ProfileQualitySignal = {
-  label: string
-  score: number
-  status: "ready" | "needs-check" | "blocked"
-  detail: string
 }
 
 function RevealMetric({
@@ -528,130 +529,6 @@ function hasJobDraft(job: JobAnalysisDraft) {
   )
 }
 
-function scoreTextEvidence(text: string, strongLength: number) {
-  const length = text.trim().length
-
-  if (length >= strongLength) {
-    return 100
-  }
-
-  if (length >= strongLength / 2) {
-    return 70
-  }
-
-  if (length >= 40) {
-    return 45
-  }
-
-  return 15
-}
-
-function getSignalStatus(score: number): ProfileQualitySignal["status"] {
-  if (score >= 75) {
-    return "ready"
-  }
-
-  if (score >= 45) {
-    return "needs-check"
-  }
-
-  return "blocked"
-}
-
-function getProfileSignalStatusLabel(status: ProfileQualitySignal["status"]) {
-  if (status === "ready") {
-    return "Ready"
-  }
-
-  if (status === "needs-check") {
-    return "Needs review"
-  }
-
-  return "Missing"
-}
-
-function getProfileQualitySignals(
-  profile: CandidateProfile,
-  reusableAnswers: ReusableAnswers
-): ProfileQualitySignal[] {
-  const evidenceScore = Math.round(
-    (scoreTextEvidence(profile.baseCvText, 1200) +
-      scoreTextEvidence(profile.experienceHighlights, 500) +
-      scoreTextEvidence(profile.projectSummaries, 500)) /
-      3
-  )
-  const workRightScore = profile.workRightDetails.trim()
-    ? profile.sponsorshipNeeded
-      ? 70
-      : 90
-    : 15
-  const roleFocusScore =
-    profile.targetRoles.trim() && profile.targetCountries.trim()
-      ? 90
-      : profile.targetRoles.trim() || profile.targetCountries.trim()
-        ? 55
-        : 20
-  const cvFactsScore = profile.baseCvText.trim()
-    ? scoreTextEvidence(profile.baseCvText, 1000)
-    : 10
-  const allowedClaimInputs = [
-    profile.baseCvText,
-    profile.experienceHighlights,
-    profile.projectSummaries,
-    reusableAnswers.strengthsAnswer,
-    reusableAnswers.workAuthorisationAnswer
-  ].filter((value) => value.trim().length > 60).length
-  const claimBoundaryScore = Math.min(100, allowedClaimInputs * 22)
-
-  return [
-    {
-      detail:
-        evidenceScore >= 75
-          ? "Enough saved evidence for job checks."
-          : "Add CV text, project examples and experience highlights.",
-      label: "Evidence",
-      score: evidenceScore,
-      status: getSignalStatus(evidenceScore)
-    },
-    {
-      detail:
-        workRightScore >= 75
-          ? "Work-right details are saved."
-          : "Add only verified work-right, sponsorship and relocation facts.",
-      label: "Work-right details",
-      score: workRightScore,
-      status: getSignalStatus(workRightScore)
-    },
-    {
-      detail:
-        roleFocusScore >= 75
-          ? "Target roles and countries are saved."
-          : "Add target roles and countries before checking roles.",
-      label: "Role targets",
-      score: roleFocusScore,
-      status: getSignalStatus(roleFocusScore)
-    },
-    {
-      detail:
-        cvFactsScore >= 75
-          ? "CV text is saved for fit checks and interview prep."
-          : "Paste enough factual CV content to support recommendations.",
-      label: "CV",
-      score: cvFactsScore,
-      status: getSignalStatus(cvFactsScore)
-    },
-    {
-      detail:
-        claimBoundaryScore >= 75
-          ? "Reusable answer evidence is available."
-          : "Add reusable answers only when they are backed by your profile.",
-      label: "Reusable answers",
-      score: claimBoundaryScore,
-      status: getSignalStatus(claimBoundaryScore)
-    }
-  ]
-}
-
 function hasApplicationJobText(application: ApplicationRecord) {
   return Boolean(
     application.notes?.trim() && application.notes.trim().length > 80
@@ -727,38 +604,6 @@ function getStatusCounts(applications: ApplicationRecord[]) {
       ).length
     }),
     {} as Record<ApplicationStatus, number>
-  )
-}
-
-function getReadinessScore(state: CompanionDashboardState) {
-  return getProfileReadinessScore(state.profile, state.reusableAnswers)
-}
-
-function getProfileReadinessScore(
-  profile: CandidateProfile,
-  reusableAnswers: Partial<ReusableAnswers> = {}
-) {
-  const requiredProfileSignals = [
-    profile.fullName.trim(),
-    profile.currentCountry.trim(),
-    profile.targetCountries.trim(),
-    profile.targetRoles.trim(),
-    profile.workRightDetails.trim(),
-    profile.baseCvText.trim()
-  ]
-  const reusableSignals = [
-    reusableAnswers.motivationAnswer?.trim() ?? "",
-    reusableAnswers.strengthsAnswer?.trim() ?? ""
-  ]
-  const requiredCompleted = requiredProfileSignals.filter(Boolean).length
-  const reusableCompleted = reusableSignals.filter(Boolean).length
-
-  return Math.min(
-    100,
-    Math.round(
-      (requiredCompleted / requiredProfileSignals.length) * 90 +
-        (reusableCompleted / reusableSignals.length) * 10
-    )
   )
 }
 
