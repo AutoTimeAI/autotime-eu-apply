@@ -11,7 +11,9 @@ import { trackJobImportStarted } from "../../../../lib/sentry-breadcrumbs"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { isTestAuthUserId } from "../../../../lib/test-auth"
 import {
+  buildApplicationIdMap,
   emptyDashboard,
+  filterActiveChildRecords,
   getSourceSurface,
   mapApplicationToRow,
   mapEvidenceToRow,
@@ -21,6 +23,8 @@ import {
   mapSyncEvents,
   normalizeApplicationUrlKey,
   normalizeLegacyDashboardPayload,
+  partitionApplicationsByTombstone,
+  resolveDeleteTarget,
   rowToApplication,
   rowToEvidence,
   rowToOutcome,
@@ -320,20 +324,9 @@ export async function POST(
     const deletedUrlKeys = new Set(
       (tombstoneResult.data ?? []).map((row) => row.url_key),
     )
-    const deletedApplicationIds = payload.applications
-      .filter((application) =>
-        deletedUrlKeys.has(
-          normalizeApplicationUrlKey(application.url || application.id),
-        ),
-      )
-      .map((application) => application.id)
-    const activeApplications = payload.applications.filter(
-      (application) =>
-        !deletedUrlKeys.has(
-          normalizeApplicationUrlKey(application.url || application.id),
-        ),
-    )
-    const applicationIdMap = new Map<string, string>()
+    const { deletedApplicationIds, activeApplications } =
+      partitionApplicationsByTombstone(payload.applications, deletedUrlKeys)
+    let applicationIdMap = new Map<string, string>()
 
     if (activeApplications.length) {
       const { data, error } = await supabase
@@ -359,19 +352,7 @@ export async function POST(
         })
       }
 
-      const existingByUrlKey = new Map(
-        (data ?? []).map((row) => [row.url_key, row.id]),
-      )
-
-      for (const application of activeApplications) {
-        const existingId = existingByUrlKey.get(
-          normalizeApplicationUrlKey(application.url || application.id),
-        )
-
-        if (existingId) {
-          applicationIdMap.set(application.id, existingId)
-        }
-      }
+      applicationIdMap = buildApplicationIdMap(activeApplications, data ?? [])
     }
 
     if (payload.reusableAnswers) {
@@ -428,16 +409,13 @@ export async function POST(
     const activeApplicationIds = new Set(
       activeApplications.map((application) => application.id),
     )
-    const activeEvidenceRecords = (payload.evidenceRecords ?? []).filter(
-      (record) =>
-        !record.applicationId || activeApplicationIds.has(record.applicationId),
-    )
-    const activeOutcomeRecords = (payload.outcomeRecords ?? []).filter(
-      (record) => activeApplicationIds.has(record.applicationId),
-    )
-    const activeInterviewPrepPacks = payload.interviewPrepPacks.filter((pack) =>
-      activeApplicationIds.has(pack.applicationId),
-    )
+    const { activeEvidenceRecords, activeOutcomeRecords, activeInterviewPrepPacks } =
+      filterActiveChildRecords({
+        activeApplicationIds,
+        evidenceRecords: payload.evidenceRecords ?? [],
+        outcomeRecords: payload.outcomeRecords ?? [],
+        interviewPrepPacks: payload.interviewPrepPacks,
+      })
 
     if (activeEvidenceRecords.length) {
       const { error } = await supabase.from("evidence_records").upsert(
@@ -643,11 +621,10 @@ export async function DELETE(
       })
     }
 
-    const targetApplications = existingApplications ?? []
-    const targetIds = targetApplications.map((application) => application.id)
-    const urlKey =
-      targetApplications[0]?.url_key ??
-      normalizeApplicationUrlKey(body.url ?? body.applicationId ?? "")
+    const { targetIds, urlKey } = resolveDeleteTarget({
+      body,
+      existingApplications,
+    })
 
     const tombstoneResult = await supabase
       .from("deleted_application_tombstones")
