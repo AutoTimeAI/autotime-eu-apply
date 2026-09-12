@@ -1,3 +1,4 @@
+import path from "node:path"
 import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
 
@@ -19,6 +20,13 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
+  // Without this, Next's per-function dependency tracing can misresolve
+  // pnpm's symlinked node_modules in this monorepo (apps/*, packages/*)
+  // and over-include files into every serverless function's bundle -
+  // diagnosed 2026-09-12 after Vercel's Functions Storage usage hit
+  // ~21GB against a 10GB limit with no change after deleting hundreds of
+  // old deployments, which ruled out deployment count as the cause.
+  outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   serverExternalPackages: ["@napi-rs/canvas", "pdf-parse"],
   async headers() {
     return [
