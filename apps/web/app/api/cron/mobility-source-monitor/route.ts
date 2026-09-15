@@ -87,7 +87,8 @@ export async function GET(request: NextRequest) {
       const previousResult = await db.from("mobility_source_versions")
         .select("id,version,language,http_status,raw_sha256,normalized_sha256,parser_version,normalizer_version")
         .eq("source_document_id", sourceDocumentId).order("version", { ascending: false }).limit(1).maybeSingle()
-      if (previousResult.error || !previousResult.data) {
+      if (previousResult.error) throw new Error("Source version history is unavailable")
+      if (!previousResult.data) {
         const capturedAt = new Date().toISOString()
         const artifact = await captureOfficialSourceArtifact(url, allowedHosts)
         if (!artifact.content || !artifact.observation.rawSha256 || !artifact.observation.normalizedSha256) {

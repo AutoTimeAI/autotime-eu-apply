@@ -103,6 +103,8 @@ test("cron is daily and requires both CRON_SECRET and a source allowlist", () =>
   assert.match(route, /MOBILITY_SOURCE_HOST_ALLOWLIST/)
   assert.match(route, /baseline_quarantined_for_review/)
   assert.match(route, /recordUnavailableInitialSource/)
+  assert.match(route, /if \(previousResult\.error\) throw new Error\("Source version history is unavailable"\)/)
+  assert.doesNotMatch(route, /previousResult\.error \|\| !previousResult\.data/)
   assert.match(route, /mobility_source_monitor_started/)
   assert.match(route, /mobility_source_monitor_completed/)
   assert.match(route, /mobility_source_monitor_source_failed/)
