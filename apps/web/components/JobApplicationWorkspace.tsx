@@ -44,7 +44,14 @@ import {
   type OnboardingProfileFields,
 } from "../lib/application-kit-request";
 import { assessCoreLoopTrace } from "../domains/core-loop/traceability";
-import { trackCoreLoopIntegrityIssue } from "../lib/analytics";
+import { trackCoreLoopIntegrityIssue, trackDecisionOverride } from "../lib/analytics";
+import {
+  emitMobilityLearningEvent,
+  readLearningConsent,
+  setLearningConsent,
+  submitMobilityComprehension,
+  type LearningConsentState,
+} from "../lib/mobility-learning-client";
 import type { ApplicationContentDraft, ApplicationRecord, MobilityProfile } from "shared";
 
 type View =
@@ -724,6 +731,17 @@ function JobDetail({
     });
     window.location.assign(`/dashboard/applications/${application.id}`);
   };
+  const prepareAnyway = () => {
+    if (
+      !window.confirm(
+        "This role's viability decision is \"Consider\", not \"Apply\" - material evidence or vacancy facts still need resolution. Prepare an application anyway?",
+      )
+    ) {
+      return;
+    }
+    trackDecisionOverride({ contentGate: "stretch", decision: analysis?.decision ?? "Consider" });
+    prepare();
+  };
   return (
     <main className="workflow-page phase-two-jobs phase-two-job-detail">
       <a href="/dashboard/jobs" className="text-link phase-two-job-back">
@@ -780,7 +798,9 @@ function JobDetail({
           <p>
             {analysis?.decision === "Apply"
               ? "The viability decision supports preparation. You will still review every claim before Ready."
-              : "Record or resolve the viability decision before preparing application material."}
+              : analysis?.decision === "Consider"
+                ? "The role may be viable, but material evidence or vacancy facts need resolution. You can prepare anyway if you've weighed the gap yourself."
+                : "Record or resolve the viability decision before preparing application material."}
           </p>
           <button
             className="button-primary"
@@ -789,6 +809,11 @@ function JobDetail({
           >
             Prepare application
           </button>
+          {analysis?.decision === "Consider" ? (
+            <button className="button-secondary" onClick={prepareAnyway}>
+              Prepare anyway
+            </button>
+          ) : null}
         </section>
       ) : (
         <Activity
@@ -1148,6 +1173,373 @@ function applicationNextAction(
   return "Review application";
 }
 
+function LineageIcon({ kind }: { kind: "vacancy" | "evidence" | "rules" | "decision" }) {
+  const paths = {
+    vacancy: <><path d="M7 3h7l3 3v15H7z" /><path d="M14 3v4h4M10 11h5M10 15h5" /></>,
+    evidence: <><path d="M9 3h6l1 3h3v15H5V6h3z" /><path d="m9 14 2 2 4-5" /></>,
+    rules: <><path d="M4 6h16M7 6l1-3h8l1 3M6 6l-2 6h4L6 6Zm12 0-2 6h4l-2-6ZM12 6v14M8 20h8" /></>,
+    decision: <><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.3 2.3 4.8-5" /></>,
+  };
+  return <svg aria-hidden="true" viewBox="0 0 24 24">{paths[kind]}</svg>;
+}
+
+type DecisionLineageLedger = {
+  decision: Record<string, unknown>;
+  ruleBundle: Record<string, unknown> | null;
+  readinessSnapshot: Record<string, unknown> | null;
+  employerVerification: Record<string, unknown> | null;
+  evidenceLinks: Record<string, unknown>[];
+  claims: Record<string, unknown>[];
+  sourceSpans: Record<string, unknown>[];
+  sourceVersions: Record<string, unknown>[];
+  sourceDocuments: Record<string, unknown>[];
+  candidateEvidence: Record<string, unknown>[];
+  expertSignoffs: Record<string, unknown>[];
+  corrections: Record<string, unknown>[];
+  correctionReviews: Record<string, unknown>[];
+  replays: Record<string, unknown>[];
+};
+
+function replayRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function DecisionReplayHistory({ replays }: { replays: Record<string, unknown>[] }) {
+  if (!replays.length) return null;
+  return (
+    <section className="decision-replay-history" aria-label="Decision replay history">
+      <span className="decision-lineage-current-label">Recorded policy comparisons</span>
+      {replays.slice(0, 3).map((replay, index) => {
+        const diff = replayRecord(replay.diff);
+        const original = replayRecord(diff.original);
+        const replayed = replayRecord(diff.replayed);
+        const isComparison = replay.mode === "successor_comparison";
+        const equivalent = replay.equivalent === true;
+        return (
+          <article key={String(replay.id ?? index)}>
+            <div>
+              <span>{isComparison ? "Approved policy comparison" : "Historical reproducibility"}</span>
+              <strong>{equivalent ? "No decision change" : "Decision or matched rule changed"}</strong>
+              <small>Completed {formatDate(String(replay.completed_at ?? replay.recorded_at ?? ""))}</small>
+            </div>
+            <dl>
+              <div><dt>Policy</dt><dd>v{String(original.version ?? "—")} → v{String(replayed.version ?? original.version ?? "—")}</dd></div>
+              <div><dt>Result</dt><dd>{String(original.actualState ?? "Unknown").replaceAll("_", " ")} → {String(replayed.actualState ?? "Unknown").replaceAll("_", " ")}</dd></div>
+              <div><dt>Matched rule</dt><dd>{String(original.matchedRuleId ?? "None")} → {String(replayed.matchedRuleId ?? "None")}</dd></div>
+            </dl>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function DecisionCorrectionHistory({ corrections, reviews }: { corrections: Record<string, unknown>[]; reviews: Record<string, unknown>[] }) {
+  if (!corrections.length) return null;
+  return (
+    <section className="decision-correction-history" aria-label="Decision correction history">
+      <span className="decision-lineage-current-label">Disagreement history</span>
+      {corrections.slice(0, 3).map((correction, index) => {
+        const review = reviews.find((item) => item.correction_id === correction.id);
+        const evidence = Array.isArray(review?.evidence_references) ? review.evidence_references : [];
+        const reasons = Array.isArray(review?.reason_codes) ? review.reason_codes.map(String) : [];
+        return (
+          <article key={String(correction.id ?? index)}>
+            <div>
+              <span>{String(correction.target_type ?? "decision").replaceAll("_", " ")}</span>
+              <strong>{String(review?.decision ?? correction.state ?? "submitted").replaceAll("_", " ")}</strong>
+              <small>Submitted {formatDate(String(correction.submitted_at ?? ""))}</small>
+            </div>
+            <div>
+              <p>{String(review?.resolution_notes ?? correction.reason ?? "Awaiting governed review.")}</p>
+              <small>{reasons.length ? reasons.join(" · ").replaceAll("_", " ") : "Review pending"} · {evidence.length} evidence reference{evidence.length === 1 ? "" : "s"}</small>
+              {review?.successor_decision_id ? <small>Corrected by successor decision {String(review.successor_decision_id).slice(0, 8).toUpperCase()}</small> : null}
+            </div>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function DecisionLineage({
+  analysis,
+  application,
+  interviews,
+  job,
+  learningConsent,
+}: {
+  analysis: ReturnType<typeof currentAnalysis>;
+  application: ApplicationWorkspace;
+  interviews: InterviewRecord[];
+  job: JobRecord;
+  learningConsent: LearningConsentState | null;
+}) {
+  const sources = getGovernedSourcesForCountry(job.facts.country.value);
+  const [ledger, setLedger] = useState<DecisionLineageLedger | null>(null);
+  const [ledgerState, setLedgerState] = useState<"idle" | "loading" | "loaded" | "unavailable">("idle");
+  const [ledgerRefresh, setLedgerRefresh] = useState(0);
+  const [correctionTarget, setCorrectionTarget] = useState("output");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [lineageAction, setLineageAction] = useState<"idle" | "correction" | "original-replay" | "successor-replay">("idle");
+  const [lineageActionStatus, setLineageActionStatus] = useState("");
+  const [comprehensionReason, setComprehensionReason] = useState<"UNCLEAR_TERMINOLOGY" | "UNCLEAR_EVIDENCE" | "UNCLEAR_ACTION" | "OTHER">("UNCLEAR_ACTION");
+  const [comprehensionStatus, setComprehensionStatus] = useState("");
+  const [savingComprehension, setSavingComprehension] = useState(false);
+  useEffect(() => {
+    if (!application.mobilityDecisionId) {
+      setLedger(null);
+      setLedgerState("idle");
+      return;
+    }
+    const controller = new AbortController();
+    setLedgerState("loading");
+    void fetch(`/api/mobility/decisions/${encodeURIComponent(application.mobilityDecisionId)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    }).then(async (response) => {
+      const payload = await response.json() as { data: DecisionLineageLedger | null };
+      if (!response.ok || !payload.data) throw new Error("Lineage unavailable");
+      setLedger(payload.data);
+      setLedgerState("loaded");
+    }).catch((error) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setLedger(null);
+      setLedgerState("unavailable");
+    });
+    return () => controller.abort();
+  }, [application.mobilityDecisionId, ledgerRefresh]);
+  const submitLineageAction = async (
+    payload: Record<string, unknown>,
+    action: "correction" | "original-replay" | "successor-replay",
+  ) => {
+    if (!application.mobilityDecisionId) return;
+    setLineageAction(action);
+    setLineageActionStatus(action === "correction"
+      ? "Submitting correction…"
+      : action === "original-replay"
+        ? "Replaying recorded policy…"
+        : "Comparing with the approved current policy…");
+    try {
+      const response = await fetch(`/api/mobility/decisions/${encodeURIComponent(application.mobilityDecisionId)}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json() as { data?: { correction?: { id?: string } }; error: string | null };
+      if (!response.ok) throw new Error(result.error ?? "Action failed");
+      if (action === "correction") {
+        setCorrectionReason("");
+        const correctionId = result.data?.correction?.id;
+        if (learningConsent?.enabled && correctionId) {
+          void emitMobilityLearningEvent({
+            consentId: learningConsent.consentId,
+            decisionId: application.mobilityDecisionId,
+            applicationId: application.id,
+            correctionId,
+            eventType: "correction_submitted",
+            evidenceClass: "user_reported",
+          }).catch(() => setLineageActionStatus("Correction saved, but it was not added to consent-scoped learning."));
+        }
+      }
+      setLineageActionStatus(action === "correction"
+        ? "Correction submitted for review."
+        : action === "original-replay"
+          ? "Original-policy replay completed."
+          : "Approved-policy comparison completed.");
+      setLedgerRefresh((value) => value + 1);
+    } catch (error) {
+      setLineageActionStatus(error instanceof Error ? error.message : "The lineage action could not be saved.");
+    } finally {
+      setLineageAction("idle");
+    }
+  };
+  const mappedEvidence = analysis?.capability.filter((item) => item.state !== "missing").length ?? 0;
+  const evidenceTotal = analysis?.capability.length ?? 0;
+  const decisionRecorded = Boolean(application.mobilityDecisionId);
+  const recordComprehension = async (understood: boolean) => {
+    if (!application.mobilityDecisionId || !learningConsent?.enabled) return;
+    setSavingComprehension(true); setComprehensionStatus("");
+    try {
+      await submitMobilityComprehension({
+        consentId: learningConsent.consentId, decisionId: application.mobilityDecisionId,
+        understood, reasonCode: understood ? "CLEAR" : comprehensionReason,
+      });
+      setComprehensionStatus(understood ? "Clarity confirmed." : "Clarity issue recorded for review.");
+    } catch (error) {
+      setComprehensionStatus(error instanceof Error ? error.message : "Clarity response could not be saved.");
+    } finally { setSavingComprehension(false); }
+  };
+  const latestOutcome = interviews.at(-1)?.status ?? application.status;
+  const recordLabel = application.mobilityDecisionId
+    ? application.mobilityDecisionId.slice(0, 8).toUpperCase()
+    : null;
+
+  return (
+    <section className="decision-lineage" aria-labelledby="decision-lineage-heading">
+      <header className="decision-lineage-hero">
+        <div className="decision-lineage-heading">
+          <span className="decision-lineage-mark" aria-hidden="true">
+            <LineageIcon kind="decision" />
+          </span>
+          <div>
+            <p className="product-eyebrow">Decision intelligence</p>
+            <h2 id="decision-lineage-heading">Why this recommendation exists</h2>
+            <p>Follow the evidence from the captured vacancy to the current outcome.</p>
+          </div>
+        </div>
+        <div className={`decision-lineage-record ${decisionRecorded ? "recorded" : "local"}`}>
+          <span>{decisionRecorded ? "Immutable record" : "Local snapshot"}</span>
+          <strong>{recordLabel ? `#${recordLabel}` : "Not recorded yet"}</strong>
+          <small>
+            {ledgerState === "loading"
+              ? "Verifying the stored lineage…"
+              : ledgerState === "loaded"
+                ? "Stored lineage verified for this account."
+                : ledgerState === "unavailable"
+                  ? "Record exists, but its lineage could not be loaded."
+                  : decisionRecorded
+              ? "A server decision record was created with the application kit."
+              : "Generate the application kit to create a governed server record."}
+          </small>
+        </div>
+      </header>
+
+      <ol className="decision-lineage-chain" aria-label="Decision evidence chain">
+        <li>
+          <span className="decision-lineage-node"><LineageIcon kind="vacancy" /></span>
+          <div><small>01 · Input</small><strong>Vacancy captured</strong><span>{job.source}</span></div>
+        </li>
+        <li>
+          <span className="decision-lineage-node"><LineageIcon kind="evidence" /></span>
+          <div><small>02 · Match</small><strong>{mappedEvidence}/{evidenceTotal} mapped</strong><span>Candidate evidence</span></div>
+        </li>
+        <li>
+          <span className="decision-lineage-node"><LineageIcon kind="rules" /></span>
+          <div><small>03 · Verify</small><strong>{sources.length} official source{sources.length === 1 ? "" : "s"}</strong><span>{job.facts.country.value || "European guidance"}</span></div>
+        </li>
+        <li className="is-current">
+          <span className="decision-lineage-node"><LineageIcon kind="decision" /></span>
+          <div><small>04 · Decision</small><strong>{analysis?.decision ?? "Not analysed"}</strong><span>{analysis ? `${analysis.confidence} confidence · v${analysis.version}` : "Evidence pending"}</span></div>
+        </li>
+      </ol>
+
+      <div className="decision-lineage-details">
+        <div className="decision-lineage-explanation">
+          <span className="decision-lineage-kicker">Decision rationale</span>
+          <h3>{analysis?.reason ?? "Analyse the vacancy to produce an evidence-backed recommendation."}</h3>
+          <dl>
+            <div><dt>Strongest signal</dt><dd>{analysis?.positiveEvidence ?? "No supporting signal recorded."}</dd></div>
+            <div><dt>Key risk</dt><dd>{analysis?.criticalRisk ?? "Not assessed."}</dd></div>
+            <div><dt>Next verification</dt><dd>{analysis?.nextAction ?? "Complete vacancy analysis."}</dd></div>
+          </dl>
+        </div>
+        <aside className="decision-lineage-outcome">
+          <span className="decision-lineage-kicker">Learning loop</span>
+          <strong>{latestOutcome.replaceAll("_", " ")}</strong>
+          <p>{interviews.length ? `${interviews.length} linked interview event${interviews.length === 1 ? "" : "s"}.` : "No interview outcome recorded yet."}</p>
+          <span className={`decision-lineage-consent ${decisionRecorded ? "active" : ""}`}>
+            {decisionRecorded ? "Decision can be linked to outcomes" : "Outcome linkage awaits a decision record"}
+          </span>
+        </aside>
+      </div>
+
+      {decisionRecorded ? (
+        <section className="decision-comprehension" aria-labelledby="decision-comprehension-title">
+          <div><span className="decision-lineage-kicker">Comprehension evidence</span><h3 id="decision-comprehension-title">Is the recommendation and next action clear?</h3></div>
+          {learningConsent?.enabled ? <div className="decision-comprehension-controls">
+            <button className="button-secondary" disabled={savingComprehension} onClick={() => void recordComprehension(true)} type="button">Yes, clear</button>
+            <select aria-label="Reason the recommendation is unclear" disabled={savingComprehension} value={comprehensionReason} onChange={(event) => setComprehensionReason(event.target.value as typeof comprehensionReason)}><option value="UNCLEAR_ACTION">Next action is unclear</option><option value="UNCLEAR_EVIDENCE">Evidence is unclear</option><option value="UNCLEAR_TERMINOLOGY">Terminology is unclear</option><option value="OTHER">Another clarity issue</option></select>
+            <button className="button-secondary" disabled={savingComprehension} onClick={() => void recordComprehension(false)} type="button">Not yet clear</button>
+          </div> : <p>Enable private learning contribution to provide consent-scoped clarity evidence.</p>}
+          {comprehensionStatus ? <p role="status">{comprehensionStatus}</p> : null}
+        </section>
+      ) : null}
+
+      {decisionRecorded ? (
+        <details className="decision-lineage-actions">
+          <summary>
+            <span>Correct or replay this decision</span>
+            <small>History remains unchanged and auditable</small>
+          </summary>
+          <div className="decision-lineage-action-grid">
+            <form onSubmit={(event) => {
+              event.preventDefault();
+              void submitLineageAction({ action: "submit_correction", targetType: correctionTarget, targetId: application.mobilityDecisionId, reason: correctionReason }, "correction");
+            }}>
+              <span className="decision-lineage-kicker">Report a disagreement</span>
+              <h3>What appears incorrect?</h3>
+              <label>Area<select value={correctionTarget} onChange={(event) => setCorrectionTarget(event.target.value)}><option value="output">Recommendation</option><option value="candidate_evidence">Candidate evidence</option><option value="vacancy">Vacancy information</option><option value="employer">Employer verification</option><option value="claim">Mobility claim</option><option value="source">Official source</option><option value="rule">Decision rule</option></select></label>
+              <label>Reason<textarea value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} minLength={10} maxLength={2000} required placeholder="Explain what is wrong and what evidence should be checked." /></label>
+              <button className="button-secondary" disabled={lineageAction !== "idle" || correctionReason.trim().length < 10} type="submit">{lineageAction === "correction" ? "Submitting…" : "Submit correction"}</button>
+            </form>
+            <section>
+              <span className="decision-lineage-kicker">Reproducibility</span>
+              <h3>Replay the original decision</h3>
+              <p>Re-run the recorded policy facts against the exact historical rule bundle. This does not replace the original result.</p>
+              <button className="button-secondary" disabled={lineageAction !== "idle"} onClick={() => void submitLineageAction({ action: "request_replay", mode: "original_versions" }, "original-replay")} type="button">{lineageAction === "original-replay" ? "Replaying…" : "Replay original policy"}</button>
+              <button className="button-secondary" disabled={lineageAction !== "idle"} onClick={() => void submitLineageAction({ action: "request_replay", mode: "successor_comparison" }, "successor-replay")} type="button">{lineageAction === "successor-replay" ? "Comparing…" : "Compare approved current policy"}</button>
+              <small>Original replay verifies deterministic execution. Current-policy comparison runs the same recorded facts only against an audited, active successor bundle. Hashed CV and profile evidence remain private and are not reconstructed.</small>
+            </section>
+          </div>
+          {lineageActionStatus ? <p className="decision-lineage-action-status" role="status">{lineageActionStatus}</p> : null}
+        </details>
+      ) : null}
+
+      <details className="decision-lineage-sources">
+        <summary>
+          <span>Inspect official source provenance</span>
+          <small>{sources.length ? `Reviewed sources for ${job.facts.country.value || "Europe"}` : "No governed source available"}</small>
+        </summary>
+        <div>
+          {ledgerState === "loaded" && ledger ? (
+            <section className="decision-ledger-summary" aria-label="Stored decision lineage">
+              <div><span>Rule bundle</span><strong>v{String(ledger.ruleBundle?.version ?? "—")}</strong><small>{String(ledger.ruleBundle?.state ?? "Unknown state")}</small></div>
+              <div><span>Evidence links</span><strong>{ledger.evidenceLinks.length}</strong><small>{ledger.claims.length} versioned claim{ledger.claims.length === 1 ? "" : "s"}</small></div>
+              <div><span>Employer check</span><strong>{String(ledger.employerVerification?.state ?? "Not applicable").replaceAll("_", " ")}</strong><small>{ledger.employerVerification ? String((ledger.employerVerification.reason_codes as string[] | undefined)?.join(", ") ?? "Verification recorded") : "No employer verification required"}</small></div>
+              <div><span>Expert sign-off</span><strong>{ledger.expertSignoffs.length ? String(ledger.expertSignoffs[0]?.decision ?? "Recorded") : "None"}</strong><small>{ledger.expertSignoffs.length ? `Review by ${formatDate(String(ledger.expertSignoffs[0]?.review_by ?? ""))}` : "No sign-off linked"}</small></div>
+              <div><span>Corrections / replays</span><strong>{ledger.corrections.length} / {ledger.replays.length}</strong><small>Append-only history</small></div>
+            </section>
+          ) : ledgerState === "loading" ? (
+            <p className="decision-ledger-state" role="status">Loading the stored source and decision versions…</p>
+          ) : ledgerState === "unavailable" ? (
+            <p className="decision-ledger-state warning" role="status">The saved record could not be verified right now. Current guidance remains visible below, but it is not a substitute for the historical ledger.</p>
+          ) : null}
+          {ledgerState === "loaded" && ledger ? <DecisionCorrectionHistory corrections={ledger.corrections} reviews={ledger.correctionReviews} /> : null}
+          {ledgerState === "loaded" && ledger ? <DecisionReplayHistory replays={ledger.replays} /> : null}
+          {ledger?.sourceVersions.map((version) => {
+            const document = ledger.sourceDocuments.find((item) => item.id === version.source_document_id);
+            const linkedSpans = ledger.sourceSpans.filter((item) => item.source_version_id === version.id);
+            return (
+              <article className="decision-ledger-source" key={String(version.id)}>
+                <div><span>{String(document?.publisher ?? "Official source")}</span><strong>{String(document?.jurisdiction ?? job.facts.country.value)} · source version {String(version.version)}</strong></div>
+                <dl><div><dt>Retrieved</dt><dd>{formatDate(String(version.retrieved_at))}</dd></div><div><dt>Linked passages</dt><dd>{linkedSpans.length}</dd></div></dl>
+                {document?.canonical_url ? <a href={String(document.canonical_url)} rel="noreferrer" target="_blank">Open recorded source ↗</a> : null}
+              </article>
+            );
+          })}
+          {ledgerState === "loaded" && ledger?.sourceVersions.length === 0 ? <p className="decision-ledger-state warning">This decision is stored, but it has no claim-to-source evidence links. Treat its provenance as incomplete.</p> : null}
+          <p className="decision-lineage-current-label">Current governed guidance</p>
+          {sources.map((source) => (
+            <article key={`${source.url}-${source.ruleVersion}`}>
+              <div><span>{source.publisher}</span><strong>{source.title}</strong></div>
+              <dl>
+                <div><dt>Rule version</dt><dd>{source.ruleVersion}</dd></div>
+                <div><dt>Last reviewed</dt><dd>{formatDate(source.reviewedAt)}</dd></div>
+              </dl>
+              <a href={source.url} rel="noreferrer" target="_blank" aria-label={`Open official source: ${source.title}`}>Open source ↗</a>
+            </article>
+          ))}
+          {!sources.length ? <p>AutoTime is not presenting an official-source claim for this country.</p> : null}
+          <p className="decision-lineage-freshness">Current sources may be newer than the stored decision. AutoTime keeps the two views separate so a later rule update cannot silently rewrite what supported the original recommendation.</p>
+        </div>
+      </details>
+    </section>
+  );
+}
+
 function ApplicationsSystemState({
   kind,
 }: {
@@ -1432,6 +1824,22 @@ function ApplicationDetail({
     "coverLetter"
   > | null>(null);
   const [isGeneratingKit, setIsGeneratingKit] = useState(false);
+  const [learningConsent, setLearningConsentState] = useState(() =>
+    typeof window === "undefined" ? null : readLearningConsent(localStorage, userId),
+  );
+  const [isSavingLearningConsent, setIsSavingLearningConsent] = useState(false);
+  const toggleLearningConsent = async (enabled: boolean) => {
+    setIsSavingLearningConsent(true);
+    try {
+      const saved = await setLearningConsent(localStorage, userId, enabled);
+      setLearningConsentState(saved);
+      onStatus(enabled ? "Private learning contribution enabled." : "Private learning contribution disabled.");
+    } catch (error) {
+      onStatus(error instanceof Error ? error.message : "Learning preference could not be saved.");
+    } finally {
+      setIsSavingLearningConsent(false);
+    }
+  };
   const generateKit = async () => {
     setIsGeneratingKit(true);
     onStatus("Generating application kit with AutoTime AI...");
@@ -1453,7 +1861,7 @@ function ApplicationDetail({
         ),
       });
       const body = (await response.json()) as {
-        data: { content?: ApplicationContentDraft; upgradeUrl?: string } | null;
+        data: { content?: ApplicationContentDraft; upgradeUrl?: string; decisionRecordId?: string } | null;
         error: string | null;
       };
       if (!response.ok || !body.data?.content) {
@@ -1465,7 +1873,10 @@ function ApplicationDetail({
         return;
       }
       const { coverLetter, ...rest } = body.data.content;
-      update({ coverLetter, coverLetterRequested: true });
+      update({ coverLetter, coverLetterRequested: true, ...(body.data.decisionRecordId && { mobilityDecisionId: body.data.decisionRecordId }) });
+      if (body.data.decisionRecordId && learningConsent?.enabled) {
+        void emitMobilityLearningEvent({ consentId: learningConsent.consentId, decisionId: body.data.decisionRecordId, applicationId: application.id, eventType: "decision_viewed", evidenceClass: "observed" }).catch(() => onStatus("Application kit generated; learning event could not be recorded."));
+      }
       setKitDraft(rest);
       onStatus("Application kit generated with AutoTime AI.");
     } catch {
@@ -1493,10 +1904,13 @@ function ApplicationDetail({
       );
     }
   };
-  const confirmApplied = () =>
-    window.confirm(
-      "Confirm that you submitted this application outside AutoTime.",
-    ) && setStatus("Applied", true);
+  const confirmApplied = () => {
+    if (!window.confirm("Confirm that you submitted this application outside AutoTime.")) return;
+    setStatus("Applied", true);
+    if (learningConsent?.enabled && application.mobilityDecisionId) {
+      void emitMobilityLearningEvent({ consentId: learningConsent.consentId, decisionId: application.mobilityDecisionId, applicationId: application.id, eventType: "applied", evidenceClass: "observed" }).catch(() => onStatus("Application marked Applied; learning event could not be recorded."));
+    }
+  };
   const primaryAction =
     application.status === "Preparing" ? (
       <button
@@ -1578,6 +1992,14 @@ function ApplicationDetail({
           {status}
         </p>
       ) : null}
+
+      <DecisionLineage
+        analysis={analysis}
+        application={application}
+        interviews={interviews}
+        job={job}
+        learningConsent={learningConsent}
+      />
 
       <div className="phase-three-detail-grid">
         <div className="phase-three-detail-main">
@@ -1699,6 +2121,20 @@ function ApplicationDetail({
               cover letter is saved to this application, the rest is shown
               here to copy.
             </p>
+            <label className="phase-three-check-control">
+              <input
+                type="checkbox"
+                checked={Boolean(learningConsent?.enabled)}
+                disabled={isSavingLearningConsent}
+                onChange={(event) => void toggleLearningConsent(event.target.checked)}
+              />
+              <span>
+                <strong>Help improve cross-border decisions</strong>
+                <small>
+                  With your consent, link this decision to application actions and outcomes. You can withdraw consent here at any time.
+                </small>
+              </span>
+            </label>
             <button
               className="button-secondary"
               disabled={isGeneratingKit}

@@ -25,6 +25,9 @@
     "test:country-fit": "node --experimental-strip-types scripts/country-fit-model.test.mjs",
     "test:evidence-integrity": "node --experimental-strip-types --test scripts/evidence-integrity.test.mjs",
     "test:international-orchestration": "node --experimental-strip-types --test scripts/international-orchestration.test.mjs",
+    "test:sponsorship-readiness": "node --experimental-strip-types --test scripts/sponsorship-readiness.test.mjs",
+    "test:stamp4-governance-gate": "node --test scripts/stamp4-governance-gate.test.mjs",
+    "test:mobility-suite": "node --experimental-strip-types --test scripts/mobility-*.test.mjs apps/web/tests/mobility-*.test.mjs",
     "test:application-preparation-policy": "node --experimental-strip-types --test scripts/application-preparation-policy.test.mjs",
     "test:occupation-modules": "node --experimental-strip-types --test scripts/occupation-module-contract.test.mjs",
     "test:engineering-governance": "node --test scripts/engineering-governance.test.mjs",
@@ -57,6 +60,8 @@
     "test:ai-quality": "tsx --conditions=react-server scripts/ai-quality-evaluation.test.mjs",
     "test:admin-migrations:local": "powershell -ExecutionPolicy Bypass -File scripts/run-local-admin-migration-test.ps1",
     "test:admin-bundle-canary": "node scripts/admin-client-bundle-canary.mjs",
+    "test:pdf-cv-bundle": "node --experimental-strip-types --test scripts/pdf-cv-bundle-budget.test.mjs",
+    "test:server-trace-budget": "node scripts/server-trace-budget.mjs",
     "test:mvp:python": "python scripts/autotime_mvp_test_runner.py",
     "test:mvp:coverage": "node scripts/mvp-test-coverage.mjs",
     "smoke:web": "node --use-system-ca scripts/smoke-web-dashboard.mjs",
@@ -87,7 +92,7 @@
     "test:v2:ats-live": "node --experimental-strip-types scripts/v2-live-ats-validation.mjs",
     "test:mvp": "node scripts/mvp-automation-toolkit.mjs",
     "test": "pnpm test:unit",
-    "test:unit": "pnpm --filter extension test && pnpm test:web:outreach-contacts && pnpm test:role-pathways && pnpm test:role-pathways-persistence && pnpm test:phase-3a-readiness && pnpm test:phase-3b-workflow && pnpm test:phase-3c-interviews && pnpm test:job-workflow-migration-safety && pnpm test:job-workflow-sync && pnpm test:interview-workflow-sync && pnpm test:admin-foundation && pnpm test:validation-run && pnpm test:market-ready-gate && pnpm test:production-hardening && pnpm test:country-fit && pnpm test:evidence-integrity && pnpm test:international-orchestration && pnpm test:application-preparation-policy && pnpm test:web:application-preparation-use-case && pnpm test:web:interview-buddy-policy && pnpm test:web:technical-interview-policy && pnpm test:web:technical-drill-catalogue && pnpm test:web:dashboard-state-storage && pnpm test:web:profile-recovery && pnpm test:web:dashboard-preferences-storage && pnpm test:web:product-context-model && pnpm test:occupation-modules && pnpm test:engineering-governance && pnpm test:repository-organization && pnpm test:smoke:web:unit && pnpm test:web:cloud-sync && pnpm test:web:interview && pnpm test:web:sentry-privacy && pnpm test:web:dashboard-content-snapshot && pnpm test:web:auth-error-messages && pnpm test:web:safe-redirect-path && pnpm test:web:status-tone && pnpm test:web:account-export && pnpm test:web:image-signature && pnpm test:web:linkedin-import && pnpm test:web:admin-users-pagination && pnpm test:web:request-ip && pnpm test:web:docx-cv && pnpm test:web:portfolio-ssrf && pnpm test:web:role-intelligence-nvidia && pnpm test:web:environment-boundaries && pnpm test:web:diagnostic-response && pnpm test:ai-quality && pnpm test:mvp:coverage",
+    "test:unit": "pnpm --filter extension test && pnpm test:web:outreach-contacts && pnpm test:role-pathways && pnpm test:role-pathways-persistence && pnpm test:phase-3a-readiness && pnpm test:phase-3b-workflow && pnpm test:phase-3c-interviews && pnpm test:job-workflow-migration-safety && pnpm test:job-workflow-sync && pnpm test:interview-workflow-sync && pnpm test:admin-foundation && pnpm test:validation-run && pnpm test:market-ready-gate && pnpm test:production-hardening && pnpm test:country-fit && pnpm test:evidence-integrity && pnpm test:international-orchestration && pnpm test:sponsorship-readiness && pnpm test:stamp4-governance-gate && pnpm test:mobility-suite && pnpm test:application-preparation-policy && pnpm test:web:application-preparation-use-case && pnpm test:web:interview-buddy-policy && pnpm test:web:technical-interview-policy && pnpm test:web:technical-drill-catalogue && pnpm test:web:dashboard-state-storage && pnpm test:web:profile-recovery && pnpm test:web:dashboard-preferences-storage && pnpm test:web:product-context-model && pnpm test:occupation-modules && pnpm test:engineering-governance && pnpm test:repository-organization && pnpm test:smoke:web:unit && pnpm test:web:cloud-sync && pnpm test:web:interview && pnpm test:web:sentry-privacy && pnpm test:web:dashboard-content-snapshot && pnpm test:web:auth-error-messages && pnpm test:web:safe-redirect-path && pnpm test:web:status-tone && pnpm test:web:account-export && pnpm test:web:image-signature && pnpm test:web:linkedin-import && pnpm test:web:admin-users-pagination && pnpm test:web:request-ip && pnpm test:web:docx-cv && pnpm test:web:portfolio-ssrf && pnpm test:web:role-intelligence-nvidia && pnpm test:web:environment-boundaries && pnpm test:web:diagnostic-response && pnpm test:ai-quality && pnpm test:mvp:coverage",
     "check:free-space": "node scripts/check-free-space.mjs",
     "prepare:e2e": "pnpm check:free-space",
     "test:e2e": "pnpm prepare:e2e && node scripts/run-playwright.mjs test",
@@ -97,18 +102,17 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
-    "test:lighthouse": "pnpm build:web && lhci autorun",
+    "test:lighthouse": "pnpm build:web && node scripts/lighthouse-public.mjs",
     "test:lighthouse:dashboard": "node scripts/lighthouse-dashboard.mjs",
     "test:all": "pnpm lint && pnpm typecheck && pnpm build && pnpm build:web && pnpm test:e2e",
     "typecheck": "pnpm -r typecheck"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",
-    "next": "^16.3.1"
+    "next": "^16.3.3"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.60.0",
     "@supabase/supabase-js": "^2.105.3",
     "checkly": "^8.21.0",
@@ -122,6 +126,7 @@
   },
   "pnpm": {
     "overrides": {
+      "@napi-rs/canvas": "-",
       "@types/react": "18.3.28",
       "@types/react-dom": "18.3.7",
       "react": "18.2.0",
@@ -140,7 +145,9 @@
       "qs": "^6.16.0",
       "postcss": "^8.5.23",
       "nanoid": "^3.3.16",
-      "js-yaml": "^4.3.0",
+      "js-yaml": "^4.3.2",
+      "less": "-",
+      "sharp": "^0.35.4",
       "esbuild": "^0.28.1",
       "dompurify": "^3.4.12",
       "@opentelemetry/core": "^2.8.0",

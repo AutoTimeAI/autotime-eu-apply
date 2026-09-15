@@ -1282,3 +1282,41 @@ Documented honestly rather than silently glossed over:
   regression test against; flagged for whoever next touches this route
   to add error logging (e.g. `reportClientDiagnostic`/`console.error`
   per failed table) rather than silently substituting `[]`.
+- **`packages/shared/src/international/sponsorship-readiness.ts` reviewed
+  after the local in-process reimplementation of the former Stamp4
+  sponsorship-check service** (`SPONSORSHIP_RULESET_VERSION =
+  "stamp4-import-2026.09.15"`). Verified: salary extraction from vacancy
+  text (EUR/GBP, ranges via conservative lower bound, monthly
+  annualization, labelled compensation wording, UK-local amounts
+  converted at the disclosed 1.17 GBP/EUR ruleset rate), false-positive
+  guards against dates/team-size/years-of-experience, and threshold/
+  `ruleClaims` provenance all match the code and pass
+  `scripts/sponsorship-readiness.test.mjs` (9/9) run via `node
+  --experimental-strip-types`. One theoretical gap checked and ruled
+  out: `detectAnnualSalaryEur` accepts a bare 4-6 digit number as salary
+  with no currency symbol when `input.salary` is supplied directly
+  (rather than derived from vacancy text). Traced both call sites -
+  `decision-adapter.ts` always passes `salary: null` (so detection only
+  ever runs against the currency-anchored snippet from
+  `salaryEvidenceFromVacancy`), and `stamp4-check/route.ts` only ever
+  passes the API's dedicated `salary` request field, never unrelated
+  free text - so the false-positive scenario cannot occur through either
+  live code path. No fix needed.
+- **Closed moat-analysis capability #8 (correction/disagreement capture), upgraded from
+  Partial to Present.** `decision_override` analytics tracking existed only inside
+  `DashboardExperience.tsx`'s `saveApplicationFromJob`, gated behind `currentTab === "jobs"` -
+  a tab no live route ever renders (`/dashboard/jobs` renders `JobApplicationWorkspace.tsx`
+  instead), confirmed dead by `docs/reports/acceptance-gate-audit-2026-09-10.md`. The live job
+  flow had no override path at all: "Prepare application" was hard-`disabled` unless
+  `analysis?.decision === "Apply"`, with no way to proceed past a "Consider" or "Skip" decision.
+  Added a `prepareAnyway` action in `JobApplicationWorkspace.tsx` gated to `decision === "Consider"`
+  only (never "Skip", which can carry a real sponsorship-incompatibility blocker, or "Insufficient
+  information") - requires an explicit `window.confirm` before firing `trackDecisionOverride` and
+  proceeding. The original dead `DashboardExperience.tsx` call site was deliberately left in place
+  per user decision (documented rollback/reference path), not deleted. Verified: `pnpm --filter web
+  typecheck` clean; `scripts/phase-3b-workflow.test.mjs` and `scripts/acceptance-gate-fixes.test.mjs`
+  pass (added a new case asserting the live `JobApplicationWorkspace.tsx` call site and its
+  "Consider"-only gating); full `pnpm test:unit` run clean (0 failures across all suites). Updated
+  `docs/moat-analysis.md` (#8 Partial to Present, 4/10 capabilities now genuinely built),
+  `docs/reference/technical-debt.md`, and `docs/reports/acceptance-gate-audit-2026-09-10.md` to
+  match.

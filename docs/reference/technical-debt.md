@@ -55,7 +55,9 @@ regardless of which page renders them, since no page ever supplies these `view`/
   underlying computation may still run whenever `DashboardExperience` mounts on the live
   autofill-profile route, since it wasn't verified whether it's tab-gated at the `useMemo`/state
   level too), the official-sources freshness panel (gate 3), and the
-  `saveApplicationFromJob`/`decision_override` tracking call (half of gate 5).
+  `saveApplicationFromJob`/`decision_override` tracking call (gate 5 - though `decision_override`
+  itself is no longer dead: `JobApplicationWorkspace.tsx`'s `prepareAnyway` now fires it from a
+  live "Prepare anyway" override path on `/dashboard/jobs` for a "Consider" decision).
 - `activeFocus === "application-answers"` - `/dashboard/application-answers` and
   `/dashboard/documents` are both redirect shims to `/dashboard/applications`
   (`JobApplicationWorkspace`), not this focus value. Contains: the entire "Application Kit
@@ -78,15 +80,18 @@ component is safe to delete wholesale.
 Two independent, low-risk cleanups, each doable as its own bounded change set per this repo's
 "one domain per change set" rule:
 
-1. Add a `redirect()` shim for `/dashboard/insights` → `/dashboard/applications`, matching the
+1. **Closed 10 September 2026:** add a `redirect()` shim for `/dashboard/insights` → `/dashboard/applications`, matching the
    pattern already used for `/dashboard/application-answers`, `/dashboard/documents`,
    `/dashboard/inbox`, `/dashboard/match-score`, and `/dashboard/interview`. This closes the one
    remaining unshimmed legacy URL.
-2. Once nothing renders `currentTab === "jobs"` or `activeFocus === "application-answers"` (true
+2. **In progress 10 September 2026:** once nothing renders `currentTab === "jobs"` or `activeFocus === "application-answers"` (true
    today, confirmed above), those two blocks - along with `state.jobAnalysis`/`euFitEngineResult`
    and any helper code that exists only to feed them - can be deleted from
    `DashboardExperience.tsx` outright. This is the largest remaining reduction available in that
-   file (it is still ~8,300 lines) and, unlike the extractions already completed this
+   file. The unreachable Applications/Progress/Follow-up JSX branch was removed first after the
+   insights redirect, reducing the component from 8,407 to 7,187 lines; route-ownership tests now
+   assert that Applications and Follow-ups use their dedicated live workspaces. The remaining dead
+   Jobs/application-answer blocks still need removal. Unlike the extractions already completed this
    modernization pass, is a deletion rather than a relocation, since `JobApplicationWorkspace`
    already covers the live equivalent of the "jobs" tab's user-facing purpose.
 
@@ -119,10 +124,18 @@ Both ultimately call the same underlying engine (`assessInternationalJob` in
 `packages/shared/src/international/assessment.ts`), so their conclusions should already be
 consistent in principle, but they are wired up independently: `decision-adapter.ts` resolves a
 target country from the candidate's saved profile, while `job-application-workflow.ts` resolves it
-from the vacancy's own extracted country fact first. Nothing currently tests that the two paths
-would reach the same conclusion given the same candidate and job. Unifying them (or at minimum
-adding a cross-path consistency test) is future work, not done as part of either fix, to keep each
-change set scoped to one call site per this repo's modernization rules. This gap widened slightly
+from the vacancy's own extracted country fact first. A cross-path contract test now protects the
+two highest-risk shared cases: explicit no-sponsorship wording must block both paths, while explicit
+sponsorship plus strong evidence must not be blocked by either. Adding that test exposed and fixed
+a real vocabulary divergence: `assessInternationalJob` did not recognize "cannot provide visa
+sponsorship," although the live Jobs analyzer did. Sponsorship-rejection vocabulary is now
+centralized in `vacancyRejectsSponsorship` and consumed by the fit model, International assessment,
+and live Jobs analyzer instead of being maintained in three independent lists. Target-country
+precedence is also centralized in `resolveAssessmentCountry`: explicit caller choice, then the
+vacancy country, then the candidate's general target-country list. Application-kit requests now
+pass the extracted country rather than a broader city/country label where both exist. Full
+structural unification of the two decision result shapes remains future work
+to keep the behavior change scoped and independently reviewable. This gap widened slightly
 with the kit-generation feature below (`JobApplicationWorkspace` now triggers *both* paths for the
 same job - `analyseJob` for its own Apply/Consider/Skip decision, and `decision-adapter.ts`
 indirectly via kit generation - which can legitimately disagree on the same job/candidate pair).

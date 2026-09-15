@@ -1,16 +1,19 @@
 /**
- * Proxies an authenticated user's request to Stamp4's real
- * legal-eligibility check (sponsorship-engine reconciliation) - kept
- * server-side because the request carries STAMP4_SPONSORSHIP_SERVICE_SECRET,
- * which must never reach the browser. Returns null data (200, not an error)
- * for countries Stamp4 doesn't cover, or when Stamp4 is unreachable -
- * assessInternationalJob already falls back correctly to its own
- * text-signal/evidence-first checks when no stamp4Assessment is supplied.
+ * Runs the former Stamp4 sponsorship engine in-process for an authenticated
+ * EU Apply user. The route contract is retained for the existing UI, while
+ * the retired standalone deployment and shared service secret are no longer
+ * runtime dependencies. Unsupported countries still return null data.
  */
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { fetchStamp4SponsorshipAssessment, isStamp4SponsorshipCovered } from "shared"
+import { assessSponsorshipReadiness, isStamp4SponsorshipCovered } from "shared"
 import { getRequestUser } from "../../../../lib/api-auth"
+import { createAdminClient } from "../../../../lib/supabase/admin"
+import { recordExternalAssessmentSnapshot } from "../../../../platform/mobility-external-assessment/writer"
+import {
+  isMobilityGovernanceEnforcementEnabled,
+  loadCurrentMobilityReadiness,
+} from "../../../../platform/application-preparation/mobility-governance-repository"
 
 const requestSchema = z.object({
   countryPackId: z.string().trim().min(1),
@@ -46,24 +49,49 @@ export async function POST(request: NextRequest) {
     return jsonResponse({ data: null, error: null }, 200)
   }
 
-  const baseUrl = process.env.STAMP4_SPONSORSHIP_SERVICE_URL
-  const secret = process.env.STAMP4_SPONSORSHIP_SERVICE_SECRET
-  if (!baseUrl || !secret) {
-    return jsonResponse({ data: null, error: null }, 200)
+  const governanceEnabled = isMobilityGovernanceEnforcementEnabled()
+  const adminClient = governanceEnabled ? createAdminClient() : null
+  if (governanceEnabled) {
+    try {
+      const governed = await loadCurrentMobilityReadiness(adminClient as never, body.country)
+      if (!governed || governed.readiness.outputPermission !== "definitive") {
+        return jsonResponse({
+          data: null,
+          error: "This country's official-threshold rules require current source and expert review before a verified result can be shown.",
+        }, 409)
+      }
+    } catch {
+      return jsonResponse({
+        data: null,
+        error: "Official-threshold governance status is temporarily unavailable.",
+      }, 503)
+    }
   }
 
-  const assessment = await fetchStamp4SponsorshipAssessment(
-    {
-      roleTitle: body.roleTitle,
-      country: body.country,
-      salary: body.salary ?? null,
-      rawText: body.rawText,
-      domainKeywords: body.domainKeywords,
-      requiredSkills: body.requiredSkills,
-      responsibilities: body.responsibilities,
-    },
-    { baseUrl, secret },
-  )
+  const requestPayload = {
+    roleTitle: body.roleTitle,
+    country: body.country,
+    salary: body.salary ?? null,
+    rawText: body.rawText,
+    domainKeywords: body.domainKeywords,
+    requiredSkills: body.requiredSkills,
+    responsibilities: body.responsibilities,
+  }
+  const assessment = assessSponsorshipReadiness(requestPayload)
+
+  // Best-effort immutable input/output capture for audit and replay. A
+  // snapshot failure never withholds the assessment already computed.
+  if (governanceEnabled) {
+    void recordExternalAssessmentSnapshot({
+      client: adminClient as never,
+      provider: "autotime-stamp4-integrated",
+      endpoint: "/api/international/stamp4-check",
+      request: requestPayload,
+      response: assessment as unknown as Record<string, unknown> | null,
+      httpStatus: 200,
+      covered: true,
+    })
+  }
 
   return jsonResponse({ data: assessment, error: null }, 200)
 }

@@ -118,20 +118,21 @@ assumption) rather than assumed present because they sound like they should exis
 | 1 | Versioned mobility sources | **Not found** | `OfficialSourceCitation` (`packages/shared/src/international/types.ts`) holds one current `reviewedAt`/`ruleVersion` snapshot per source — no revision history. |
 | 2 | Source-change detection | **Not found** | No hashing/diffing/monitoring of government source pages anywhere in the repo. |
 | 3 | Immutable decision records | **Present** | `job_workflow_analysis_snapshots` (Supabase) is explicitly append-only, `unique(job_id, version)`, no update/delete RLS policy; mirrored client-side in `JobAnalysisResult.version`. |
-| 4 | Employer/sponsor verification | **Partial** | Real live lookup via Stamp4's external API, but only for UK/Ireland/Netherlands/Germany — every other country falls back to user-asserted text. |
+| 4 | Employer/sponsor verification | **Partial** | Stamp4's assessment rules now execute inside EU Apply with versioned replay provenance for UK/Ireland/Netherlands/Germany. Coverage is still narrow, and employer-register verification remains separate; other countries fall back to evidence-first checks. |
 | 5 | Candidate evidence provenance | **Present** | Per-fact `evidenceStatusSchema` (verified/user_declared/inferred/unknown/missing/conflicting/stale) in `packages/shared/src/evidence/model.ts`. |
 | 6 | Claim-to-evidence links | **Present** | `assessClaimSupport` requires linked evidence and returns an explicit unsupported/needs-confirmation state, never silent. |
 | 7 | Decision replay | **Not found** | Snapshots store a past decision's *output*, not a pinned policy version to re-execute inputs against — no versioned rule engine exists. |
-| 8 | Correction/disagreement capture | **Partial** | `fact_correction` tracking is live (reachable via `/dashboard/autofill-profile`); `decision_override` tracking exists in code but its only call site sits inside a `DashboardExperience.tsx` tab no live route ever renders — dead in production. |
+| 8 | Correction/disagreement capture | **Present** | `fact_correction` tracking is live (reachable via `/dashboard/autofill-profile`). `decision_override` was dead (its only call site sat inside a `DashboardExperience.tsx` tab no live route ever renders); now also fires from a live "Prepare anyway" override path in `JobApplicationWorkspace.tsx` (`/dashboard/jobs`) when a candidate proceeds past a "Consider" viability decision — "Skip" (which can carry a real sponsorship-incompatibility blocker) stays hard-blocked with no override. |
 | 9 | Country readiness scores | **Not found** | Only a binary `"full" \| "explorer"` tier exists — no graduated, computed score. |
 | 10 | Expert sign-off records | **Not found** | No DB table or schema anywhere. The only artifact is `docs/reference/jurisdiction-signoff-log.md` — a markdown tracking doc, deliberately empty, not a queryable system. |
 
-**Reading this against the ranking above:** 3 of 10 are genuinely built (records, provenance,
-claim-linking) — real progress toward rank 1's prerequisite of trustworthy historical data. 2 are
-partial. 5 are not built at all, including the two capabilities that would make rank 2 defensible
-in the way the original ranking assumed (versioned sources, source-change detection) and the one
-that would make rank 1 *provable* rather than merely claimed (decision replay). The gap between
-"has evidence integrity" (true) and "has an operational moat" (not yet) is exactly these five.
+**Reading this against the ranking above:** 4 of 10 are genuinely built (records, provenance,
+claim-linking, correction/disagreement capture) — real progress toward rank 1's prerequisite of
+trustworthy historical data. 1 is partial (employer/sponsor verification). 5 are not built at all,
+including the two capabilities that would make rank 2 defensible in the way the original ranking
+assumed (versioned sources, source-change detection) and the one that would make rank 1 *provable*
+rather than merely claimed (decision replay). The gap between "has evidence integrity" (true) and
+"has an operational moat" (not yet) is exactly these five.
 
 ## Competitive reality check (real research, 10 September 2026)
 

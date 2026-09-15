@@ -161,10 +161,16 @@ suggestion) and `decision_override` (fires from `saveApplicationFromJob` when a 
 despite a "blocked"/"stretch" content gate) - the first two real analytics call sites in the
 codebase. "Disagreement" specifically still has no distinct existing UI action to hook without
 adding new UI, so it remains untracked. Covered by `scripts/acceptance-gate-fixes.test.mjs`.
-**Reachability: split.** `fact_correction` is live - `updateProductContext`'s call site sits behind
-`showProfileSettingsPanel` (`activeFocus === "autofill-profile" || "settings"`), reachable via the
-live `/dashboard/autofill-profile` route. `decision_override` is dead - `saveApplicationFromJob`'s
-only call site is inside `currentTab === "jobs"`, unreachable in production routing.
+**Reachability (updated 15 September 2026): both live.** `fact_correction` is live -
+`updateProductContext`'s call site sits behind `showProfileSettingsPanel`
+(`activeFocus === "autofill-profile" || "settings"`), reachable via the live
+`/dashboard/autofill-profile` route. `decision_override`'s original call site
+(`saveApplicationFromJob`, inside `DashboardExperience.tsx`'s `currentTab === "jobs"`) is still
+dead - unreachable in production routing. It is now also fired from a second, live call site:
+`JobApplicationWorkspace.tsx`'s `prepareAnyway`, reachable via `/dashboard/jobs` when a candidate
+proceeds past a "Consider" viability decision with an explicit confirm step. "Skip" (which can
+carry a real sponsorship-incompatibility blocker) and "Insufficient information" still hard-block
+with no override. Covered by `scripts/acceptance-gate-fixes.test.mjs`.
 
 **6. "High-risk conclusions receive scenario-based QA and human subject-matter review before
 their jurisdiction is marketed as supported."** — **Process gate, correctly not automated** — but

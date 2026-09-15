@@ -139,6 +139,22 @@ test("gate 5: a decision override is tracked when a job is saved despite a non-r
   assert.match(saveBody, /trackDecisionOverride\(\{/)
 })
 
+test("gate 5: decision override is reachable from the live job workflow, not only the dead DashboardExperience jobs tab", async () => {
+  const workspace = await read("apps/web/components/JobApplicationWorkspace.tsx")
+
+  assert.match(workspace, /trackDecisionOverride/)
+
+  const prepareAnywayStart = workspace.indexOf("const prepareAnyway = () =>")
+  const prepareAnywayEnd = workspace.indexOf("\n  };", prepareAnywayStart)
+  const prepareAnywayBody = workspace.slice(prepareAnywayStart, prepareAnywayEnd)
+
+  // Only "Consider" gets an override path - "Skip" (which can carry a real
+  // sponsorship-incompatibility blocker) and "Insufficient information"
+  // still hard-block via the primary button's `disabled` check.
+  assert.match(prepareAnywayBody, /trackDecisionOverride\(\{/)
+  assert.match(workspace, /analysis\?\.decision === "Consider" \? \(/)
+})
+
 test("gate 17: kit preparation start and save are tracked with an application id and duration, never document content", async () => {
   const analytics = await read("apps/web/lib/analytics.ts")
   const dashboard = await read("apps/web/components/DashboardExperience.tsx")

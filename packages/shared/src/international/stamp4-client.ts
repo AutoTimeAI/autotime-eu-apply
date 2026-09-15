@@ -1,4 +1,4 @@
-// Client for Stamp4's sponsorship-check service (see
+// Legacy transition client for Stamp4's sponsorship-check service (see
 // stamp4-simple-apply-cockpit's /api/stamp4/simple-apply/sponsorship-check) -
 // the real statutory-threshold, occupation-mapped legal-eligibility check
 // that exists for UK/Ireland/Netherlands/Germany, composed into
@@ -6,8 +6,8 @@
 // optional stamp4Assessment field rather than replacing AutoTime's own
 // broader text-signal engine. Deliberately server-side only: the request
 // carries a shared secret that must never reach the browser, and the
-// two products are separate deployments (not a shared workspace), so this
-// is a real HTTP call, not an in-process import.
+// EU Apply now executes the imported rules through sponsorship-readiness.ts;
+// retain this adapter temporarily for shadow comparisons and rollback.
 import type { Stamp4SponsorshipAssessment } from "./types.ts";
 
 const STAMP4_SPONSORSHIP_COUNTRY_IDS = new Set(["uk", "ireland", "netherlands", "germany"]);
