@@ -44,53 +44,58 @@ export async function GET(request: NextRequest) {
   for (const document of documents.data ?? []) {
     const url = String(document.canonical_url)
     const sourceDocumentId = String(document.id)
-    const countryCode = countryCodes[String(document.jurisdiction).trim().toLowerCase()]
-    if (!countryCode || !isAllowedOfficialSource(url, allowedHosts)) {
-      results.push({ sourceDocumentId, status: "skipped_not_allowlisted" })
-      continue
-    }
-    const previousResult = await db.from("mobility_source_versions")
-      .select("id,version,language,http_status,raw_sha256,normalized_sha256,parser_version,normalizer_version")
-      .eq("source_document_id", sourceDocumentId).order("version", { ascending: false }).limit(1).maybeSingle()
-    if (previousResult.error || !previousResult.data) {
-      const capturedAt = new Date().toISOString()
-      const artifact = await captureOfficialSourceArtifact(url)
-      if (!artifact.content || !artifact.observation.rawSha256 || !artifact.observation.normalizedSha256) {
-        results.push({ sourceDocumentId, status: "baseline_capture_failed" })
+    try {
+      const countryCode = countryCodes[String(document.jurisdiction).trim().toLowerCase()]
+      if (!countryCode || !isAllowedOfficialSource(url, allowedHosts)) {
+        results.push({ sourceDocumentId, status: "skipped_not_allowlisted" })
         continue
       }
-      const snapshotUri = await archiveOfficialSource({ client: db, sourceDocumentId, content: artifact.content, contentType: artifact.contentType, rawSha256: artifact.observation.rawSha256, capturedAt })
-      await recordInitialSourceBaseline({ client: db, sourceDocumentId, countryCode, observation: artifact.observation, snapshotUri, language: artifact.language, observedAt: capturedAt })
-      results.push({ sourceDocumentId, status: "baseline_quarantined_for_review" })
-      continue
-    }
-    const previous = {
-      available: Number(previousResult.data.http_status) < 400,
-      httpStatus: Number(previousResult.data.http_status),
-      rawSha256: String(previousResult.data.raw_sha256),
-      normalizedSha256: String(previousResult.data.normalized_sha256),
-      parserVersion: String(previousResult.data.parser_version),
-      normalizerVersion: String(previousResult.data.normalizer_version),
-    }
-    const capturedAt = new Date().toISOString()
-    const artifact = await captureOfficialSourceArtifact(url)
-    const current = artifact.observation
-    const classification = classifySourceChange(previous, current)
-    let observedVersion: { version: number; language: string; snapshotUri: string } | undefined
-    if (classification.classification !== "unchanged" && current.rawSha256 && current.normalizedSha256 && artifact.content) {
-      const snapshotUri = await archiveOfficialSource({
-        client: db, sourceDocumentId, content: artifact.content,
-        contentType: artifact.contentType, rawSha256: current.rawSha256,
-        capturedAt,
+      const previousResult = await db.from("mobility_source_versions")
+        .select("id,version,language,http_status,raw_sha256,normalized_sha256,parser_version,normalizer_version")
+        .eq("source_document_id", sourceDocumentId).order("version", { ascending: false }).limit(1).maybeSingle()
+      if (previousResult.error || !previousResult.data) {
+        const capturedAt = new Date().toISOString()
+        const artifact = await captureOfficialSourceArtifact(url)
+        if (!artifact.content || !artifact.observation.rawSha256 || !artifact.observation.normalizedSha256) {
+          results.push({ sourceDocumentId, status: "baseline_capture_failed" })
+          continue
+        }
+        const snapshotUri = await archiveOfficialSource({ client: db, sourceDocumentId, content: artifact.content, contentType: artifact.contentType, rawSha256: artifact.observation.rawSha256, capturedAt })
+        await recordInitialSourceBaseline({ client: db, sourceDocumentId, countryCode, observation: artifact.observation, snapshotUri, language: artifact.language, observedAt: capturedAt })
+        results.push({ sourceDocumentId, status: "baseline_quarantined_for_review" })
+        continue
+      }
+      const previous = {
+        available: Number(previousResult.data.http_status) < 400,
+        httpStatus: Number(previousResult.data.http_status),
+        rawSha256: String(previousResult.data.raw_sha256),
+        normalizedSha256: String(previousResult.data.normalized_sha256),
+        parserVersion: String(previousResult.data.parser_version),
+        normalizerVersion: String(previousResult.data.normalizer_version),
+      }
+      const capturedAt = new Date().toISOString()
+      const artifact = await captureOfficialSourceArtifact(url)
+      const current = artifact.observation
+      const classification = classifySourceChange(previous, current)
+      let observedVersion: { version: number; language: string; snapshotUri: string } | undefined
+      if (classification.classification !== "unchanged" && current.rawSha256 && current.normalizedSha256 && artifact.content) {
+        const snapshotUri = await archiveOfficialSource({
+          client: db, sourceDocumentId, content: artifact.content,
+          contentType: artifact.contentType, rawSha256: current.rawSha256,
+          capturedAt,
+        })
+        observedVersion = { version: Number(previousResult.data.version) + 1, language: artifact.language === "und" ? String(previousResult.data.language) : artifact.language, snapshotUri }
+      }
+      const recorded = await recordSourceObservationChange({
+        client: db, sourceDocumentId, previousVersionId: String(previousResult.data.id),
+        observedVersionId: classification.classification === "unchanged" ? String(previousResult.data.id) : null,
+        observedVersion, countryCode, previous, current, observedAt: capturedAt,
       })
-      observedVersion = { version: Number(previousResult.data.version) + 1, language: artifact.language === "und" ? String(previousResult.data.language) : artifact.language, snapshotUri }
+      results.push({ sourceDocumentId, status: recorded.classification.classification })
+    } catch {
+      console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_source_failed", requestId, sourceDocumentId }))
+      results.push({ sourceDocumentId, status: "source_monitor_failed" })
     }
-    const recorded = await recordSourceObservationChange({
-      client: db, sourceDocumentId, previousVersionId: String(previousResult.data.id),
-      observedVersionId: classification.classification === "unchanged" ? String(previousResult.data.id) : null,
-      observedVersion, countryCode, previous, current, observedAt: capturedAt,
-    })
-    results.push({ sourceDocumentId, status: recorded.classification.classification })
   }
   const statusCounts = results.reduce<Record<string, number>>((counts, result) => {
     counts[result.status] = (counts[result.status] ?? 0) + 1
@@ -104,5 +109,6 @@ export async function GET(request: NextRequest) {
     statusCounts,
     durationMs: Date.now() - startedAt,
   }))
-  return NextResponse.json({ ok: true, checked: results.length, results })
+  const failed = results.filter((result) => result.status === "source_monitor_failed" || result.status === "baseline_capture_failed").length
+  return NextResponse.json({ ok: failed === 0, checked: results.length, failed, results }, { status: failed === 0 ? 200 : 503 })
 }
