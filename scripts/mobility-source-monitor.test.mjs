@@ -4,6 +4,7 @@ import test from "node:test"
 import { captureOfficialSource, captureOfficialSourceArtifact, isAllowedOfficialSource, normalizeOfficialSource } from "../apps/web/platform/mobility-source-monitor/capture.ts"
 import { archiveOfficialSource } from "../apps/web/platform/mobility-source-monitor/archive.ts"
 import { resolveSourceJurisdictionCode } from "../apps/web/platform/mobility-source-monitor/jurisdiction.ts"
+import { isSourceMonitorFailure } from "../apps/web/platform/mobility-source-monitor/status.ts"
 
 test("source normalization removes executable and presentation noise", () => {
   assert.equal(normalizeOfficialSource("<style>x{}</style><h1> Permit </h1><script>bad()</script><p>rule</p>"), "Permit rule")
@@ -38,6 +39,15 @@ test("source jurisdictions support ISO country codes without a hard-coded market
   assert.equal(resolveSourceJurisdictionCode("Netherlands"), "NL")
   assert.equal(resolveSourceJurisdictionCode("Portugal"), null)
   assert.equal(resolveSourceJurisdictionCode("EUROPE"), null)
+})
+
+test("registry configuration mistakes fail the monitor instead of reporting success", () => {
+  assert.equal(isSourceMonitorFailure("configuration_invalid_jurisdiction"), true)
+  assert.equal(isSourceMonitorFailure("configuration_host_not_allowlisted"), true)
+  assert.equal(isSourceMonitorFailure("baseline_capture_failed"), true)
+  assert.equal(isSourceMonitorFailure("source_monitor_failed"), true)
+  assert.equal(isSourceMonitorFailure("unchanged"), false)
+  assert.equal(isSourceMonitorFailure("transport_only"), false)
 })
 
 test("capture hashes raw and normalized content without returning source text", async () => {
@@ -97,7 +107,9 @@ test("cron is daily and requires both CRON_SECRET and a source allowlist", () =>
   assert.match(route, /mobility_source_monitor_completed/)
   assert.match(route, /mobility_source_monitor_source_failed/)
   assert.match(route, /status: failed === 0 \? 200 : 503/)
-  assert.match(route, /source_monitor_failed/)
+  assert.match(route, /configuration_invalid_jurisdiction/)
+  assert.match(route, /configuration_host_not_allowlisted/)
+  assert.match(route, /isSourceMonitorFailure/)
   assert.match(route, /statusCounts/)
   assert.match(route, /sourceBatchSize = 20/)
   assert.match(route, /sourceConcurrency = 4/)

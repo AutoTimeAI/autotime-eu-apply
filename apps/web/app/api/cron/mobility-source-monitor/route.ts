@@ -6,6 +6,7 @@ import { createAdminClient } from "../../../../lib/supabase/admin"
 import { captureOfficialSourceArtifact, isAllowedOfficialSource } from "../../../../platform/mobility-source-monitor/capture"
 import { archiveOfficialSource } from "../../../../platform/mobility-source-monitor/archive"
 import { resolveSourceJurisdictionCode } from "../../../../platform/mobility-source-monitor/jurisdiction"
+import { isSourceMonitorFailure } from "../../../../platform/mobility-source-monitor/status"
 import { recordInitialSourceBaseline, recordSourceObservationChange, recordUnavailableInitialSource } from "../../../../platform/mobility-source-monitor/writer"
 
 export const maxDuration = 60
@@ -73,8 +74,14 @@ export async function GET(request: NextRequest) {
     const sourceDocumentId = String(document.id)
     try {
       const countryCode = resolveSourceJurisdictionCode(document.jurisdiction)
-      if (!countryCode || !isAllowedOfficialSource(url, allowedHosts)) {
-        results[sourceIndex] = { sourceDocumentId, status: "skipped_not_allowlisted" }
+      if (!countryCode) {
+        console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_source_failed", requestId, sourceDocumentId, reason: "invalid_jurisdiction" }))
+        results[sourceIndex] = { sourceDocumentId, status: "configuration_invalid_jurisdiction" }
+        continue
+      }
+      if (!isAllowedOfficialSource(url, allowedHosts)) {
+        console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_source_failed", requestId, sourceDocumentId, reason: "host_not_allowlisted" }))
+        results[sourceIndex] = { sourceDocumentId, status: "configuration_host_not_allowlisted" }
         continue
       }
       const previousResult = await db.from("mobility_source_versions")
@@ -141,6 +148,6 @@ export async function GET(request: NextRequest) {
     statusCounts,
     durationMs: Date.now() - startedAt,
   }))
-  const failed = results.filter((result) => result.status === "source_monitor_failed" || result.status === "baseline_capture_failed").length
+  const failed = results.filter((result) => isSourceMonitorFailure(result.status)).length
   return NextResponse.json({ ok: failed === 0, checked: results.length, failed, results }, { status: failed === 0 ? 200 : 503 })
 }
