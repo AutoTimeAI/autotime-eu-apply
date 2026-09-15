@@ -20,7 +20,7 @@ export async function recordSourceObservationChange({
   previous: SourceObservation
   current: SourceObservation
   observedAt?: string
-  observedVersion?: { version: number; language: string; snapshotUri: string }
+  observedVersion?: { version: number; language: string; snapshotUri: string; redirectChain: unknown[] }
 }): Promise<{ eventId: string; classification: ReturnType<typeof classifySourceChange> }> {
   const classification = classifySourceChange(previous, current)
   const result = await client.rpc("record_and_propagate_mobility_source_change", {
@@ -47,9 +47,9 @@ export async function recordSourceObservationChange({
   return { eventId: result.data, classification }
 }
 
-export async function recordInitialSourceBaseline({ client, sourceDocumentId, countryCode, observation, snapshotUri, language, observedAt = new Date().toISOString() }: {
+export async function recordInitialSourceBaseline({ client, sourceDocumentId, countryCode, observation, snapshotUri, language, redirectChain, observedAt = new Date().toISOString() }: {
   client: SourceChangeWriteClient; sourceDocumentId: string; countryCode: string;
-  observation: SourceObservation; snapshotUri: string; language: string; observedAt?: string
+  observation: SourceObservation; snapshotUri: string; language: string; redirectChain: unknown[]; observedAt?: string
 }): Promise<string> {
   if (!observation.available || !observation.rawSha256 || !observation.normalizedSha256 || observation.httpStatus === null)
     throw new Error("Initial mobility source baseline is incomplete")
@@ -57,7 +57,7 @@ export async function recordInitialSourceBaseline({ client, sourceDocumentId, co
     p_source_document_id: sourceDocumentId,
     p_previous_version_id: null,
     p_observed_version_id: null,
-    p_observed_version: { version: 1, language, snapshotUri, httpStatus: observation.httpStatus, rawSha256: observation.rawSha256, normalizedSha256: observation.normalizedSha256, parserVersion: observation.parserVersion, normalizerVersion: observation.normalizerVersion },
+    p_observed_version: { version: 1, language, snapshotUri, redirectChain, httpStatus: observation.httpStatus, rawSha256: observation.rawSha256, normalizedSha256: observation.normalizedSha256, parserVersion: observation.parserVersion, normalizerVersion: observation.normalizerVersion },
     p_country_code: countryCode.trim().toUpperCase(),
     p_classification: "pipeline_changed",
     p_quarantine: true,

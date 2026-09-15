@@ -8,6 +8,7 @@ const MAX_SOURCE_REDIRECTS = 5
 const SOURCE_FETCH_TIMEOUT_MS = 8_000
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
+export interface SourceRedirectHop { status: number; from: string; to: string }
 
 export function normalizeOfficialSource(raw: string): string {
   return raw
@@ -28,9 +29,14 @@ export function isAllowedOfficialSource(url: string, allowedHosts: Set<string>):
   }
 }
 
-async function fetchAllowedOfficialSource(url: string, allowedHosts: Set<string>, fetcher: typeof fetch): Promise<Response> {
+function provenanceUrl(url: URL): string {
+  return `${url.origin}${url.pathname}`
+}
+
+async function fetchAllowedOfficialSource(url: string, allowedHosts: Set<string>, fetcher: typeof fetch): Promise<{ response: Response; redirectChain: SourceRedirectHop[] }> {
   let currentUrl = new URL(url)
   const signal = AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS)
+  const redirectChain: SourceRedirectHop[] = []
   for (let redirectCount = 0; redirectCount <= MAX_SOURCE_REDIRECTS; redirectCount += 1) {
     if (!isAllowedOfficialSource(currentUrl.toString(), allowedHosts)) throw new Error("Official source host is not allowlisted")
     const response = await fetcher(currentUrl.toString(), {
@@ -38,10 +44,13 @@ async function fetchAllowedOfficialSource(url: string, allowedHosts: Set<string>
       headers: { "User-Agent": "AutoTimeSourceMonitor/1.0" },
       signal,
     })
-    if (![301, 302, 303, 307, 308].includes(response.status)) return response
+    if (![301, 302, 303, 307, 308].includes(response.status)) return { response, redirectChain }
     const location = response.headers.get("location")
     if (!location || redirectCount === MAX_SOURCE_REDIRECTS) throw new Error("Official source redirect could not be followed safely")
-    currentUrl = new URL(location, currentUrl)
+    const nextUrl = new URL(location, currentUrl)
+    if (!isAllowedOfficialSource(nextUrl.toString(), allowedHosts)) throw new Error("Official source redirect host is not allowlisted")
+    redirectChain.push({ status: response.status, from: provenanceUrl(currentUrl), to: provenanceUrl(nextUrl) })
+    currentUrl = nextUrl
   }
   throw new Error("Official source redirect limit exceeded")
 }
@@ -71,7 +80,7 @@ export async function captureOfficialSource(
   fetcher: typeof fetch = fetch,
 ): Promise<SourceObservation> {
   try {
-    const response = await fetchAllowedOfficialSource(url, allowedHosts, fetcher)
+    const { response } = await fetchAllowedOfficialSource(url, allowedHosts, fetcher)
     if (!response.ok) return { available: false, httpStatus: response.status, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }
     const raw = await readSourceText(response)
     const normalized = normalizeOfficialSource(raw)
@@ -86,10 +95,10 @@ export async function captureOfficialSourceArtifact(
   url: string,
   allowedHosts: Set<string>,
   fetcher: typeof fetch = fetch,
-): Promise<{ observation: SourceObservation; content: string | null; contentType: string; language: string }> {
+): Promise<{ observation: SourceObservation; content: string | null; contentType: string; language: string; redirectChain: SourceRedirectHop[] }> {
   try {
-    const response = await fetchAllowedOfficialSource(url, allowedHosts, fetcher)
-    if (!response.ok) return { observation: { available: false, httpStatus: response.status, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }, content: null, contentType: "text/plain", language: "und" }
+    const { response, redirectChain } = await fetchAllowedOfficialSource(url, allowedHosts, fetcher)
+    if (!response.ok) return { observation: { available: false, httpStatus: response.status, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }, content: null, contentType: "text/plain", language: "und", redirectChain }
     const content = await readSourceText(response)
     const normalized = normalizeOfficialSource(content)
     return {
@@ -97,8 +106,9 @@ export async function captureOfficialSourceArtifact(
       content,
       contentType: response.headers.get("content-type")?.split(";")[0] ?? "text/html",
       language: response.headers.get("content-language")?.split(",")[0]?.trim().slice(0, 35) || "und",
+      redirectChain,
     }
   } catch {
-    return { observation: { available: false, httpStatus: null, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }, content: null, contentType: "text/plain", language: "und" }
+    return { observation: { available: false, httpStatus: null, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }, content: null, contentType: "text/plain", language: "und", redirectChain: [] }
   }
 }

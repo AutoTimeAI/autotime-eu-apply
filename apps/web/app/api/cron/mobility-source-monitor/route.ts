@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
           continue
         }
         const snapshotUri = await archiveOfficialSource({ client: db, sourceDocumentId, content: artifact.content, contentType: artifact.contentType, rawSha256: artifact.observation.rawSha256, capturedAt })
-        await recordInitialSourceBaseline({ client: db, sourceDocumentId, countryCode, observation: artifact.observation, snapshotUri, language: artifact.language, observedAt: capturedAt })
+        await recordInitialSourceBaseline({ client: db, sourceDocumentId, countryCode, observation: artifact.observation, snapshotUri, language: artifact.language, redirectChain: artifact.redirectChain, observedAt: capturedAt })
         results[sourceIndex] = { sourceDocumentId, status: "baseline_quarantined_for_review" }
         continue
       }
@@ -105,14 +105,14 @@ export async function GET(request: NextRequest) {
       const artifact = await captureOfficialSourceArtifact(url, allowedHosts)
       const current = artifact.observation
       const classification = classifySourceChange(previous, current)
-      let observedVersion: { version: number; language: string; snapshotUri: string } | undefined
+      let observedVersion: { version: number; language: string; snapshotUri: string; redirectChain: unknown[] } | undefined
       if (classification.classification !== "unchanged" && current.rawSha256 && current.normalizedSha256 && artifact.content) {
         const snapshotUri = await archiveOfficialSource({
           client: db, sourceDocumentId, content: artifact.content,
           contentType: artifact.contentType, rawSha256: current.rawSha256,
           capturedAt,
         })
-        observedVersion = { version: Number(previousResult.data.version) + 1, language: artifact.language === "und" ? String(previousResult.data.language) : artifact.language, snapshotUri }
+        observedVersion = { version: Number(previousResult.data.version) + 1, language: artifact.language === "und" ? String(previousResult.data.language) : artifact.language, snapshotUri, redirectChain: artifact.redirectChain }
       }
       const recorded = await recordSourceObservationChange({
         client: db, sourceDocumentId, previousVersionId: String(previousResult.data.id),

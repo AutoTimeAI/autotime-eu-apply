@@ -33,6 +33,14 @@ test("the propagation transaction blocks every critically dependent bundle", () 
   assert.match(source, /insert into public\.mobility_source_versions/i)
 })
 
+test("new source versions persist validated redirect provenance", () => {
+  const source = fs.readFileSync("supabase/migrations/20260915130000_record_mobility_source_redirect_chain.sql", "utf8")
+  assert.match(source, /p_observed_version->'redirectChain'/)
+  assert.match(source, /jsonb_typeof\(source_redirect_chain\) <> 'array'/)
+  assert.match(source, /snapshot_uri, redirect_chain/)
+  assert.match(source, /grant execute[\s\S]*to service_role/i)
+})
+
 test("provider failures are redacted", async () => {
   const client = { async rpc() { return { data: null, error: { message: "private database detail" } } } }
   await assert.rejects(
@@ -44,11 +52,12 @@ test("provider failures are redacted", async () => {
 test("a first source capture becomes version one but stays quarantined for review", async () => {
   const calls = []
   const client = { async rpc(name, args) { calls.push({ name, args }); return { data: "event-1", error: null } } }
-  await recordInitialSourceBaseline({ client, sourceDocumentId: "source-1", countryCode: "DE", observation: previous, snapshotUri: "supabase-storage://mobility-source-snapshots/source-1/a", language: "en" })
+  await recordInitialSourceBaseline({ client, sourceDocumentId: "source-1", countryCode: "DE", observation: previous, snapshotUri: "supabase-storage://mobility-source-snapshots/source-1/a", language: "en", redirectChain: [] })
   assert.equal(calls[0].args.p_observed_version.version, 1)
   assert.equal(calls[0].args.p_classification, "pipeline_changed")
   assert.equal(calls[0].args.p_quarantine, true)
   assert.deepEqual(calls[0].args.p_reason_codes, ["INITIAL_SOURCE_BASELINE_REVIEW_REQUIRED"])
+  assert.deepEqual(calls[0].args.p_observed_version.redirectChain, [])
 })
 
 test("a failed first capture creates immutable unavailable evidence without inventing a version", async () => {

@@ -67,6 +67,15 @@ test("capture follows redirects only when every hop is allowlisted", async () =>
   })
   assert.equal(result.observation.available, true)
   assert.deepEqual(visited, ["https://ind.nl/old", "https://ind.nl/current"])
+  assert.deepEqual(result.redirectChain, [{ status: 302, from: "https://ind.nl/old", to: "https://ind.nl/current" }])
+})
+
+test("redirect provenance excludes query strings and fragments", async () => {
+  const result = await captureOfficialSourceArtifact("https://ind.nl/old?tracking=one", new Set(["ind.nl"]), async (url) => {
+    if (String(url).includes("/old")) return new Response(null, { status: 302, headers: { location: "/current?token=secret#section" } })
+    return new Response("Current rule", { status: 200 })
+  })
+  assert.deepEqual(result.redirectChain, [{ status: 302, from: "https://ind.nl/old", to: "https://ind.nl/current" }])
 })
 
 test("capture stops reading bodies that exceed the archive limit", async () => {
