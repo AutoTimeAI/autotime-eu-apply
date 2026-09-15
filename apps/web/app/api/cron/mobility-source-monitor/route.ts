@@ -11,6 +11,7 @@ import { recordInitialSourceBaseline, recordSourceObservationChange } from "../.
 export const maxDuration = 60
 type UntypedClient = SupabaseClient<any>
 const sourceBatchSize = 20
+const sourceConcurrency = 4
 
 function authorised(request: NextRequest): boolean {
   const expected = process.env.CRON_SECRET
@@ -61,14 +62,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Source registry unavailable" }, { status: 503 })
   }
   const documents = [...(firstBatch.data ?? []), ...(wrappedBatch.data ?? [])]
-  const results: Array<{ sourceDocumentId: string; status: string }> = []
-  for (const document of documents) {
+  const results = new Array<{ sourceDocumentId: string; status: string }>(documents.length)
+  let nextSourceIndex = 0
+  async function processSources() {
+    while (nextSourceIndex < documents.length) {
+      const sourceIndex = nextSourceIndex
+      nextSourceIndex += 1
+      const document = documents[sourceIndex]
     const url = String(document.canonical_url)
     const sourceDocumentId = String(document.id)
     try {
       const countryCode = resolveSourceJurisdictionCode(document.jurisdiction)
       if (!countryCode || !isAllowedOfficialSource(url, allowedHosts)) {
-        results.push({ sourceDocumentId, status: "skipped_not_allowlisted" })
+        results[sourceIndex] = { sourceDocumentId, status: "skipped_not_allowlisted" }
         continue
       }
       const previousResult = await db.from("mobility_source_versions")
@@ -78,12 +84,12 @@ export async function GET(request: NextRequest) {
         const capturedAt = new Date().toISOString()
         const artifact = await captureOfficialSourceArtifact(url, allowedHosts)
         if (!artifact.content || !artifact.observation.rawSha256 || !artifact.observation.normalizedSha256) {
-          results.push({ sourceDocumentId, status: "baseline_capture_failed" })
+          results[sourceIndex] = { sourceDocumentId, status: "baseline_capture_failed" }
           continue
         }
         const snapshotUri = await archiveOfficialSource({ client: db, sourceDocumentId, content: artifact.content, contentType: artifact.contentType, rawSha256: artifact.observation.rawSha256, capturedAt })
         await recordInitialSourceBaseline({ client: db, sourceDocumentId, countryCode, observation: artifact.observation, snapshotUri, language: artifact.language, observedAt: capturedAt })
-        results.push({ sourceDocumentId, status: "baseline_quarantined_for_review" })
+        results[sourceIndex] = { sourceDocumentId, status: "baseline_quarantined_for_review" }
         continue
       }
       const previous = {
@@ -112,12 +118,14 @@ export async function GET(request: NextRequest) {
         observedVersionId: classification.classification === "unchanged" ? String(previousResult.data.id) : null,
         observedVersion, countryCode, previous, current, observedAt: capturedAt,
       })
-      results.push({ sourceDocumentId, status: recorded.classification.classification })
+      results[sourceIndex] = { sourceDocumentId, status: recorded.classification.classification }
     } catch {
       console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_source_failed", requestId, sourceDocumentId }))
-      results.push({ sourceDocumentId, status: "source_monitor_failed" })
+      results[sourceIndex] = { sourceDocumentId, status: "source_monitor_failed" }
+    }
     }
   }
+  await Promise.all(Array.from({ length: Math.min(sourceConcurrency, documents.length) }, () => processSources()))
   const statusCounts = results.reduce<Record<string, number>>((counts, result) => {
     counts[result.status] = (counts[result.status] ?? 0) + 1
     return counts

@@ -90,10 +90,13 @@ test("cron is daily and requires both CRON_SECRET and a source allowlist", () =>
   assert.match(route, /source_monitor_failed/)
   assert.match(route, /statusCounts/)
   assert.match(route, /sourceBatchSize = 20/)
+  assert.match(route, /sourceConcurrency = 4/)
+  assert.match(route, /Promise\.all\(Array\.from\(\{ length: Math\.min\(sourceConcurrency, documents\.length\) \}/)
   assert.match(route, /utcDay \* sourceBatchSize/)
   assert.match(route, /\.order\("id"\)\.range\(batchOffset, firstBatchEnd\)/)
   assert.match(route, /\.order\("id"\)\.range\(0, remaining - 1\)/)
   assert.doesNotMatch(route, /console\.(?:info|warn|error)\([^\n]*(?:canonical_url|snapshotUri|content)/)
+  assert.match(fs.readFileSync("apps/web/platform/mobility-source-monitor/capture.ts", "utf8"), /SOURCE_FETCH_TIMEOUT_MS = 8_000/)
 })
 
 test("every integrated Stamp4 threshold source is registered and allowlisted", () => {

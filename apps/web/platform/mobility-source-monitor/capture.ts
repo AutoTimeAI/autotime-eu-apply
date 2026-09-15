@@ -5,6 +5,7 @@ export const SOURCE_PARSER_VERSION = "official-html-text-v1"
 export const SOURCE_NORMALIZER_VERSION = "official-text-v1"
 const MAX_SOURCE_BYTES = 5_242_880
 const MAX_SOURCE_REDIRECTS = 5
+const SOURCE_FETCH_TIMEOUT_MS = 8_000
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
 
@@ -29,12 +30,13 @@ export function isAllowedOfficialSource(url: string, allowedHosts: Set<string>):
 
 async function fetchAllowedOfficialSource(url: string, allowedHosts: Set<string>, fetcher: typeof fetch): Promise<Response> {
   let currentUrl = new URL(url)
+  const signal = AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS)
   for (let redirectCount = 0; redirectCount <= MAX_SOURCE_REDIRECTS; redirectCount += 1) {
     if (!isAllowedOfficialSource(currentUrl.toString(), allowedHosts)) throw new Error("Official source host is not allowlisted")
     const response = await fetcher(currentUrl.toString(), {
       redirect: "manual",
       headers: { "User-Agent": "AutoTimeSourceMonitor/1.0" },
-      signal: AbortSignal.timeout(15_000),
+      signal,
     })
     if (![301, 302, 303, 307, 308].includes(response.status)) return response
     const location = response.headers.get("location")
