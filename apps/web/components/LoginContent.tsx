@@ -2,7 +2,7 @@
 
 /** Runs email and OAuth sign-in flows with bounded, user-facing diagnostics. */
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useState } from "react";
 import { reportClientIssue } from "../lib/client-diagnostics";
 import {
   configurationUnavailableMessage,
@@ -10,7 +10,6 @@ import {
 } from "../lib/configuration-error";
 import { getClientSafeRedirectPath } from "../lib/safe-redirect-path";
 import { getStatusTone } from "../lib/status-tone";
-import { createBrowserClient } from "../lib/supabase/client";
 
 type OAuthProvider = "github" | "google";
 
@@ -24,7 +23,15 @@ function getErrorMessage(error: unknown): string {
     : "Sign-in could not be started. Please try again.";
 }
 
-function LoginForm() {
+type LoginContentProps = {
+  initialHasExistingSession?: boolean;
+  initialIdentityProviderLabel?: string | null;
+};
+
+function LoginForm({
+  initialHasExistingSession = false,
+  initialIdentityProviderLabel = null,
+}: LoginContentProps) {
   const searchParams = useSearchParams();
   const authError = searchParams.get("error") || searchParams.get("message");
   const [status, setStatus] = useState<string | null>(
@@ -40,98 +47,13 @@ function LoginForm() {
     null,
   );
   const [accountConsent, setAccountConsent] = useState(false);
-  const [hasExistingSession, setHasExistingSession] = useState(false);
-  const [identityProviderLabel, setIdentityProviderLabel] = useState<string | null>(null);
-  const oauthStartedRef = useRef(false);
+  const [hasExistingSession, setHasExistingSession] = useState(
+    initialHasExistingSession,
+  );
+  const [identityProviderLabel, setIdentityProviderLabel] = useState<string | null>(
+    initialIdentityProviderLabel,
+  );
   const redirectTo = getClientSafeRedirectPath(searchParams.get("redirectTo"));
-
-  useEffect(() => {
-    let isMounted = true;
-    let supabase: ReturnType<typeof createBrowserClient>;
-
-    try {
-      supabase = createBrowserClient();
-    } catch (error: unknown) {
-      const message = getErrorMessage(error);
-      setStatus(`Failed: ${message}`);
-      reportClientIssue({
-        area: "auth",
-        code: "auth.client.create.failed",
-        message,
-      });
-      return;
-    }
-
-    supabase.auth.getSession().then(async ({ data, error }) => {
-      if (!isMounted) {
-        return;
-      }
-
-      if (error) {
-        setStatus(`Failed: ${error.message}`);
-        reportClientIssue({
-          area: "auth",
-          code: "auth.session.read.failed",
-          message: error.message,
-        });
-        return;
-      }
-
-      if (data.session) {
-        setHasExistingSession(true);
-        try {
-          const { data: identities, error: identitiesError } = await supabase.auth.getUserIdentities();
-          if (!isMounted) {
-            return;
-          }
-
-          if (!identitiesError) {
-            const providers = identities.identities
-              .map((identity) => identity.provider)
-              .filter(Boolean);
-            const providerLabel = providers.includes("github")
-              ? "GitHub"
-              : providers.includes("google")
-                ? "Google"
-                : null;
-            setIdentityProviderLabel(providerLabel);
-          }
-        } catch {
-          setIdentityProviderLabel(null);
-        }
-        setStatus(
-          "You are already signed in. Confirm access below to continue.",
-        );
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session && oauthStartedRef.current) {
-        setStatus("Signed in. Redirecting to dashboard...");
-        window.location.replace(redirectTo);
-      }
-
-      if (event === "SIGNED_IN" && session && !oauthStartedRef.current) {
-        setHasExistingSession(true);
-        setStatus(
-          "You are already signed in. Confirm access below to continue.",
-        );
-      }
-
-      if (event === "SIGNED_OUT") {
-        setHasExistingSession(false);
-        setStatus("Session expired. Sign in again to continue.");
-        setPendingProvider(null);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [redirectTo]);
 
   const handleSignIn = async (provider: OAuthProvider) => {
     try {
@@ -140,10 +62,10 @@ function LoginForm() {
         return;
       }
 
-      oauthStartedRef.current = true;
       setStatus("Opening secure sign-in...");
       setPendingProvider(provider);
 
+      const { createBrowserClient } = await import("../lib/supabase/client");
       const supabase = createBrowserClient();
       const callbackUrl = new URL("/auth/callback", window.location.origin);
       callbackUrl.searchParams.set("redirectTo", redirectTo);
@@ -171,7 +93,6 @@ function LoginForm() {
           message: error.message,
           metadata: { provider },
         });
-        oauthStartedRef.current = false;
         setPendingProvider(null);
         return;
       }
@@ -185,7 +106,6 @@ function LoginForm() {
           message,
           metadata: { provider },
         });
-        oauthStartedRef.current = false;
         setPendingProvider(null);
         return;
       }
@@ -201,7 +121,6 @@ function LoginForm() {
         message,
         metadata: { provider },
       });
-      oauthStartedRef.current = false;
       setPendingProvider(null);
     }
   };
@@ -220,7 +139,7 @@ function LoginForm() {
     try {
       setStatus(null);
       setPendingProvider(null);
-      oauthStartedRef.current = false;
+      const { createBrowserClient } = await import("../lib/supabase/client");
       const supabase = createBrowserClient();
       await supabase.auth.signOut();
       setHasExistingSession(false);
@@ -374,10 +293,10 @@ function LoginForm() {
 }
 
 /** Renders the interactive login experience behind the server login page. */
-export function LoginContent() {
+export function LoginContent(props: LoginContentProps) {
   return (
     <Suspense fallback={null}>
-      <LoginForm />
+      <LoginForm {...props} />
     </Suspense>
   );
 }

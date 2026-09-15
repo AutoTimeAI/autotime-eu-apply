@@ -12,7 +12,6 @@ import {
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { getStatusTone } from "../lib/status-tone";
-import { createBrowserClient } from "../lib/supabase/client";
 import type { SubscriptionPlan } from "../lib/supabase/types";
 
 type DashboardPlanContextValue = {
@@ -360,6 +359,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
       const response = await fetch("/auth/signout", { method: "POST" });
 
       if (!response.ok) {
+        const { createBrowserClient } = await import("../lib/supabase/client");
         const supabase = createBrowserClient();
         const { error } = await supabase.auth.signOut();
 
@@ -368,6 +368,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
           return;
         }
       } else {
+        const { createBrowserClient } = await import("../lib/supabase/client");
         const supabase = createBrowserClient();
         await supabase.auth.signOut({ scope: "local" });
       }
@@ -375,6 +376,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
       window.location.replace("/login?loggedOut=1");
     } catch (error: unknown) {
       try {
+        const { createBrowserClient } = await import("../lib/supabase/client");
         const supabase = createBrowserClient();
         const { error: signOutError } = await supabase.auth.signOut();
 

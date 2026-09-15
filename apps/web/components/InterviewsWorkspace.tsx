@@ -37,6 +37,10 @@ import {
   saveInterviewWorkflow,
 } from "../lib/interview-storage";
 import { useInterviewWorkflowSync } from "../lib/useInterviewWorkflowSync";
+import {
+  emitMobilityLearningEvent,
+  readLearningConsent,
+} from "../lib/mobility-learning-client";
 
 type View = { kind: "list" } | { kind: "detail"; id: string };
 const stageLabel = (value: string) =>
@@ -165,6 +169,28 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
               item.id === changed.id ? changed : item,
             ),
           });
+          const consent = readLearningConsent(localStorage, userId);
+          if (consent?.enabled && application.mobilityDecisionId) {
+            const eventType = applicationOutcome === "progressed"
+              ? "interview"
+              : applicationOutcome;
+            void emitMobilityLearningEvent({
+              consentId: consent.consentId,
+              decisionId: application.mobilityDecisionId,
+              applicationId: application.id,
+              eventType,
+              evidenceClass: "user_reported",
+            }).catch(() => setStatus("Outcome saved; learning event could not be recorded."));
+            if (updated.outcomeDetails?.employerConfirmedReason) {
+              void emitMobilityLearningEvent({
+                consentId: consent.consentId,
+                decisionId: application.mobilityDecisionId,
+                applicationId: application.id,
+                eventType: "employer_response",
+                evidenceClass: "user_reported",
+              }).catch(() => setStatus("Outcome saved; employer-response learning event could not be recorded."));
+            }
+          }
         }}
       />
     );
@@ -199,6 +225,16 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
             ),
           },
         );
+        const consent = readLearningConsent(localStorage, userId);
+        if (consent?.enabled && application.mobilityDecisionId) {
+          void emitMobilityLearningEvent({
+            consentId: consent.consentId,
+            decisionId: application.mobilityDecisionId,
+            applicationId: application.id,
+            eventType: "interview",
+            evidenceClass: "observed",
+          }).catch(() => setStatus("Interview added; learning event could not be recorded."));
+        }
         window.location.assign(`/dashboard/interviews/${record.id}`);
       }}
     />

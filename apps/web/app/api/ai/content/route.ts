@@ -33,6 +33,16 @@ import {
   prepareApplicationKit,
 } from "../../../../domains/application-preparation/prepare-application-kit"
 import { assessApplicationDecision } from "../../../../platform/application-preparation/decision-adapter"
+import { createAdminClient } from "../../../../lib/supabase/admin"
+import {
+  isMobilityGovernanceEnforcementEnabled,
+  type MobilityGovernanceClient,
+} from "../../../../platform/application-preparation/mobility-governance-repository.ts"
+import {
+  appendGovernedMobilityDecision,
+  type MobilityDecisionWriteClient,
+} from "../../../../platform/application-preparation/mobility-decision-writer.ts"
+import type { ExternalAssessmentWriteClient } from "../../../../platform/mobility-external-assessment/writer.ts"
 
 type ApiResponse<T> = {
   data: T | null
@@ -41,7 +51,7 @@ type ApiResponse<T> = {
 }
 
 type ContentRouteData =
-  | { content: ApplicationContentDraft }
+  | { content: ApplicationContentDraft; decisionRecordId?: string }
   | { upgradeUrl: string }
 
 const requestSchema = z.object({
@@ -85,11 +95,32 @@ export async function POST(
 
     const body = requestSchema.parse(await request.json())
 
+    let decisionRecordId: string | undefined
     const result = await prepareApplicationKit({
       input: body,
       userId: user.id,
       ports: {
-        decisions: { assess: assessApplicationDecision },
+        decisions: {
+          assess: async (input) => {
+            if (!isMobilityGovernanceEnforcementEnabled())
+              return assessApplicationDecision(input)
+            const admin = createAdminClient()
+            const decision = await assessApplicationDecision(
+              input,
+              admin as unknown as MobilityGovernanceClient,
+              admin as unknown as ExternalAssessmentWriteClient,
+            )
+            const recorded = await appendGovernedMobilityDecision({
+              client: admin as unknown as MobilityDecisionWriteClient,
+              userId: user.id,
+              input,
+              decision,
+              replayInputs: decision.replayInputs,
+            })
+            decisionRecordId = recorded?.decisionRecordId
+            return decision
+          },
+        },
         generator: { generate: generateContentWithOpenAI },
         lifecycle: {
           generationStarted: () =>
@@ -112,7 +143,7 @@ export async function POST(
     })
 
     return jsonResponse({
-      data: { content: result.value },
+      data: { content: result.value, ...(decisionRecordId && { decisionRecordId }) },
       error: null,
       status: 200,
     })

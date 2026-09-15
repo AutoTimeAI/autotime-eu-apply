@@ -7,8 +7,11 @@
 // visitors get a minimal marketing nav with a sign-in CTA.
 
 import Link from "next/link"
-import { UserNav } from "./UserNav"
+import Image from "next/image"
+import dynamic from "next/dynamic"
 import type { SubscriptionPlan } from "../lib/supabase/types"
+
+const UserNav = dynamic(() => import("./UserNav").then((module) => module.UserNav))
 
 type PublicNavProps = {
   currentPath?: string
@@ -62,11 +65,14 @@ export function PublicNav({ currentPath, user }: PublicNavProps) {
   return (
     <nav className="product-nav" aria-label="Primary">
       <Link className="dashboard-brand" href={user ? "/dashboard" : "/"}>
-        <img
+        <Image
           alt=""
           aria-hidden="true"
           className="brand-mark"
+          height={48}
+          priority
           src="/brand/autotime-mark.png"
+          width={48}
         />
         <span className="brand-text">
           <span className="brand-title-line">

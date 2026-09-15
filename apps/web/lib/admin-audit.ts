@@ -10,11 +10,11 @@ import "server-only";
 import { createAdminClient } from "./supabase/admin";
 import type { Json } from "./supabase/types";
 
-export const adminAuditActions = ["admin_owner_bootstrapped", "admin_owner_recovery_suspended", "beta_access_suspended", "beta_access_restored", "feature_flag_updated", "market_refresh_requested"] as const;
-export const adminAuditTargetTypes = ["admin_membership", "beta_access", "feature_flag", "market_data"] as const;
+export const adminAuditActions = ["admin_owner_bootstrapped", "admin_owner_recovery_suspended", "beta_access_suspended", "beta_access_restored", "feature_flag_updated", "market_refresh_requested", "mobility_source_capture_reviewed", "mobility_expert_signoff_recorded", "mobility_claim_reviewed", "mobility_rule_bundle_activated", "mobility_rule_bundle_staged", "mobility_rule_evaluation_recorded", "mobility_fixture_set_registered"] as const;
+export const adminAuditTargetTypes = ["admin_membership", "beta_access", "feature_flag", "market_data", "mobility_source", "mobility_claim", "mobility_rule"] as const;
 export type AdminAuditAction = (typeof adminAuditActions)[number];
 export type AdminAuditTargetType = (typeof adminAuditTargetTypes)[number];
-const allowedMetadataKeys = new Set(["reason", "previousStatus", "nextStatus", "flagKey", "enabled", "version", "provider"]);
+const allowedMetadataKeys = new Set(["reason", "previousStatus", "nextStatus", "flagKey", "enabled", "version", "provider", "decision", "scope"]);
 /**
  * Reduces arbitrary audit metadata down to an explicit allowlist of keys
  * (dropping anything else), and coerces each surviving value to a string

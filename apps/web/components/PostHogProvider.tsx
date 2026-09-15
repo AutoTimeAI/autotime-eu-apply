@@ -7,10 +7,6 @@
 // render logic and from every other layout component.
 
 import { useEffect } from "react"
-import posthog from "posthog-js"
-import { canUseAnalytics, identifyAnalyticsUser } from "../lib/analytics"
-import { getAnalyticsEnv } from "../lib/env"
-import { createBrowserClient } from "../lib/supabase/client"
 import { analyticsConsentStorageKey } from "./AnalyticsConsent"
 
 let hasInitialisedPostHog = false
@@ -28,16 +24,27 @@ export default function PostHogProvider() {
   useEffect(() => {
     async function initialisePostHog() {
       if (
-        !canUseAnalytics() ||
         window.localStorage.getItem(analyticsConsentStorageKey) !== "granted"
       ) {
         return
       }
 
+      // Keep PostHog and Supabase out of the initial public-page bundle. They
+      // are needed only after explicit consent, so loading them earlier adds
+      // cost without providing functionality.
+      const [posthogModule, analyticsModule, envModule, supabaseModule] =
+        await Promise.all([
+          import("posthog-js"),
+          import("../lib/analytics"),
+          import("../lib/env"),
+          import("../lib/supabase/client"),
+        ])
+      if (!analyticsModule.canUseAnalytics()) return
+
       if (!hasInitialisedPostHog) {
-        const analytics = getAnalyticsEnv()
+        const analytics = envModule.getAnalyticsEnv()
         if (!analytics) return
-        posthog.init(analytics.key, {
+        posthogModule.default.init(analytics.key, {
           api_host: analytics.host,
           capture_pageview: true,
           defaults: "2025-05-24",
@@ -47,13 +54,13 @@ export default function PostHogProvider() {
       }
 
       try {
-        const supabase = createBrowserClient()
+        const supabase = supabaseModule.createBrowserClient()
         const {
           data: { user },
         } = await supabase.auth.getUser()
 
         if (user) {
-          identifyAnalyticsUser(user.id)
+          analyticsModule.identifyAnalyticsUser(user.id)
         }
       } catch (error: unknown) {
         return

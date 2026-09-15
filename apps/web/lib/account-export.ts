@@ -27,4 +27,12 @@ export const exportedTables = [
   "outreach_messages",
   "user_skill_profile",
   "esco_questionnaire_answers",
+  "mobility_candidate_evidence_items",
+  "mobility_vacancy_snapshots",
+  "mobility_employer_verifications",
+  "mobility_decision_records",
+  "mobility_decision_corrections",
+  "mobility_decision_replays",
+  "mobility_learning_consents",
+  "mobility_learning_events",
 ] as const

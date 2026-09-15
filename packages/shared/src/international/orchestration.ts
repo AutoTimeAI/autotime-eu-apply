@@ -4,6 +4,7 @@
 // into one final decision. See orchestrateJobDecision's own doc comment for
 // why this boundary exists and must not be bypassed.
 import type { AutoTimeFitReview } from "../fit-model.ts";
+import type { ReadinessResult } from "../evidence/readiness.ts";
 import type {
   InternationalAssessment,
   InternationalDecision,
@@ -26,6 +27,8 @@ export type CombinedJobDecision = {
   assumptions: string[];
   nextAction: string;
   officialSources: OfficialSourceCitation[];
+  mobilityOutputPermission: ReadinessResult["outputPermission"] | "not-evaluated";
+  mobilityReadinessState: ReadinessResult["state"] | "not-evaluated";
 };
 
 function unique(items: string[]) {
@@ -50,10 +53,12 @@ export function orchestrateJobDecision({
   fit,
   international,
   internationalRequirement = "not-relevant",
+  mobilityReadiness,
 }: {
   fit: AutoTimeFitReview;
   international?: InternationalAssessment;
   internationalRequirement?: InternationalEvidenceRequirement;
+  mobilityReadiness?: ReadinessResult;
 }): CombinedJobDecision {
   const fitOnlyDecision = fitDecision(fit);
   const missingInternational =
@@ -64,6 +69,16 @@ export function orchestrateJobDecision({
     decision = "Insufficient evidence";
   } else if (international?.confirmedBlockers.length) {
     decision = "Skip";
+  } else if (
+    internationalRequirement === "required" &&
+    mobilityReadiness?.outputPermission === "blocked"
+  ) {
+    decision = "Insufficient evidence";
+  } else if (
+    internationalRequirement === "required" &&
+    mobilityReadiness?.outputPermission === "information_only"
+  ) {
+    decision = "Investigate first";
   } else if (
     international?.supportLevel === "explorer" ||
     international?.decision === "Investigate first"
@@ -89,6 +104,11 @@ export function orchestrateJobDecision({
         ? [
             "International evidence required for this applicant and hiring country",
           ]
+        : []),
+      ...(mobilityReadiness?.outputPermission === "blocked"
+        ? mobilityReadiness.reasonCodes.map(
+            (code) => `Mobility readiness: ${code}`,
+          )
         : []),
     ]),
     // fit.riskAreas falls back to a single reassuring "No serious blocker
@@ -125,5 +145,8 @@ export function orchestrateJobDecision({
             ? international.nextAction
             : fit.suggestedNextAction,
     officialSources: international?.sources ?? [],
+    mobilityOutputPermission:
+      mobilityReadiness?.outputPermission ?? "not-evaluated",
+    mobilityReadinessState: mobilityReadiness?.state ?? "not-evaluated",
   };
 }

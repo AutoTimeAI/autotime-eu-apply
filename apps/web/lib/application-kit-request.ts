@@ -83,7 +83,7 @@ export function buildApplicationKitRequest({
       jobTitle: job.title.value,
       company: job.employer.value,
       jobUrl: job.sourceUrl,
-      location: job.facts.location.value || job.facts.country.value,
+      location: job.facts.country.value || job.facts.location.value,
       workMode: mapWorkMode(job.facts.workArrangement.value),
       jobDescription: job.description,
       notes: "",

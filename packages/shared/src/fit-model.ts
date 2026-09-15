@@ -16,6 +16,7 @@ import type {
   ReusableAnswers
 } from "./types.ts"
 import { getCountryRule, type CountryRule } from "./country-rules.ts"
+import { vacancyRejectsSponsorship } from "./international/assessment.ts"
 import {
   getApplicationPriority,
   getComponentConfidence,
@@ -424,14 +425,10 @@ function getSponsorshipLikelihood(
     "work permit",
     ...rule.positiveSponsorshipSignals
   ])
-  const rejectsSponsorship = includesAny(jobText, [
-    "no sponsorship",
-    "unable to sponsor",
-    "must have right to work",
-    "existing right to work",
-    "without sponsorship",
-    ...rule.negativeSponsorshipSignals
-  ])
+  const rejectsSponsorship = vacancyRejectsSponsorship(
+    jobText,
+    rule.negativeSponsorshipSignals,
+  )
   const needsSponsorship =
     context.candidatePosition === "foreign-candidate" && profile.sponsorshipNeeded
   const strictnessPenalty =

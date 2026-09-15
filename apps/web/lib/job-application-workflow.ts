@@ -4,9 +4,11 @@ import {
   assessInternationalJob,
   getInternationalCountryPack,
   getSubmissionPermission,
+  resolveAssessmentCountry,
   type ApplicationRecord,
   type MobilityProfile,
   type OfficialSourceCitation,
+  vacancyRejectsSponsorship,
 } from "shared";
 
 export type EvidenceState = "confirmed" | "partial" | "missing" | "conflicting";
@@ -129,6 +131,7 @@ export type ApplicationWorkspace = {
   evidenceConfirmed: boolean;
   followUpDate?: string;
   id: string;
+  mobilityDecisionId?: string;
   jobId: string;
   referenceNumber?: string;
   screeningAnswers: ScreeningAnswer[];
@@ -419,7 +422,10 @@ function assessMobilityBlockers(
 ): { blockers: string[]; pathwayUnknown: string | null } {
   if (!profile || !needsMobilityCheck(profile))
     return { blockers: [], pathwayUnknown: null };
-  const targetCountry = job.facts.country.value || profile.targetCountries[0];
+  const targetCountry = resolveAssessmentCountry({
+    vacancyCountry: job.facts.country.value,
+    profileTargetCountries: profile.targetCountries,
+  });
   if (!targetCountry) return { blockers: [], pathwayUnknown: null };
   const assessment = assessInternationalJob({
     country: targetCountry,
@@ -517,10 +523,7 @@ export function analyseJob(
     !job.employer.value && "Employer",
     mobility.pathwayUnknown,
   ].filter(Boolean) as string[];
-  const explicitNoSponsorship =
-    /(?:cannot|unable to|no)\s+(?:offer|provide)?\s*(?:visa )?sponsorship/i.test(
-      job.facts.sponsorship.value,
-    );
+  const explicitNoSponsorship = vacancyRejectsSponsorship(job.description);
   const incompatible = Boolean(
     (options.sponsorshipRequired && explicitNoSponsorship) ||
       mobility.blockers.length > 0,

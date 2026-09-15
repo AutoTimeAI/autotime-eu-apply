@@ -21,6 +21,25 @@ export type ApplicationDecisionResult = {
   blockers: string[];
   decision: InternationalDecision;
   missingEvidence: string[];
+  governance?: {
+    readinessSnapshotId: string;
+    ruleBundleVersionId: string;
+    targetCountry: string;
+    outputPermission: "blocked" | "information_only" | "conditional" | "definitive";
+    readinessState: "quarantined" | "research" | "information_only" | "conditional" | "approved";
+    reasonCodes: string[];
+    executableEvaluation?: {
+      expectedState: string;
+      actualState: string | null;
+      matchedRuleId: string | null;
+      passed: boolean;
+      evaluatedFacts: Record<string, string | number | boolean | null>;
+    };
+  };
+  /** Present when an independently versioned assessment input (including the integrated Stamp4 ruleset) was recorded for replay. */
+  replayInputs?: {
+    externalAssessmentSnapshotIds: string[];
+  };
 };
 
 export type GeneratedApplicationKit = {

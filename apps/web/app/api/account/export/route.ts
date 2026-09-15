@@ -41,8 +41,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const admin = createAdminClient()
     const results = await Promise.all(
       exportedTables.map(async (table) => {
-        const { data, error } = await admin
-          .from(table)
+        const { data, error } = await (admin as unknown as {
+          from(name: string): { select(columns: string): { eq(column: string, value: string): PromiseLike<{ data: unknown[] | null; error: unknown }> } }
+        }).from(table)
           .select("*")
           .eq("user_id", user.id)
         return [table, error ? [] : (data ?? [])] as const

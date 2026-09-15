@@ -122,6 +122,17 @@ export const stamp4SponsorshipAssessmentSchema = z.object({
   salaryThresholdEUR: z.number().nullable(),
   blockers: z.array(z.string()).default([]),
   checkedAt: z.string().datetime(),
+  rulesetVersion: z.string().min(1).optional(),
+  rulesetEffectiveAt: z.string().date().optional(),
+  ruleClaims: z.array(z.object({
+    claimId: z.string().min(1),
+    sourceUrl: z.string().url(),
+    sourceReviewedAt: z.string().date(),
+    sourceValue: z.number(),
+    sourceCurrency: z.string().length(3),
+    sourcePeriod: z.enum(["month", "year"]),
+    transformation: z.string().min(1).optional(),
+  })).optional(),
 });
 
 /** All the per-job evidence assessInternationalJob (./assessment.ts) needs to produce an InternationalAssessment: hiring country, mobility profile, job text/duties, salary, and any employer-specific sponsorship evidence. */
