@@ -1,8 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": false
+  },
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm exec next build",
   "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/cron/mobility-source-monitor",
+      "schedule": "17 4 * * *"
+    }
+  ],
   "experimentalServices": {
     "web": {
       "entrypoint": "apps/web",
