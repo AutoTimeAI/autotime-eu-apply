@@ -21,14 +21,25 @@ function authorised(request: NextRequest): boolean {
 }
 
 export async function GET(request: NextRequest) {
-  if (!authorised(request))
+  const startedAt = Date.now()
+  const requestId = request.headers.get("x-vercel-id")
+  console.info(JSON.stringify({ level: "info", event: "mobility_source_monitor_started", requestId }))
+  if (!authorised(request)) {
+    console.warn(JSON.stringify({ level: "warn", event: "mobility_source_monitor_rejected", requestId, reason: "unauthorised" }))
     return NextResponse.json({ ok: false, error: "Unauthorised" }, { status: 401 })
+  }
   const allowedHosts = new Set((process.env.MOBILITY_SOURCE_HOST_ALLOWLIST ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean))
-  if (!allowedHosts.size) return NextResponse.json({ ok: false, error: "Source host allowlist is not configured" }, { status: 503 })
+  if (!allowedHosts.size) {
+    console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_failed", requestId, reason: "allowlist_missing", durationMs: Date.now() - startedAt }))
+    return NextResponse.json({ ok: false, error: "Source host allowlist is not configured" }, { status: 503 })
+  }
 
   const db = createAdminClient() as unknown as UntypedClient
   const documents = await db.from("mobility_source_documents").select("id,canonical_url,jurisdiction").limit(20)
-  if (documents.error) return NextResponse.json({ ok: false, error: "Source registry unavailable" }, { status: 503 })
+  if (documents.error) {
+    console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_failed", requestId, reason: "source_registry_unavailable", durationMs: Date.now() - startedAt }))
+    return NextResponse.json({ ok: false, error: "Source registry unavailable" }, { status: 503 })
+  }
   const results: Array<{ sourceDocumentId: string; status: string }> = []
   for (const document of documents.data ?? []) {
     const url = String(document.canonical_url)
@@ -81,5 +92,17 @@ export async function GET(request: NextRequest) {
     })
     results.push({ sourceDocumentId, status: recorded.classification.classification })
   }
+  const statusCounts = results.reduce<Record<string, number>>((counts, result) => {
+    counts[result.status] = (counts[result.status] ?? 0) + 1
+    return counts
+  }, {})
+  console.info(JSON.stringify({
+    level: "info",
+    event: "mobility_source_monitor_completed",
+    requestId,
+    checked: results.length,
+    statusCounts,
+    durationMs: Date.now() - startedAt,
+  }))
   return NextResponse.json({ ok: true, checked: results.length, results })
 }
