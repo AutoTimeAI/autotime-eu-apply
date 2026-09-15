@@ -19,7 +19,7 @@ test("source artifacts use a private immutable object path", async () => {
 })
 
 test("artifact capture retains content only for private archival", async () => {
-  const artifact = await captureOfficialSourceArtifact("https://ind.nl/source", async () => new Response("<h1>Rule</h1>", { status: 200, headers: { "content-type": "text/html" } }))
+  const artifact = await captureOfficialSourceArtifact("https://ind.nl/source", new Set(["ind.nl"]), async () => new Response("<h1>Rule</h1>", { status: 200, headers: { "content-type": "text/html" } }))
   assert.equal(artifact.content, "<h1>Rule</h1>")
   assert.match(artifact.observation.normalizedSha256, /^[a-f0-9]{64}$/)
 })
@@ -41,11 +41,39 @@ test("source jurisdictions support ISO country codes without a hard-coded market
 })
 
 test("capture hashes raw and normalized content without returning source text", async () => {
-  const result = await captureOfficialSource("https://ind.nl/source", async () => new Response("<h1>Rule</h1>", { status: 200 }))
+  const result = await captureOfficialSource("https://ind.nl/source", new Set(["ind.nl"]), async () => new Response("<h1>Rule</h1>", { status: 200 }))
   assert.equal(result.available, true)
   assert.match(result.rawSha256, /^[a-f0-9]{64}$/)
   assert.match(result.normalizedSha256, /^[a-f0-9]{64}$/)
   assert.equal(Object.values(result).includes("Rule"), false)
+})
+
+test("capture refuses redirects to hosts outside the allowlist", async () => {
+  const visited = []
+  const result = await captureOfficialSourceArtifact("https://ind.nl/source", new Set(["ind.nl"]), async (url) => {
+    visited.push(String(url))
+    return new Response(null, { status: 302, headers: { location: "https://attacker.test/private" } })
+  })
+  assert.equal(result.observation.available, false)
+  assert.deepEqual(visited, ["https://ind.nl/source"])
+})
+
+test("capture follows redirects only when every hop is allowlisted", async () => {
+  const visited = []
+  const result = await captureOfficialSourceArtifact("https://ind.nl/old", new Set(["ind.nl"]), async (url) => {
+    visited.push(String(url))
+    if (String(url).endsWith("/old")) return new Response(null, { status: 302, headers: { location: "/current" } })
+    return new Response("<h1>Current rule</h1>", { status: 200 })
+  })
+  assert.equal(result.observation.available, true)
+  assert.deepEqual(visited, ["https://ind.nl/old", "https://ind.nl/current"])
+})
+
+test("capture stops reading bodies that exceed the archive limit", async () => {
+  const oversized = "x".repeat(5_242_881)
+  const result = await captureOfficialSourceArtifact("https://ind.nl/source", new Set(["ind.nl"]), async () => new Response(oversized, { status: 200 }))
+  assert.equal(result.observation.available, false)
+  assert.equal(result.content, null)
 })
 
 test("cron is daily and requires both CRON_SECRET and a source allowlist", () => {

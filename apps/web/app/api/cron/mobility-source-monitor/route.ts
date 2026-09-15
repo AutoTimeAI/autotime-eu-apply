@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         .eq("source_document_id", sourceDocumentId).order("version", { ascending: false }).limit(1).maybeSingle()
       if (previousResult.error || !previousResult.data) {
         const capturedAt = new Date().toISOString()
-        const artifact = await captureOfficialSourceArtifact(url)
+        const artifact = await captureOfficialSourceArtifact(url, allowedHosts)
         if (!artifact.content || !artifact.observation.rawSha256 || !artifact.observation.normalizedSha256) {
           results.push({ sourceDocumentId, status: "baseline_capture_failed" })
           continue
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
         normalizerVersion: String(previousResult.data.normalizer_version),
       }
       const capturedAt = new Date().toISOString()
-      const artifact = await captureOfficialSourceArtifact(url)
+      const artifact = await captureOfficialSourceArtifact(url, allowedHosts)
       const current = artifact.observation
       const classification = classifySourceChange(previous, current)
       let observedVersion: { version: number; language: string; snapshotUri: string } | undefined
