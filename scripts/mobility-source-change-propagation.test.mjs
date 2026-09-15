@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import fs from "node:fs"
 import test from "node:test"
-import { recordInitialSourceBaseline, recordSourceObservationChange, recordUnavailableInitialSource } from "../apps/web/platform/mobility-source-monitor/writer.ts"
+import { recordFailedInitialSource, recordInitialSourceBaseline, recordSourceObservationChange } from "../apps/web/platform/mobility-source-monitor/writer.ts"
 
 const hash = (value) => value.repeat(64)
 const previous = { available: true, httpStatus: 200, rawSha256: hash("a"), normalizedSha256: hash("b"), parserVersion: "1", normalizerVersion: "1" }
@@ -63,7 +63,7 @@ test("a first source capture becomes version one but stays quarantined for revie
 test("a failed first capture creates immutable unavailable evidence without inventing a version", async () => {
   const calls = []
   const client = { async rpc(name, args) { calls.push({ name, args }); return { data: "event-2", error: null } } }
-  const eventId = await recordUnavailableInitialSource({ client, sourceDocumentId: "source-2", countryCode: "pt", observedAt: "2026-09-15T12:00:00Z" })
+  const eventId = await recordFailedInitialSource({ client, sourceDocumentId: "source-2", countryCode: "pt", reasonCode: "INITIAL_SOURCE_UNAVAILABLE", observedAt: "2026-09-15T12:00:00Z" })
   assert.equal(eventId, "event-2")
   assert.equal(calls[0].name, "record_and_propagate_mobility_source_change")
   assert.equal(calls[0].args.p_country_code, "PT")
@@ -71,4 +71,11 @@ test("a failed first capture creates immutable unavailable evidence without inve
   assert.equal(calls[0].args.p_observed_version, null)
   assert.equal(calls[0].args.p_quarantine, true)
   assert.deepEqual(calls[0].args.p_reason_codes, ["INITIAL_SOURCE_UNAVAILABLE"])
+})
+
+test("an unsupported first source format is recorded as incomplete, not unavailable", async () => {
+  const calls = []
+  const client = { async rpc(name, args) { calls.push({ name, args }); return { data: "event-3", error: null } } }
+  await recordFailedInitialSource({ client, sourceDocumentId: "source-3", countryCode: "SE", reasonCode: "INITIAL_SOURCE_CAPTURE_INCOMPLETE" })
+  assert.deepEqual(calls[0].args.p_reason_codes, ["INITIAL_SOURCE_CAPTURE_INCOMPLETE"])
 })

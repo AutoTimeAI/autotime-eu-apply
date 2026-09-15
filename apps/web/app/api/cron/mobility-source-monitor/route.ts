@@ -7,7 +7,7 @@ import { captureOfficialSourceArtifact, isAllowedOfficialSource } from "../../..
 import { archiveOfficialSource } from "../../../../platform/mobility-source-monitor/archive"
 import { resolveSourceJurisdictionCode } from "../../../../platform/mobility-source-monitor/jurisdiction"
 import { isSourceMonitorFailure } from "../../../../platform/mobility-source-monitor/status"
-import { recordInitialSourceBaseline, recordSourceObservationChange, recordUnavailableInitialSource } from "../../../../platform/mobility-source-monitor/writer"
+import { recordFailedInitialSource, recordInitialSourceBaseline, recordSourceObservationChange } from "../../../../platform/mobility-source-monitor/writer"
 
 export const maxDuration = 60
 type UntypedClient = SupabaseClient<any>
@@ -92,7 +92,13 @@ export async function GET(request: NextRequest) {
         const capturedAt = new Date().toISOString()
         const artifact = await captureOfficialSourceArtifact(url, allowedHosts)
         if (!artifact.content || !artifact.observation.rawSha256 || !artifact.observation.normalizedSha256) {
-          await recordUnavailableInitialSource({ client: db, sourceDocumentId, countryCode, observedAt: capturedAt })
+          await recordFailedInitialSource({
+            client: db,
+            sourceDocumentId,
+            countryCode,
+            reasonCode: artifact.observation.available ? "INITIAL_SOURCE_CAPTURE_INCOMPLETE" : "INITIAL_SOURCE_UNAVAILABLE",
+            observedAt: capturedAt,
+          })
           results[sourceIndex] = { sourceDocumentId, status: "baseline_capture_failed" }
           continue
         }

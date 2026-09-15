@@ -6,6 +6,7 @@ export const SOURCE_NORMALIZER_VERSION = "official-text-v1"
 const MAX_SOURCE_BYTES = 5_242_880
 const MAX_SOURCE_REDIRECTS = 5
 const SOURCE_FETCH_TIMEOUT_MS = 8_000
+const supportedSourceContentTypes = new Set(["application/json", "application/xhtml+xml", "text/html", "text/plain"])
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
 export interface SourceRedirectHop { status: number; from: string; to: string }
@@ -74,6 +75,14 @@ async function readSourceText(response: Response): Promise<string> {
   return content + decoder.decode()
 }
 
+function sourceContentType(response: Response): string {
+  return response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() || "text/html"
+}
+
+function incompleteObservation(httpStatus: number): SourceObservation {
+  return { available: true, httpStatus, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }
+}
+
 export async function captureOfficialSource(
   url: string,
   allowedHosts: Set<string>,
@@ -82,6 +91,7 @@ export async function captureOfficialSource(
   try {
     const { response } = await fetchAllowedOfficialSource(url, allowedHosts, fetcher)
     if (!response.ok) return { available: false, httpStatus: response.status, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }
+    if (!supportedSourceContentTypes.has(sourceContentType(response))) return incompleteObservation(response.status)
     const raw = await readSourceText(response)
     const normalized = normalizeOfficialSource(raw)
     if (!normalized) return { available: true, httpStatus: response.status, rawSha256: hash(raw), normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }
@@ -99,12 +109,14 @@ export async function captureOfficialSourceArtifact(
   try {
     const { response, redirectChain } = await fetchAllowedOfficialSource(url, allowedHosts, fetcher)
     if (!response.ok) return { observation: { available: false, httpStatus: response.status, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }, content: null, contentType: "text/plain", language: "und", redirectChain }
+    const contentType = sourceContentType(response)
+    if (!supportedSourceContentTypes.has(contentType)) return { observation: incompleteObservation(response.status), content: null, contentType, language: "und", redirectChain }
     const content = await readSourceText(response)
     const normalized = normalizeOfficialSource(content)
     return {
       observation: { available: true, httpStatus: response.status, rawSha256: hash(content), normalizedSha256: normalized ? hash(normalized) : null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION },
       content,
-      contentType: response.headers.get("content-type")?.split(";")[0] ?? "text/html",
+      contentType,
       language: response.headers.get("content-language")?.split(",")[0]?.trim().slice(0, 35) || "und",
       redirectChain,
     }

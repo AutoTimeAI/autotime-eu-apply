@@ -95,6 +95,15 @@ test("capture stops reading bodies that exceed the archive limit", async () => {
   assert.equal(result.content, null)
 })
 
+test("capture rejects unsupported binary formats instead of hashing them as text", async () => {
+  const result = await captureOfficialSourceArtifact("https://ind.nl/source.pdf", new Set(["ind.nl"]), async () => new Response("%PDF-binary", { status: 200, headers: { "content-type": "application/pdf" } }))
+  assert.equal(result.observation.available, true)
+  assert.equal(result.observation.rawSha256, null)
+  assert.equal(result.observation.normalizedSha256, null)
+  assert.equal(result.content, null)
+  assert.equal(result.contentType, "application/pdf")
+})
+
 test("cron is daily and requires both CRON_SECRET and a source allowlist", () => {
   const config = JSON.parse(fs.readFileSync("vercel.json", "utf8"))
   assert.deepEqual(config.crons, [{ path: "/api/cron/mobility-source-monitor", schedule: "17 4 * * *" }])
@@ -102,7 +111,8 @@ test("cron is daily and requires both CRON_SECRET and a source allowlist", () =>
   assert.match(route, /timingSafeEqual/)
   assert.match(route, /MOBILITY_SOURCE_HOST_ALLOWLIST/)
   assert.match(route, /baseline_quarantined_for_review/)
-  assert.match(route, /recordUnavailableInitialSource/)
+  assert.match(route, /recordFailedInitialSource/)
+  assert.match(route, /INITIAL_SOURCE_CAPTURE_INCOMPLETE/)
   assert.match(route, /if \(previousResult\.error\) throw new Error\("Source version history is unavailable"\)/)
   assert.doesNotMatch(route, /previousResult\.error \|\| !previousResult\.data/)
   assert.match(route, /mobility_source_monitor_started/)
