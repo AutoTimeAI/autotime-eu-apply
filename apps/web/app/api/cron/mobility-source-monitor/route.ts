@@ -5,12 +5,12 @@ import { classifySourceChange } from "shared"
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import { captureOfficialSourceArtifact, isAllowedOfficialSource } from "../../../../platform/mobility-source-monitor/capture"
 import { archiveOfficialSource } from "../../../../platform/mobility-source-monitor/archive"
+import { resolveSourceJurisdictionCode } from "../../../../platform/mobility-source-monitor/jurisdiction"
 import { recordInitialSourceBaseline, recordSourceObservationChange } from "../../../../platform/mobility-source-monitor/writer"
 
 export const maxDuration = 60
 type UntypedClient = SupabaseClient<any>
 const sourceBatchSize = 20
-const countryCodes: Record<string, string> = { germany: "DE", netherlands: "NL", ireland: "IE", "united kingdom": "GB", france: "FR" }
 
 function authorised(request: NextRequest): boolean {
   const expected = process.env.CRON_SECRET
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const url = String(document.canonical_url)
     const sourceDocumentId = String(document.id)
     try {
-      const countryCode = countryCodes[String(document.jurisdiction).trim().toLowerCase()]
+      const countryCode = resolveSourceJurisdictionCode(document.jurisdiction)
       if (!countryCode || !isAllowedOfficialSource(url, allowedHosts)) {
         results.push({ sourceDocumentId, status: "skipped_not_allowlisted" })
         continue

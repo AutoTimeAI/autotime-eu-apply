@@ -3,6 +3,7 @@ import fs from "node:fs"
 import test from "node:test"
 import { captureOfficialSource, captureOfficialSourceArtifact, isAllowedOfficialSource, normalizeOfficialSource } from "../apps/web/platform/mobility-source-monitor/capture.ts"
 import { archiveOfficialSource } from "../apps/web/platform/mobility-source-monitor/archive.ts"
+import { resolveSourceJurisdictionCode } from "../apps/web/platform/mobility-source-monitor/jurisdiction.ts"
 
 test("source normalization removes executable and presentation noise", () => {
   assert.equal(normalizeOfficialSource("<style>x{}</style><h1> Permit </h1><script>bad()</script><p>rule</p>"), "Permit rule")
@@ -28,6 +29,15 @@ test("only explicitly allowlisted HTTPS hosts can be retrieved", () => {
   assert.equal(isAllowedOfficialSource("https://ind.nl/source", hosts), true)
   assert.equal(isAllowedOfficialSource("http://ind.nl/source", hosts), false)
   assert.equal(isAllowedOfficialSource("https://ind.nl.attacker.test/source", hosts), false)
+})
+
+test("source jurisdictions support ISO country codes without a hard-coded market ceiling", () => {
+  assert.equal(resolveSourceJurisdictionCode("pt"), "PT")
+  assert.equal(resolveSourceJurisdictionCode(" SE "), "SE")
+  assert.equal(resolveSourceJurisdictionCode("United Kingdom"), "GB")
+  assert.equal(resolveSourceJurisdictionCode("Netherlands"), "NL")
+  assert.equal(resolveSourceJurisdictionCode("Portugal"), null)
+  assert.equal(resolveSourceJurisdictionCode("EUROPE"), null)
 })
 
 test("capture hashes raw and normalized content without returning source text", async () => {
