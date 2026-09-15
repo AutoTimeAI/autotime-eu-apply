@@ -9,6 +9,7 @@ import { recordInitialSourceBaseline, recordSourceObservationChange } from "../.
 
 export const maxDuration = 60
 type UntypedClient = SupabaseClient<any>
+const sourceBatchSize = 20
 const countryCodes: Record<string, string> = { germany: "DE", netherlands: "NL", ireland: "IE", "united kingdom": "GB", france: "FR" }
 
 function authorised(request: NextRequest): boolean {
@@ -35,13 +36,33 @@ export async function GET(request: NextRequest) {
   }
 
   const db = createAdminClient() as unknown as UntypedClient
-  const documents = await db.from("mobility_source_documents").select("id,canonical_url,jurisdiction").limit(20)
-  if (documents.error) {
+  const sourceCountResult = await db.from("mobility_source_documents").select("id", { count: "exact", head: true })
+  if (sourceCountResult.error || sourceCountResult.count === null) {
     console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_failed", requestId, reason: "source_registry_unavailable", durationMs: Date.now() - startedAt }))
     return NextResponse.json({ ok: false, error: "Source registry unavailable" }, { status: 503 })
   }
+  const sourceCount = sourceCountResult.count
+  const utcDay = Math.floor(Date.now() / 86_400_000)
+  const batchOffset = sourceCount > 0 ? (utcDay * sourceBatchSize) % sourceCount : 0
+  const firstBatchEnd = Math.min(batchOffset + sourceBatchSize, sourceCount) - 1
+  const firstBatch = firstBatchEnd >= batchOffset
+    ? await db.from("mobility_source_documents").select("id,canonical_url,jurisdiction").order("id").range(batchOffset, firstBatchEnd)
+    : { data: [], error: null }
+  if (firstBatch.error) {
+    console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_failed", requestId, reason: "source_registry_unavailable", durationMs: Date.now() - startedAt }))
+    return NextResponse.json({ ok: false, error: "Source registry unavailable" }, { status: 503 })
+  }
+  const remaining = Math.min(sourceBatchSize, sourceCount) - (firstBatch.data?.length ?? 0)
+  const wrappedBatch = remaining > 0
+    ? await db.from("mobility_source_documents").select("id,canonical_url,jurisdiction").order("id").range(0, remaining - 1)
+    : { data: [], error: null }
+  if (wrappedBatch.error) {
+    console.error(JSON.stringify({ level: "error", event: "mobility_source_monitor_failed", requestId, reason: "source_registry_unavailable", durationMs: Date.now() - startedAt }))
+    return NextResponse.json({ ok: false, error: "Source registry unavailable" }, { status: 503 })
+  }
+  const documents = [...(firstBatch.data ?? []), ...(wrappedBatch.data ?? [])]
   const results: Array<{ sourceDocumentId: string; status: string }> = []
-  for (const document of documents.data ?? []) {
+  for (const document of documents) {
     const url = String(document.canonical_url)
     const sourceDocumentId = String(document.id)
     try {
@@ -106,6 +127,8 @@ export async function GET(request: NextRequest) {
     event: "mobility_source_monitor_completed",
     requestId,
     checked: results.length,
+    registered: sourceCount,
+    batchOffset,
     statusCounts,
     durationMs: Date.now() - startedAt,
   }))

@@ -51,6 +51,10 @@ test("cron is daily and requires both CRON_SECRET and a source allowlist", () =>
   assert.match(route, /status: failed === 0 \? 200 : 503/)
   assert.match(route, /source_monitor_failed/)
   assert.match(route, /statusCounts/)
+  assert.match(route, /sourceBatchSize = 20/)
+  assert.match(route, /utcDay \* sourceBatchSize/)
+  assert.match(route, /\.order\("id"\)\.range\(batchOffset, firstBatchEnd\)/)
+  assert.match(route, /\.order\("id"\)\.range\(0, remaining - 1\)/)
   assert.doesNotMatch(route, /console\.(?:info|warn|error)\([^\n]*(?:canonical_url|snapshotUri|content)/)
 })
 
