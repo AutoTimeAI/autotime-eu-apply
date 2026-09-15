@@ -10,6 +10,20 @@ test("source normalization removes executable and presentation noise", () => {
   assert.equal(normalizeOfficialSource("<style>x{}</style><h1> Permit </h1><script>bad()</script><p>rule</p>"), "Permit rule")
 })
 
+test("source normalization separates page chrome changes from guidance changes", () => {
+  const first = '<nav>Menu A</nav><main><h1>Salary</h1><p>EUR&nbsp;50&#44;000</p></main><footer>Version A</footer>'
+  const second = '<nav>Menu B</nav><main><h1>Salary</h1><p>EUR 50,000</p></main><footer>Version B</footer>'
+  assert.equal(normalizeOfficialSource(first), "Salary EUR 50,000")
+  assert.equal(normalizeOfficialSource(first), normalizeOfficialSource(second))
+})
+
+test("JSON normalization is stable across irrelevant object-key ordering", () => {
+  const first = normalizeOfficialSource('{"threshold":50000,"route":{"code":"blue","year":2026}}', "application/json")
+  const second = normalizeOfficialSource('{"route":{"year":2026,"code":"blue"},"threshold":50000}', "application/json")
+  assert.equal(first, second)
+  assert.equal(normalizeOfficialSource("not-json", "application/json"), "")
+})
+
 test("source artifacts use a private immutable object path", async () => {
   const uploads = []
   const client = { storage: { from(bucket) { return { async upload(path, content, options) { uploads.push({ bucket, path, content, options }); return { data: { path }, error: null } } } } } }
@@ -131,6 +145,7 @@ test("cron is daily and requires both CRON_SECRET and a source allowlist", () =>
   assert.match(route, /\.order\("id"\)\.range\(0, remaining - 1\)/)
   assert.doesNotMatch(route, /console\.(?:info|warn|error)\([^\n]*(?:canonical_url|snapshotUri|content)/)
   assert.match(fs.readFileSync("apps/web/platform/mobility-source-monitor/capture.ts", "utf8"), /SOURCE_FETCH_TIMEOUT_MS = 8_000/)
+  assert.match(fs.readFileSync("apps/web/platform/mobility-source-monitor/capture.ts", "utf8"), /SOURCE_NORMALIZER_VERSION = "official-text-v2"/)
 })
 
 test("every integrated Stamp4 threshold source is registered and allowlisted", () => {

@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto"
 import type { SourceObservation } from "shared"
 
-export const SOURCE_PARSER_VERSION = "official-html-text-v1"
-export const SOURCE_NORMALIZER_VERSION = "official-text-v1"
+export const SOURCE_PARSER_VERSION = "official-content-v2"
+export const SOURCE_NORMALIZER_VERSION = "official-text-v2"
 const MAX_SOURCE_BYTES = 5_242_880
 const MAX_SOURCE_REDIRECTS = 5
 const SOURCE_FETCH_TIMEOUT_MS = 8_000
@@ -11,12 +11,40 @@ const supportedSourceContentTypes = new Set(["application/json", "application/xh
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
 export interface SourceRedirectHop { status: number; from: string; to: string }
 
-export function normalizeOfficialSource(raw: string): string {
-  return raw
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;|&#160;/gi, " ")
+function canonicalizeJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalizeJson)
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalizeJson(entry)]))
+  }
+  return value
+}
+
+function decodeHtmlEntities(value: string): string {
+  const named: Record<string, string> = { amp: "&", apos: "'", gt: ">", lt: "<", nbsp: " ", quot: '"' }
+  return value.replace(/&(?:#(\d+)|#x([a-f0-9]+)|([a-z]+));/gi, (entity, decimal: string | undefined, hexadecimal: string | undefined, name: string | undefined) => {
+    if (decimal) return String.fromCodePoint(Number.parseInt(decimal, 10))
+    if (hexadecimal) return String.fromCodePoint(Number.parseInt(hexadecimal, 16))
+    return named[name?.toLowerCase() ?? ""] ?? entity
+  })
+}
+
+export function normalizeOfficialSource(raw: string, contentType = "text/html"): string {
+  if (contentType === "application/json") {
+    try {
+      return JSON.stringify(canonicalizeJson(JSON.parse(raw)))
+    } catch {
+      return ""
+    }
+  }
+  if (contentType === "text/plain") return raw.normalize("NFKC").replace(/\s+/g, " ").trim()
+  const primary = raw.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1]
+    ?? raw.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1]
+    ?? raw
+  return decodeHtmlEntities(primary
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(script|style|noscript|template|svg|nav|header|footer|aside|dialog|form)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " "))
+    .normalize("NFKC")
     .replace(/\s+/g, " ")
     .trim()
 }
@@ -93,7 +121,7 @@ export async function captureOfficialSource(
     if (!response.ok) return { available: false, httpStatus: response.status, rawSha256: null, normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }
     if (!supportedSourceContentTypes.has(sourceContentType(response))) return incompleteObservation(response.status)
     const raw = await readSourceText(response)
-    const normalized = normalizeOfficialSource(raw)
+    const normalized = normalizeOfficialSource(raw, sourceContentType(response))
     if (!normalized) return { available: true, httpStatus: response.status, rawSha256: hash(raw), normalizedSha256: null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }
     return { available: true, httpStatus: response.status, rawSha256: hash(raw), normalizedSha256: hash(normalized), parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION }
   } catch {
@@ -112,7 +140,7 @@ export async function captureOfficialSourceArtifact(
     const contentType = sourceContentType(response)
     if (!supportedSourceContentTypes.has(contentType)) return { observation: incompleteObservation(response.status), content: null, contentType, language: "und", redirectChain }
     const content = await readSourceText(response)
-    const normalized = normalizeOfficialSource(content)
+    const normalized = normalizeOfficialSource(content, contentType)
     return {
       observation: { available: true, httpStatus: response.status, rawSha256: hash(content), normalizedSha256: normalized ? hash(normalized) : null, parserVersion: SOURCE_PARSER_VERSION, normalizerVersion: SOURCE_NORMALIZER_VERSION },
       content,
