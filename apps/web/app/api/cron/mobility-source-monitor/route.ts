@@ -6,7 +6,7 @@ import { createAdminClient } from "../../../../lib/supabase/admin"
 import { captureOfficialSourceArtifact, isAllowedOfficialSource } from "../../../../platform/mobility-source-monitor/capture"
 import { archiveOfficialSource } from "../../../../platform/mobility-source-monitor/archive"
 import { resolveSourceJurisdictionCode } from "../../../../platform/mobility-source-monitor/jurisdiction"
-import { recordInitialSourceBaseline, recordSourceObservationChange } from "../../../../platform/mobility-source-monitor/writer"
+import { recordInitialSourceBaseline, recordSourceObservationChange, recordUnavailableInitialSource } from "../../../../platform/mobility-source-monitor/writer"
 
 export const maxDuration = 60
 type UntypedClient = SupabaseClient<any>
@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
         const capturedAt = new Date().toISOString()
         const artifact = await captureOfficialSourceArtifact(url, allowedHosts)
         if (!artifact.content || !artifact.observation.rawSha256 || !artifact.observation.normalizedSha256) {
+          await recordUnavailableInitialSource({ client: db, sourceDocumentId, countryCode, observedAt: capturedAt })
           results[sourceIndex] = { sourceDocumentId, status: "baseline_capture_failed" }
           continue
         }

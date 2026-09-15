@@ -69,3 +69,26 @@ export async function recordInitialSourceBaseline({ client, sourceDocumentId, co
   if (typeof result.data !== "string") throw new Error("Initial mobility source baseline returned no identifier")
   return result.data
 }
+
+export async function recordUnavailableInitialSource({ client, sourceDocumentId, countryCode, observedAt = new Date().toISOString() }: {
+  client: SourceChangeWriteClient
+  sourceDocumentId: string
+  countryCode: string
+  observedAt?: string
+}): Promise<string> {
+  const result = await client.rpc("record_and_propagate_mobility_source_change", {
+    p_source_document_id: sourceDocumentId,
+    p_previous_version_id: null,
+    p_observed_version_id: null,
+    p_observed_version: null,
+    p_country_code: countryCode.trim().toUpperCase(),
+    p_classification: "unavailable",
+    p_quarantine: true,
+    p_review_required: true,
+    p_reason_codes: ["INITIAL_SOURCE_UNAVAILABLE"],
+    p_observed_at: observedAt,
+  })
+  if (result.error) throw new Error("Initial unavailable source observation could not be recorded")
+  if (typeof result.data !== "string") throw new Error("Initial unavailable source observation returned no identifier")
+  return result.data
+}
