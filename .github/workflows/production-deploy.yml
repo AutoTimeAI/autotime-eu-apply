@@ -1,0 +1,97 @@
+name: Manual production deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character commit SHA from main to deploy
+        required: true
+        type: string
+      confirmation:
+        description: Type DEPLOY PRODUCTION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autotime-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Verify and deploy selected commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ inputs.commit_sha }}
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_eYfFWCwi1Hh0FJoPORmr6pcb
+      VERCEL_PROJECT_ID: prj_XUEts6JIkUeZ4pcUIIKl2FiXgqeC
+
+    steps:
+      - name: Checkout main history
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate release authorization and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$DEPLOY_CONFIRMATION" = "DEPLOY PRODUCTION"
+          [[ "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$DEPLOY_SHA" origin/main
+          git checkout --detach "$DEPLOY_SHA"
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run release gates
+        run: |
+          pnpm typecheck
+          pnpm test:mobility-suite
+
+      - name: Build and deploy production
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${VERCEL_TOKEN:?Configure VERCEL_TOKEN in the production GitHub environment}"
+          pnpm dlx vercel@59.7.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+          pnpm dlx vercel@59.7.0 build --prod --token="$VERCEL_TOKEN"
+          deployment_url="$(pnpm dlx vercel@59.7.0 deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")"
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Verify deployed surface
+        env:
+          WEB_SMOKE_URL: ${{ steps.deploy.outputs.url }}
+        run: pnpm smoke:web
+
+      - name: Record deployment evidence
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        shell: bash
+        run: |
+          {
+            echo "## Production deployment"
+            echo "- Commit: \`$DEPLOY_SHA\`"
+            echo "- URL: $DEPLOYMENT_URL"
+            echo "- Verification: typecheck, mobility suite, production build, deployed smoke"
+          } >> "$GITHUB_STEP_SUMMARY"
