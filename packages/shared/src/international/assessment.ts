@@ -75,13 +75,21 @@ const sponsorshipRejectionSignals = [
 // sponsorship is available" or "We are unable to provide visa sponsorship"
 // - the denial word and "sponsorship" are real words apart, not adjacent.
 // This regex is deliberately more permissive than the literal signals list
-// above (matches "cannot/unable to/no", optionally "offer"/"provide",
-// optionally "visa", then "sponsorship" in any of those combinations) and
-// catches every case the literal list also catches, plus the ones it
-// doesn't - so it's additive, not a replacement for the list's other
-// non-sponsorship-worded entries (e.g. "existing right to work").
+// above (matches "cannot/unable to/no/without", optionally "the need
+// for"/"offer"/"provide"/"employer", optionally "visa", then "sponsorship"
+// in any of those combinations) and catches every case the literal list
+// also catches, plus the ones it doesn't - so it's additive, not a
+// replacement for the list's other non-sponsorship-worded entries (e.g.
+// "existing right to work").
+//
+// "without" is included because real postings phrase this as a permission
+// requirement rather than a refusal - e.g. "You must be permitted to work
+// in Ireland ... without the need for employer sponsorship" (found via
+// scripts/real-vacancy-evaluation.test.mjs against a real Dublin posting,
+// which the plain "without sponsorship" literal above didn't catch because
+// of the intervening "the need for employer").
 const sponsorshipDenialPattern =
-  /(?:cannot|unable to|no)\s+(?:offer|provide)?\s*(?:visa\s+)?sponsorship/i
+  /(?:cannot|unable to|no|without)\s+(?:the\s+need\s+for\s+)?(?:offer|provide)?\s*(?:employer\s+)?(?:visa\s+)?sponsorship/i
 
 /** Canonical vacancy-language policy shared by every live decision path. */
 export function vacancyRejectsSponsorship(

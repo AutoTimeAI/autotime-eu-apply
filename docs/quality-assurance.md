@@ -1170,6 +1170,47 @@ plan's own anti-speculation instruction. This proves the harness runs
 against real vacancy text end to end so evaluation is fast the moment a
 slice is chosen.
 
+## Real-vacancy evaluation harness extended to Ireland - defect found and fixed - 2026-09-17
+
+Added 4 real cases (RV-003 through RV-006) sourced from
+`docs/investigations/ireland-software-vacancy-10-case-ledger-2026-09-17.md`
+(Codex's real-posting ledger for the provisional "sponsorship-required
+backend/software engineer, Ireland" slice hypothesis - itself still
+unvalidated). Covers four distinct sponsorship-signal categories: silence
+(Dun & Bradstreet), conflicting/ambiguous form wording (Gong), company-level-
+not-vacancy-specific ("Fin sponsors immigration for some roles" - Fin/
+Salesforce), and an explicit hard negative (Ridgeline). V03 (Tripadvisor)
+from the ledger was excluded - its link now redirects to a generic board, a
+stale-posting control per the ledger's own note.
+
+The harness now also runs `assessInternationalJob` (the real mobility
+layer), not just `analyseJob` (the fit layer), for any case with a
+`targetCountry`. This matters: the fit layer alone scored the Ridgeline
+hard-negative case as `"Consider"` - only the mobility layer's blocker
+check catches it.
+
+Running that check against real text surfaced a genuine, live defect: the
+Ridgeline posting reads "You must be permitted to work in Ireland ...
+without the need for employer sponsorship" - real phrasing that
+`vacancyRejectsSponsorship`'s literal `"without sponsorship"` entry and its
+denial regex (`packages/shared/src/international/assessment.ts`) both
+missed, because of the intervening "the need for employer" words. The
+engine returned `pathwayStatus: "verification-required"` instead of
+`"confirmed-blocker"` for a sponsorship-required candidate against an
+explicit no-sponsorship posting - exactly the failure mode the harness
+exists to catch, not a hypothetical.
+
+Fixed by extending `sponsorshipDenialPattern` to include `without` as a
+denial word and `(?:the\s+need\s+for\s+)?` / `(?:employer\s+)?` as optional
+infix groups, so it now matches "without ... sponsorship" phrasing the same
+way it already matched "cannot/unable to/no ... sponsorship" phrasing.
+Verified: `pnpm test:real-vacancy-evaluation` (RV-006 now correctly
+resolves to `mobility=Skip`, `confirmed-blocker`) and full `pnpm test:unit`
+both pass clean afterward - the wider regex doesn't false-positive on any
+existing fixture.
+
+Run: `pnpm test:real-vacancy-evaluation`.
+
 ## Blind-review artifact export - 2026-09-16
 
 Added `scripts/export-blind-review-artifact.mjs`

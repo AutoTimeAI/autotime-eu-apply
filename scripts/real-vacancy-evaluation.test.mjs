@@ -3,6 +3,10 @@ import {
   analyseJob,
   extractJob,
 } from "../apps/web/lib/job-application-workflow.ts";
+import {
+  assessInternationalJob,
+  mobilityProfileSchema,
+} from "../packages/shared/src/international/index.ts";
 import { realVacancyCases } from "./real-vacancy-evaluation-cases.mjs";
 
 // Sibling to scripts/decision-quality-evaluation.test.mjs, but runs the
@@ -17,8 +21,21 @@ import { realVacancyCases } from "./real-vacancy-evaluation-cases.mjs";
 // predetermined "correct" decision - it asserts the engine produces a
 // well-formed, non-crashing result on real-world text, and surfaces the
 // actual decision/reasoning for manual review rather than asserting one.
+//
+// Cases with a `targetCountry` also run through assessInternationalJob -
+// the real mobility layer, not just the role/skill fit layer analyseJob
+// covers. This matters: a hard sponsorship negative (e.g. RV-006) can
+// score "Consider" on fit alone while the mobility layer correctly
+// blocks it, and only exercising the fit layer would hide that.
 
 const VALID_DECISIONS = ["Apply", "Consider", "Insufficient information"];
+const sponsorshipRequiredProfile = mobilityProfileSchema.parse({
+  currentCountry: "India",
+  targetCountries: ["Ireland"],
+  applicantPosition: "sponsorship-required",
+  sponsorshipRequired: "yes",
+  relocationPreference: "yes",
+});
 
 assert.ok(realVacancyCases.length > 0, "the real-vacancy corpus must not be empty");
 assert.equal(
@@ -52,8 +69,30 @@ for (const scenario of realVacancyCases) {
       void mentionsSponsorship;
     }
 
+    let mobilityNote = "";
+    if (scenario.targetCountry) {
+      const international = assessInternationalJob({
+        country: scenario.targetCountry,
+        mobilityProfile: sponsorshipRequiredProfile,
+        jobText: scenario.vacancyText,
+        roleDuties: scenario.candidateEvidence,
+      });
+      assert.ok(
+        typeof international.decision === "string" && international.decision.length > 0,
+        `${scenario.id}: mobility assessment must produce a decision`,
+      );
+      if (scenario.sponsorshipSignal === "explicit-no") {
+        assert.equal(
+          international.pathwayStatus,
+          "confirmed-blocker",
+          `${scenario.id}: an explicit no-sponsorship posting must be a confirmed blocker for a sponsorship-required candidate`,
+        );
+      }
+      mobilityNote = `, mobility=${international.decision}`;
+    }
+
     console.log(
-      `ok - ${scenario.id} - ${scenario.company} / ${scenario.roleTitle} -> ${result.decision} (${scenario.sourceUrl})`,
+      `ok - ${scenario.id} - ${scenario.company} / ${scenario.roleTitle} -> ${result.decision}${mobilityNote} (${scenario.sourceUrl})`,
     );
   } catch (error) {
     failed += 1;

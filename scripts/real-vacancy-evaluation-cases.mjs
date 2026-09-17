@@ -8,11 +8,24 @@
 // paired with these postings yet; that only happens once a slice is
 // chosen per docs/investigations/slice-selection-interview-kit.md).
 //
-// This is intentionally a starter corpus of 2, not the 30-50 cases the
+// This is intentionally a small starter corpus, not the 30-50 cases the
 // validation plan ultimately needs - building that fully belongs after
 // slice selection, per the plan's own anti-speculation instruction.
-// These two exist to prove the harness runs against real vacancy text
-// end to end.
+// These exist to prove the harness runs against real vacancy text end
+// to end.
+//
+// RV-003 through RV-006 source from
+// docs/investigations/ireland-software-vacancy-10-case-ledger-2026-09-17.md
+// (Codex's real-posting source ledger for the provisional "sponsorship-
+// required backend/software engineer, Ireland" slice hypothesis - itself
+// still unvalidated, see that doc and
+// docs/investigations/synthetic-tech-candidate-discovery-rehearsal-2026-09-17.md).
+// Chosen to cover four distinct sponsorship-signal categories from that
+// ledger's taxonomy: silence (V01), conflicting/ambiguous form wording
+// (V02), company-level-not-vacancy-specific (V04), and an explicit hard
+// negative (V07). V03 (Tripadvisor) is excluded: its ledger link now
+// redirects to a generic board, a stale-posting control per the ledger's
+// own note, not a live case.
 
 export const realVacancyCases = [
   {
@@ -115,5 +128,151 @@ Benefits
 - Remote work flexibility (requires Portugal or Germany base)`,
     candidateEvidence:
       "3 years as an Analytics Engineer on AWS, using Redshift, dbt and Airflow. Built Terraform-managed infrastructure and Iceberg-based lakehouse ingestion pipelines. Strong SQL and Python. Fluent English, based in Portugal.",
+  },
+  {
+    id: "RV-003",
+    company: "Dun & Bradstreet",
+    roleTitle: "Senior Software Engineer (R-19525)",
+    location: "Dublin, Ireland",
+    sourceUrl: "https://jobs.lever.co/dnb/15b7a0ec-2c39-469a-b0e2-4bb756a13f8e",
+    capturedAt: "2026-09-17",
+    sponsorshipSignal: "silent",
+    vacancyText: `Job title: Senior Software Engineer (R-19525)
+Company: Dun & Bradstreet
+Location: Dublin, Ireland
+Employment Type: Full Time, Hybrid
+
+Key Responsibilities
+The role focuses on designing and developing modern RESTful APIs within the Prime team. Responsibilities include developing platform capabilities, validating solutions through prototypes, writing maintainable code, and mentoring junior team members. The posting emphasizes exploring practical uses of AI-assisted engineering tools to improve developer productivity.
+
+Requirements
+- Bachelor's degree in computer science or related field
+- 6+ years commercial software development experience
+- Web Service APIs experience using Java and Spring
+- Cloud platform experience (GCP or AWS)
+- Collaborative problem-solving skills
+- Interest in emerging technologies including AI-assisted development
+
+No specific mention of visa sponsorship or work eligibility requirements appears in this posting. The company notes it may use AI tools in hiring but emphasizes that final hiring decisions are ultimately made by humans.`,
+    candidateEvidence:
+      "7 years commercial software development experience, primarily Java and Spring building RESTful APIs. AWS cloud platform experience. Mentored junior engineers. Non-EU citizen, requires employer sponsorship to work in Ireland.",
+    targetCountry: "Ireland",
+  },
+  {
+    id: "RV-004",
+    company: "Gong.io",
+    roleTitle: "Senior Backend Engineer",
+    location: "Dublin, Ireland",
+    sourceUrl: "https://job-boards.greenhouse.io/gongio/jobs/4684215006",
+    capturedAt: "2026-09-17",
+    sponsorshipSignal: "conflicting",
+    vacancyText: `Job title: Senior Backend Engineer
+Company: Gong.io
+Location: Dublin
+
+Key Requirements
+- 7+ years hands-on backend development experience with strong Java expertise
+- Proven mentoring experience for engineers
+- Cloud platform proficiency (AWS, Azure, or Google Cloud)
+- Microservices architecture knowledge
+- Strong problem-solving and communication abilities
+- Bachelor's degree in Computer Science or related field (preferred)
+
+Primary Responsibilities
+The role involves designing scalable backend services, owning feature lifecycles end-to-end, and establishing engineering standards.
+
+Work Arrangement
+We operate a hybrid model 3 days a week in office.
+
+Employment Eligibility
+The posting specifies: You must be eligible to work in Ireland. The application form asks candidates about their legal authorization to work in Ireland and whether they require sponsorship for immigration-related employment benefits.
+
+Company Overview
+Gong provides AI-powered revenue intelligence software serving over 5,000 companies globally.`,
+    candidateEvidence:
+      "8 years backend development experience, strong Java, microservices on AWS. Led feature delivery end-to-end and set engineering standards for a 6-person team. Non-EU citizen, requires employer sponsorship to work in Ireland.",
+    targetCountry: "Ireland",
+  },
+  {
+    id: "RV-005",
+    company: "Fin (part of Salesforce)",
+    roleTitle: "Senior Software Engineer",
+    location: "Dublin, Ireland",
+    sourceUrl: "https://job-boards.greenhouse.io/intercom/jobs/5082494",
+    capturedAt: "2026-09-17",
+    sponsorshipSignal: "company-level-not-vacancy-specific",
+    vacancyText: `Job title: Senior Software Engineer
+Company: Fin (now part of Salesforce)
+Location: Dublin, Ireland
+Work Model: Hybrid (3 days per week in office required)
+
+About the Role
+Fin seeks an experienced engineer to solve customer problems through technical expertise. You'll join a multidisciplinary team building backend and frontend systems alongside designers, product managers, researchers, and data analysts.
+
+Key Responsibilities
+- Develop technical plans and contribute to architecture for products serving tens of millions daily
+- Write Ruby code managing AWS, infrastructure, and platform technologies
+- Deploy production changes on day one; ship features within the first week
+- Mentor engineers and participate in hiring
+- Utilize AI-powered developer tools to focus on meaningful problem-solving
+
+Required Qualifications
+- 5+ years of industry experience in a software engineering role, preferably building a SaaS product
+- Deep knowledge of a high-level programming language (Ruby, Python, Javascript, etc.)
+- Experience collaborating with product teams and designers with proven customer value delivery
+- Experience with distributed systems
+
+Notable Provisions
+Visa Sponsorship: Fin sponsors immigration for some roles so we encourage you to still apply if you require sponsorship.
+
+Equal Opportunity: Salesforce maintains non-discrimination policies and assesses candidates on the basis of merit, competence and qualifications.`,
+    candidateEvidence:
+      "6 years software engineering experience building a SaaS product, deep Ruby and distributed-systems knowledge, AWS infrastructure. Mentored engineers and participated in hiring. Non-EU citizen, requires employer sponsorship to work in Ireland.",
+    targetCountry: "Ireland",
+  },
+  {
+    id: "RV-006",
+    company: "Ridgeline",
+    roleTitle: "Staff Software Engineer, Trade Order Management",
+    location: "Dublin, Ireland",
+    sourceUrl: "https://job-boards.greenhouse.io/ridgeline/jobs/7788849003",
+    capturedAt: "2026-09-17",
+    sponsorshipSignal: "explicit-no",
+    vacancyText: `Job title: Staff Software Engineer, Trade Order Management
+Company: Ridgeline
+Location: Dublin, Ireland
+Employment Type: Hybrid (3 days/week in office)
+
+Job Summary
+Ridgeline seeks a Staff Software Engineer to build and support high-quality Trade Order Management applications. The role spans the full development lifecycle from design through production support, leveraging AWS and modern backend technologies.
+
+Key Responsibilities
+- Contribute technical expertise and design input collaboratively
+- Participate across the complete software development lifecycle
+- Build, enhance, and maintain scalable applications on AWS
+- Troubleshoot production issues and support critical trading workflows
+- Mentor fellow engineers and improve system reliability
+
+Requirements
+- Computer Science degree or equivalent
+- 8+ years software engineering experience
+- 6+ years Java/Kotlin (or equivalent modern backend language)
+- Design patterns, OOAD, SOLID principles, and automated testing expertise
+- Cloud-native application experience, preferably AWS
+- Complex problem-solving and root cause analysis skills
+- Web front-end knowledge (React, JavaScript, TypeScript)
+- Strong communication and cross-team collaboration abilities
+
+Work Authorization
+You must be permitted to work in Ireland, including under EU work authorization, without the need for employer sponsorship.
+
+Bonus Qualifications
+- Buy-side order management systems experience
+- Financial instruments knowledge
+- Mathematics background
+- FIX/SWIFT protocol experience`,
+    candidateEvidence:
+      "9 years software engineering experience, 7 years Java/Kotlin backend, AWS cloud-native applications, React/TypeScript front-end knowledge, strong automated-testing background. Non-EU citizen, requires employer sponsorship to work in Ireland.",
+    targetCountry: "Ireland",
   },
 ];
