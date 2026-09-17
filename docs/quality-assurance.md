@@ -1920,3 +1920,33 @@ Documented honestly rather than silently glossed over:
   18; a follow-up screenshot confirms both paid cards' full feature lists
   and CTA buttons are now fully visible and unobstructed at initial load.
 - `pnpm test:unit` clean.
+
+## 2026-09-17 — Broadened error-redaction sweep to the whole API surface
+
+- Previous fixes (AI pipeline, mobility governance) were each found via a
+  targeted deep-dive into one area, then checked off in
+  `diagnostic-response.test.mjs`. Ran the same literal-pattern search
+  across every `route.ts` in `apps/web/app/api` regardless of which prior
+  audit had touched it, to see if the bug class was actually contained.
+  It wasn't: found 6 more files with the identical raw
+  `error instanceof Error ? error.message : ...` leak straight to the
+  client on a 500 - `profile/onboarding`, `outreach` (three handlers, plus
+  a fourth spot in GET leaking a raw Supabase `error.message` via a
+  slightly different shape), `esco/questionnaire` (two handlers),
+  `esco/score-job`, `esco/import-evidence`, `cv/github`.
+- Also explicitly re-verified `diagnostics/client`, `sync/extension`, and
+  `account/settings` were false positives from the broad grep - all three
+  already wrap their error field through `diagnosticJson`, which calls
+  `toPublicApiError` internally regardless of the raw string passed in.
+- Fixed all 6 confirmed files with the same `toPublicApiError(message,
+  status)` wrap, extended `diagnostic-response.test.mjs` to cover them,
+  and spot-checked live against the dev server that a genuine 400
+  (Zod validation failure) still passes its real message through
+  unredacted - only 5xx is generic.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+- Open question worth a future pass: is there a reason this bug pattern
+  recurred 15 times across 4 separate audits instead of being caught
+  once at the framework level (e.g. a lint rule or a required response
+  helper)? Worth considering a route-level wrapper that makes the unsafe
+  pattern impossible to write, rather than continuing to find instances
+  one sweep at a time.
