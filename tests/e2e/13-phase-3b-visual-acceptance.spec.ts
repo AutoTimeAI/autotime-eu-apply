@@ -116,9 +116,13 @@ async function addAndAnalyse(page: Page, description: string) {
   });
   await page.getByRole("button", { name: "Review and analyse" }).click();
   await page.getByRole("button", { name: "Analyse job" }).click();
+  // Two independent live decision paths can render this heading
+  // (job-application-workflow.ts's fit-model wording vs.
+  // packages/shared/src/international/assessment.ts's mobility wording -
+  // see docs/reference/technical-debt.md), so this must cover both.
   await expect(
     page.getByRole("heading", {
-      name: /confirmed evidence|role may be viable|vacancy wording conflicts|not enough/i,
+      name: /confirmed evidence|role may be viable|vacancy wording conflicts|not enough|sponsorship or new work permission is not available/i,
     }),
   ).toBeVisible();
 }
@@ -285,8 +289,17 @@ test("Skip is explained and legacy routes resolve without loops", async ({
   );
   await addAndAnalyse(page, skipVacancy);
   await expect(page.getByText("Skip", { exact: true })).toBeVisible();
+  // The rendered decision comes from the international assessment engine
+  // (packages/shared/src/international/assessment.ts) for this scenario,
+  // not job-application-workflow.ts's separate "vacancy wording conflicts"
+  // phrasing - verified against the live page, not assumed. Scoped to the
+  // heading specifically: the same text also legitimately repeats in a
+  // <dd> definition further down the page, which makes an unscoped
+  // getByText ambiguous.
   await expect(
-    page.getByText(/conflicts with the stated sponsorship requirement/i),
+    page.getByRole("heading", {
+      name: /sponsorship or new work permission is not available/i,
+    }),
   ).toBeVisible();
   await page.screenshot({
     fullPage: true,

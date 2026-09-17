@@ -66,7 +66,15 @@ test("new user, account-profile deletion and logout retention are explicit", asy
   );
   await page.getByRole("button", { name: /test\.user@example\.com/i }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await page.waitForTimeout(1_000);
+  // Sign out triggers the app's own client-side navigation to "/" - a fixed
+  // sleep before the test's own goto("/") below is a race: if the app's
+  // navigation is still in flight when goto("/") fires, the browser aborts
+  // one in favor of the other (net::ERR_ABORTED). Wait for that navigation
+  // to actually land first, then the explicit goto("/") below is a real,
+  // reliable reload (needed to verify localStorage persists across it),
+  // not a second navigation competing with the first.
+  await page.waitForURL("**/", { timeout: 15_000 }).catch(() => {});
+  await page.waitForLoadState("load").catch(() => {});
   await page.goto("/");
   expect(
     await page.evaluate((key) => localStorage.getItem(key), mobilityKey),
