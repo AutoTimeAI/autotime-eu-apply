@@ -36,7 +36,9 @@ import { assessApplicationDecision } from "../../../../platform/application-prep
 import { createAdminClient } from "../../../../lib/supabase/admin"
 import {
   isMobilityGovernanceEnforcementEnabled,
+  isMobilityDecisionRecordingEnabled,
   type MobilityGovernanceClient,
+  type RuleBundleVersionLookupClient,
 } from "../../../../platform/application-preparation/mobility-governance-repository.ts"
 import {
   appendGovernedMobilityDecision,
@@ -102,22 +104,33 @@ export async function POST(
       ports: {
         decisions: {
           assess: async (input) => {
-            if (!isMobilityGovernanceEnforcementEnabled())
+            const enforcementEnabled = isMobilityGovernanceEnforcementEnabled()
+            const recordingEnabled = isMobilityDecisionRecordingEnabled()
+            if (!enforcementEnabled && !recordingEnabled)
               return assessApplicationDecision(input)
             const admin = createAdminClient()
+            // enforcementEnabled controls whether governanceClient is passed
+            // (the only thing that can change combined.decision/blockers).
+            // recordingEnabled independently controls whether a validation-
+            // pilot decision gets persisted - it can never affect what the
+            // candidate sees. See mobility-governance-repository.ts and
+            // docs/reference/landwell-master-execution-plan.md §4.
             const decision = await assessApplicationDecision(
               input,
-              admin as unknown as MobilityGovernanceClient,
+              enforcementEnabled ? (admin as unknown as MobilityGovernanceClient) : undefined,
               admin as unknown as ExternalAssessmentWriteClient,
+              recordingEnabled ? (admin as unknown as RuleBundleVersionLookupClient) : undefined,
             )
-            const recorded = await appendGovernedMobilityDecision({
-              client: admin as unknown as MobilityDecisionWriteClient,
-              userId: user.id,
-              input,
-              decision,
-              replayInputs: decision.replayInputs,
-            })
-            decisionRecordId = recorded?.decisionRecordId
+            if (decision.governance) {
+              const recorded = await appendGovernedMobilityDecision({
+                client: admin as unknown as MobilityDecisionWriteClient,
+                userId: user.id,
+                input,
+                decision,
+                replayInputs: decision.replayInputs,
+              })
+              decisionRecordId = recorded?.decisionRecordId
+            }
             return decision
           },
         },

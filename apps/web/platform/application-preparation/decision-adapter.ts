@@ -15,8 +15,10 @@ import type {
 } from "../../domains/application-preparation/prepare-application-kit";
 import {
   loadCurrentMobilityReadiness,
+  loadPilotObservationRuleBundleVersionId,
   missingGovernanceReadiness,
   type MobilityGovernanceClient,
+  type RuleBundleVersionLookupClient,
 } from "./mobility-governance-repository.ts";
 import {
   recordExternalAssessmentSnapshot,
@@ -32,6 +34,7 @@ export async function assessApplicationDecision(
   input: ApplicationPreparationInput,
   governanceClient?: MobilityGovernanceClient,
   snapshotClient?: ExternalAssessmentWriteClient,
+  recordingClient?: RuleBundleVersionLookupClient,
 ): Promise<ApplicationDecisionResult> {
   const missingEvidence = [
     !input.profile.baseCvText.trim() && "CV text",
@@ -61,7 +64,7 @@ export async function assessApplicationDecision(
       };
     }
 
-    return assessWithInternational({ input, fit, targetCountry, missingEvidence, governanceClient, snapshotClient });
+    return assessWithInternational({ input, fit, targetCountry, missingEvidence, governanceClient, snapshotClient, recordingClient });
   }
 
   const combined = orchestrateJobDecision({
@@ -82,6 +85,7 @@ async function assessWithInternational({
   missingEvidence,
   governanceClient,
   snapshotClient,
+  recordingClient,
 }: {
   input: ApplicationPreparationInput;
   fit: ReturnType<typeof evaluateAutoTimeFitScore>;
@@ -89,6 +93,7 @@ async function assessWithInternational({
   missingEvidence: string[];
   governanceClient?: MobilityGovernanceClient;
   snapshotClient?: ExternalAssessmentWriteClient;
+  recordingClient?: RuleBundleVersionLookupClient;
 }): Promise<ApplicationDecisionResult> {
   const mobilityProfile = migrateCandidateProfileToMobilityProfile(input.profile);
   const countryPack = getInternationalCountryPack(targetCountry);
@@ -152,6 +157,27 @@ async function assessWithInternational({
       })
     : null;
 
+  // Validation-pilot recording only: independent of governanceClient/governed
+  // above, this never feeds orchestrateJobDecision and never changes
+  // combined.decision/blockers - it only lets the already-computed real
+  // decision be persisted for the evaluation corpus. Only attempted when no
+  // real governance readiness exists, so it never overrides genuine governed
+  // metadata. See docs/reference/landwell-master-execution-plan.md §4.
+  const recordingGovernance = !governed && recordingClient
+    ? await (async () => {
+        const pilotRuleBundleVersionId = await loadPilotObservationRuleBundleVersionId(recordingClient);
+        if (!pilotRuleBundleVersionId) return undefined;
+        return {
+          readinessSnapshotId: null,
+          ruleBundleVersionId: pilotRuleBundleVersionId,
+          targetCountry,
+          outputPermission: "information_only" as const,
+          readinessState: "research" as const,
+          reasonCodes: ["PILOT_OBSERVATION_RECORDING"],
+        };
+      })()
+    : undefined;
+
   if (crossCheck && !crossCheck.passed) {
     const reasonCodes = [...new Set([
       ...(governed?.readiness.reasonCodes ?? []),
@@ -181,17 +207,21 @@ async function assessWithInternational({
     blockers: combined.blockers,
     decision: combined.decision,
     missingEvidence,
-    ...(governed && {
-      governance: {
-        readinessSnapshotId: governed.snapshotId,
-        ruleBundleVersionId: governed.ruleBundleVersionId,
-        targetCountry,
-        outputPermission: governed.readiness.outputPermission,
-        readinessState: governed.readiness.state,
-        reasonCodes: governed.readiness.reasonCodes,
-        ...(crossCheck && { executableEvaluation: crossCheck.evaluation }),
-      },
-    }),
+    ...(governed
+      ? {
+          governance: {
+            readinessSnapshotId: governed.snapshotId,
+            ruleBundleVersionId: governed.ruleBundleVersionId,
+            targetCountry,
+            outputPermission: governed.readiness.outputPermission,
+            readinessState: governed.readiness.state,
+            reasonCodes: governed.readiness.reasonCodes,
+            ...(crossCheck && { executableEvaluation: crossCheck.evaluation }),
+          },
+        }
+      : recordingGovernance
+        ? { governance: recordingGovernance }
+        : {}),
     ...(externalAssessmentSnapshotIds.length > 0 && {
       replayInputs: { externalAssessmentSnapshotIds },
     }),

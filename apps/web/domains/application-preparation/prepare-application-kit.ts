@@ -22,7 +22,8 @@ export type ApplicationDecisionResult = {
   decision: InternationalDecision;
   missingEvidence: string[];
   governance?: {
-    readinessSnapshotId: string;
+    /** Null for observation-only records with no approved readiness snapshot. */
+    readinessSnapshotId: string | null;
     ruleBundleVersionId: string;
     targetCountry: string;
     outputPermission: "blocked" | "information_only" | "conditional" | "definitive";

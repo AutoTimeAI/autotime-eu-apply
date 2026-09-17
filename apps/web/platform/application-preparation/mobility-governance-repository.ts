@@ -55,3 +55,49 @@ export function isMobilityGovernanceEnforcementEnabled(
 ): boolean {
   return value === "true"
 }
+
+/**
+ * Separate from enforcement on purpose: this only controls whether a real
+ * decision gets written to mobility_decision_records for the validation
+ * pilot's evaluation corpus. It never feeds into orchestrateJobDecision and
+ * can never change what a candidate sees - only isMobilityGovernanceEnforcementEnabled
+ * does that, by design (see docs/reference/landwell-master-execution-plan.md §4).
+ */
+export function isMobilityDecisionRecordingEnabled(
+  value = process.env.MOBILITY_DECISION_RECORDING_ENABLED,
+): boolean {
+  return value === "true"
+}
+
+/**
+ * Recorded decisions require a real, existing mobility_rule_bundle_version
+ * row (a NOT NULL foreign key on mobility_decision_records). This bundle is
+ * deliberately staged in 'draft' state - never activated, never used by
+ * loadCurrentMobilityReadiness/mobility_country_readiness_snapshots - so
+ * recording pilot decisions can never affect the real governance/enforcement
+ * path. See supabase/migrations/20260916120000_seed_pilot_observation_rule_bundle.sql.
+ */
+export const PILOT_OBSERVATION_RULE_BUNDLE_ID = "pilot-observation"
+
+export interface RuleBundleVersionLookupClient {
+  from(table: string): {
+    select(columns: string): {
+      eq(column: string, value: string): {
+        eq(column: string, value: number): { maybeSingle(): QueryResult }
+      }
+    }
+  }
+}
+
+export async function loadPilotObservationRuleBundleVersionId(
+  client: RuleBundleVersionLookupClient,
+): Promise<string | null> {
+  const { data, error } = await client.from("mobility_rule_bundle_versions")
+    .select("id")
+    .eq("bundle_id", PILOT_OBSERVATION_RULE_BUNDLE_ID)
+    .eq("version", 1)
+    .maybeSingle()
+  if (error || !data) return null
+  const id = (data as { id?: unknown }).id
+  return typeof id === "string" ? id : null
+}
