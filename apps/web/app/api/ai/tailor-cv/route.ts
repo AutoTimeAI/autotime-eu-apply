@@ -12,6 +12,7 @@ import {
   FeatureGateError,
   finalizeAiCall,
 } from "../../../../lib/feature-gate";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 const cvSchema = z.object({
   contact: z.object({
     name: z.string().max(200),
@@ -84,7 +85,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         data: null,
-        error: error instanceof Error ? error.message : "CV tailoring failed",
+        error: toPublicApiError(
+          error instanceof Error ? error.message : "CV tailoring failed",
+          status,
+        ),
       },
       { status },
     );

@@ -1354,9 +1354,67 @@ Stamp4 check is explicitly disclosed as an unverified gap rather than
 silently assumed clean. No integration issue found there; documented as
 a completed audit, not a fix.
 
+## AI pipeline deep-dive: 4 routes leaked raw internal errors to the client - 2026-09-17
+
+Requested deep-dive audit of the AI generation pipeline. Most of it held
+up well - `openai-server.ts`'s central call wrapper, the app-level rate
+limiter, and the AI credit ledger (Stripe-webhook-idempotent via
+`on conflict (stripe_checkout_session_id) do nothing`, and
+`consume_ai_credit` uses `pg_advisory_xact_lock` to prevent a
+concurrent-spend race) are all careful, correct code.
+
+Found a real gap: `apps/web/tests/diagnostic-response.test.mjs` already
+exists specifically to catch API routes that leak a raw
+`error instanceof Error ? error.message : ...` fallback straight to the
+client on a 500 (bypassing `toPublicApiError`'s redaction, which every
+route using `diagnosticJson` gets automatically) - but it only ever
+checked two `profile/*` routes. Four AI routes had exactly this bug and
+were never checked: `ai/cover-letter` (both its `POST` and a separate
+`PATCH` handler - the test itself caught the second one on the first
+run, after the `POST` fix alone), `ai/cv-enrich`, `ai/tailor-cv`, and
+`ai/work-authorisation`. Any unexpected exception in these five call
+sites (an OpenAI SDK error, a Postgres error from a Supabase call, etc.)
+would have returned its raw message directly in the API response instead
+of the generic "Request could not be completed" message the rest of the
+app already guarantees on a 500.
+
+Fixed by wrapping each fallback in `toPublicApiError(message, status)`,
+the same helper every other redacted route already uses - not a new
+mechanism, just applying the existing one to routes that had bypassed
+it. Extended `diagnostic-response.test.mjs` to check these five call
+sites going forward, so this can't silently regress again.
+
+Also checked for a request-timeout gap: no explicit timeout is set on
+the OpenAI `.responses.create()` call itself, and no route/project
+`maxDuration` is configured anywhere, so a slow OpenAI response relies
+entirely on the platform's own default function timeout (unconfigured,
+so untuned) rather than a bounded, intentional one. The configured model
+(`gpt-4.1-mini`, 1200 max output tokens) keeps normal-case latency low
+enough that this is unlikely to bite under typical conditions, but it's
+an untuned reliability edge - flagged here as a known gap, not fixed,
+since picking the right bound needs a real decision (Vercel plan/Fluid
+Compute settings, acceptable user-facing wait time), not a guess.
+
+Verified: `pnpm typecheck` clean, `apps/web/tests/diagnostic-response.test.mjs`
+passes (and correctly failed before the `PATCH` handler fix, proving the
+new assertions are load-bearing, not just decorative). Full
+`pnpm test:unit` passes.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
+
+- **No explicit timeout on the OpenAI `.responses.create()` call in
+  `apps/web/lib/openai-server.ts`, and no `maxDuration` configured on any
+  AI route or project-wide in `vercel.json`.** Found during the
+  2026-09-17 AI-pipeline audit. A slow OpenAI response currently relies
+  entirely on the platform's own default function timeout - unconfigured,
+  so untuned - rather than a bounded, intentional one. `gpt-4.1-mini`
+  with a 1200-token output cap keeps normal-case latency low enough that
+  this is unlikely to bite under typical conditions, but it's a real,
+  untuned edge. Not fixed: picking the right bound needs a real decision
+  (Vercel plan/Fluid Compute settings, acceptable user-facing wait time),
+  not a guess.
 
 - **`POST /api/sync/dashboard`'s `applications` upsert has no
   compare-and-swap**, unlike `job_workflow_jobs`, `job_workflow_applications`,
