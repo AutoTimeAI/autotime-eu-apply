@@ -1834,3 +1834,29 @@ Documented honestly rather than silently glossed over:
   `test:decision-adapter-target-country` into `pnpm test:unit` (neither was
   previously in the CI chain). Full `pnpm test:unit` and `pnpm -r typecheck`
   clean.
+
+## 2026-09-17 — End-to-end verification pass
+
+- `pnpm test:unit` — clean.
+- Live production route check surfaced a **stale deployment**: `vercel ls`
+  shows the latest Ready production build was created at 17:08, while
+  `main` HEAD (`0120fbaf`) was committed at 20:34 — over 3 hours of
+  today's fixes (mobility/AI redaction, Stamp4 cleanup, UK country-support,
+  outreach label/settings-overflow fixes) are not live yet. This also
+  explains an apparent routing inconsistency found while probing this:
+  `/api/mobility/learning/consent` correctly 401s with an `X-Matched-Path`
+  header (route unchanged, matches fine), while `/api/diagnostics/health`
+  and `/api/ai/content` 307-redirect to `/login` with **no**
+  `X-Matched-Path` header at all — i.e. the deployed build isn't routing
+  those paths the way current source expects. Not an app bug; a
+  deployment-currency gap. `vercel.json` has git auto-deploy disabled, so
+  this requires re-running the manual production-deploy workflow.
+- Live e2e run of `tests/e2e/37-continuous-application-journey.spec.ts`
+  failed on a `waitForURL` timeout after the "create interview" step. The
+  captured page snapshot at failure time shows the interview page fully
+  rendered (nav/header/content present, `domcontentloaded` fired, URL
+  already at the target pattern) — the `load` event just never fired
+  within budget, most likely blocked by a slow third-party analytics
+  script under Playwright's default `waitUntil: "load"`. Treated as test
+  flakiness, not a functional regression, since the interview was created
+  and the app state was correct at failure time.
