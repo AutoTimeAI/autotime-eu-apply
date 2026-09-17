@@ -314,6 +314,71 @@ test("Skip is explained and legacy routes resolve without loops", async ({
   }
 });
 
+test("reanalysing a job resets a linked application's stale evidence confirmation", async ({
+  page,
+}) => {
+  // Found during a 2026-09-17 audit of the application-preparation flow:
+  // evidenceConfirmed/consequentialAnswersReviewed are confirmations
+  // against one specific analysis. Reanalysing a job never touched an
+  // already-existing linked application, so a candidate could confirm
+  // evidence, reanalyse (new decision, new missing evidence), and the
+  // stale confirmation would still satisfy the readiness gate for content
+  // that was never reviewed against the new analysis. Reachable via
+  // "Prepare anyway" (Consider decision) since the primary button only
+  // offers "Reanalyse job" while the decision isn't "Apply".
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seedProfile(
+    page,
+    "SQL production support UAT incident analysis stakeholder communication",
+    true,
+  );
+  await addAndAnalyse(page, considerVacancy);
+  await expect(
+    page.getByText(/Consider|Insufficient information/, { exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Application" }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Prepare anyway" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Application checklist" }),
+  ).toBeVisible();
+
+  await page.getByLabel(/confirmed the selected evidence/i).check();
+  await page.getByLabel(/reviewed every consequential answer/i).check();
+  await expect(page.getByLabel(/confirmed the selected evidence/i)).toBeChecked();
+  await expect(page.getByLabel(/reviewed every consequential answer/i)).toBeChecked();
+
+  // The "application" view (this page) is its own single-page layout with
+  // no tab bar - reanalysing has to happen from the job's own page.
+  const jobId: string = await page.evaluate((uid) => {
+    const state = JSON.parse(
+      localStorage.getItem(`autotime-phase-3b-workflow-v1:${uid}`) || "null",
+    );
+    return state.jobs[0].id;
+  }, userId);
+  await page.goto(`/dashboard/jobs/${jobId}`);
+  await page.getByRole("tab", { name: "Analysis" }).click();
+  await page.getByRole("button", { name: "Reanalyse job" }).click();
+  await expect(
+    page.getByText(/Analysis version \d+ saved\. The linked application's evidence confirmation was reset/),
+  ).toBeVisible();
+
+  // Reanalysing the same vacancy text is deterministic, so the decision is
+  // still "Consider" here and "Prepare anyway" reappears; since an
+  // application already exists for this job, clicking it just navigates
+  // back to that (now-reset) application - same as the real product flow.
+  await page.getByRole("tab", { name: "Application" }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Prepare anyway" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Application checklist" }),
+  ).toBeVisible();
+  await expect(page.getByLabel(/confirmed the selected evidence/i)).not.toBeChecked();
+  await expect(page.getByLabel(/reviewed every consequential answer/i)).not.toBeChecked();
+});
+
 test("keyboard and tab semantics remain usable", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await seedProfile(

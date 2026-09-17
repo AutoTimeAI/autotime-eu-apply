@@ -1430,6 +1430,54 @@ replays by supplying someone else's decision ID. No issue found there.
 Verified: `pnpm typecheck` clean, extended `diagnostic-response.test.mjs`
 passes, full `pnpm test:unit` passes.
 
+## Application-preparation deep-dive: stale evidence confirmation survives reanalysis - 2026-09-17
+
+Requested deep-dive audit of the full application-preparation flow
+(CV tailoring -> evidence review -> readiness gate -> applied), the
+fourth and final area of the day's audit sweep. Most of it held up
+well - `transitionApplication`'s status-adjacency guard already had a
+prior real fix in place (a documented, deliberate defensive check
+against an `Array.indexOf` returning `-1` for a terminal status letting
+"Interview -> Preparing" slip through the "one step" arithmetic), and
+`getSubmissionPermission`/the "Mark as applied" confirmation dialog are
+both correctly gated.
+
+Found a real, reachable bug: `application.evidenceConfirmed` and
+`consequentialAnswersReviewed` are confirmations against one specific
+job analysis, but reanalysing a job (`analyse()` in
+`JobApplicationWorkspace.tsx`) only ever updated the job's
+`analysisHistory` - it never touched an already-existing linked
+application. A candidate could confirm evidence, then reanalyse (new
+decision, new missing evidence, new risk areas - possibly a completely
+different outcome), and the stale confirmation would still silently
+satisfy the readiness gate for content that was never reviewed against
+the new analysis. Reachable in the live product via "Prepare anyway"
+(shown for a "Consider" decision) - the primary button only ever shows
+"Reanalyse job" while the decision isn't "Apply", so an "Apply"-decision
+job with an existing application has no UI path back into `analyse()`,
+but a "Consider" one does.
+
+Fixed by resetting the linked application's `evidenceConfirmed`,
+`consequentialAnswersReviewed`, and status (back to "Preparing" if it
+was Preparing/Needs review/Ready) whenever a reanalysis happens -
+never touching an application that's already Applied or further along,
+since those represent a real submission that can't be un-made. The
+candidate now sees an explicit status message explaining why.
+
+Verified live, not just asserted: added
+`tests/e2e/13-phase-3b-visual-acceptance.spec.ts`'s "reanalysing a job
+resets a linked application's stale evidence confirmation" test, which
+reproduces the exact real path (Consider -> Prepare anyway -> confirm
+both checkboxes -> reanalyse -> revisit the application) and asserts
+both checkboxes are unchecked afterward. Iterated on the test itself
+against the real running app - the first two attempts failed for
+genuine reasons (the "application" view has no shared tab bar with the
+"job" view, so navigating back needed the job's own URL; "Prepare
+anyway" only renders under the job's own "Application" tab, not the
+one this component shares by view kind) rather than the underlying fix
+being wrong, which the live accessibility-tree snapshot at each attempt
+confirmed. Full spec (5 tests) and full `pnpm test:unit` pass.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:

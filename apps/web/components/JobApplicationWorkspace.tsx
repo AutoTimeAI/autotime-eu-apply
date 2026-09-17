@@ -706,14 +706,55 @@ function JobDetail({
       sponsorshipRequired,
       mobilityProfile,
     });
-    updateJob({
+    const nextJob = {
       ...job,
       analysisHistory: [...job.analysisHistory, result],
-      analysisState: "Analysed",
+      analysisState: "Analysed" as const,
       updatedAt: result.createdAt,
+    };
+    // A linked application's evidenceConfirmed/consequentialAnswersReviewed
+    // checkboxes are confirmations against *this specific* analysis - if a
+    // reanalysis changes the evidence picture (new decision, new missing
+    // evidence, new risk areas), those confirmations are stale, not just
+    // out of date. Without this, the readiness gate would still treat them
+    // as satisfied and let the candidate reach "Ready"/"Applied" without
+    // ever having reviewed the new analysis. Never touches an application
+    // that's already Applied or further along - only Preparing/Needs
+    // review/Ready get walked back to Preparing to force re-review, since
+    // those are the only statuses reachable before a real submission.
+    const linkedApplication = state.applications.find(
+      (item) => item.jobId === job.id,
+    );
+    const resettableStatuses: ApplicationWorkspaceStatus[] = [
+      "Preparing",
+      "Needs review",
+      "Ready",
+    ];
+    const nextApplications =
+      linkedApplication && resettableStatuses.includes(linkedApplication.status)
+        ? state.applications.map((item) =>
+            item.id === linkedApplication.id
+              ? {
+                  ...item,
+                  status: "Preparing" as const,
+                  evidenceConfirmed: false,
+                  consequentialAnswersReviewed: false,
+                  updatedAt: result.createdAt,
+                }
+              : item,
+          )
+        : state.applications;
+    onChange({
+      ...state,
+      jobs: state.jobs.map((item) => (item.id === job.id ? nextJob : item)),
+      applications: nextApplications,
     });
     setTab("analysis");
-    onStatus(`Analysis version ${result.version} saved.`);
+    onStatus(
+      linkedApplication && resettableStatuses.includes(linkedApplication.status)
+        ? `Analysis version ${result.version} saved. The linked application's evidence confirmation was reset - review it again before marking Ready.`
+        : `Analysis version ${result.version} saved.`,
+    );
   };
   const prepare = () => {
     const existing = state.applications.find((item) => item.jobId === job.id);
