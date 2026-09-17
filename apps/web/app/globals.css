@@ -8512,6 +8512,17 @@ h4 {
   padding: 12px;
 }
 
+/* On the pricing page the bottom-right corner sits directly over the
+   highlighted (paid) plan's CTA at first paint, before the visitor has
+   dismissed the banner. Anchoring it bottom-left there instead means any
+   undismissed overlap falls on the Free tier's non-revenue CTA. */
+@media (min-width: 601px) {
+  body:has(.pricing-shell) .consent-banner {
+    left: 18px;
+    right: auto;
+  }
+}
+
 .consent-banner p {
   margin: 0;
   color: var(--text);

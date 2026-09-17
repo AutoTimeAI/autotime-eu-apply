@@ -1891,3 +1891,32 @@ Documented honestly rather than silently glossed over:
   `/api/ai/content`, and `/api/stripe/checkout` all now return `401` with
   `Content-Type: application/json` instead of a `307` to `/login`.
 - `pnpm test:unit` and `pnpm --filter web typecheck` both clean.
+
+## 2026-09-17 — Admin API sweep + real pricing-page overlap bug
+
+- Swept all 17 `/api/admin/*` routes: confirmed every one consistently uses
+  `requireAdminRequest` for auth and `safeAdminError` for redacted error
+  responses (no stragglers, unlike the pattern fixed yesterday in the AI
+  and mobility routes). No fix needed here - a genuine "nothing found"
+  result.
+- Visual sweep of `/pricing` at 1440x900 found a real, verified overlap:
+  the fixed-position `.consent-banner` (bottom: 18px, right: 18px) sits
+  directly over the "Pro Quarterly" (highlighted/paid) plan's last three
+  feature bullets and its CTA button, at the actual initial scroll
+  position - confirmed via `getBoundingClientRect()` (banner spans
+  y:744-882 in a 900px-tall viewport) and a non-fullPage viewport
+  screenshot, not a `fullPage` capture artifact this time. Before
+  responding to the consent prompt, a first-time visitor cannot see or
+  click the revenue-critical upgrade CTA without first dismissing the
+  banner.
+- Fix: on the pricing page only (`body:has(.pricing-shell)`, desktop
+  widths), anchor the banner to the bottom-left instead of bottom-right.
+  Any undismissed overlap now falls on the Free tier's non-revenue "Open
+  dashboard" CTA instead of the paid plans. Mobile is unaffected (already
+  a single-column stacked layout where only the Free card is in view at
+  load, and the existing `max-width: 600px` override still applies
+  unchanged).
+- Verified live: banner's `getBoundingClientRect().x` moved from 1062 to
+  18; a follow-up screenshot confirms both paid cards' full feature lists
+  and CTA buttons are now fully visible and unobstructed at initial load.
+- `pnpm test:unit` clean.
