@@ -1644,6 +1644,19 @@ Documented honestly rather than silently glossed over:
   the just-deleted application resurrected by this POST's insert. Same
   underlying architecture fix (proper CAS/tombstone design for this
   table) would close both; still not attempted here for the same reason.
+  **Update, 2026-09-17: the TOCTOU/resurrection half of this is now
+  fixed** - the route re-runs the same tombstone check immediately before
+  the `applications` upsert, so a `DELETE` landing in that window is
+  caught and the application is routed to `deletedApplicationIds` instead
+  of being resurrected. This didn't need the broader CAS redesign, so it
+  was safe to close on its own. **The lost-update-via-edit half is still
+  open**: a web-dashboard status edit racing an extension sync's
+  read-merge-write cycle can still be silently overwritten by stale
+  merged data - that still needs the real per-row CAS design described
+  above, not attempted here for the same reason as before. New
+  regression test: `scripts/sync-dashboard-tombstone-recheck.test.mjs`,
+  now wired into `pnpm test:unit` (confirmed to fail against the
+  pre-fix source before verifying the fix passes it).
 - **Two accepted dependency-review exceptions**, both allow-listed in
   `dependency-review.yml` with justification recorded in the workflow
   itself, not silently ignored - revisit each if/when an upstream fix
