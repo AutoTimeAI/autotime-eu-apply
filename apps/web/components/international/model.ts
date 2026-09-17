@@ -1,4 +1,8 @@
-import { supportedExplorerCountries, type MobilityProfile } from "shared";
+import {
+  fullCountryDisplayNames,
+  supportedExplorerCountries,
+  type MobilityProfile,
+} from "shared";
 
 export type InternationalSection =
   | "overview"
@@ -7,7 +11,16 @@ export type InternationalSection =
   | "employers"
   | "sources";
 
-export const fullCountries = ["Ireland", "Germany", "Netherlands"];
+// Derived from the engine's own country-pack registry (not a separately
+// maintained list) since 2026-09-17 - it had silently drifted before: the
+// UK country pack was added with supportLevel: "full" in
+// packages/shared/src/international/assessment.ts, but this list was
+// never updated to match, so a UK-targeting candidate could never select
+// it as a full-support country here and fell through to the generic
+// "Other Europe: explore and verify" tier instead, understating a
+// capability the engine already had. Deriving from the shared export
+// means this can't drift again the same way.
+export const fullCountries = fullCountryDisplayNames;
 export const allCountries = [...fullCountries, ...supportedExplorerCountries];
 
 export const positionLabels: Record<

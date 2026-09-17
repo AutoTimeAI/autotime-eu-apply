@@ -1517,6 +1517,42 @@ suite (175 tests), sponsorship-readiness suite (9 tests, including
 orchestration suite (13 tests, including the live Stamp4-verified-Apply
 case) all pass unchanged. Full `pnpm test:unit` passes.
 
+## UK missing from the Countries page's full-support tier - 2026-09-17
+
+Found doing a live visual sweep across every dashboard page (asked
+directly to find something broken, not from a bug report). The
+Countries overview's "Choose a hiring country" grid showed only
+Ireland/Germany/Netherlands as "Full pathway intelligence"; everything
+else fell through to the generic "Other Europe: explore and verify"
+tier. But `packages/shared/src/international/country-packs/uk.ts`
+already exists with `supportLevel: "full"`, real GOV.UK sources, and
+is one of the four countries Stamp4's statutory-threshold engine
+covers - `apps/web/components/international/model.ts`'s own
+hardcoded `fullCountries = ["Ireland", "Germany", "Netherlands"]`
+array was simply never updated when the UK country pack was added, so
+a UK-targeting candidate could select the UK as their profile's target
+country but the Countries page itself never surfaced it as a
+full-support option, understating a capability the engine already had.
+
+Fixed at the root, not just the symptom: exported
+`fullCountryDisplayNames` from `assessment.ts` (derived from the same
+`fullCountryPacks` array `getInternationalCountryPack` itself uses,
+not a separately maintained list), and changed `model.ts`'s
+`fullCountries` to derive from that export instead of hardcoding its
+own copy. This is the same drift-prevention shape as other fixes
+today (single source of truth instead of two lists that have to be
+kept in sync by hand) - if a fifth full-support country pack is added
+in the future, the UI picks it up automatically instead of silently
+falling behind again.
+
+Verified live in a real browser both before and after the fix
+(screenshot evidence: UK absent, then present as "Full pathway
+intelligence" alongside Ireland/Germany/Netherlands, correctly
+resolving to the real UK country pack's Skilled Worker visa/GOV.UK
+content on selection). `pnpm typecheck` clean across shared and web;
+international-orchestration suite (13 tests) and country-fit suite
+(12 tests) pass unchanged; full `pnpm test:unit` passes.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:

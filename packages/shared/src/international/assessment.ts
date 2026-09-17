@@ -25,6 +25,20 @@ const fullCountryPacks = [
   netherlandsCountryPack,
   ukCountryPack,
 ];
+/**
+ * Display names of every country with a dedicated, supportLevel: "full"
+ * CountryPack - the single source of truth for which countries actually
+ * get full pathway intelligence. Added 2026-09-17 after
+ * apps/web/components/international/model.ts's own hardcoded
+ * `fullCountries` list silently drifted from this one: the UK country
+ * pack was added here but that UI list was never updated, so a
+ * UK-targeting candidate never saw "Full pathway intelligence" for it
+ * despite the engine fully supporting it. The UI should derive from this
+ * export instead of maintaining its own parallel list.
+ */
+export const fullCountryDisplayNames = fullCountryPacks.map(
+  (pack) => pack.displayName,
+);
 /** Countries with generic "explorer" coverage (see country-packs/european-explorer.ts) rather than a dedicated pack - listed for UI display, not used to gate assessInternationalJob's own pack lookup. */
 export const supportedExplorerCountries = [
   "Belgium",
