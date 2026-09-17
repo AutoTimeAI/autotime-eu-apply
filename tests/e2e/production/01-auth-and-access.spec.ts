@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { bootstrapQaSession, getProductionOrigin, gotoProduction } from "./helpers"
+import { bootstrapQaSession, getProductionOrigin, gotoProduction, invalidateQaSessionCache } from "./helpers"
 
 // QA authentication and dashboard access, unauthenticated access/redirects,
 // and sign-out - against real production, using the dedicated QA test
@@ -69,6 +69,11 @@ test.describe("sign-out", () => {
     await page.locator(".user-nav-trigger").click()
     await page.getByRole("menuitem", { name: "Sign out" }).click()
     await expect(page).toHaveURL(/\/(login)?(\?.*)?$/, { timeout: 15_000 })
+    // This test's own sign-out just revoked the session helpers.ts cached
+    // for reuse across every other spec file - drop it so the next
+    // bootstrapQaSession call re-authenticates for real instead of
+    // reinjecting now-invalid cookies.
+    invalidateQaSessionCache()
 
     await gotoProduction(page, "/dashboard")
     await expect(page).toHaveURL(/\/login/)
