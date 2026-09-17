@@ -1,0 +1,21 @@
+market,portfolio_wave,desk_research_level,primary_source_chain,route_disambiguation,salary_or_list_versioning,employer_data,internal_cases,expert_signoff,regulatory_scope,production_status,principal_blocker
+Germany,1,R1,strong_partial,structured_specification,current_2026_parameters,not_route_central,specification_16_cases,missing,missing,research_only,Statutory cross-reference review executable corpus and expert sign-off
+Netherlands,1,R1,strong_partial,structured_hsm_and_blue_card,current_2026_parameters,official_register_unresolved_entities,specification_18_cases,missing,missing,research_only,Dutch legal reconciliation entity benchmark and expert sign-off
+Ireland,2,R1,partial,partial,partial,unknown,missing,missing,missing,research_only,Occupation mapping and case corpus
+France,2,R1,partial,partial,partial,not_route_central,missing,missing,missing,research_only,Bilingual rule chain and parallel routes
+Sweden,2,R1,partial,partial,partial,not_route_central,missing,missing,missing,research_only,Ordinary permit comparison and cases
+Spain,2,R1,strong,partial,current_2026_values,unknown,missing,missing,missing,research_only,Occupation catalogue cases and expert review
+Austria,3,R1,partial,partial,partial,not_route_central,missing,missing,missing,research_only,Full route comparison and point cases
+Denmark,3,R1,partial,partial,partial,certified_employer_data_pending,missing,missing,missing,research_only,Positive List extraction and Fast-track employer chain
+Finland,3,R1,partial,partial,partial,employer_supplements_application,missing,missing,missing,research_only,Primary law general overlays and cases
+Belgium,3,R1,eu_plus_brussels,partial,stale_regional_values,unknown,missing,missing,missing,research_only,Current thresholds for all regions/communities
+Luxembourg,3,R1,partial,partial,partial,adem_declaration_only,missing,missing,missing,research_only,Underlying law and expert review
+Portugal,3,R1,partial,partial,stale_page_values,tech_visa_data_pending,missing,missing,missing,research_only,Resolve current values validity contradiction and operations
+Estonia,3,R1,partial,partial,formula_requires_statistics_value,employer_invitation_and_consent,missing,missing,missing,research_only,Route-clause map current salary value and cases
+Poland,research,R1,partial,partial,2025_value_needs_confirmation,unknown,missing,missing,missing,research_only,Current Polish implementation contract period and threshold
+Czechia,research,R1,partial,partial,formula_requires_average_value,registered_blue_card_vacancy,missing,missing,missing,research_only,Numeric threshold bilingual review and cases
+Italy,research,R1,partial,partial,2024_value_stale,employer_process,missing,missing,missing,research_only,Current threshold national legal chain and cases
+Lithuania,research,R1,partial,partial,formula_known_inputs_stale,employer_required,missing,missing,missing,research_only,Current wage shortage list and national Article 44-1 chain
+Norway,separate,R1,partial,partial,contextual,employer_confirmation,missing,missing,missing,research_only,Operational job/pay assessment
+Switzerland,separate,R1,partial,partial,contextual,employer_evidence,missing,missing,missing,manual_research_only,Cantonal practice quotas and priority
+United Kingdom,separate,R1,partial,partial,partial,official_register,missing,missing,written_opinion_required,information_only,IAA scope and expert arrangement

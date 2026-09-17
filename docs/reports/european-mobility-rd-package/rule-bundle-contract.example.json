@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "0.1-research",
+  "status": "draft_not_for_production",
+  "bundleId": "nl-hsm-2026-research-example",
+  "jurisdiction": "NL",
+  "routeId": "highly-skilled-migrant",
+  "semanticVersion": "0.0.1",
+  "effectiveFrom": "2026-01-01",
+  "effectiveTo": "2026-12-31",
+  "knowledgeCutoff": "2026-09-10T00:00:00Z",
+  "sourceRevisionIds": [
+    "NL-001@2026-09-10",
+    "NL-002@2026-09-10",
+    "NL-003@2026-09-10",
+    "NL-006@2026-09-10"
+  ],
+  "rules": [
+    {
+      "ruleId": "NL-HSM-02",
+      "description": "The employing legal entity must be recognised by the IND for the HSM route.",
+      "factPaths": ["employer.indRecognisedSponsorAssertion"],
+      "operator": "assertion_is_current_and_confirmed",
+      "parameter": {
+        "register": "ind-public-register-work",
+        "requiredMatchTier": "exact_identifier"
+      },
+      "applicability": { "operator": "always" },
+      "onPass": "continue",
+      "onFail": "verification_required",
+      "sourceClaimIds": ["NL-001#recognised-sponsor", "NL-003#register-semantics"],
+      "explanationTemplateId": "nl-hsm-recognised-sponsor-v1"
+    },
+    {
+      "ruleId": "NL-HSM-SALARY-BAND",
+      "description": "Select exactly one salary band from supported age/reduced-category evidence.",
+      "factPaths": [
+        "candidate.ageAtApplication",
+        "candidate.reducedCriterionEvidence",
+        "job.qualifyingMonthlySalaryExcludingHolidayPay"
+      ],
+      "operator": "conditional_threshold",
+      "parameter": {
+        "currency": "EUR",
+        "period": "month",
+        "bands": [
+          {
+            "id": "reduced",
+            "when": "reducedCriterionEvidence=confirmed",
+            "minimum": 3122
+          },
+          {
+            "id": "under-30",
+            "when": "reducedCriterionEvidence=not_applicable AND ageAtApplication<30",
+            "minimum": 4357
+          },
+          {
+            "id": "age-30-plus",
+            "when": "reducedCriterionEvidence=not_applicable AND ageAtApplication>=30",
+            "minimum": 5942
+          }
+        ]
+      },
+      "applicability": { "operator": "always" },
+      "onPass": "continue",
+      "onFail": "criteria_not_indicated",
+      "sourceClaimIds": ["NL-002#2026-hsm-amounts"],
+      "explanationTemplateId": "nl-hsm-salary-v1"
+    },
+    {
+      "ruleId": "NL-HSM-07",
+      "description": "Salary must be in line with the market rate.",
+      "factPaths": ["job.marketRateAssessment"],
+      "operator": "status_equals",
+      "parameter": "confirmed",
+      "applicability": { "operator": "always" },
+      "onPass": "criteria_indicated",
+      "onFail": "verification_required",
+      "sourceClaimIds": ["NL-001#market-rate", "NL-006#uwv-assessment"],
+      "explanationTemplateId": "nl-hsm-market-rate-v1"
+    }
+  ],
+  "testCorpusHash": "PENDING_EXPERT_LABELLED_CORPUS",
+  "reviewerSignoffs": [],
+  "releasePolicy": {
+    "productionAllowed": false,
+    "positiveUserWordingAllowed": false,
+    "reason": "Research interface example; primary-law reconciliation, complete rules, tests and expert sign-off are pending."
+  }
+}

@@ -1,0 +1,2 @@
+experiment_id,cohort_id,participant_id,segment,country_corridor,acquisition_channel,offer_version,price_currency,price_amount,qualified_at,checkout_started_at,paid_at,refunded_at,delivery_completed_at,distinct_vacancies,repeat_paid_at,source_ops_minutes,expert_minutes,support_minutes,inference_cost,payment_fees,other_variable_cost,net_revenue,contribution,exclusion_reason,notes
+PILOT-001,,,,DE-NL,,,,,,,,,,,,,,,,,,,,,

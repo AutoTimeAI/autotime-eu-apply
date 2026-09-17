@@ -1,0 +1,25 @@
+ticket_id,epic,priority,title,principal_scope,depends_on,acceptance_evidence,external_gate,release_mode
+MOB-001,decision-convergence,P0,Map every live decision caller,"dashboard; workflow; API; extension",,"ADR plus runtime/contract tests proving callers and inputs",none,internal
+MOB-002,decision-convergence,P0,Select canonical route-assessment contract,"shared international and legacy fit paths",MOB-001,"ADR; adapter plan; prohibited new imports check",architecture review,internal
+MOB-003,source-platform,P0,Create immutable source definition and revision schema,"database; RLS; typed repository",MOB-002,"migration test; append-only policy; hash fixture; rollback",privacy retention review,internal
+MOB-004,source-platform,P0,Create atomic claim and source-link schema,"database; shared schemas",MOB-003,"support contradict supersede links with exact locator tests",legal source hierarchy review,internal
+MOB-005,source-platform,P0,Implement source diff and materiality queue,"scheduled ingestion; admin review",MOB-003,"two revisions produce reviewable diff and affected claims",human materiality owner,internal
+MOB-006,rule-engine,P0,Implement constrained rule-bundle schema,"shared package",MOB-004,"schema rejects arbitrary operators unsigned or invalid intervals",DE/NL reviewer input,internal
+MOB-007,rule-engine,P0,Implement deterministic three-valued evaluator,"shared package",MOB-006,"true false unknown conflict stale propagation tests",none,internal
+MOB-008,rule-engine,P0,Encode DE research-only bundle,"country rules and sources","MOB-006;MOB-007","Germany benchmark parses and deterministic subset passes",German expert sign-off,private_evaluation
+MOB-009,rule-engine,P0,Encode NL HSM and Blue Card research-only bundles,"country rules and sources","MOB-006;MOB-007","Dutch benchmark parses and deterministic subset passes",Dutch expert sign-off,private_evaluation
+MOB-010,decision-records,P0,Persist immutable decision snapshots and traces,"database; service layer","MOB-007","same canonical input/bundle has stable hash; update denied",retention/legal review,internal
+MOB-011,decision-records,P0,Implement as-decided and as-current replay,"service; admin/user explanation","MOB-010;MOB-005","100% original replay; intelligible rule/source delta",none,internal
+MOB-012,employer-graph,P0,Import versioned IND sponsor assertions,"ingestion; database; admin","MOB-003","organisation KVK revision/date preserved; monthly update test",source terms review,internal
+MOB-013,employer-graph,P0,Implement precision-first legal-entity matching,"shared service; UI",MOB-012,"fuzzy/alias/subsidiary never auto-verified; labelled precision report",manual labels,private_evaluation
+MOB-014,evidence,P0,Add immutable evidence revisions and source spans,"existing evidence model; persistence",MOB-004,"claims resolve exact revision/spans; inferred facts require confirmation",DPIA,internal
+MOB-015,evidence,P0,Enforce claim-to-evidence export/content gate,"application generation and export",MOB-014,"stale conflict orphan and unsupported claims blocked",output policy review,internal
+MOB-016,corrections,P1,Implement correction and affected-decision workflow,"database; admin; user",MOB-010,"critical correction freezes bundle and lists affected decisions",incident owner,internal
+MOB-017,signoff,P1,Bind expert sign-off to bundle source and corpus hashes,"database; admin release gate","MOB-008;MOB-009","changed hash invalidates sign-off automatically",verified DE/NL experts,internal
+MOB-018,trust-ux,P1,Render separated route status product action and evidence limits,"web and extension surfaces","MOB-011;MOB-015","status snapshots; accessibility; client cannot strengthen server policy",UAT comprehension,private_evaluation
+MOB-019,telemetry,P1,Instrument trust behaviour payment and delivery-cost events,"analytics; billing; operations",MOB-018,"event dictionary consent deletion and Stripe reconciliation tests",DPIA and real cohort,private_beta
+MOB-020,operations,P1,Run critical source-change and rollback drill,"source; rule; replay; incident","MOB-005;MOB-011;MOB-016;MOB-017","freeze replace replay notification decision and signed report",reviewer/on-call coverage,private_beta
+MOB-021,production,P1,Verify Stripe Resend Sentry and store extension,"production integrations",MOB-019,"provider and AutoTime evidence per production verification plan",live accounts and permissions,private_beta
+MOB-022,privacy,P1,Verify export deletion cascade and recovery,"all stores/vendors/backups","MOB-010;MOB-014;MOB-019","synthetic production account expected-versus-observed report",DPO approval,private_beta
+MOB-023,evaluation,P0,Convert 40-case specification into executable corpus,"test harness; fixtures","MOB-007;MOB-008;MOB-009","case IDs in CI; blind holdout isolated; release report generated",expert labels,private_evaluation
+MOB-024,legacy-retirement,P2,Retire legacy decision writes after shadow reconciliation,"fit model consumers and migrations","MOB-002;MOB-010;MOB-023","zero live imports/writes; rollback retained; data reconciliation",architecture owner,private_beta

@@ -1,0 +1,41 @@
+case_id,country,route,scenario,expected_route_outcome,expected_product_action,critical_assertion,external_label_required
+DE-BC-001,Germany,EU Blue Card,"General route; EUR 50700 annual; six-month contract; comparable degree; appropriate non-regulated role",criteria_indicated,investigate_or_apply_with_limits,"Never say visa eligible or guaranteed",yes
+DE-BC-002,Germany,EU Blue Card,"General route; EUR 50699.99 annual; no lower-band basis",criteria_not_indicated,investigate_alternative_route,"Boundary below threshold is not rounded up",yes
+DE-BC-003,Germany,EU Blue Card,"Salary exactly EUR 45934.20; confirmed ISCO shortage group; BA handling unresolved",verification_required,investigate_first,"Lower salary alone cannot establish route",yes
+DE-BC-004,Germany,EU Blue Card,"Salary above lower band; role title says software; duties absent",verification_required,investigate_first,"Title cannot establish ISCO mapping",yes
+DE-BC-005,Germany,EU Blue Card,"Recent graduate claimed; graduation date missing",verification_required,request_date,"Reduced criterion is not inferred",yes
+DE-BC-006,Germany,EU Blue Card,"Graduated exactly three years before intended application; otherwise complete",verification_required,expert_boundary_review,"Date inclusivity must be signed",yes
+DE-BC-007,Germany,EU Blue Card,"Foreign computing degree; non-regulated job; no anabin/ZAB evidence",verification_required,request_comparability,"Non-regulated practice is distinct from route evidence",yes
+DE-BC-008,Germany,EU Blue Card,"IT applicant without degree; two years experience in five",criteria_not_indicated,investigate_separate_route,"Do not confuse §18g IT exception with §19c route",yes
+DE-BC-009,Germany,EU Blue Card,"IT applicant without degree; three years in prior seven; duties evidence incomplete",verification_required,request_experience_duties,"Duration alone does not prove level or relevance",yes
+DE-BC-010,Germany,EU Blue Card,"Contract duration 5 months 29 days; all other encoded facts pass",criteria_not_indicated,investigate_alternative,"Six-month boundary enforced",yes
+DE-BC-011,Germany,EU Blue Card,"Contract says six months but start/end dates conflict",verification_required,resolve_conflict,"Conflict overrides positive extraction",yes
+DE-BC-012,Germany,EU Blue Card,"Regulated profession; practice permission unknown",verification_required,request_official_confirmation,"Unknown regulated status blocks positive conclusion",yes
+DE-BC-013,Germany,EU Blue Card,"EUR 4300 monthly supplied; guaranteed annual amount and pay frequency absent",verification_required,request_contract_salary,"No unsafe annualisation",yes
+DE-BC-014,Germany,EU Blue Card,"Threshold source revision expired yesterday; all candidate facts pass",route_not_evaluated,freeze_and_refresh,"Expired rule pack cannot return positive",no
+DE-BC-015,Germany,EU Blue Card,"Old decision under 2025 bundle replayed after 2026 threshold update",criteria_indicated,replay_with_delta,"As-decided immutable; as-current explains delta",yes
+DE-BC-016,Germany,EU Blue Card,"Vacancy says no visa sponsorship; route facts otherwise pass",criteria_indicated,skip_or_employer_blocked,"Route criteria and application decision remain separate",yes
+NL-HSM-001,Netherlands,Highly Skilled Migrant,"Age 30; EUR 5942 monthly excluding holiday pay; exact KVK sponsor match; market rate unknown",verification_required,investigate_first,"Threshold pass cannot override market-rate unknown",yes
+NL-HSM-002,Netherlands,Highly Skilled Migrant,"Age 29; EUR 4357 monthly; exact sponsor; market-conform evidence supplied",criteria_indicated,investigate_or_apply_with_limits,"Use age at legally relevant date",yes
+NL-HSM-003,Netherlands,Highly Skilled Migrant,"Age 30; EUR 4357 monthly; no reduced-category basis",criteria_not_indicated,investigate_alternative,"Under-30 band not applied at age 30",yes
+NL-HSM-004,Netherlands,Highly Skilled Migrant,"Reduced EUR 3122 salary; user merely says recent graduate",verification_required,request_reduced_category_evidence,"Reduced band is conditional",yes
+NL-HSM-005,Netherlands,Highly Skilled Migrant,"Salary includes annual holiday allowance to reach EUR 5942",criteria_not_indicated,request_qualifying_salary,"Holiday allowance excluded",yes
+NL-HSM-006,Netherlands,Highly Skilled Migrant,"Base below threshold; uncertain annual bonus would exceed it",criteria_not_indicated,request_qualifying_salary,"Uncertain pay excluded",yes
+NL-HSM-007,Netherlands,Highly Skilled Migrant,"Fixed thirteenth month contractually guaranteed but paid annually",criteria_not_indicated_or_verification_required,expert_boundary_review,"Monthly-payment condition evaluated",yes
+NL-HSM-008,Netherlands,Highly Skilled Migrant,"Employer brand matches register name; employing subsidiary differs",verification_required,resolve_legal_entity,"Brand match never becomes confirmed sponsor",yes
+NL-HSM-009,Netherlands,Highly Skilled Migrant,"Exact organisation name but KVK differs",verification_required,resolve_legal_entity,"KVK conflict overrides name similarity",yes
+NL-HSM-010,Netherlands,Highly Skilled Migrant,"Exact KVK sponsor match; vacancy explicitly says no sponsorship",criteria_indicated,skip_or_employer_blocked,"Register recognition is not vacancy willingness",yes
+NL-HSM-011,Netherlands,Highly Skilled Migrant,"Register snapshot older than configured monthly freshness limit",verification_required,refresh_register,"Stale register cannot verify current status",no
+NL-HSM-012,Netherlands,Highly Skilled Migrant,"Salary threshold and sponsor pass; salary appears far above comparable role but market-rate evidence absent",verification_required,investigate_market_rate,"High salary does not automatically prove market conformity",yes
+NL-BC-001,Netherlands,EU Blue Card,"Employer not recognised sponsor; all Blue Card-specific employer and candidate facts pass",criteria_indicated,investigate_or_apply_with_limits,"Do not require recognised sponsor for Dutch Blue Card",yes
+NL-BC-002,Netherlands,EU Blue Card,"EUR 4754 reduced threshold; graduation date within three years; six-month contract",criteria_indicated,investigate_or_apply_with_limits,"Reduced Blue Card is distinct from reduced HSM",yes
+NL-BC-003,Netherlands,EU Blue Card,"IT professional; three relevant years in prior seven; no degree; six-month contract and salary pass",criteria_indicated,investigate_or_apply_with_limits,"Experience alternative evaluated only for in-scope IT mapping",yes
+NL-BC-004,Netherlands,EU Blue Card,"Non-IT applicant; three years experience; no qualifying degree",criteria_not_indicated,investigate_alternative,"IT experience exception not generalised",yes
+NL-BC-005,Netherlands,EU Blue Card,"Employer fine within prior five years alleged but evidence conflicts",verification_required,resolve_conflict,"Employer enforcement criterion not guessed",yes
+NL-BC-006,Netherlands,EU Blue Card,"Five-month contract; other facts pass",criteria_not_indicated,investigate_alternative,"Six-month boundary enforced",yes
+X-001,Cross-market,All,"Candidate is EU citizen but flow selects sponsorship-required route",route_not_evaluated,correct_profile_or_route,"Contradictory work-right state resolved before evaluation",yes
+X-002,Cross-market,All,"Official guidance and current notice disagree on threshold",verification_required,freeze_and_triage,"No source chosen silently",yes
+X-003,Cross-market,All,"A required evidence link references a deleted fact",verification_required,repair_integrity,"Orphan link blocks material claim",no
+X-004,Cross-market,All,"Same immutable input and bundle evaluated twice",same_as_original,no_user_visible_change,"Canonical output hash is deterministic",no
+X-005,Cross-market,All,"Correction is accepted after original decision",same_as_original,append_correction_and_replay,"Original record never mutated",no
+X-006,Cross-market,All,"Expert sign-off exists for earlier bundle but current bundle changed materially",route_not_evaluated,request_new_signoff,"Sign-off is exact-version scoped",yes
