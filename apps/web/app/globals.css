@@ -2139,6 +2139,15 @@ h4 {
   margin-bottom: 0;
 }
 
+/* The Account panel's <h2> renders the user's raw email address, which has
+   no natural break points a browser reliably wraps at (e.g.
+   "agent-browser@autotime.test" overflowed its card, clipped by the
+   container instead of wrapping onto a second line) - allow breaking
+   anywhere as a fallback once a real word boundary isn't available. */
+.settings-control-panel .section-heading h2 {
+  overflow-wrap: anywhere;
+}
+
 .settings-control-grid > .status-banner {
   grid-column: 1 / -1;
 }

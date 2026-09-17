@@ -22,7 +22,13 @@ export function OutreachDraftForm({ jobs, initialJobId = "", selectedContact, on
   }, [selectedContact]);
   return <section className="workflow-editor"><h3>Draft outreach</h3><p>AutoTime drafts only. You review, copy, and send it yourself.</p><div className="workflow-form-grid">
     <label>Tracked application<select value={form.jobId} onChange={(event) => selectJob(event.target.value)}><option value="">Choose an application</option>{jobs.map((job) => <option key={job.id} value={job.id}>{job.role_title || job.title} — {job.company || "Unknown company"}</option>)}</select></label>
-    {(["jobTitle","companyName","recruiterName","recruiterRole","recruiterEmail","candidateSummary"] as const).map((key) => <label key={key}>{key.replace(/([A-Z])/g," $1")}<input value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} /></label>)}
+    {(["jobTitle","companyName","recruiterName","recruiterRole","recruiterEmail","candidateSummary"] as const).map((key) => {
+      // key.replace(/([A-Z])/g," $1") alone turns "jobTitle" into "job
+      // Title" (space inserted, casing untouched) instead of "Job Title" -
+      // the leading .replace(/^./, ...) fixes the first letter's case too.
+      const label = key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
+      return <label key={key}>{label}<input value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} /></label>;
+    })}
     <label className="full-span">Job description<textarea value={form.jobDescription} onChange={(event) => setForm({ ...form, jobDescription: event.target.value })} /></label>
     <label>Strengths (comma separated)<input value={form.strengths} onChange={(event) => setForm({ ...form, strengths: event.target.value })} /></label>
     <label>Contact type<select value={form.contactType} onChange={(event) => setForm({ ...form, contactType: event.target.value })}><option value="recruiter">Recruiter</option><option value="hiring_manager">Hiring manager</option><option value="peer_target_role">Peer in target role</option></select></label>

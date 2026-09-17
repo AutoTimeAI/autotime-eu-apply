@@ -1553,6 +1553,51 @@ content on selection). `pnpm typecheck` clean across shared and web;
 international-orchestration suite (13 tests) and country-fit suite
 (12 tests) pass unchanged; full `pnpm test:unit` passes.
 
+## Full visual sweep of every dashboard page - two real, small fixes - 2026-09-17
+
+Screenshotted every dashboard route in a real headless browser and read
+each one, rather than assuming from code. Most pages were clean; three
+apparent issues turned out to be the same already-confirmed local-dev
+limitation (server-side onboarding/session checks that can't be
+satisfied by a localStorage-only seed, and one Supabase client-side
+call in `AccountIdentityLinker` that legitimately has no browser
+session under the test-auth bypass) - not new findings, correctly not
+re-reported as bugs each time they recurred. `match-score`, `inbox`,
+`application-answers`, and `documents` are confirmed, tested legacy
+redirects, also not bugs.
+
+Two real, small UI bugs found and fixed:
+
+1. **`OutreachDraftForm.tsx`'s generated field labels were
+   miscapitalized** - "job Title", "company Name", "recruiter Name",
+   "recruiter Role", "recruiter Email", "candidate Summary", visibly
+   inconsistent with the correctly-capitalized labels next to them on
+   the same page ("Tracked application", "Contact type", "Channel").
+   Root cause: `key.replace(/([A-Z])/g," $1")` inserts a space before
+   each capital but never fixes the resulting string's casing. Fixed
+   by chaining `.replace(/^./, (c) => c.toUpperCase())`.
+
+2. **The Settings page's account-email `<h2>` had no overflow
+   handling** and visibly overflowed its card
+   (`agent-browser@autotime.test` extended past the container instead
+   of wrapping). Fixed with a scoped `overflow-wrap: anywhere` on
+   `.settings-control-panel .section-heading h2`.
+
+Also noted, not fixed: `/dashboard/extension`'s page does its own
+direct `createServerClient().auth.getUser()` check instead of using
+the shared `getTestAuthUser()` bypass every other dashboard route
+relies on - appropriate for a page that links real accounts (a
+security-sensitive path, not somewhere to weaken auth for
+testability), but it means the page's real authenticated content has
+no e2e coverage today; the one existing test referencing this route
+only checks the nav link's `href`, never renders the page. Left as a
+known gap rather than building new test infrastructure speculatively.
+
+Verified: `pnpm typecheck` clean; both fixes confirmed live via a
+second screenshot pass (labels correctly "Job Title"/"Company
+Name"/etc.; email wraps onto three lines within its card instead of
+overflowing). Full `pnpm test:unit` passes.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
