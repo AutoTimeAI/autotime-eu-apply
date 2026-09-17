@@ -110,14 +110,14 @@ export async function POST(request: Request) {
       );
     if (error instanceof RateLimitError)
       return NextResponse.json(
-        { data: null, error: error.message },
+        { data: null, error: error.message /* safe-error-message: RateLimitError */ },
         { status: 429 },
       );
     if (error instanceof FeatureGateError)
       return NextResponse.json(
         {
           data: { upgradeUrl: getUpgradeUrl(request) },
-          error: error.message,
+          error: error.message /* safe-error-message: FeatureGateError */,
         },
         { status: 402 },
       );
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       {
         data: null,
         error: unavailable
-          ? error.message
+          ? error.message /* safe-error-message: RoleIntelligenceUnavailableError */
           : "Role Pathways generation failed safely.",
       },
       { status: unavailable ? 503 : 500 },

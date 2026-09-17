@@ -18,6 +18,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 
 const contactType = z.enum(["recruiter", "hiring_manager", "peer_target_role"]);
 const httpUrl = z.string().trim().max(2_000).refine((value) => {
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
   const { user } = await getRequestUser(request);
   if (!user) return NextResponse.json({ data: null, error: "Unauthorised" }, { status: 401 });
   const { data, error } = await createAdminClient().from("outreach_contacts").select("id,name,role,company,email,profile_url,contact_type,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(500);
-  return NextResponse.json({ data: data ?? [], error: error?.message ?? null }, { status: error ? 500 : 200 });
+  return NextResponse.json({ data: data ?? [], error: error ? toPublicApiError(error.message, 500) : null }, { status: error ? 500 : 200 });
 }
 
 /**
@@ -92,6 +93,8 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ data: { imported: insertable.length, duplicates: body.contacts.length - insertable.length }, error: null });
   } catch (error) {
-    return NextResponse.json({ data: null, error: error instanceof z.ZodError ? error.issues[0]?.message : error instanceof Error ? error.message : "Contact import failed" }, { status: error instanceof z.ZodError ? 400 : 500 });
+    const status = error instanceof z.ZodError ? 400 : 500;
+    const message = error instanceof z.ZodError ? error.issues[0]?.message ?? "Contact import failed" : error instanceof Error ? error.message : "Contact import failed";
+    return NextResponse.json({ data: null, error: toPublicApiError(message, status) }, { status });
   }
 }

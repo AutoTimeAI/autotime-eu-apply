@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 
 const requestSchema = z.object({
   frequency: z.enum(["daily", "weekly", "off"]),
@@ -49,17 +50,16 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ data, error: null });
   } catch (error: unknown) {
+    const status = error instanceof z.ZodError ? 400 : 500;
+    const message =
+      error instanceof z.ZodError
+        ? "Choose daily, weekly or off"
+        : error instanceof Error
+          ? error.message
+          : "Job alert preference could not be saved";
     return NextResponse.json(
-      {
-        data: null,
-        error:
-          error instanceof z.ZodError
-            ? "Choose daily, weekly or off"
-            : error instanceof Error
-              ? error.message
-              : "Job alert preference could not be saved",
-      },
-      { status: error instanceof z.ZodError ? 400 : 500 },
+      { data: null, error: toPublicApiError(message, status) },
+      { status },
     );
   }
 }
