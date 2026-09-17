@@ -1860,3 +1860,34 @@ Documented honestly rather than silently glossed over:
   script under Playwright's default `waitUntil: "load"`. Treated as test
   flakiness, not a functional regression, since the interview was created
   and the app state was correct at failure time.
+
+## 2026-09-17 — Real bug found and fixed: protected API routes redirected instead of erroring
+
+- Root cause of the earlier "stale deployment" theory turned out wrong: the
+  redeploy didn't change the behavior. Traced it to `apps/web/proxy.ts`
+  (Next.js's middleware-equivalent), which via `lib/proxy-policy.ts`
+  treats `/api/admin`, `/api/ai`, `/api/diagnostics`, and `/api/stripe` as
+  "protected" the same way it treats page routes: an unauthenticated
+  request is 307-redirected to `/login`'s HTML page *before* the route
+  handler runs, even though each of these routes' own code already
+  returns a proper JSON 401/403 (confirmed by reading
+  `api/diagnostics/health/route.ts` directly). `/api/mobility/*` isn't in
+  the protected-prefix list, so it reaches its own handler and returns
+  correct JSON - that inconsistency is what originally surfaced this.
+- Real, reachable impact: client-side `fetch()` follows same-origin
+  redirects automatically, so `JobApplicationWorkspace.tsx`'s AI-kit
+  generation call to `/api/ai/content` and `PricingCard.tsx`'s Stripe
+  checkout/portal calls, when made with an expired session, silently got
+  back the login page's HTML with `status 200/ok:true`. Their
+  `await response.json()` then threw a `SyntaxError`, surfacing to the
+  user as a generic "try again shortly" instead of prompting
+  re-authentication - and retrying would repeat the same failure forever.
+- Fix: `proxy.ts` now branches on `pathname.startsWith("/api/")` before
+  redirecting - protected API paths get the same JSON 401 shape their own
+  handlers already use; only page routes still get the HTML redirect.
+  Added a regression test asserting this branch exists in
+  `environment-boundaries.test.mjs`.
+- Verified live in production after redeploy: `/api/diagnostics/health`,
+  `/api/ai/content`, and `/api/stripe/checkout` all now return `401` with
+  `Content-Type: application/json` instead of a `307` to `/login`.
+- `pnpm test:unit` and `pnpm --filter web typecheck` both clean.
