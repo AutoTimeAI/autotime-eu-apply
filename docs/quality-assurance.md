@@ -1240,6 +1240,55 @@ Currently populated from the 2-case real-vacancy starter corpus - will
 regenerate with more rows once the 30-50 case corpus exists (master plan
 §6 step 3, blocked on slice selection, not on this tooling).
 
+## Production outage found and fixed; deploy smoke test blind spot closed - 2026-09-17
+
+A real production incident, found and fixed the same session. After the
+first successful manual production deployment of the day (workflow run
+35233160144), `pnpm test:e2e`'s live `tests/e2e/production/*` specs failed
+in ways that first looked like a possible auth bypass: an unauthenticated
+visit to `/dashboard` returned the dashboard instead of redirecting to
+`/login`. Verified directly against production with a clean, cookie-free
+`curl` request (not trusting the test alone): actually a **503 Service
+Unavailable** on every authenticated/backend route -
+`/dashboard`, `/dashboard/jobs`, and `/api/diagnostics/health` all
+returned the app's own redacted "This service is temporarily unavailable"
+503 body, matching the codebase's established
+missing-configuration-fails-closed pattern
+(`apps/web/tests/environment-boundaries.test.mjs`).
+
+Root cause: `NEXT_PUBLIC_SUPABASE_URL` in Vercel's **Production**
+environment (a separate config surface from the `VERCEL_TOKEN` GitHub
+Actions secret fixed earlier the same session) pointed at the wrong
+Supabase project. Founder corrected the value in the Vercel dashboard;
+since `NEXT_PUBLIC_*` vars are baked in at build time, a plain env-var
+edit doesn't retroactively fix an already-built deployment - a fresh
+deploy (workflow run 35244560445) was required and confirmed the fix:
+`/dashboard` now returns `307` to `/login?redirectTo=%2Fdashboard`
+instead of `503`, verified directly, and the two originally-failing
+production e2e specs pass cleanly on an isolated re-run.
+
+**Why the deploy pipeline's own gate didn't catch this**: `pnpm smoke:web`
+(`scripts/smoke-web-dashboard.mjs`), the post-deploy verification step in
+`.github/workflows/production-deploy.yml`, only ever fetched the public
+homepage and checked for marketing-copy text markers - unauthenticated,
+no Supabase dependency, structurally incapable of detecting a broken
+backend. Closed that blind spot: added `runProtectedRouteSmoke()`, which
+fetches `/dashboard` with `redirect: "manual"` and asserts a 3xx redirect
+to login - the correct healthy-unauthenticated response - failing loudly
+on a 5xx (backend/config broken) or a 200 (potential auth bypass) instead.
+Wired into the same `main()` the deploy workflow already calls, so future
+deploys get this check automatically with no workflow-file changes
+needed. Six new unit tests added
+(`scripts/smoke-web-dashboard.test.mjs`), including one that reproduces
+today's exact failure mode (503 instead of a redirect) and asserts the
+new check catches it - verified this isn't just theoretical by directly
+simulating the broken state before the fix existed and confirming it
+failed, then confirming the real, now-healthy production passes both
+checks live.
+
+Run: `pnpm smoke:web` (live) or `pnpm test:smoke:web:unit` (already wired
+into `pnpm test:unit`).
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:

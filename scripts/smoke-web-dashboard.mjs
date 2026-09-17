@@ -38,6 +38,46 @@ function describeFetchError(error) {
   return `${error.message}${causeText}`
 }
 
+// The public homepage check above cannot catch a broken backend - it's
+// unauthenticated marketing copy with no Supabase dependency. Found the hard
+// way (2026-09-17): a Supabase project mismatch in the production
+// environment left every authenticated route returning a redacted 503,
+// while this smoke test kept passing because it only ever checked "/".
+// This second check hits a protected route without following redirects: a
+// healthy deployment 3xx-redirects an unauthenticated visitor to /login
+// (see apps/web/app/dashboard/layout.tsx); a backend/config failure
+// surfaces as a 5xx instead, which this catches and the homepage check
+// cannot.
+export async function runProtectedRouteSmoke({
+  url = defaultUrl,
+  fetchImpl = fetch,
+  path = "/dashboard"
+} = {}) {
+  let response
+  try {
+    response = await fetchImpl(new URL(path, url).toString(), {
+      headers: {
+        "user-agent": "autotime-web-smoke/1.0"
+      },
+      redirect: "manual"
+    })
+  } catch (error) {
+    return {
+      ok: false,
+      message: describeFetchError(error)
+    }
+  }
+
+  if (response.status < 300 || response.status >= 400) {
+    return {
+      ok: false,
+      message: `expected a 3xx redirect to login for an unauthenticated ${path} request, received ${response.status}`
+    }
+  }
+
+  return { ok: true }
+}
+
 export async function runWebDashboardSmoke({
   url = defaultUrl,
   fetchImpl = fetch,
@@ -90,17 +130,23 @@ async function main() {
   const url = getWebSmokeUrl()
   console.log(`Checking AutoTime web dashboard: ${url}`)
 
-  const result = await runWebDashboardSmoke({ url })
-
-  if (result.ok) {
+  const homepageResult = await runWebDashboardSmoke({ url })
+  if (homepageResult.ok) {
     console.log(
       "PASS - deployed web dashboard returned expected Private Beta v1 HTML"
     )
-    return
+  } else {
+    console.error(`FAIL - ${homepageResult.message}`)
+    process.exitCode = 1
   }
 
-  console.error(`FAIL - ${result.message}`)
-  process.exitCode = 1
+  const protectedRouteResult = await runProtectedRouteSmoke({ url })
+  if (protectedRouteResult.ok) {
+    console.log("PASS - protected /dashboard route redirects unauthenticated visitors, backend is reachable")
+  } else {
+    console.error(`FAIL - ${protectedRouteResult.message}`)
+    process.exitCode = 1
+  }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

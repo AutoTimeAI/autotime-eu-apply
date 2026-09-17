@@ -3,6 +3,7 @@ import {
   defaultUrl,
   expectedMarkers,
   getWebSmokeUrl,
+  runProtectedRouteSmoke,
   runWebDashboardSmoke
 } from "./smoke-web-dashboard.mjs"
 
@@ -102,6 +103,67 @@ test("fails with fallback message when request throws an unknown value", async (
   })
 
   assert.deepEqual(result, { ok: false, message: "request failed" })
+})
+
+function createRedirectResponse(status = 307) {
+  return { status }
+}
+
+test("passes when an unauthenticated protected-route request gets a 3xx redirect", async () => {
+  const result = await runProtectedRouteSmoke({
+    url: "https://example.test",
+    fetchImpl: createFetch(createRedirectResponse(307))
+  })
+
+  assert.deepEqual(result, { ok: true })
+})
+
+test("fails when a protected route returns a server error instead of redirecting", async () => {
+  // The exact failure mode found 2026-09-17: a Supabase project mismatch
+  // left /dashboard returning 503 instead of redirecting to /login.
+  const result = await runProtectedRouteSmoke({
+    fetchImpl: createFetch(createRedirectResponse(503))
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /expected a 3xx redirect/)
+  assert.match(result.message, /503/)
+})
+
+test("fails when a protected route returns 200 instead of redirecting (possible auth bypass)", async () => {
+  const result = await runProtectedRouteSmoke({
+    fetchImpl: createFetch(createRedirectResponse(200))
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /expected a 3xx redirect/)
+  assert.match(result.message, /200/)
+})
+
+test("protected-route smoke fetches the given path relative to the base URL", async () => {
+  let requestedUrl
+  const result = await runProtectedRouteSmoke({
+    url: "https://example.test",
+    path: "/dashboard",
+    fetchImpl: async (url) => {
+      requestedUrl = url
+      return createRedirectResponse(307)
+    }
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(requestedUrl, "https://example.test/dashboard")
+})
+
+test("protected-route smoke reports a fetch error the same way the homepage check does", async () => {
+  const result = await runProtectedRouteSmoke({
+    fetchImpl: async () => {
+      throw new Error("network down")
+    }
+  })
+
+  assert.equal(result.ok, false)
+  assert.match(result.message, /network down/)
 })
 
 test("reads default and environment override smoke URLs", () => {
