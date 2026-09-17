@@ -43,3 +43,51 @@ test("workflow inputs are passed through env instead of interpolated in shell", 
   );
   assert.doesNotMatch(workflow, /run:\s*\|[\s\S]*\$\{\{ inputs\./);
 });
+
+// Added 2026-09-17: a bad Production env var left every authenticated
+// route 503ing while the deploy itself still reported success and left
+// the broken build live - the smoke check above catches the failure, but
+// without an automatic rollback, the broken build stayed live until
+// someone noticed the red CI run and rolled back by hand.
+test("a failed post-deploy check automatically rolls production back", () => {
+  const captureIndex = workflow.indexOf(
+    "Capture current production deployment for rollback",
+  );
+  const deployIndex = workflow.indexOf("Build and deploy production");
+  const smokeIndex = workflow.indexOf("Verify deployed surface");
+  const rollbackIndex = workflow.indexOf(
+    "Roll back to previous production deployment",
+  );
+
+  assert.ok(captureIndex > 0, "must capture the previous deployment");
+  assert.ok(
+    captureIndex < deployIndex,
+    "must capture the previous deployment before deploying the new one",
+  );
+  assert.ok(
+    deployIndex < smokeIndex && smokeIndex < rollbackIndex,
+    "rollback step must come after the smoke check it responds to",
+  );
+
+  const rollbackStep = workflow.slice(rollbackIndex);
+  assert.match(rollbackStep, /if: failure\(\) && steps\.previous\.outputs\.url != ''/);
+  assert.match(rollbackStep, /vercel@59\.7\.0 rollback/);
+  assert.match(
+    rollbackStep,
+    /"https:\/\/\$\{\{ steps\.previous\.outputs\.url \}\}"/,
+  );
+});
+
+test("a failure with nothing to roll back to is surfaced loudly, not silently", () => {
+  assert.match(
+    workflow,
+    /if: failure\(\) && steps\.previous\.outputs\.url == ''/,
+  );
+  assert.match(workflow, /::error::/);
+});
+
+test("deployment evidence is only recorded when the deploy actually succeeded", () => {
+  const recordIndex = workflow.indexOf("Record deployment evidence");
+  const recordStep = workflow.slice(recordIndex);
+  assert.match(recordStep, /if: success\(\)/);
+});

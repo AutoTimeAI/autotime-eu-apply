@@ -68,13 +68,42 @@ jobs:
           pnpm typecheck
           pnpm test:mobility-suite
 
+      - name: Link Vercel project
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${VERCEL_TOKEN:?Configure VERCEL_TOKEN in the production GitHub environment}"
+          pnpm dlx vercel@59.7.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      # Captured before the new build goes live, so a failed smoke check
+      # below has something concrete to restore - see "Roll back" step.
+      # Added 2026-09-17 after a bad Production env var left every
+      # authenticated route 503ing while the deploy itself reported
+      # success; the smoke check now catches that (see "Verify deployed
+      # surface"), but without this, a caught failure still left the
+      # broken build live until someone rolled back by hand.
+      - name: Capture current production deployment for rollback
+        id: previous
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${VERCEL_TOKEN:?Configure VERCEL_TOKEN in the production GitHub environment}"
+          response="$(curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_ORG_ID&target=production&state=READY&limit=1")"
+          previous_url="$(echo "$response" | jq -r '.deployments[0].url // empty')"
+          if [ -z "$previous_url" ]; then
+            echo "No existing READY production deployment found - nothing to roll back to (likely the first deploy)."
+          else
+            echo "Current production deployment before this run: https://$previous_url"
+          fi
+          echo "url=$previous_url" >> "$GITHUB_OUTPUT"
+
       - name: Build and deploy production
         id: deploy
         shell: bash
         run: |
           set -euo pipefail
           : "${VERCEL_TOKEN:?Configure VERCEL_TOKEN in the production GitHub environment}"
-          pnpm dlx vercel@59.7.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
           pnpm dlx vercel@59.7.0 build --prod --token="$VERCEL_TOKEN"
           deployment_url="$(pnpm dlx vercel@59.7.0 deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN")"
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
@@ -84,7 +113,35 @@ jobs:
           WEB_SMOKE_URL: ${{ steps.deploy.outputs.url }}
         run: pnpm smoke:web
 
+      # Runs only if a prior step in this job failed (typically the smoke
+      # check above) and there is a previous deployment to restore to.
+      # Vercel's own aliasing already pointed the production domain at the
+      # new (broken) build as part of "vercel deploy --prod" above, so
+      # without this, the broken build stays live until someone notices
+      # the red CI run and rolls back manually.
+      - name: Roll back to previous production deployment
+        if: failure() && steps.previous.outputs.url != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${VERCEL_TOKEN:?Configure VERCEL_TOKEN in the production GitHub environment}"
+          echo "::warning::Deployment verification failed - rolling production back to https://${{ steps.previous.outputs.url }}"
+          pnpm dlx vercel@59.7.0 rollback "https://${{ steps.previous.outputs.url }}" --token="$VERCEL_TOKEN" --yes
+          {
+            echo "## Automatic rollback"
+            echo "- Failed deployment: \`$DEPLOY_SHA\` (${{ steps.deploy.outputs.url }})"
+            echo "- Rolled back to: https://${{ steps.previous.outputs.url }}"
+            echo "- Reason: post-deploy verification (pnpm smoke:web) failed - see the failed step's log above."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Warn when no rollback target exists after a failure
+        if: failure() && steps.previous.outputs.url == ''
+        shell: bash
+        run: |
+          echo "::error::Deployment verification failed and no previous READY production deployment was found to roll back to. Production may currently be serving the broken build at ${{ steps.deploy.outputs.url }} - check manually."
+
       - name: Record deployment evidence
+        if: success()
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
         shell: bash

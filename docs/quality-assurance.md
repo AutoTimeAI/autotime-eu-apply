@@ -1289,6 +1289,37 @@ checks live.
 Run: `pnpm smoke:web` (live) or `pnpm test:smoke:web:unit` (already wired
 into `pnpm test:unit`).
 
+## Automatic rollback added to the deploy workflow - 2026-09-17
+
+Follow-up to the outage above, same day. The new smoke check makes a bad
+deploy fail loudly, but a failed GitHub Actions step alone doesn't undo
+anything - `vercel deploy --prod` already aliases the live production
+domain to the new build the moment it deploys, so the broken build stayed
+live until someone noticed the red run and rolled back by hand.
+
+`.github/workflows/production-deploy.yml` now captures the current
+production deployment's URL (via the Vercel REST API, `target=production`
++ `state=READY`, most recent) **before** deploying the new one, and adds
+a step that runs only `if: failure() && steps.previous.outputs.url != ''`
+- i.e. only when something later in the job (typically the smoke check)
+failed - which runs `vercel rollback` against that captured URL to
+restore the last known-good deployment automatically. A second step
+covers the edge case where no previous deployment exists (first-ever
+deploy) and surfaces that loudly (`::error::`) instead of silently doing
+nothing. "Record deployment evidence" is now gated on `if: success()` so
+a rolled-back run doesn't log itself as a successful deployment.
+
+This does not remove the human step of noticing a failed run and deciding
+whether to re-investigate before retrying - it only makes sure production
+itself isn't left serving the broken build in the meantime.
+
+Verified: `pnpm dlx yaml-lint` confirms the workflow file is still valid
+YAML; three new regression tests in `scripts/manual-production-deploy.test.mjs`
+assert the capture step runs before the deploy step, the rollback step's
+condition and command are correct, the no-previous-deployment case is
+surfaced as an error rather than swallowed, and evidence-recording is
+success-gated. Full `pnpm test:unit` passes.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
