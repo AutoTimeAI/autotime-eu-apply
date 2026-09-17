@@ -1127,6 +1127,78 @@ composed pipeline end to end, which no existing unit test did (every
 orchestration-test fixture passes `riskAreas` directly, bypassing
 fit-model.ts's fallback entirely).
 
+## Real-vacancy evaluation harness - 2026-09-16
+
+Added `scripts/real-vacancy-evaluation.test.mjs` (wired into `pnpm test:unit`
+as `test:real-vacancy-evaluation`), a sibling to
+`scripts/decision-quality-evaluation.test.mjs` but sourcing input from real,
+verbatim-captured job postings instead of hand-fabricated template strings.
+Case data lives in `scripts/real-vacancy-evaluation-cases.mjs`.
+
+This is item C of `docs/reference/landwell-master-execution-plan.md` -
+unblocked, code-only plumbing that does not depend on the founder's
+in-progress slice-selection interviews
+(`docs/investigations/slice-selection-interview-kit.md`).
+
+Two starter cases, both captured 2026-09-16 from arbeitnow.com (real
+company/title/location/description text, sources recorded in the case
+file): MOTOR Ai's "Data Engineer (m/f/d)" (Berlin) and Emma - The Sleep
+Company's "Analytics Engineer, Data Platform" (Frankfurt). Both are real
+examples of the "sponsorship silent" case category
+(`docs/investigations/case-corpus-starter-log.md` already found none of 35
+sampled German data-engineering postings mention sponsorship in the
+listing view) - candidate evidence attached to each is synthetic, since no
+real candidate has been paired with these postings yet.
+
+Deliberately does **not** assert a predetermined "correct" decision the
+way the synthetic benchmark does - there is no blind-reviewer ground-truth
+label for real cases yet (`landwell-tech-system-validation-plan.md` §5.2
+requires the interviews and independent review cycle first). Instead it
+asserts structural well-formedness (decision is one of the three valid
+values, `unknowns` is an array, `reason` is non-empty) and one honesty
+property that does generalise: the engine must never assert "sponsorship
+confirmed/available" when the source posting is silent on it. Both cases
+pass; the engine correctly lands on `"Consider"` for both (partial
+requirements match, sponsorship unresolved) rather than fabricating
+`"Apply"` or `"Insufficient information"`.
+
+Run: `pnpm test:real-vacancy-evaluation`.
+
+Explicitly a 2-case starter, not the 30-50 case corpus the validation plan
+ultimately needs - building that fully waits on slice selection, per the
+plan's own anti-speculation instruction. This proves the harness runs
+against real vacancy text end to end so evaluation is fast the moment a
+slice is chosen.
+
+## Blind-review artifact export - 2026-09-16
+
+Added `scripts/export-blind-review-artifact.mjs`
+(`pnpm export:blind-review-artifact`) - item B of
+`docs/reference/landwell-master-execution-plan.md` §5.3. Per the plan's own
+instruction not to build the missing expert-signoff/rule-bundle admin UI
+speculatively, the first blind-reviewer labeling cycle is satisfied by an
+offline CSV artifact instead.
+
+Reads `scripts/real-vacancy-evaluation-cases.mjs` and writes two files to
+`docs/investigations/`:
+- `blind-review-artifact.csv` - vacancy text + candidate evidence only, for
+  the reviewer, with blank `reviewer_label`/`reviewer_reasoning`/
+  `reviewer_name` columns.
+- `blind-review-artifact-engine-output.csv` - the engine's own decision for
+  the same cases, kept in a **separate** file so the reviewer's label isn't
+  anchored by seeing the engine's answer first.
+
+Usage documented in `docs/investigations/blind-review-instructions.md`,
+including the label scale (`Apply`/`Consider`/`Insufficient information` -
+same three outcomes the product itself produces), the legal/pathway
+reviewer fallback rule from the validation plan, and how agreement
+comparison feeds the failure-taxonomy repair order in step 4 of the master
+plan's sequencing.
+
+Currently populated from the 2-case real-vacancy starter corpus - will
+regenerate with more rows once the 30-50 case corpus exists (master plan
+§6 step 3, blocked on slice selection, not on this tooling).
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
@@ -1320,3 +1392,34 @@ Documented honestly rather than silently glossed over:
   `docs/moat-analysis.md` (#8 Partial to Present, 4/10 capabilities now genuinely built),
   `docs/reference/technical-debt.md`, and `docs/reports/acceptance-gate-audit-2026-09-10.md` to
   match.
+- **Split decision-recording from decision-enforcement in the mobility governance
+  gate, for the LandWell tech-validation pilot.** Audit found
+  `MOBILITY_GOVERNANCE_ENFORCEMENT_ENABLED` coupled two independent concerns in
+  one flag: writing a decision record (`mobility_decision_records`, wanted for
+  the pilot's evaluation corpus) and cross-checking/blocking the live
+  recommendation against `mobility_country_readiness_snapshots` (empty today,
+  so enabling it would have forced every foreign-candidate decision to
+  `"Insufficient evidence"` via the `missingGovernanceReadiness` fallback -
+  traced precisely to `outputPermission: "blocked"` in
+  `mobility-governance-repository.ts:51`). Fixed by adding a second,
+  independent flag (`MOBILITY_DECISION_RECORDING_ENABLED`) and a
+  `recordingClient` path through `decision-adapter.ts` that only attaches
+  pilot governance metadata (`outputPermission: "information_only"`,
+  `reasonCodes: ["PILOT_OBSERVATION_RECORDING"]`) when no real governance
+  snapshot exists - it never reaches `orchestrateJobDecision`, so it cannot
+  change `combined.decision`/blockers. Recording requires a real
+  `mobility_rule_bundle_versions` row to satisfy a NOT NULL foreign key on
+  `mobility_decision_records`; added a migration
+  (`20260916120000_seed_pilot_observation_rule_bundle.sql`) seeding one
+  `'draft'`-state bundle that is never activated and never read by
+  `loadCurrentMobilityReadiness`, so it cannot affect real governance either.
+  Migration not yet applied (Supabase MCP tooling was disconnected mid-session)
+  - recording silently no-ops until it is. Verified: new
+  `scripts/decision-adapter-recording-flag.test.mjs` (3 cases) asserts
+  decision/blockers are byte-identical with and without recording, that
+  recording is a clean no-op when the bundle isn't seeded, and that native
+  candidates (mobility check not applicable) are never touched by the
+  recording client. Also wired this new test and the pre-existing orphaned
+  `test:decision-adapter-target-country` into `pnpm test:unit` (neither was
+  previously in the CI chain). Full `pnpm test:unit` and `pnpm -r typecheck`
+  clean.
