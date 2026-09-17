@@ -1478,6 +1478,45 @@ one this component shares by view kind) rather than the underlying fix
 being wrong, which the live accessibility-tree snapshot at each attempt
 confirmed. Full spec (5 tests) and full `pnpm test:unit` pass.
 
+## Removed dead Stamp4 standalone-service HTTP client - 2026-09-17
+
+Follow-up to the Stamp4-integration trace done earlier this session
+(see the "loop/lag" audit entry above): asked directly whether anything
+from the pre-integration Stamp4 architecture should be voided or
+removed now that its sponsorship-check engine runs in-process.
+
+Found real, confirmed dead code:
+`packages/shared/src/international/stamp4-client.ts` still exported
+`fetchStamp4SponsorshipAssessment` - a 56-line HTTP client that called
+the original standalone Stamp4 microservice over the network with a
+shared bearer secret, explicitly commented "retain this adapter
+temporarily for shadow comparisons and rollback." A full-codebase
+search (including tests and docs) found zero callers anywhere except
+its own definition, and no `STAMP4_SPONSORSHIP_SERVICE_URL`/
+`STAMP4_SPONSORSHIP_SERVICE_SECRET` env vars configured anywhere - the
+standalone deployment this client called no longer exists, and the
+rollback plan the comment described was never actually wired up.
+Because `packages/shared/src/international/index.ts` re-exports this
+file with `export *`, the dead function (and its `Stamp4SponsorshipCheckInput`
+type) was part of the shared package's live public API surface -
+callable by any future code with no indication it was retired.
+
+Removed the function and its now-unused supporting types
+(`Stamp4SponsorshipCheckInput`, the file-local `FetchLike`, the
+now-unneeded `Stamp4SponsorshipAssessment` import). Kept
+`isStamp4SponsorshipCovered` - still live-called from
+`decision-adapter.ts` and the `/api/international/stamp4-check` route -
+and rewrote the file's header comment to state the current
+architecture plainly instead of describing a since-completed
+migration as still in progress.
+
+Verified: `pnpm typecheck` clean across all three workspaces (shared,
+web, extension - shared ships to the extension too), the mobility
+suite (175 tests), sponsorship-readiness suite (9 tests, including
+"integrated Stamp4 sponsorship readiness"), and international-
+orchestration suite (13 tests, including the live Stamp4-verified-Apply
+case) all pass unchanged. Full `pnpm test:unit` passes.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
