@@ -180,6 +180,18 @@ test("protected proxy missing sessions preserve login redirect behavior", () => 
   );
 });
 
+test("proxy redirects unauthenticated page requests but returns JSON for API requests", async () => {
+  const source = await readFile(new URL("../proxy.ts", import.meta.url), "utf8");
+  assert.match(
+    source,
+    /pathname\.startsWith\("\/api\/"\)/,
+    "proxy.ts must branch on API paths before redirecting to the HTML login page, " +
+      "so a fetch() to a protected /api/* route with an expired session gets a JSON " +
+      "401 it can parse instead of following a same-origin redirect to login's HTML " +
+      "and throwing on response.json().",
+  );
+});
+
 test("sync refresh missing configuration maps to a redacted 503", () =>
   isolated(async () => {
     let failure;

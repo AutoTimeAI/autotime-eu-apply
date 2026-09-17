@@ -90,6 +90,27 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       data: { user },
     } = await supabase.auth.getUser()
     if (isProtectedPath(pathname) && !user) {
+      if (pathname.startsWith("/api/")) {
+        logDiagnostic(
+          createDiagnostic({
+            area: "auth",
+            code: "auth.proxy.protected-api-unauthorised",
+            message: "Protected API route requested without a session",
+            request,
+            status: 401,
+          }),
+        )
+
+        return applyAuthCookies({
+          cookiesToSet,
+          headersToSet,
+          response: NextResponse.json(
+            { data: null, error: "Unauthorised", status: 401 },
+            { status: 401 },
+          ),
+        })
+      }
+
       const loginUrl = new URL(
         getUnauthenticatedRedirect(pathname, request.nextUrl.search),
         request.url,
