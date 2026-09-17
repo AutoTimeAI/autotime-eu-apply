@@ -10,12 +10,6 @@ export const netherlandsCountryPack: CountryPack = {
   displayName: "Netherlands",
   supportLevel: "full",
   pathways: ["Highly Skilled Migrant", "European Blue Card"],
-  occupationCategories: [
-    "Technology",
-    "engineering",
-    "science",
-    "highly skilled work",
-  ],
   requiredEvidence: [
     "Dutch employing entity",
     "Recognised-sponsor evidence for the Highly Skilled Migrant route",

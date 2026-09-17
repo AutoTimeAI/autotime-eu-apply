@@ -10,7 +10,6 @@ export const europeanExplorerPack: CountryPack = {
   displayName: "Other Europe",
   supportLevel: "explorer",
   pathways: [],
-  occupationCategories: [],
   requiredEvidence: [
     "Hiring country",
     "Language requirements",

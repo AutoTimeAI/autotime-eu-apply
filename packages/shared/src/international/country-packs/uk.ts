@@ -12,7 +12,6 @@ export const ukCountryPack: CountryPack = {
   displayName: "United Kingdom",
   supportLevel: "full",
   pathways: ["Skilled Worker visa"],
-  occupationCategories: ["ICT", "engineering", "science", "finance", "business"],
   requiredEvidence: [
     "Detailed duties and an SOC 2020 occupation-code mapping",
     "Annual salary with currency",

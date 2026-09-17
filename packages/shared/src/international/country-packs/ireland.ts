@@ -9,13 +9,6 @@ export const irelandCountryPack: CountryPack = {
   displayName: "Ireland",
   supportLevel: "full",
   pathways: ["Critical Skills Employment Permit", "General Employment Permit"],
-  occupationCategories: [
-    "ICT",
-    "engineering",
-    "science",
-    "finance",
-    "business",
-  ],
   requiredEvidence: [
     "Detailed duties and an occupation mapping",
     "Annual salary with currency",

@@ -175,7 +175,6 @@ export type CountryPack = {
   displayName: string;
   supportLevel: CountrySupportLevel;
   pathways: string[];
-  occupationCategories: string[];
   requiredEvidence: string[];
   recruiterQuestions: string[];
   languageConsiderations: string[];

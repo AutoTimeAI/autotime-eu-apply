@@ -10,12 +10,6 @@ export const germanyCountryPack: CountryPack = {
   displayName: "Germany",
   supportLevel: "full",
   pathways: ["EU Blue Card", "Skilled-worker pathways"],
-  occupationCategories: [
-    "Technology",
-    "engineering",
-    "science",
-    "regulated professions",
-  ],
   requiredEvidence: [
     "Concrete job offer and contract evidence",
     "Salary with currency and pay period",
