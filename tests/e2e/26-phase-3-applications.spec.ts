@@ -388,7 +388,13 @@ test("blocked, ready, applied and rejected detail states preserve transitions", 
 
   await seed(page, [{ id: "rejected", stage: "Rejected", complete: true }]);
   await page.goto("/dashboard/applications/app-rejected");
-  await expect(page.getByText("Rejected", { exact: true })).toBeVisible();
+  // Scoped to the status badge specifically: DecisionLineage's "Why this
+  // recommendation exists" panel can also render the word "Rejected" for
+  // the underlying decision, so an unscoped exact-text locator is
+  // ambiguous once both are on the page.
+  await expect(
+    page.locator(".product-status-badge", { hasText: "Rejected" }),
+  ).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
   await capture(page, "rejected-application-1440x900.png");
 });

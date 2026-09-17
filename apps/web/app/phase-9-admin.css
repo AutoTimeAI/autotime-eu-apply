@@ -195,7 +195,7 @@
 .operations-admin-review-list { display: grid; gap: 18px; }
 .operations-admin-review-card { display: grid; gap: 12px; padding: 20px; border: 1px solid #dce5ee; border-radius: 16px; background: #fff; }
 .operations-admin-review-card header { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; }
-.operations-admin-review-card header span { color: #176c5b; font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+.operations-admin-review-card header span { color: #174ea6; font-size: .72rem; font-weight: 800; text-transform: uppercase; }
 .operations-admin-review-card header small { margin-left: auto; color: #6b7789; }
 .operations-admin-review-card form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
 .operations-admin-review-card label { display: grid; gap: 5px; color: #34465c; font-size: .78rem; font-weight: 700; }
