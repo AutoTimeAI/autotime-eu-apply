@@ -20,6 +20,7 @@ import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { classifyJobToEsco } from "../../../../lib/esco/classify-job";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 
 const schema=z.object({url:z.string().url().max(2000).optional(),title:z.string().trim().max(300).optional(),description:z.string().trim().max(50000).optional()}).refine((value)=>value.url||value.title,{message:"Provide a job URL or title"});
 const terms=(value:string)=>[...new Set(value.toLowerCase().match(/[a-z][a-z0-9+#.-]{2,}/g)??[])].slice(0,6);
@@ -51,4 +52,4 @@ export async function POST(request:NextRequest){try{
   const [skills,profile]=await Promise.all([skillIds.length?db.from("esco_skills").select("id,preferred_label").in("id",skillIds):Promise.resolve({data:[],error:null}),skillIds.length?db.from("user_skill_profile").select("esco_skill_id,confidence").eq("user_id",user.id).in("esco_skill_id",skillIds).gt("confidence",0.5):Promise.resolve({data:[],error:null})]);if(skills.error)throw skills.error;if(profile.error)throw profile.error;
   const confirmed=new Set((profile.data??[]).map((item)=>item.esco_skill_id));const labels=new Map((skills.data??[]).map((item)=>[item.id,item.preferred_label]));const matched=skillIds.filter((id)=>confirmed.has(id)).map((id)=>labels.get(id)??id);const missing=skillIds.filter((id)=>!confirmed.has(id)).map((id)=>labels.get(id)??id);
   return NextResponse.json({data:{matched:true,title,occupationId,classification:{confidence,method},matchedSkills:matched,missingSkills:missing,matchedCount:matched.length,totalEssentialSkills:skillIds.length},error:null});
-}catch(error){return NextResponse.json({data:null,error:error instanceof Error?error.message:"Job scoring failed"},{status:error instanceof z.ZodError?400:500});}}
+}catch(error){const status=error instanceof z.ZodError?400:500;const message=error instanceof Error?error.message:"Job scoring failed";return NextResponse.json({data:null,error:toPublicApiError(message,status)},{status});}}

@@ -18,6 +18,7 @@ import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { enrichCvFromGitHub } from "../../../../lib/cv/sources/github";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 
 const schema = z.object({ username: z.string().trim().regex(/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i), token: z.string().trim().max(255).optional() });
 
@@ -53,6 +54,8 @@ export async function POST(request: NextRequest) {
     }))).filter((item): item is NonNullable<typeof item> => item !== null);
     return NextResponse.json({ data: { ...data, escoSuggestions }, error: null });
   } catch (error) {
-    return NextResponse.json({ data: null, error: error instanceof Error ? error.message : "GitHub enrichment failed" }, { status: error instanceof z.ZodError ? 400 : 502 });
+    const status = error instanceof z.ZodError ? 400 : 502;
+    const message = error instanceof Error ? error.message : "GitHub enrichment failed";
+    return NextResponse.json({ data: null, error: toPublicApiError(message, status) }, { status });
   }
 }

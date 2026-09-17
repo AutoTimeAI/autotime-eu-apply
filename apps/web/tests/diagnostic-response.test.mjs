@@ -35,6 +35,15 @@ for (const route of [
   new URL("../app/api/mobility/learning/comprehension/route.ts", import.meta.url),
   new URL("../app/api/mobility/learning/consent/route.ts", import.meta.url),
   new URL("../app/api/mobility/learning/events/route.ts", import.meta.url),
+  // Found in a follow-up sweep across every route.ts matching the same
+  // literal pattern regardless of prior test coverage - these six had the
+  // identical raw error.message-to-client bug, previously unchecked here.
+  new URL("../app/api/profile/onboarding/route.ts", import.meta.url),
+  new URL("../app/api/outreach/route.ts", import.meta.url),
+  new URL("../app/api/esco/questionnaire/route.ts", import.meta.url),
+  new URL("../app/api/esco/score-job/route.ts", import.meta.url),
+  new URL("../app/api/esco/import-evidence/route.ts", import.meta.url),
+  new URL("../app/api/cv/github/route.ts", import.meta.url),
 ]) {
   const source = await readFile(route, "utf8")
   assert.doesNotMatch(source, /data:\s*null,\s*error:\s*error\s+instanceof\s+Error/)

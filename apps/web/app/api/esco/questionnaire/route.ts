@@ -5,6 +5,7 @@ import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { assertAiRouteRateLimit, RateLimitError, runEscoQuestionnaireRoundWithOpenAI } from "../../../../lib/openai-server";
 import { reserveAiCall, releaseAiCall, FeatureGateError, finalizeAiCall } from "../../../../lib/feature-gate";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 
 const schema = z.object({ question: z.string().min(5).max(500), answer: z.string().min(20).max(10000) });
 const openQuestion = "What kind of work are you strongest at, and what have you actually done recently?";
@@ -51,9 +52,9 @@ export async function POST(request: NextRequest) {
     }
     await finalizeAiCall(reservationId, { feature: "esco-questionnaire", model: result.model, promptTokens: result.promptTokens, completionTokens: result.completionTokens, costUsd: result.costUsd });
     return NextResponse.json({ data: { round, skills, nextQuestion: round >= 6 ? "" : result.value.nextQuestion, complete: round >= 6 }, error: null });
-  } catch (error) { const status = error instanceof z.ZodError ? 400 : error instanceof FeatureGateError ? 402 : error instanceof RateLimitError ? 429 : 500; return NextResponse.json({ data: null, error: error instanceof Error ? error.message : "Questionnaire failed" }, { status }); }
+  } catch (error) { const status = error instanceof z.ZodError ? 400 : error instanceof FeatureGateError ? 402 : error instanceof RateLimitError ? 429 : 500; const message = error instanceof Error ? error.message : "Questionnaire failed"; return NextResponse.json({ data: null, error: toPublicApiError(message, status) }, { status }); }
 }
 
 export async function PATCH(request: NextRequest) {
-  try { const { user } = await getRequestUser(request); if (!user) return NextResponse.json({ data: null, error: "Unauthorised" }, { status: 401 }); const body = z.object({ escoSkillId: z.string().min(1), confirmed: z.boolean() }).parse(await request.json()); const { data, error } = await createAdminClient().from("user_skill_profile").update({ source: body.confirmed ? "confirmed" : "inferred", updated_at: new Date().toISOString() }).eq("user_id", user.id).eq("esco_skill_id", body.escoSkillId).select("esco_skill_id,confidence,source").single(); if (error) throw error; return NextResponse.json({ data, error: null }); } catch (error) { return NextResponse.json({ data: null, error: error instanceof Error ? error.message : "Confirmation failed" }, { status: error instanceof z.ZodError ? 400 : 500 }); }
+  try { const { user } = await getRequestUser(request); if (!user) return NextResponse.json({ data: null, error: "Unauthorised" }, { status: 401 }); const body = z.object({ escoSkillId: z.string().min(1), confirmed: z.boolean() }).parse(await request.json()); const { data, error } = await createAdminClient().from("user_skill_profile").update({ source: body.confirmed ? "confirmed" : "inferred", updated_at: new Date().toISOString() }).eq("user_id", user.id).eq("esco_skill_id", body.escoSkillId).select("esco_skill_id,confidence,source").single(); if (error) throw error; return NextResponse.json({ data, error: null }); } catch (error) { const status = error instanceof z.ZodError ? 400 : 500; const message = error instanceof Error ? error.message : "Confirmation failed"; return NextResponse.json({ data: null, error: toPublicApiError(message, status) }, { status }); }
 }

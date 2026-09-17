@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { getMissingOnboardingEvidence, hasCompletedRequiredOnboarding, isValidLinkedInProfile } from "../../../../lib/onboarding-readiness";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 import type { Database } from "../../../../lib/supabase/types";
 
 // The generated Insert type still marks full_name/current_country/
@@ -70,6 +71,7 @@ export async function PATCH(request: NextRequest) {
     if(error instanceof z.ZodError){
       return NextResponse.json({data:null,error:error.issues[0]?.message??"Correct the highlighted profile fields.",fields:Array.from(new Set(error.issues.map(issue=>String(issue.path[0]??"")).filter(Boolean)))},{status:400});
     }
-    return NextResponse.json({data:null,error:error instanceof Error?error.message:"Profile save failed"},{status:500});
+    const message = error instanceof Error ? error.message : "Profile save failed";
+    return NextResponse.json({data:null,error:toPublicApiError(message,500)},{status:500});
   }
 }

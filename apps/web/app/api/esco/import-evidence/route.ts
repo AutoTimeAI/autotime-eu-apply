@@ -18,6 +18,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { toPublicApiError } from "../../../../lib/public-api-error";
 
 const schema = z.object({ escoSkillIds: z.array(z.string().trim().min(1)).max(20) });
 
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest) {
     if (rows.length) { const { error } = await client.from("user_skill_profile").insert(rows); if (error) throw error; }
     return NextResponse.json({ data: { inserted: rows.length }, error: null });
   } catch (error) {
-    return NextResponse.json({ data: null, error: error instanceof Error ? error.message : "Evidence import failed" }, { status: error instanceof z.ZodError ? 400 : 500 });
+    const status = error instanceof z.ZodError ? 400 : 500;
+    const message = error instanceof Error ? error.message : "Evidence import failed";
+    return NextResponse.json({ data: null, error: toPublicApiError(message, status) }, { status });
   }
 }
