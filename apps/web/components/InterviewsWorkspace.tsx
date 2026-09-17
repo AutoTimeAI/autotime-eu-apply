@@ -1124,10 +1124,23 @@ function InterviewPractice({
   const question = interview.questions[index];
   const timeLimit = question && ["technical", "scenario"].includes(question.category) ? 120 : 90;
   useEffect(() => {
-    if (!startedAt || remaining <= 0) return;
-    const timer = window.setInterval(() => setRemaining((value) => Math.max(0, value - 1)), 1000);
+    if (!startedAt) return;
+    // `remaining` deliberately isn't a dependency here: the callback only
+    // needs the functional setState form below, so including it would
+    // tear down and recreate this interval on every single tick instead
+    // of running one stable timer for the question's whole duration.
+    // Self-clears via the `timer` closure once it reaches zero.
+    const timer = window.setInterval(() => {
+      setRemaining((value) => {
+        if (value <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return value - 1;
+      });
+    }, 1000);
     return () => window.clearInterval(timer);
-  }, [startedAt, remaining]);
+  }, [startedAt]);
   useEffect(() => { setResponse(""); setStartedAt(null); setRemaining(timeLimit); }, [index, timeLimit]);
   if (!question)
     return (

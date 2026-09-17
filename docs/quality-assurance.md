@@ -1320,6 +1320,40 @@ condition and command are correct, the no-previous-deployment case is
 surfaced as an error rather than swallowed, and evidence-recording is
 success-gated. Full `pnpm test:unit` passes.
 
+## Fixed a real interval re-arm bug in the interview practice-mode countdown - 2026-09-17
+
+Found while auditing the codebase for loop/lag patterns at the founder's
+request, not from a bug report. `InterviewsWorkspace.tsx`'s per-question
+countdown timer had `remaining` in its own `useEffect` dependency array,
+even though the interval callback only used the functional `setState`
+update form (`setRemaining((value) => ...)`), which doesn't need it. Net
+effect: every single tick (every second) tore down and recreated the
+`setInterval` instead of running one stable timer for the question's
+whole duration - a real, if minor, inefficiency, not a runaway/infinite
+loop (the countdown still counted down correctly).
+
+Fixed by removing `remaining` from the dependency array (now depends only
+on `startedAt`) and moving the zero-check inside the interval callback,
+self-clearing via the `timer` closure once it reaches zero, instead of
+relying on the effect re-running to notice `remaining <= 0`.
+
+Verified: `pnpm typecheck` clean; `tests/e2e/15-phase-3c-interviews.spec.ts`
+(includes practice-mode's live countdown) - initially showed 4 unrelated
+failures on a run this session's own process-killing interfered with, but
+all 9 tests in the spec pass cleanly on an isolated rerun with nothing
+else touching port 3000, confirming those failures were self-inflicted
+interference, not real regressions. Full `pnpm test:unit` passes.
+
+While auditing for this, also traced the Stamp4 sponsorship-verification
+integration end to end (UI -> API route -> shared engine -> the same
+`decision-adapter.ts` path that powers the main Jobs-page "Analyse job"
+decision, not just the separate Countries page) and confirmed it's
+genuinely, deeply wired in for UK/Ireland/Netherlands/Germany - a real
+statutory-threshold breach becomes a confirmed blocker, and a missing
+Stamp4 check is explicitly disclosed as an unverified gap rather than
+silently assumed clean. No integration issue found there; documented as
+a completed audit, not a fix.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:
