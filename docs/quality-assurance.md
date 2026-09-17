@@ -1950,3 +1950,33 @@ Documented honestly rather than silently glossed over:
   helper)? Worth considering a route-level wrapper that makes the unsafe
   pattern impossible to write, rather than continuing to find instances
   one sweep at a time.
+
+## 2026-09-17 — Structural fix: error-redaction check now scans the whole tree
+
+- Replaced `diagnostic-response.test.mjs`'s manually maintained route list
+  with a recursive walk of every `route.ts` under `apps/web/app/api` (67
+  files). The manual list only ever grew when an audit remembered to add
+  the file it had just checked - the same raw-error.message-to-client bug
+  was independently found and fixed 4 separate times today because each
+  fix only covered the files that particular audit looked at.
+- Running the new scanner immediately proved the point: found 3 more real
+  instances the manual list had missed - `esco/matches` (raw Supabase RPC
+  `error.message`), `outreach/contacts` (three call sites), and
+  `profile/alerts` (generic `instanceof Error` fallback). Fixed all three
+  with the established `toPublicApiError` wrap.
+- The scanner also initially flagged `role-pathways/generate/route.ts`,
+  which turned out to be a genuine false positive on first pass and a
+  real design question on the second: its three `error.message` exposures
+  are deliberately safe, gated behind `instanceof` checks on custom Error
+  subclasses (`RateLimitError`, `FeatureGateError`,
+  `RoleIntelligenceUnavailableError`) whose messages are hand-authored
+  constants, not raw exceptions. A proximity-based heuristic to
+  distinguish this from the unsafe generic fallback proved unreliable in
+  both directions during development (caught unrelated `console.error`
+  logging as a false guard, then flagged safe server-only logging as
+  client-facing). Settled on an explicit `/* safe-error-message:
+  <ClassName> */` comment requirement instead of a heuristic - visible in
+  code review, and the only way to suppress the check.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean; the
+  scanner itself now passes across all 67 route files with no
+  hand-maintained allowlist to fall out of date.
