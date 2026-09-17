@@ -1400,6 +1400,36 @@ passes (and correctly failed before the `PATCH` handler fix, proving the
 new assertions are load-bearing, not just decorative). Full
 `pnpm test:unit` passes.
 
+## Mobility governance deep-dive: same redaction bug in 5 more routes - 2026-09-17
+
+Requested deep-dive audit of mobility governance writes, following the
+AI-pipeline pass above. Same bug class, found in a different part of the
+app: `GET /api/mobility/decisions/[decisionId]`, its sibling `POST
+.../actions` (corrections and both replay modes), and all three
+`/api/mobility/learning/{consent,comprehension,events}` routes returned
+a raw `error instanceof Error ? error.message : ...` fallback on a 500,
+unredacted - the exact pattern `diagnostic-response.test.mjs` exists to
+catch, just never extended to check the mobility surface. The admin
+mobility routes (`/api/admin/mobility-*`) were already clean - they use
+a distinct `safeAdminError` helper - so this was confined to the
+candidate-facing routes.
+
+Fixed the same way as the AI routes: wrapped each fallback in
+`toPublicApiError(message, status)`. Extended the same test to cover
+all five call sites.
+
+Also checked ownership/RLS design on the decision-lineage read path
+specifically, since it fans out into eight related tables in one
+`Promise.all` - confirmed correct: the first query enforces
+`.eq("user_id", user.id)` on `mobility_decision_records`, and every
+later query is either scoped to `user_id` again or keyed off the
+already-verified `decisionId`/foreign keys, so a request can't be
+tricked into reading another user's evidence links, corrections, or
+replays by supplying someone else's decision ID. No issue found there.
+
+Verified: `pnpm typecheck` clean, extended `diagnostic-response.test.mjs`
+passes, full `pnpm test:unit` passes.
+
 ## Known gaps
 
 Documented honestly rather than silently glossed over:

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { getRequestUser } from "../../../../../lib/api-auth"
 import { createAdminClient } from "../../../../../lib/supabase/admin"
+import { toPublicApiError } from "../../../../../lib/public-api-error"
 
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0" }
 
@@ -121,7 +122,7 @@ export async function GET(
     }, { headers: privateHeaders })
   } catch (error) {
     return NextResponse.json(
-      { data: null, error: error instanceof Error ? error.message : "Decision lineage could not be loaded" },
+      { data: null, error: toPublicApiError(error instanceof Error ? error.message : "Decision lineage could not be loaded", 500) },
       { status: 500, headers: privateHeaders },
     )
   }

@@ -3,6 +3,7 @@ import { z } from "zod"
 import { getRequestUser } from "../../../../../lib/api-auth"
 import { createAdminClient } from "../../../../../lib/supabase/admin"
 import { appendLearningConsent, type LearningWriteClient } from "../../../../../platform/mobility-learning/writer.ts"
+import { toPublicApiError } from "../../../../../lib/public-api-error"
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data, error: null }, { status: 201 })
   } catch (error) {
     const invalid = error instanceof z.ZodError
-    return NextResponse.json({ data: null, error: invalid ? "Invalid learning consent" : error instanceof Error ? error.message : "Learning consent failed" }, { status: invalid ? 400 : 500 })
+    const status = invalid ? 400 : 500
+    return NextResponse.json({ data: null, error: invalid ? "Invalid learning consent" : toPublicApiError(error instanceof Error ? error.message : "Learning consent failed", status) }, { status })
   }
 }

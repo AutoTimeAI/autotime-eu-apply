@@ -5,6 +5,7 @@ import { createHash } from "node:crypto"
 import { evaluateMobilityRuleCase } from "shared"
 import { getRequestUser } from "../../../../../../lib/api-auth"
 import { createAdminClient } from "../../../../../../lib/supabase/admin"
+import { toPublicApiError } from "../../../../../../lib/public-api-error"
 
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0" }
 // These append-only moat tables intentionally lead the generated Database
@@ -249,9 +250,10 @@ export async function POST(
     return NextResponse.json({ data: { replay: inserted.data }, error: null }, { status: 201, headers: privateHeaders })
   } catch (error) {
     const invalid = error instanceof z.ZodError
+    const status = invalid ? 400 : 500
     return NextResponse.json(
-      { data: null, error: invalid ? "Invalid lineage action" : error instanceof Error ? error.message : "Lineage action failed" },
-      { status: invalid ? 400 : 500, headers: privateHeaders },
+      { data: null, error: invalid ? "Invalid lineage action" : toPublicApiError(error instanceof Error ? error.message : "Lineage action failed", status) },
+      { status, headers: privateHeaders },
     )
   }
 }
