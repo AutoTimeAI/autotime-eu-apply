@@ -54,6 +54,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Verify serverless PDF CV extraction
+        run: pnpm test:pdf-cv-bundle
+
       - name: Verify platform coverage registry and fixtures
         run: node --experimental-strip-types scripts/platform-coverage.test.mjs
 
@@ -99,6 +102,9 @@ jobs:
           STRIPE_PRO_MONTHLY_PRICE_ID: price_offline_ci_monthly
           STRIPE_PRO_ANNUAL_PRICE_ID: price_offline_ci_annual
           RESEND_API_KEY: re_offline_ci
+
+      - name: Enforce Vercel server trace budget
+        run: pnpm test:server-trace-budget
 
       - name: Work around unreliable azure.archive.ubuntu.com mirror
         run: |

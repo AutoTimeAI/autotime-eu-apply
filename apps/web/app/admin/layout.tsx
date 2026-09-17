@@ -17,6 +17,7 @@ const items: Array<[string, string, AdminPermission]> = [
   ["Feedback", "/admin/feedback", "feedback:read"],
   ["AI Operations", "/admin/ai-operations", "ai_operations:read"],
   ["Market Data", "/admin/market-data", "market_data:read"],
+  ["Corrections", "/admin/mobility-corrections", "mobility_corrections:review"],
   ["Feature Flags", "/admin/feature-flags", "feature_flags:read"],
   ["Audit Log", "/admin/audit-log", "audit:read"],
 ] as const;

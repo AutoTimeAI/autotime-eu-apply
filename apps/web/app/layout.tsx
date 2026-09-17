@@ -23,8 +23,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://autotime-eu-apply.vercel.app"),
   icons: {
     apple: "/icon.png",
-    icon: "/icon.png",
-    shortcut: "/icon.png"
+    icon: "/favicon-64.png",
+    shortcut: "/favicon-64.png"
   },
   openGraph: {
     title: "AutoTime EU Apply - Strategic European Tech Applications",

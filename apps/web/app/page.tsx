@@ -285,12 +285,14 @@ export default async function HomePage() {
 
       <section className="landing-hero" aria-labelledby="landing-title">
         <video
-          aria-hidden="true"
-          autoPlay
+          aria-label="AutoTime EU Apply product demonstration"
           className="landing-hero-media"
+          controls
           loop
           muted
           playsInline
+          poster="/demo/autotime-first-user-demo-poster.webp"
+          preload="none"
           src="/demo/autotime-first-user-demo.mp4"
         />
         <div className="landing-hero-overlay" />

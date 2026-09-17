@@ -27,7 +27,6 @@ const nextConfig: NextConfig = {
   // ~21GB against a 10GB limit with no change after deleting hundreds of
   // old deployments, which ruled out deployment count as the cause.
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
-  serverExternalPackages: ["@napi-rs/canvas", "pdf-parse"],
   async headers() {
     return [
       {

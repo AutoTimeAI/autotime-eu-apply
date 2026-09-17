@@ -61,3 +61,12 @@ if (
 }
 
 console.log("Verified Stripe production prices by lookup key.")
+console.log(
+  "If STRIPE_PRO_QUARTERLY_PRICE_ID / STRIPE_AI_CREDIT_PACK_PRICE_ID are unset " +
+    "or point at a stale literal price ID, set them to these lookup selectors " +
+    "instead of a price_... value - getStripePriceEnv() resolves them via " +
+    "resolveStripePriceId()'s lookup: prefix, so they never need to be updated " +
+    "again even if this script recreates the underlying price:",
+)
+console.log(`  STRIPE_PRO_QUARTERLY_PRICE_ID=lookup:autotime_pro_quarterly_gbp_v1`)
+console.log(`  STRIPE_AI_CREDIT_PACK_PRICE_ID=lookup:autotime_ai_credits_25_gbp_v1`)
