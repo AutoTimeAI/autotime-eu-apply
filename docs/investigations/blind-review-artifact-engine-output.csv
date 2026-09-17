@@ -1,0 +1,3 @@
+case_id,engine_decision,engine_reason,engine_confidence,engine_unknowns,engine_critical_risk
+RV-001,Consider,"The role may be viable, but material evidence or vacancy facts need resolution.",Medium,Salary,Key Responsibilities
+RV-002,Consider,"The role may be viable, but material evidence or vacancy facts need resolution.",Medium,Salary,Key Responsibilities
