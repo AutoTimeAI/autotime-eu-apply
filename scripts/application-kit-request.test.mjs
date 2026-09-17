@@ -78,6 +78,7 @@ test("buildApplicationKitRequest produces a request that validates against the r
   assert.equal(request.profile.relocationWillingness, "yes");
   assert.equal(request.job.jobTitle, "Backend Engineer");
   assert.equal(request.job.company, "Example Payments");
+  assert.equal(request.job.location, "Ireland");
   assert.equal(request.job.workMode, "hybrid");
   assert.equal(request.job.jobDescription, job().description);
 });

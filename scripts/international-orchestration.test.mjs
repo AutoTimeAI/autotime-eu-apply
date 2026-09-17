@@ -5,6 +5,7 @@ import {
   assessInternationalJob,
   mobilityProfileSchema,
   orchestrateJobDecision,
+  resolveAssessmentCountry,
 } from "../packages/shared/src/international/index.ts";
 
 const baseProfile = mobilityProfileSchema.parse({
@@ -13,6 +14,29 @@ const baseProfile = mobilityProfileSchema.parse({
   applicantPosition: "sponsorship-required",
   sponsorshipRequired: "yes",
   relocationPreference: "yes",
+});
+
+test("assessment country precedence is explicit choice, vacancy, then profile", () => {
+  assert.equal(
+    resolveAssessmentCountry({
+      explicitCountry: "Germany",
+      vacancyCountry: "Netherlands",
+      profileTargetCountries: ["Ireland"],
+    }),
+    "Germany",
+  );
+  assert.equal(
+    resolveAssessmentCountry({
+      vacancyCountry: "Netherlands",
+      profileTargetCountries: ["Ireland"],
+    }),
+    "Netherlands",
+  );
+  assert.equal(
+    resolveAssessmentCountry({ profileTargetCountries: ["", "Ireland"] }),
+    "Ireland",
+  );
+  assert.equal(resolveAssessmentCountry({}), null);
 });
 
 function goodFit(overrides = {}) {
@@ -145,6 +169,19 @@ test("a weak fit score is Skip regardless of clean international evidence", () =
   assert.equal(result.decision, "Skip");
 });
 
+test("explicit cannot-provide visa sponsorship wording is a confirmed blocker", () => {
+  const international = assessInternationalJob({
+    country: "Ireland",
+    mobilityProfile: baseProfile,
+    jobText: "We cannot provide visa sponsorship for this vacancy.",
+    roleDuties: "Build secure payment services.",
+  });
+
+  assert.equal(international.decision, "Skip");
+  assert.equal(international.pathwayStatus, "confirmed-blocker");
+  assert.ok(international.confirmedBlockers.length > 0);
+});
+
 test("a clean Stamp4-verified assessment with a strong fit produces Apply", () => {
   const international = assessInternationalJob({
     country: "Ireland",
@@ -173,6 +210,45 @@ test("a clean Stamp4-verified assessment with a strong fit produces Apply", () =
   assert.ok(result.evidenceUsed.some((item) => /Stamp4 verified/.test(item)));
 });
 
+test("governed readiness fails closed at the single decision boundary", () => {
+  const international = assessInternationalJob({
+    country: "Ireland",
+    mobilityProfile: baseProfile,
+    jobText: "Visa sponsorship available for this systems engineering role",
+    roleDuties: "Build services",
+    contractDurationMonths: 24,
+    occupationMapping: "confirmed",
+  });
+  const result = orchestrateJobDecision({
+    fit: goodFit(),
+    international,
+    internationalRequirement: "required",
+    mobilityReadiness: {
+      state: "research",
+      score: 45,
+      outputPermission: "blocked",
+      reasonCodes: ["SOURCE_CHAIN_INCOMPLETE"],
+    },
+  });
+  assert.equal(result.decision, "Insufficient evidence");
+  assert.equal(result.mobilityOutputPermission, "blocked");
+  assert.equal(result.mobilityReadinessState, "research");
+  assert.ok(
+    result.missingEvidence.includes(
+      "Mobility readiness: SOURCE_CHAIN_INCOMPLETE",
+    ),
+  );
+});
+
+test("legacy callers are explicitly labelled as readiness not evaluated", () => {
+  const result = orchestrateJobDecision({
+    fit: goodFit(),
+    internationalRequirement: "not-relevant",
+  });
+  assert.equal(result.mobilityOutputPermission, "not-evaluated");
+  assert.equal(result.mobilityReadinessState, "not-evaluated");
+});
+
 // ai/content/route.ts imports "next/server", which the plain node test
 // runner can't resolve outside Next.js's own bundler - static-inspection
 // against the real source is this codebase's established pattern for
@@ -187,11 +263,15 @@ test("the content-generation gate delegates the combined decision to application
     "utf8",
   );
   const adapter = await readFile(
-    new URL("../apps/web/platform/application-preparation/decision-adapter.ts", import.meta.url),
+    new URL(
+      "../apps/web/platform/application-preparation/decision-adapter.ts",
+      import.meta.url,
+    ),
     "utf8",
   );
   assert.match(route, /prepareApplicationKit\(\{/);
-  assert.match(route, /decisions:\s*\{ assess: assessApplicationDecision \}/);
+  assert.match(route, /assessApplicationDecision\(/);
+  assert.match(route, /createAdminClient\(\)/);
   assert.match(adapter, /orchestrateJobDecision\(\{/);
   assert.match(adapter, /evaluateAutoTimeFitScore\(\{/);
   assert.match(adapter, /assessInternationalJob\(\{/);

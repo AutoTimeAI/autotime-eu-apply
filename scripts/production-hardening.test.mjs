@@ -351,39 +351,18 @@ test("Interview Prep keeps coaching, prep packs and reusable answers separated",
   assert.match(saveAnswerFlow, /scheduleDashboardSync\(next/)
 })
 
-test("Follow-ups and Progress stay ordered and do not duplicate tracker systems", () => {
-  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+test("live follow-up and application routes do not depend on the legacy dashboard tracker", () => {
+  const followUpsPage = read("apps/web/app/dashboard/follow-ups/page.tsx")
+  const applicationsPage = read("apps/web/app/dashboard/applications/page.tsx")
+  const insightsPage = read("apps/web/app/dashboard/insights/page.tsx")
 
-  assert.match(dashboard, /title: "Follow-up Queue"/)
-  assert.match(dashboard, /See which tracked job needs action next/)
-  assert.match(dashboard, /function hasFollowUpAction\(application: ApplicationRecord\)/)
-  assert.match(dashboard, /application\.nextActionDate/)
-  assert.match(dashboard, /\["Applied", "Interview", "Offer"\]\.includes\(application\.status\)/)
-  assert.match(dashboard, /aria-label="Follow-up workflow"/)
-  assert.match(dashboard, /Only jobs with a date, action or in-flight status appear/)
-  assert.match(dashboard, /aria-label="Follow-up responsibility"/)
-  assert.match(dashboard, /Clear scheduled action/)
-
-  assert.match(dashboard, /title: "Progress"/)
-  assert.match(dashboard, /Review what happened across tracked jobs/)
-  assert.match(dashboard, /aria-label="Progress workflow"/)
-  assert.match(dashboard, /Track outcomes/)
-  assert.match(dashboard, /Run report/)
-  assert.match(dashboard, /aria-label="Progress responsibility"/)
-  assert.match(dashboard, /Use Fit Analysis to score a role, Follow-ups to act/)
-  assert.match(dashboard, /onClick=\{runOnlineAnalytics\}/)
-
-  const updateStart = dashboard.indexOf("const updateApplication = (")
-  const deleteStart = dashboard.indexOf("const removeApplicationFromState = (")
-  assert.notEqual(updateStart, -1)
-  assert.notEqual(deleteStart, -1)
-  const updateFlow = dashboard.slice(updateStart, deleteStart)
-
-  assert.match(updateFlow, /updateOutcomeRecordFromApplication\(/)
-  assert.match(updateFlow, /persist\(nextState, "Application and outcome record updated"\)/)
-  assert.match(updateFlow, /scheduleDashboardSync\(nextState/)
+  assert.match(followUpsPage, /OutreachWorkspace/)
+  assert.doesNotMatch(followUpsPage, /DashboardExperience/)
+  assert.match(applicationsPage, /JobApplicationWorkspace/)
+  assert.doesNotMatch(applicationsPage, /DashboardExperience/)
+  assert.match(insightsPage, /redirect\("\/dashboard\/applications"\)/)
+  assert.doesNotMatch(insightsPage, /DashboardExperience/)
 })
-
 test("Public product promise matches the strategic European tech positioning", () => {
   const login = read("apps/web/components/LoginContent.tsx")
   const layout = read("apps/web/app/layout.tsx")
@@ -450,25 +429,15 @@ test("Client fallbacks surface and record runtime and action failures", () => {
   assert.match(extensionConnect, /extension\.connect\.unhandled/)
 })
 
-test("login page survives a misconfigured Supabase client instead of crashing to the error boundary", () => {
-  // Reproduced live: LoginForm's mount effect called createBrowserClient()
-  // directly with no try/catch. When NEXT_PUBLIC_SUPABASE_URL/ANON_KEY are
-  // missing or invalid, that throws ConfigurationUnavailableError
-  // synchronously inside the effect, which crashed the entire /login page to
-  // the generic error.tsx fallback - the one page where that's most
-  // damaging, since it leaves zero path to sign in. Every other
-  // createBrowserClient() call site in the app already wraps it in a
-  // try/catch; this asserts LoginContent does too, and that it maps the
-  // config error to the same user-facing message used elsewhere (not the
-  // raw internal "Required service configuration is unavailable" string).
+test("login resolves sessions safely without putting Supabase in the initial client bundle", () => {
   const login = read("apps/web/components/LoginContent.tsx")
+  const loginPage = read("apps/web/app/login/page.tsx")
 
   assert.match(login, /isConfigurationUnavailableError/)
   assert.match(login, /configurationUnavailableMessage/)
-  assert.match(
-    login,
-    /try\s*\{[\s\S]{0,40}createBrowserClient\(\)[\s\S]{0,40}\}\s*catch/
-  )
+  assert.doesNotMatch(login, /^import .*createBrowserClient/m)
+  assert.match(login, /await import\("\.\.\/lib\/supabase\/client"\)/)
+  assert.match(loginPage, /try\s*\{[\s\S]*createServerClient\(\)[\s\S]*\}\s*catch/)
 })
 
 test("feature readiness supersedes the universal profile lock", () => {
@@ -1151,6 +1120,37 @@ test("job/interview workflow sync helpers check every write's error instead of f
     interviewWorkflow,
     /if \(error\) throw new Error\("Interview preparation snapshot could not be saved\."\)/,
   )
+})
+
+test("decision lineage read verifies ownership before traversing the immutable ledger", () => {
+  const route = read("apps/web/app/api/mobility/decisions/[decisionId]/route.ts")
+  const ownershipCheck = route.indexOf('.eq("id", decisionId).eq("user_id", user.id).maybeSingle()')
+  const relatedReads = route.indexOf('Promise.all([')
+
+  assert.match(route, /getRequestUser\(request\)/)
+  assert.ok(ownershipCheck > 0, "decision lookup must constrain both record ID and user ID")
+  assert.ok(relatedReads > ownershipCheck, "related ledger reads must happen only after ownership succeeds")
+  assert.match(route, /if \(!decisionResult\.data\).*status: 404/s)
+  assert.match(route, /Cache-Control.*private, no-store, max-age=0/)
+  assert.doesNotMatch(route, /encrypted_payload_reference/)
+})
+
+test("decision correction and synchronous replay actions are owned, append-only and idempotent", () => {
+  const route = read("apps/web/app/api/mobility/decisions/[decisionId]/actions/route.ts")
+  const ownershipCheck = route.indexOf('.eq("id", decisionId)')
+  const firstInsert = route.indexOf('.from("mobility_decision_corrections").insert(')
+
+  assert.match(route, /actionSchema\.parse\(await request\.json\(\)\)/)
+  assert.ok(ownershipCheck > 0 && firstInsert > ownershipCheck)
+  assert.match(route, /\.eq\("user_id", user\.id\)/)
+  assert.match(route, /state: "submitted"/)
+  assert.match(route, /state: "succeeded"/)
+  assert.match(route, /completed_at: now/)
+  assert.match(route, /idempotency_key/)
+  assert.match(route, /\.eq\("idempotency_key", idempotencyKey\)/)
+  assert.match(route, /inserted\.error\?\.code === "23505"/)
+  assert.doesNotMatch(route, /mobility_decision_records"\)\.update/)
+  assert.doesNotMatch(route, /mobility_decision_records"\)\.delete/)
 })
 
 let failed = 0

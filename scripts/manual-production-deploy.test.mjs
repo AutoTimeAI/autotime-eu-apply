@@ -6,6 +6,11 @@ const workflow = fs.readFileSync(
   ".github/workflows/production-deploy.yml",
   "utf8",
 );
+const vercelConfig = JSON.parse(fs.readFileSync("vercel.json", "utf8"));
+
+test("Git pushes cannot bypass the manual production deployment workflow", () => {
+  assert.equal(vercelConfig.git?.deploymentEnabled, false);
+});
 
 test("production deployment is manual-only and commit-pinned", () => {
   assert.match(workflow, /workflow_dispatch:/);

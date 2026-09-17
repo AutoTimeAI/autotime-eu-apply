@@ -3,7 +3,10 @@ import test from "node:test"
 import {
   assessClaimSupport,
   evidenceFactSchema,
-  getApplicationEvidenceBlockers
+  getApplicationEvidenceBlockers,
+  mobilityClaimVersionSchema,
+  mobilityRuleBundleVersionSchema,
+  mobilitySourceVersionSchema
 } from "../packages/shared/src/evidence/index.ts"
 
 const fact = (overrides = {}) =>
@@ -159,3 +162,81 @@ test("application compatibility blockers preserve current readiness behavior", (
   )
 })
 
+const hash = "a".repeat(64)
+
+test("versioned source captures preserve temporal and content identity", () => {
+  const source = mobilitySourceVersionSchema.parse({
+    id: "source-version-2",
+    sourceDocumentId: "de-blue-card-law",
+    version: 2,
+    retrievedAt: "2026-09-12T10:00:00Z",
+    effectiveFrom: "2026-01-01T00:00:00Z",
+    effectiveTo: "2027-01-01T00:00:00Z",
+    language: "de",
+    httpStatus: 200,
+    rawSha256: hash,
+    normalizedSha256: "b".repeat(64),
+    snapshotUri: "https://evidence.autotime.test/de/source-version-2",
+    parserVersion: "parser-1",
+    normalizerVersion: "normalizer-1"
+  })
+
+  assert.equal(source.version, 2)
+  assert.throws(() =>
+    mobilitySourceVersionSchema.parse({
+      ...source,
+      effectiveFrom: "2027-01-01T00:00:00Z",
+      effectiveTo: "2026-01-01T00:00:00Z"
+    })
+  )
+})
+
+test("claim successors require explicit lineage", () => {
+  const base = {
+    id: "claim-version-2",
+    claimId: "DE-LAW-001",
+    version: 2,
+    statement: "A successor rule statement.",
+    claimType: "fact",
+    sourceSpanIds: ["span-1"],
+    confidence: "high",
+    state: "approved"
+  }
+
+  assert.throws(() => mobilityClaimVersionSchema.parse(base))
+  assert.equal(
+    mobilityClaimVersionSchema.parse({
+      ...base,
+      predecessorVersionId: "claim-version-1"
+    }).predecessorVersionId,
+    "claim-version-1"
+  )
+  assert.throws(() =>
+    mobilityClaimVersionSchema.parse({
+      ...base,
+      version: 1,
+      predecessorVersionId: "impossible"
+    })
+  )
+})
+
+test("rule bundles cannot exist without claims and evaluation cases", () => {
+  const bundle = {
+    id: "de-blue-card-v1",
+    bundleId: "de-blue-card",
+    version: 1,
+    jurisdiction: "Germany",
+    route: "EU Blue Card",
+    state: "draft"
+  }
+
+  assert.throws(() => mobilityRuleBundleVersionSchema.parse(bundle))
+  assert.equal(
+    mobilityRuleBundleVersionSchema.parse({
+      ...bundle,
+      criticalClaimVersionIds: ["claim-version-1"],
+      evaluationCaseIds: ["DE-SALARY-001"]
+    }).state,
+    "draft"
+  )
+})
