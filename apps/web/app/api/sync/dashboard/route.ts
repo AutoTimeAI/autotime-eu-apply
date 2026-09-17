@@ -324,8 +324,12 @@ export async function POST(
     const deletedUrlKeys = new Set(
       (tombstoneResult.data ?? []).map((row) => row.url_key),
     )
-    const { deletedApplicationIds, activeApplications } =
-      partitionApplicationsByTombstone(payload.applications, deletedUrlKeys)
+    const firstPass = partitionApplicationsByTombstone(
+      payload.applications,
+      deletedUrlKeys,
+    )
+    let deletedApplicationIds = firstPass.deletedApplicationIds
+    let activeApplications = firstPass.activeApplications
     let applicationIdMap = new Map<string, string>()
 
     if (activeApplications.length) {
@@ -377,6 +381,56 @@ export async function POST(
           request,
           status: 500,
         })
+      }
+    }
+
+    if (activeApplications.length) {
+      // Re-check tombstones immediately before the write, not just once
+      // earlier in the handler: a concurrent DELETE for one of these same
+      // applications could land in the window between that earlier read
+      // and this write, and without this second check its tombstone would
+      // be missed - resurrecting an application the user just deleted
+      // elsewhere via this same sync's insert. This narrows (does not
+      // close) the broader lost-update gap against a concurrent *edit*
+      // documented in this file's own known-gaps notes, which needs a
+      // real per-row CAS design, not a second read - but a delete losing
+      // to a stale re-insert is a distinct, narrower race this check does
+      // fully close.
+      const recheckUrlKeys = activeApplications.map((application) =>
+        normalizeApplicationUrlKey(application.url || application.id),
+      )
+      const recheckResult = await supabase
+        .from("deleted_application_tombstones")
+        .select("url_key")
+        .eq("user_id", auth.user.id)
+        .in("url_key", recheckUrlKeys)
+
+      if (recheckResult.error) {
+        return diagnosticJson({
+          area: "sync",
+          code: "sync.dashboard.tombstones.recheck-failed",
+          data: null,
+          error: recheckResult.error.message,
+          log: true,
+          request,
+          status: 500,
+        })
+      }
+
+      const recheckDeletedUrlKeys = new Set(
+        (recheckResult.data ?? []).map((row) => row.url_key),
+      )
+
+      if (recheckDeletedUrlKeys.size) {
+        const revalidated = partitionApplicationsByTombstone(
+          activeApplications,
+          recheckDeletedUrlKeys,
+        )
+        deletedApplicationIds = [
+          ...deletedApplicationIds,
+          ...revalidated.deletedApplicationIds,
+        ]
+        activeApplications = revalidated.activeApplications
       }
     }
 
