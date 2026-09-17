@@ -38,6 +38,42 @@ Personalize the opening line to their actual post — a generic DM reads as spam
 
 > Hi [name] — saw your post about [specific thing they mentioned, e.g. "the sponsorship search taking longer than expected"]. I'm doing some informal research on exactly that problem, no pitch, no company behind it yet — would you have 15-20 min to talk through what the search has actually looked like for you? Happy to share back anything useful I learn from others in the same boat.
 
+## Cold-stranger variants (no prior relationship, no personal network)
+
+Added 2026-09-17 for the realistic case of not knowing anyone in the
+target group personally. These assume zero familiarity, so they lean
+harder on transparency (who you are, why you're asking) and a low-friction
+ask, since a stranger has no reason to trust you yet. Expect a low
+response rate cold — plan to reach 80-150 people across these channels to
+land the 8-12 real conversations the kit needs, not 8-12 messages sent.
+
+### Reddit — cold post, no assumed context
+
+> **Title:** Founder doing free research on the sponsored-visa tech job search (Europe) — 15 min?
+>
+> I'm a solo founder looking into what actually makes searching for a sponsored tech role in Europe hard, before I build anything based on a guess. Not recruiting, nothing to sell, no company site yet even. If you've done this search (successfully or not) in the last year or two, I'd genuinely appreciate 15-20 minutes on a call to hear what it was actually like — what you looked for, what info was missing, what wasted your time.
+>
+> Happy to go first and share whatever I learn back with anyone who wants it. Comment below or DM — either is fine, no pressure either way.
+
+### LinkedIn — cold connection request note (character-limited, ~300 chars)
+
+> Hi [name] — building something for people navigating sponsored tech job searches in Europe. Doing real research first, not selling anything. Would value 15 min of your experience if you're open to it — no pitch, happy to share findings back. No worries if not!
+
+### LinkedIn — cold InMail/DM (no prior post to reference)
+
+> Hi [name] — reaching out cold, apologies if this isn't useful timing. I'm researching the sponsored-visa tech job search in Europe (I'm a solo founder, pre-product, genuinely trying to understand the real problem before building anything). Your background looked relevant to that search. Would you have 15-20 minutes for a call about your experience? No pitch, no obligation, happy to share back what I learn from others too.
+
+### Discord/Facebook group — cold, first-time poster
+
+> New here, hope this is okay to post. I'm doing research (unpaid, no product yet) on what makes the visa-sponsored tech job hunt in Europe hard. If anyone's been through it and has 15 min to talk, I'd really appreciate it — trying to build something useful based on real experience, not guesses. DMs open, happy to reciprocate.
+
+### Volume/targeting tips specific to going in cold
+
+- Post the Reddit versions first — they scale (one post reaches everyone in that community) instead of one-to-one DMs, which is the highest-leverage move when starting from zero contacts.
+- For LinkedIn, search exact phrases people use when frustrated ("visa sponsorship" + "frustrating", "rejected" + "sponsorship", "relocate" + "tech role") rather than just job titles — surfaces people mid-complaint, who reply more.
+- A connection-request note gets seen even if never accepted (LinkedIn shows the note either way) — worth sending even to people unlikely to accept, since some will reply without accepting.
+- Track response rate per channel from the first 20-30 sent/posted, and shift effort toward whichever channel is actually converting rather than splitting evenly upfront.
+
 ## Notes carried over from the parent kit
 
 - Don't pitch LandWell or ask hypothetical willingness-to-pay questions until the participant has described an actual recent decision (per the 17 Sept correction in the parent kit).
