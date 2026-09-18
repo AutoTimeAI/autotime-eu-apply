@@ -33,7 +33,26 @@ export async function createServerClient(): Promise<SupabaseClient<Database>> {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options)
             })
+            // Temporary instrumentation added while investigating a
+            // production issue (2026-09-18): the QA test account's session
+            // cookie set here is not being recognized by the very next
+            // request's auth check, despite Supabase's own auth server
+            // confirming the session was created successfully. Logs only
+            // cookie names/count, never values, to confirm whether this
+            // code path actually runs to completion (vs. being silently
+            // swallowed by the catch below) without needing browser
+            // DevTools access to the real session. Remove once resolved.
+            console.info("autotime_supabase_cookies_set", {
+              count: cookiesToSet.length,
+              names: cookiesToSet.map(({ name }) => name),
+            })
           } catch (error: unknown) {
+            console.warn("autotime_supabase_cookies_set_failed", {
+              count: cookiesToSet.length,
+              errorIsError: error instanceof Error,
+              errorMessage: error instanceof Error ? error.message : undefined,
+            })
+
             if (error instanceof Error) {
               return
             }
