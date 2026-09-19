@@ -28,6 +28,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (step === "check") {
     const supabase = await createServerClient()
+    // Local, no-network parse of whatever session the SDK extracted from
+    // the incoming cookie, checked before the network call that fails -
+    // to see whether the cookie was even successfully decoded into a
+    // session with a real access token, or the SDK silently fell back to
+    // having none at all.
+    const sessionResult = await supabase.auth.getSession()
     const {
       data: { user },
       error,
@@ -37,6 +43,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       step: "check",
       hasUser: Boolean(user),
       userId: user?.id ?? null,
+      sessionParsed: Boolean(sessionResult.data.session),
+      sessionAccessTokenPreview: sessionResult.data.session?.access_token?.slice(0, 24) ?? null,
+      sessionError: sessionResult.error?.message ?? null,
       // Deliberately NOT redacted here (unlike everywhere else in the
       // codebase): this diagnostic-only route is gated by a Vercel-only
       // secret with no client-facing use, and the real getUser() error
