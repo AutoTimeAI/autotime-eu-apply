@@ -20,38 +20,20 @@ export type PendingCookie = { name: string; value: string; options: CookieOption
  * store. Needed because Next.js does not reliably merge cookies mutated via
  * `cookies().set()` onto a separately-constructed `NextResponse.redirect()`
  * returned from a Route Handler - a documented App Router limitation
- * (https://github.com/vercel/next.js/discussions/48434), confirmed here via
- * production diagnostics showing the write itself always succeeded (logged,
- * sane cookie attributes) while the browser's very next request still had
- * no session. `response.cookies.set()` is the one path Next.js guarantees
- * attaches to that exact response regardless of its type. Any caller that
- * signs a user in and then redirects must call this on its final response;
- * callers returning `NextResponse.json()`/`NextResponse.next()` don't need
- * this - the ambient merge already works for those.
+ * (https://github.com/vercel/next.js/discussions/48434). `response.cookies.set()`
+ * is the one path Next.js guarantees attaches to that exact response
+ * regardless of its type. Any caller that signs a user in and then
+ * redirects must call this on its final response; callers returning
+ * `NextResponse.json()`/`NextResponse.next()` don't need this - the ambient
+ * merge already works for those.
  */
 export function applyPendingCookies(
   response: NextResponse,
   pendingCookies: PendingCookie[],
 ): NextResponse {
-  // Temporary instrumentation (2026-09-19): the redirect-cookie fix this
-  // function is part of did not resolve the QA-bootstrap production issue
-  // on its first deploy - logging here to confirm this function actually
-  // runs and how many cookies it applies, since removing the prior
-  // diagnostic in the same commit as the fix made that unverifiable.
-  // Remove once resolved.
-  console.info("autotime_apply_pending_cookies", {
-    pendingCount: pendingCookies.length,
-    names: pendingCookies.map(({ name }) => name),
-  })
-
   pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, options)
   })
-
-  console.info("autotime_apply_pending_cookies_done", {
-    responseSetCookieHeaderCount: response.headers.getSetCookie?.().length ?? -1,
-  })
-
   return response
 }
 

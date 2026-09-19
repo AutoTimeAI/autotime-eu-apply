@@ -1993,3 +1993,82 @@ Documented honestly rather than silently glossed over:
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean; the
   scanner itself now passes across all 67 route files with no
   hand-maintained allowlist to fall out of date.
+
+## 2026-09-18/19 — Root-caused the production auth failure: a placeholder value in NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+The most significant finding of this session, closing out a multi-day
+investigation that started from a failing Production Playwright smoke
+suite. Timeline of what was tried, ruled out, and finally confirmed:
+
+- **Ruled out**: Supabase auth rate-limiting from repeated
+  `generateLink`/`verifyOtp` calls in the QA bootstrap test helper (auth
+  logs showed every OTP cycle succeeding with 200, every time - no
+  throttling anywhere).
+- **Fixed but not the root cause**: Next.js does not reliably merge
+  cookies written via the ambient `cookies()` API onto a
+  separately-constructed `NextResponse.redirect()` in a Route Handler
+  (a real, documented App Router limitation -
+  vercel/next.js discussion #48434). This affected both
+  `/api/qa/session` and the real `/auth/callback` login flow identically.
+  Fixed via `applyPendingCookies()`/`createServerClient(onCookiesSet)` in
+  `lib/supabase/server.ts` - a real, permanent, worthwhile fix, verified
+  with a regression test, but deploying it alone did not resolve the
+  smoke-suite failure, proving something else was also wrong.
+- **Actual root cause**: built a temporary, self-contained diagnostic
+  route (gated by a Vercel-only `DIAGNOSTIC_TEMP_SECRET` env var, no
+  secret ever committed to source) to reproduce the exact bootstrap flow
+  via plain `curl`, independent of GitHub Actions/Playwright/the real QA
+  secret. This let us test the fix end-to-end ourselves within minutes
+  instead of waiting on 20-minute CI cycles. Findings, in order:
+  1. The session cookie genuinely round-trips correctly at the HTTP level
+     (curl confirmed the server received it back) - ruling out cookies
+     entirely.
+  2. `getUser()` still failed with `"Invalid API key"` even with a
+     provably valid cookie/session - and this error never appeared in
+     Supabase's own `auth_logs`, only in `edge_logs` (Supabase's API
+     gateway/Kong layer), meaning the request was being rejected before
+     reaching GoTrue's application layer.
+  3. Curling Supabase's `/auth/v1/user` directly, ourselves, with the
+     project's real current anon key and a real access token extracted
+     from the session, succeeded with 200 OK - proving the key and token
+     were individually valid and Supabase's API was fine.
+  4. Captured the actual outgoing request headers our own server code
+     sent (temporarily wrapping `fetch`) and found the smoking gun: the
+     `apikey` header was exactly 11 characters long - the length of the
+     literal string `"[SENSITIVE]"`. **The production
+     `NEXT_PUBLIC_SUPABASE_ANON_KEY` environment variable in Vercel was
+     not a stale or wrong key - it was literally set to the placeholder
+     text `[SENSITIVE]`, not a real key at all.**
+- **Why this went unnoticed for so long**: `proxy.ts`'s auth check only
+  destructures `{ data: { user } }` from `getUser()`'s result and never
+  inspects `error` - so a broken anon key silently looks identical to "no
+  session" and redirects to login, indistinguishable from normal session
+  expiry to a real logged-out user. No hard crash, no visible error
+  anywhere a user or a shallow smoke test would notice - it took a
+  from-scratch reproduction harness to surface the real HTTP-level
+  rejection.
+- **Fix**: replaced the placeholder with the project's real, current anon
+  key value (confirmed directly via Supabase's own API) and changed the
+  variable's Vercel type from "Secret" (write-only, cannot be viewed once
+  saved) to "Config" - correct given `NEXT_PUBLIC_`-prefixed variables are
+  already shipped to every browser by design, and "Secret" type's
+  un-revealable nature is very likely what let a bad value sit unnoticed
+  for months (whatever incident produced the placeholder, presumably some
+  automated redaction tool overcorrecting, could never be spotted by
+  anyone looking at the dashboard afterward).
+- **Verified fixed**: the same diagnostic route, re-run after the env var
+  correction and a fresh deployment, returned `hasUser: true` with the
+  correct QA user id and `error: null`, with the captured `apikey` header
+  now showing a real 208-character JWT instead of an 11-character
+  placeholder.
+- Removed the temporary diagnostic route and its debug logging once
+  confirmed; kept the redirect-cookie fix (a real, independent
+  improvement) and its regression test
+  (`scripts/auth-cookie-redirect-fix.test.mjs`).
+- **Recommendation for the founder**: given how long this sat undetected,
+  consider adding a lightweight production health check that actually
+  exercises `getUser()`/RLS-scoped reads with a real (non-service-role)
+  key on a schedule, not just an unauthenticated liveness ping - and
+  keeping `NEXT_PUBLIC_*` variables as "Config" type generally, since
+  they're public by design and "Secret" type only removes the ability to
+  verify them later without adding real confidentiality.
