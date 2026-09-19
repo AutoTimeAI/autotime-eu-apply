@@ -161,3 +161,8 @@ Deployed under the **GO WITH LIMITATIONS** decision above, per explicit release-
 | Deployment URL | `https://autotime-eu-apply-op3z4d999-rajs-projects-6830d68b.vercel.app` (aliased to production) |
 | Rollback target if needed | The previously live deployment, commit `97d4bddc` (captured automatically by the workflow before this deploy) |
 | Outstanding limitations at time of deploy | Backup/PITR verification and named incident/rollback ownership — both still open, per above |
+
+**Post-deploy live verification (same session, immediately after):**
+- `GET /` → `200`, `Age: 0`, `X-Vercel-Cache: MISS` (fresh from the new build, not a stale cached edge response)
+- `GET /dashboard`, `/waitlist`, `/admin` unauthenticated → all `307` (correctly redirect, no content leak, no error)
+- QA bootstrap session re-established against the live deployment and `GET /dashboard` authenticated → `200` (beta gate and session handling both survived the deploy correctly)
