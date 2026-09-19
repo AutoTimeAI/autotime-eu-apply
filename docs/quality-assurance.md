@@ -2918,3 +2918,26 @@ result: nothing release-blocking found; two real security gaps fixed
 and verified; one cosmetic UI bug found and tracked; the core decision
 engine, evidence-first gating, and admin access control were all
 verified genuinely live against production, not just by static review.
+
+## 2026-09-19 (correction): the "analytics banner overlap" finding above was a false positive
+
+Re-checked the one non-blocking UI finding from the walkthrough above
+(analytics-consent banner appearing to overlap the analysis
+recommendation heading). That screenshot was taken with Playwright's
+`fullPage: true`, which is known to mis-position `position: fixed`
+elements during full-page stitching (the element renders at its fixed
+viewport coordinates on every stitched segment, so it can appear
+superimposed on content far from where it actually sits on screen).
+
+Re-verified with a real viewport-only screenshot (1280x900, no
+`fullPage`) and actual element bounding boxes on the same page:
+`.consent-banner` renders at y=744-882px (bottom-right, exactly as
+`position: fixed; bottom: 18px; right: 18px` in `globals.css:8513`
+specifies), while the analysis heading sits at y=189-279px. No overlap
+exists. Retracted the finding in
+`docs/reports/beta-waitlist-release-checklist-2026-09-19.md`.
+
+Lesson for future live-testing passes: `fullPage: true` screenshots are
+unreliable evidence for anything involving `position: fixed`/`sticky`
+elements - use a viewport-only screenshot or explicit bounding-box
+checks to confirm before reporting a layout bug found that way.

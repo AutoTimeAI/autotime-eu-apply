@@ -36,7 +36,7 @@ a self-serve invite-code unlock. Follows the same gate format as
 | Production DB performance advisor scan | Reviewed, nothing release-blocking | 230 findings via subagent review: 119 `auth_rls_initplan` WARNs (per-row `auth.uid()` re-evaluation vs `(select auth.uid())`) across `profiles`/`applications`/`evidence_records` etc - real but negligible at beta scale, mechanical low-risk fix, scheduled for right after release rather than blocking on it. 4 duplicate-policy WARNs on `custom_job_sources`, low risk. Rest (76 unindexed-FK + 31 unused-index) is INFO-level and safe to defer to a post-launch pass driven by real query-log data | Deferred, tracked |
 | Leaked password protection | Not yet enabled | Supabase Auth dashboard toggle (HaveIBeenPwned check on signup/password-change) - not settable via SQL/migration, needs a manual flip in the Supabase Auth settings UI | Recommended follow-up, non-blocking |
 | Live authenticated walkthrough: dashboard, job paste, analysis, application gate, admin denial | **Complete - verified live, found 1 cosmetic bug** | Real QA session (rotated `QA_SESSION_BOOTSTRAP_SECRET`, fresh production deploy to pick it up) against production. Pasted a genuinely new vacancy (NovaGrid Energy, Berlin) end to end: extraction correctly pulled skills/location/work-arrangement/work-authorisation clause from raw text; real decision engine returned "Consider" (1/5 requirements confirmed) rather than a false pass, with real governed-source citations (EU Blue Card, Recognition in Germany - gov.de portal, dated 2026-07-29); Application tab correctly gated "Prepare application" (disabled) vs "Prepare anyway" (enabled, explicit gap acknowledgment) exactly matching the evidence-first design. `/admin` correctly redirected this non-admin account to `adminDenied=1`. Zero real console/network errors (one benign Next.js RSC-prefetch abort, expected on rapid navigation). Test job cleaned up from the QA account afterward | Resolved |
-| **Cosmetic bug found: analytics consent banner overlaps recommendation heading** | Found, not yet fixed | On the job-analysis result view, the "AutoTime uses privacy-conscious EU analytics... Allow analytics / Decline" banner renders on top of and truncates the recommendation heading text ("...vacancy facts need resolution" partially hidden behind the banner). Cosmetic only, doesn't block reading the rest of the analysis, but worth a z-index/positioning fix before wider release | Non-blocking, tracked for a follow-up fix |
+| ~~Cosmetic bug: analytics banner overlaps recommendation heading~~ | **False positive - retracted** | Initial `fullPage: true` Playwright screenshot appeared to show the consent banner overlapping the heading. Re-checked with a real viewport-only screenshot and actual bounding boxes: `.consent-banner` (`position: fixed`) sits at y=744-882px, the heading at y=189-279px - no overlap. `fullPage: true` mis-positions `position: fixed` elements during full-page stitching; that artifact, not a real rendering bug, produced the earlier screenshot. No fix needed | Retracted, no action needed |
 
 ## Release Decision
 
@@ -68,9 +68,11 @@ fixed two more real issues:
    site already used the service-role client). Fixed by revoking the
    unnecessary EXECUTE grant (`20260919180000_security_advisor_hardening.sql`),
    applied to production, re-verified via advisor re-scan.
-4. **Analytics-consent banner overlaps the analysis recommendation
-   heading** on the job-analysis result view - cosmetic, non-blocking,
-   tracked for a follow-up fix.
+A "cosmetic banner overlap" was initially reported here from a
+`fullPage: true` Playwright screenshot, then retracted after a
+viewport-only re-check with real bounding boxes showed no overlap -
+that capture mode mis-positions `position: fixed` elements during
+full-page stitching. No real bug.
 
 Nothing is release-blocking. All fixes are deployed (final commit
 `00979c73` plus the `20260919180000` DB migration, redeploy run
