@@ -194,7 +194,13 @@ export function OnboardingWizard() {
       : "";
   const [step, setStep] = useState(requested ?? 0),
     [values, setValues] = useState(empty),
-    [status, setStatus] = useState("Loading your setup…");
+    [status, setStatus] = useState("Loading your setup…"),
+    // Gates Save/Continue until the profile fetch below resolves. Without
+    // this, a fast click on "Save changes" validates against the still-empty
+    // `values` defaults (not yet overwritten by the fetched profile), which
+    // fails namePattern/placePattern on a name/location that are actually
+    // valid - found live via reproduction, not from any bad stored data.
+    [loaded, setLoaded] = useState(false);
   const countries = values.countriesTarget
     .split(",")
     .map((item) => item.trim())
@@ -205,6 +211,7 @@ export function OnboardingWizard() {
       .then(({ response, payload }) => {
         if (!response.ok) {
           setStatus(payload.error);
+          setLoaded(true);
           return;
         }
         const data = payload.data;
@@ -252,6 +259,11 @@ export function OnboardingWizard() {
           );
         }
         setStatus("");
+        setLoaded(true);
+      })
+      .catch(() => {
+        setStatus("Could not load your saved details. Refresh and try again.");
+        setLoaded(true);
       });
   }, [gatewayRequired, requested, router, userId]);
   const save = async (nextStep: number, complete = false) => {
@@ -783,18 +795,28 @@ export function OnboardingWizard() {
         <p role="status">{status}</p>
         <div className="onboarding-actions">
           {step === 5 ? (
-            <button type="button" disabled={isUploading} onClick={finish}>
+            <button
+              type="button"
+              disabled={isUploading || !loaded}
+              onClick={finish}
+            >
               Complete setup
             </button>
           ) : (
-            <button type="button" disabled={isUploading} onClick={next}>
+            <button
+              type="button"
+              disabled={isUploading || !loaded}
+              onClick={next}
+            >
               {isUploading
                 ? "Processing…"
-                : editing
-                  ? "Save changes"
-                  : step === 3
-                    ? "Continue or skip"
-                    : "Continue"}
+                : !loaded
+                  ? "Loading…"
+                  : editing
+                    ? "Save changes"
+                    : step === 3
+                      ? "Continue or skip"
+                      : "Continue"}
             </button>
           )}
           {!editing && step > 0 ? (
