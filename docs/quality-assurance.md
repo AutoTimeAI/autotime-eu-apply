@@ -2589,3 +2589,52 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   both newly-wired files) both clean. Committed as `99bf5961`, pushed,
   and deployed to production via the manual production deployment
   workflow (verified green).
+
+## 2026-09-19 — Systemic orphaned-test audit: 7 more test files never running, one was failing
+
+- Following the two orphaned `international-*` test files found earlier
+  today, ran a full audit of every `scripts/*.test.mjs` and `apps/web/
+  tests/*.test.mjs` file against `package.json` (accounting for the
+  existing `test:mobility-suite` glob, which does legitimately cover all
+  39 `mobility-*.test.mjs` files). Found 7 more genuinely orphaned,
+  actively-maintained files with no script and never running in
+  `test:unit` or CI:
+  - `scripts/international-phase2-entry-gate.test.mjs` - **was actually
+    failing** once run (see below)
+  - `scripts/international-audit.test.mjs`
+  - `scripts/decision-quality-evaluation.test.mjs` - the core AI
+    decision-rules regression suite
+  - `scripts/decision-adapter-external-assessment-snapshot.test.mjs`
+  - `scripts/application-kit-request.test.mjs`
+  - `scripts/platform-coverage.test.mjs`
+  - `apps/web/tests/content-security.test.mjs`
+- `international-phase2-entry-gate.test.mjs`'s architectural-governance
+  test had two real, independent drifts, both invisible because the
+  file never ran:
+  1. Expected `InternationalModule.tsx` under 180 lines; it had grown
+     to 207 (from Stamp4-check state/logic added over time).
+  2. Expected `UserNav.tsx`'s workflow nav array to be immediately
+     followed by `isPathInSection` with exactly 6 `label:` entries; a
+     `WorkflowNavIcon` renderer had since been added between them
+     (breaking the anchor), and "Career Direction" had been added as a
+     genuine 7th destination alongside "Countries".
+- Fixed the real drift rather than loosening the test to match it:
+  extracted the self-contained Stamp4-check state/effect/action out of
+  `InternationalModule.tsx` into a new `useStamp4Check` hook (mirroring
+  the existing `useMobilityPersistence` pattern already in the same
+  file - no behaviour change), bringing the controller to 165 lines.
+  Updated the test's stale assumptions to match the two confirmed-real,
+  confirmed-intentional product changes (icon renderer, 7th
+  destination) rather than treating them as bugs.
+- Confirmed all 7 files pass individually and wired all 7 into
+  `test:unit`. `pnpm --filter web typecheck` and the full `pnpm
+  test:unit` (exit 0) both clean. Committed as `d9c487de`, pushed, and
+  deployed to production via the manual production deployment workflow
+  (verified green; `/dashboard/international` still correctly
+  auth-redirects).
+- Recommend a follow-up: add a lightweight CI check that fails if any
+  `*.test.mjs` file under `scripts/` or `apps/web/tests/` isn't
+  reachable from a `package.json` script (literal or glob) - this is
+  now the third sweep this session to find test files silently not
+  running, and a mechanical check would catch the next one immediately
+  instead of waiting for someone to audit by hand.
