@@ -179,6 +179,16 @@ test("does not treat an unrelated word containing 'tel'/'phone'/'mobile' as a ph
   assert.equal(detectFieldFromText("text", "automobile allowance"), null)
 })
 
+test("does not treat 'voicemail' as an email field, but still detects real email labels", () => {
+  // "voicemail" contains "email" as a bare substring - without whole-word
+  // matching this silently filled the candidate's actual email address
+  // into a voicemail-related form field.
+  assert.equal(detectFieldFromText("text", "preferred voicemail greeting"), null)
+  assert.equal(detectFieldFromText("text", "voicemail number"), null)
+  assert.equal(detectFieldFromText("text", "email address"), "email")
+  assert.equal(detectFieldFromText("text", "e-mail"), "email")
+})
+
 test("maps reusable answers to autofill fields", () => {
   assert.deepEqual(
     getReusableAnswerValues({

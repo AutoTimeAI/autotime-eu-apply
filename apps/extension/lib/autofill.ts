@@ -106,7 +106,13 @@ export function detectFieldFromText(
 ): ProfileField | null {
   const text = inputText.toLowerCase()
 
-  if (inputType === "email" || includesAny(text, ["email", "e-mail"])) {
+  // Bare substring matching would also match "email" inside "voicemail"
+  // ("Preferred voicemail greeting", "Voicemail number" fields exist on
+  // some ATS forms) and silently fill the candidate's actual email
+  // address into a field that has nothing to do with email - the same
+  // false-positive class the phone check below is already hardened
+  // against via includesAnyWholeWord.
+  if (inputType === "email" || includesAnyWholeWord(text, ["email", "e-mail"])) {
     return "email"
   }
 
