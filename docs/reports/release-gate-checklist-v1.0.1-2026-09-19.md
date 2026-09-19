@@ -24,23 +24,24 @@ These are deliberately different — documentation commits were made after the d
 | P0 deployed E2E tests all pass | QA | All 10 critical-path tests from the assurance pack's §5 table exercised live against production this session — see the table below | **Pass** |
 | No unresolved Critical or High defects | Release owner | Scoped statement, not a formal defect-register query (no such register exists in this repo): every defect found during this session's audits (Stripe billing audit, routing/config sweep, live E2E walkthrough) was fixed and re-verified before this checklist was written, with none left open. This does not prove no *undiscovered* Critical/High defect exists — only that none was found and left unresolved | **Pass, scoped as above** |
 | Accessibility critical path accepted | QA | Automated axe scans pass on 11 critical surfaces (landing, home, jobs, applications, interviews, countries, career direction, profile, continuous journey, and login - login was found hanging on a broken test wait, fixed in commit `2b8db35e`, now passes in under 20s). A real live keyboard-navigation pass was also run against production (login: 6 tab stops, dashboard: 8 tab stops) - every focused element had a visible indicator, tab order followed visual order, and Escape correctly closed the account menu. Not an exhaustive walkthrough of every screen/modal | **Pass** |
-| Monitoring, incident and rollback ready | Operations | Automatic rollback-on-failure confirmed wired into the deploy workflow (captures previous READY deployment, rolls back on failed `smoke:web`) and its correctness verified by reading the workflow source. **No named incident lead or rollback operator has been recorded**, and no rehearsal has been run | **Partial — mechanism ready, ownership not assigned** |
+| Monitoring, incident and rollback ready | Operations | Automatic rollback-on-failure confirmed wired into the deploy workflow. Release owner/incident lead/rollback operator named (DataByRajesh, founder, all three roles - single-person team). A live rollback rehearsal was run 2026-09-19: rolled back to the prior deployment, confirmed via alias + smoke test, then rolled forward again and re-confirmed - full round trip under 1 minute. See `incident-and-rollback-exercise-record.md` | **Pass** |
 | Privacy, beta terms and support channel ready | Founder | Not evidenced this session — this is a founder/business-process item (privacy notice, beta acknowledgement flow, support channel) outside this session's engineering scope | **Open — needs founder confirmation** |
 
-### Result: 9 Pass / 1 Fail / 1 Open / 1 Partial
+### Result: 10 Pass / 1 Fail / 1 Open
 
-Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO**.
+Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO** - one confirmed Fail and one genuinely open item remain:
 
-One gate now confirmed **Fail** (worse than "open" - actively checked and confirmed absent):
-- **Backup/PITR** - the founder checked the Supabase dashboard 2026-09-19: the project is on the Free plan, which has zero scheduled backups and no PITR. This is a real, current, material risk to the production database, not a documentation gap.
+- **Backup/PITR - confirmed Fail.** The founder checked the Supabase dashboard 2026-09-19: the project is on the Free plan, which has zero scheduled backups and no PITR. This is a real, current, material risk to the production database - not a documentation gap, and not closeable by anything in this repo. Requires a Pro-plan upgrade decision or explicit written risk acceptance.
+- **Privacy/beta-terms/support-channel readiness - Open**, founder/business item.
 
-One gate is genuinely open and not something this session can close alone:
-- Privacy/beta-terms/support-channel readiness (founder/business item)
-
-One gate is partial:
-- Rollback: the mechanism is ready and verified, but no human has been named to operate it, and no rehearsal has been run. (This is now arguably more urgent given the confirmed backup gap - if the automatic rollback's captured previous deployment is ever insufficient, there is no database-level recovery path either.)
-
-Accessibility moved to Pass this session: automated axe passes on all 11 covered critical surfaces, and a real live keyboard/focus pass (tab order, focus visibility, Escape behavior) was added - see `testing-categories-coverage-v1.0.1-2026-09-19.md`.
+Everything else now passes, including two items closed this session with
+the founder's direct involvement: **Accessibility** (automated axe on all
+11 surfaces + a real live keyboard/focus pass), and **Monitoring/incident/
+rollback** (named owner - DataByRajesh, founder, all three roles - plus a
+real live rollback rehearsal: rolled back one step, confirmed via alias +
+smoke, rolled forward again, confirmed clean, full round trip under a
+minute). See `testing-categories-coverage-v1.0.1-2026-09-19.md` and
+`incident-and-rollback-exercise-record.md` for detail.
 
 ---
 

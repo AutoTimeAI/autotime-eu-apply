@@ -49,8 +49,8 @@ See the gate checklist for full detail. Summary:
 |---|---|
 | Supabase backup/PITR | **FAIL - confirmed zero backup coverage.** Founder checked the dashboard 2026-09-19: project is on Supabase's Free plan, which excludes scheduled backups and PITR entirely. Real production data has no recovery path right now. Needs a Pro-plan upgrade decision or explicit written risk acceptance |
 | Accessibility (automated axe + live keyboard/focus pass) | Closed - axe passes on all 11 covered critical surfaces including login; a real live keyboard-navigation pass (tab order, focus visibility, Escape behavior) was also run against production |
-| Named incident lead / rollback operator | Open - no names recorded |
-| Rollback rehearsal | Open - not run |
+| Named incident lead / rollback operator | Closed - DataByRajesh (founder) named as release owner, incident lead, and rollback operator |
+| Rollback rehearsal | Closed - ran live 2026-09-19, rolled back one step and forward again, confirmed via alias checks and `pnpm smoke:web` at each step, full round trip under 1 minute |
 | Founder privacy/beta-terms/support confirmation | Open - founder-owned |
 | Release-owner signature | Open - pending |
 

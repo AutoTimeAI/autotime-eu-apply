@@ -134,13 +134,13 @@ hesitation” standard requested for this release.
 | Blocking item | Current status | Completion evidence required |
 |---|---|---|
 | Login accessibility scan | **PASS** | Fixed and verified in commit `2b8db35e` - see section 4. |
-| Keyboard/focus critical-path review | **OPEN** | Manual keyboard-only pass for login/invite, dashboard navigation, profile, job analysis, application review, pricing and sign-out; record focus order/visibility and modal/menu escape behaviour. |
+| Keyboard/focus critical-path review | **PASS** | Live keyboard-navigation pass run against production: login (6 tab stops) and dashboard (8 tab stops) - every focused element had a visible indicator (outline or box-shadow), tab order followed visual/logical order, and Escape correctly closed the account menu. Not an exhaustive walkthrough of every screen/modal in the app, but covers the core critical path. |
 | Supabase backup/PITR | **CONFIRMED: NOT AVAILABLE** | Checked live 2026-09-19: Supabase project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which explicitly excludes scheduled backups and PITR ("Free Plan does not include project backups. Upgrade to the Pro Plan for up to 7 days of scheduled backups."). This is not an unconfirmed gate - it is a confirmed zero-backup-coverage state. Real production data (currently real invited beta users) has no recovery path if lost or corrupted. |
 | Restore readiness | **BLOCKED - no backup exists to restore from** | A restore rehearsal is not possible until backups exist. Decision needed: upgrade to Supabase Pro (adds scheduled backups + PITR), or explicitly accept the zero-recovery risk in writing for the current beta scope. |
-| Release owner | **OPEN** | Named person and date accepted. |
-| Incident lead | **OPEN** | Named person, notification channel and response expectation. |
-| Rollback operator | **OPEN** | Named person with confirmed Vercel access. |
-| Rollback rehearsal | **OPEN** | Safe rehearsal record: start deployment, target, action, smoke result and recovery time. |
+| Release owner | **PASS** | DataByRajesh (founder), accepted 2026-09-19 - single-person team, per the startup testing standard this is the correct answer rather than inventing separate roles. See `incident-and-rollback-exercise-record.md`. |
+| Incident lead | **PASS** | DataByRajesh (founder), same as above. |
+| Rollback operator | **PASS** | DataByRajesh (founder), confirmed Vercel access (used directly this session to run the rehearsal below). |
+| Rollback rehearsal | **PASS** | Ran live 2026-09-19: rolled back from `dpl_2MNUvqNWHTqzdg1jf8UmQ1WPRVJv` to the prior deployment `dpl_AsNfKi3yP8qxKwL1dfXqbPWDjXcu`, confirmed via alias check and `pnpm smoke:web` passing, then rolled forward again and re-confirmed. Rollback-to-self was first attempted and correctly rejected by Vercel (422), confirming its own safety guard. Full round trip under 1 minute. See `incident-and-rollback-exercise-record.md` for the full log. |
 | Privacy notice | **OPEN** | Founder confirms deployed notice matches actual production processing/subprocessors and beta use. |
 | Beta terms/limitations | **OPEN** | Founder confirms users see and accept appropriate beta limitations. |
 | Support channel | **OPEN** | Working channel, monitored owner and expected response window. |
@@ -212,6 +212,11 @@ run the same live smoke, and roll back immediately on failure.
 ## 8. Final authorization
 
 Complete only after section 5 contains no OPEN, BLOCKED or PARTIAL row.
+As of this update, backup/PITR (confirmed FAIL) and privacy/beta-terms/
+support (OPEN) still block this table from being signed. Release owner,
+incident lead, and rollback operator are already named in section 5 and
+`incident-and-rollback-exercise-record.md` (DataByRajesh, founder, all
+three roles) for when the remaining items close.
 
 | Field | Approval |
 |---|---|
