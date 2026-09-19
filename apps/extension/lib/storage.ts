@@ -739,18 +739,44 @@ export async function getApplications(): Promise<ApplicationRecord[]> {
   return applications.map(normalizeApplicationRecord)
 }
 
+// saveApplication/deleteApplication/updateApplication are all a
+// read-modify-write over the same stored array (chrome.storage.local.get/
+// set are real async round trips). Two concurrent calls - most concretely,
+// background/index.ts's performApplicationSync running
+// `Promise.all(deletedApplicationIds.map((id) => deleteApplication(id)))`
+// when a dashboard sync reports more than one deleted id at once - each
+// read the same starting snapshot, mutate only their own target, and
+// whichever writes last silently undoes every other concurrent call's
+// change. Sharing one queue across all three (not just deletions) makes
+// every call see the previous call's write before it reads, regardless of
+// which of the three operations, or how many, run concurrently.
+let applicationsQueue: Promise<unknown> = Promise.resolve()
+
+function withApplicationsQueue<T>(run: () => Promise<T>): Promise<T> {
+  const result = applicationsQueue.then(run)
+  applicationsQueue = result.then(
+    () => undefined,
+    () => undefined
+  )
+  return result
+}
+
 export async function saveApplication(record: ApplicationRecord) {
-  const existing = await getApplications()
-  const updated = [normalizeApplicationRecord(record), ...existing]
-  await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
+  return withApplicationsQueue(async () => {
+    const existing = await getApplications()
+    const updated = [normalizeApplicationRecord(record), ...existing]
+    await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
+  })
 }
 export async function getJobReferences(): Promise<JobReference[]> { const result=await chrome.storage.local.get(JOB_REFERENCES_KEY); return (result[JOB_REFERENCES_KEY] as JobReference[]|undefined)??[] }
 export async function saveJobReference(reference: JobReference) { const existing=await getJobReferences(); const without=existing.filter((item)=>item.url!==reference.url); await chrome.storage.local.set({[JOB_REFERENCES_KEY]:[reference,...without]}) }
 
 export async function deleteApplication(id: string) {
-  const existing = await getApplications()
-  const updated = existing.filter((record) => record.id !== id)
-  await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
+  return withApplicationsQueue(async () => {
+    const existing = await getApplications()
+    const updated = existing.filter((record) => record.id !== id)
+    await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
+  })
 }
 
 export async function updateApplication(
@@ -769,11 +795,13 @@ export async function updateApplication(
     >
   >
 ) {
-  const existing = await getApplications()
-  const updated = existing.map((record) =>
-    record.id === id
-      ? normalizeApplicationRecord({ ...record, ...changes })
-      : record
-  )
-  await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
+  return withApplicationsQueue(async () => {
+    const existing = await getApplications()
+    const updated = existing.map((record) =>
+      record.id === id
+        ? normalizeApplicationRecord({ ...record, ...changes })
+        : record
+    )
+    await chrome.storage.local.set({ [APPLICATIONS_KEY]: updated })
+  })
 }

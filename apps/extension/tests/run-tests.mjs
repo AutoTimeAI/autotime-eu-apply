@@ -1999,6 +1999,32 @@ test("saves applications newest first and deletes by id", async () => {
   assert.deepEqual(await getApplications(), [first])
 })
 
+test("concurrent deleteApplication calls (as background/index.ts's Promise.all(ids.map(deleteApplication)) issues) don't resurrect each other's target", async () => {
+  // deleteApplication does a non-atomic read-modify-write with no
+  // serialization (unlike updateApplicationSyncState's own queue for this
+  // exact hazard) - two concurrent calls each read the same pre-delete
+  // snapshot, each filter out only their own id, and whichever writes
+  // last wins, silently undoing the other deletion. This is exactly how
+  // background/index.ts's performApplicationSync calls it today when a
+  // dashboard sync reports more than one deleted application id at once.
+  resetStorage()
+
+  const ids = ["a", "b", "c"]
+  for (const id of ids) {
+    await saveApplication({
+      id,
+      title: id,
+      url: `https://example.com/${id}`,
+      createdAt: "2026-04-01T00:00:00.000Z",
+      status: "Saved"
+    })
+  }
+
+  await Promise.all(ids.map((id) => deleteApplication(id)))
+
+  assert.deepEqual(await getApplications(), [])
+})
+
 test("loads legacy application statuses as spec statuses", async () => {
   resetStorage()
 
