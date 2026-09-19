@@ -2243,3 +2243,32 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
   Committed as `d7757f11`, pushed, and deployed to production via the
   manual production deployment workflow (verified green).
+
+## 2026-09-19 — Same redaction bug found in the outreach-drafting route
+
+- Found by generalising the just-fixed portfolio bug: swept
+  `lib/openai-server.ts` for the same shape (a plain `Error` with a safe,
+  specific message that a route maps to a generic 500). Found it in
+  `draftOutreachWithOpenAI`, which throws when the model's own drafted
+  outreach message exceeds a channel's length rule: "LinkedIn note
+  exceeds 300 characters", "Outreach draft exceeds 150 words", "Outreach
+  subject exceeds 60 characters". `api/outreach/route.ts` mapped every
+  non-Zod/FeatureGate/RateLimit error to 500, and `toPublicApiError`
+  redacts any message at `status >= 500`, so the user saw a generic
+  failure with no indication the AI's draft itself was just too long
+  (a transient, retry-worthy condition, not something wrong with their
+  input - but still useful for the user/support to know).
+- Fixed the same way as the portfolio bug: added
+  `OutreachDraftValidationError extends Error` in `openai-server.ts` as
+  the throw type for these three checks, and mapped it to 422 in the
+  outreach route's status ternary so the message passes through
+  `toPublicApiError` unredacted.
+- New test file `outreach-draft-validation.test.mjs` mocks the OpenAI
+  client (via the existing `__setOpenAIClientForTesting` test seam) to
+  return an over-length body/subject for each of the three checks and
+  asserts the rejection is specifically an `OutreachDraftValidationError`
+  instance - the exact distinction the route's status mapping depends on.
+  Wired into `test:unit` as `test:web:outreach-draft-validation`.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `0abe0eb1`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green).
