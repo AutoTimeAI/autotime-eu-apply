@@ -2209,3 +2209,37 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   function with no external dependencies, exhaustively unit-tested
   against the exact bypass vectors.
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+
+## 2026-09-19 — Portfolio-fetch errors were redacted into a useless generic message
+
+- Found immediately after the portfolio SSRF fix, while checking the next
+  logical file in the same import chain (`/api/ai/cv-enrich/route.ts`).
+  Not a security bug, but a real UX/correctness defect: `fetchPortfolioText`
+  (`lib/cv/sources/portfolio.ts`) throws several deliberately safe,
+  user-actionable plain `Error` messages - "Enter a public HTTP or HTTPS
+  portfolio URL.", "Private network addresses are not allowed.",
+  `` `Portfolio returned ${status}.` ``, "Portfolio URL must return an HTML
+  page.", "Not enough readable portfolio content was found.", and "The
+  portfolio must resolve to a public address." from the SSRF-safe DNS
+  lookup.
+- The route mapped every non-Zod/FeatureGate/RateLimit error to a generic
+  500 status, and `toPublicApiError(message, status)` redacts any message
+  once `status >= 500` - so every one of these safe, specific,
+  user-actionable messages was silently replaced with a generic "Request
+  could not be completed..." string, hiding exactly the information a
+  user needs to fix their portfolio URL (e.g. "you pasted a private/
+  localhost address" vs. an opaque failure).
+- Fixed by introducing `PortfolioFetchError extends Error` as the throw
+  type for every safe message in `portfolio.ts` (including the DNS-lookup
+  rejection inside `createSsrfSafeLookup`), and adding
+  `error instanceof PortfolioFetchError ? 400 :` to the route's status
+  ternary so these messages pass through `toPublicApiError` unredacted at
+  a 4xx status instead of being swallowed at 500.
+- New regression test in `portfolio-ssrf.test.mjs` calls
+  `fetchPortfolioText` with an unsupported protocol and with private/
+  localhost hosts and asserts the rejection is specifically a
+  `PortfolioFetchError` instance, not just any `Error` - the exact
+  distinction the route's status mapping now depends on.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `d7757f11`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green).
