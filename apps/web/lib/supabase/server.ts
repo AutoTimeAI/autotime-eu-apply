@@ -33,9 +33,25 @@ export function applyPendingCookies(
   response: NextResponse,
   pendingCookies: PendingCookie[],
 ): NextResponse {
+  // Temporary instrumentation (2026-09-19): the redirect-cookie fix this
+  // function is part of did not resolve the QA-bootstrap production issue
+  // on its first deploy - logging here to confirm this function actually
+  // runs and how many cookies it applies, since removing the prior
+  // diagnostic in the same commit as the fix made that unverifiable.
+  // Remove once resolved.
+  console.info("autotime_apply_pending_cookies", {
+    pendingCount: pendingCookies.length,
+    names: pendingCookies.map(({ name }) => name),
+  })
+
   pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, options)
   })
+
+  console.info("autotime_apply_pending_cookies_done", {
+    responseSetCookieHeaderCount: response.headers.getSetCookie?.().length ?? -1,
+  })
+
   return response
 }
 
