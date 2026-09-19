@@ -6,7 +6,7 @@ import {
   isConfigurationUnavailableError,
 } from "../../../../lib/configuration-error"
 import { createAdminClient } from "../../../../lib/supabase/admin"
-import { diagnosticJson } from "../../../../lib/diagnostics"
+import { createDiagnosticId, diagnosticJson, logDiagnostic } from "../../../../lib/diagnostics"
 import { exportedTables } from "../../../../lib/account-export"
 
 // GDPR Article 20 (right to data portability). The exported set matches
@@ -39,6 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const admin = createAdminClient()
+    const incompleteTables: string[] = []
     const results = await Promise.all(
       exportedTables.map(async (table) => {
         const { data, error } = await (admin as unknown as {
@@ -46,6 +47,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }).from(table)
           .select("*")
           .eq("user_id", user.id)
+        if (error) {
+          // A GDPR Article 20 export must never silently look complete when
+          // it isn't - previously a per-table query failure (transient DB
+          // issue, RLS misconfiguration, schema drift) was swallowed into an
+          // empty array with no record anywhere that the table was skipped.
+          incompleteTables.push(table)
+          logDiagnostic(
+            {
+              area: "account",
+              code: "account.export.table-read-failed",
+              id: createDiagnosticId(),
+              level: "warn",
+              message: `Account export could not read table "${table}".`,
+              timestamp: new Date().toISOString(),
+            },
+            { userId: user.id, table, error: String(error) },
+          )
+        }
         return [table, error ? [] : (data ?? [])] as const
       }),
     )
@@ -54,6 +73,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       exportedAt: new Date().toISOString(),
       userId: user.id,
       email: user.email ?? null,
+      incompleteTables,
       data: Object.fromEntries(results),
     }
 
