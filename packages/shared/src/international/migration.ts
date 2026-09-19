@@ -32,7 +32,18 @@ export function migrateCandidateProfileToMobilityProfile(
         ? "existing-country-permission"
         : "unsure",
     currentPermissionType: profile.workRightDetails || undefined,
-    sponsorshipRequired: profile.sponsorshipNeeded ? "yes" : "unsure",
+    // Mirrors applicantPosition's own distinction above: workRightDetails
+    // being populated is real, confirmed evidence the candidate does not
+    // need sponsorship, not mere absence of an answer - collapsing it to
+    // "unsure" would discard that evidence and misrepresent a confirmed
+    // "no" as "we don't know", which downstream consumers (e.g.
+    // apps/web/components/international/model.ts's own evidence-
+    // completeness check) treat as meaningfully different from a real "no".
+    sponsorshipRequired: profile.sponsorshipNeeded
+      ? "yes"
+      : profile.workRightDetails.trim()
+        ? "no"
+        : "unsure",
     relocationPreference: profile.relocationWillingness,
     noticePeriod: profile.noticePeriod || undefined,
     notes:

@@ -66,6 +66,62 @@ test("legacy profile migration preserves old evidence", () => {
   );
 });
 
+test("legacy profile migration maps confirmed 'no sponsorship needed' evidence to sponsorshipRequired: no, not unsure", () => {
+  // sponsorshipNeeded: false with workRightDetails populated is real,
+  // confirmed evidence the candidate does not need sponsorship - not the
+  // same as never having answered. applicantPosition already made this
+  // distinction (falls back to "unsure" only when workRightDetails is
+  // also empty); sponsorshipRequired must mirror it rather than
+  // collapsing every non-sponsorship-required profile to "unsure".
+  const migrated = migrateCandidateProfileToMobilityProfile({
+    fullName: "Sample Applicant",
+    email: "",
+    phone: "",
+    linkedInUrl: "",
+    githubUrl: "",
+    portfolioUrl: "",
+    currentCountry: "Ireland",
+    currentCity: "",
+    targetCountries: "Ireland",
+    targetRoles: "Engineer",
+    workRightDetails: "EU citizen with existing right to work",
+    sponsorshipNeeded: false,
+    relocationWillingness: "no",
+    salaryExpectation: "",
+    noticePeriod: "",
+    baseCvText: "",
+    projectSummaries: "",
+    experienceHighlights: "",
+  });
+  assert.equal(migrated.applicantPosition, "existing-country-permission");
+  assert.equal(migrated.sponsorshipRequired, "no");
+});
+
+test("legacy profile migration falls back to unsure when there is genuinely no evidence either way", () => {
+  const migrated = migrateCandidateProfileToMobilityProfile({
+    fullName: "Sample Applicant",
+    email: "",
+    phone: "",
+    linkedInUrl: "",
+    githubUrl: "",
+    portfolioUrl: "",
+    currentCountry: "India",
+    currentCity: "",
+    targetCountries: "Ireland",
+    targetRoles: "Engineer",
+    workRightDetails: "",
+    sponsorshipNeeded: false,
+    relocationWillingness: "depends",
+    salaryExpectation: "",
+    noticePeriod: "",
+    baseCvText: "",
+    projectSummaries: "",
+    experienceHighlights: "",
+  });
+  assert.equal(migrated.applicantPosition, "unsure");
+  assert.equal(migrated.sponsorshipRequired, "unsure");
+});
+
 test("Ireland incomplete evidence requires investigation", () => {
   const result = assessInternationalJob({
     country: "Ireland",
