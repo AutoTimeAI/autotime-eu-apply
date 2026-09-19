@@ -146,3 +146,18 @@ All migrations through `20260919190000` are applied and verified (listed in `doc
 3. Optionally extend the live walkthrough to cover the remaining critical-path tests not exercised today (E2E-02, 06, 07, 08, 09, 10) — E2E-06 (cross-user access) is the one with the most security relevance among these.
 
 Given the above, the honest decision under the pack's own rule is **GO WITH LIMITATIONS** — the limitations being administrative/verification gaps, not known product defects.
+
+---
+
+## Deployment record
+
+Deployed under the **GO WITH LIMITATIONS** decision above, per explicit release-owner instruction.
+
+| Field | Value |
+|---|---|
+| Deployed commit | `45d9375cd1a8a819b93ca348e7f044ca288aa646` |
+| Workflow run | `35458930446` — all steps green (install, release gates, build, deploy, `pnpm smoke:web` verification), no rollback triggered |
+| Vercel deployment | `dpl_AsNfKi3yP8qxKwL1dfXqbPWDjXcu`, state `READY`, `isRollbackCandidate: true` |
+| Deployment URL | `https://autotime-eu-apply-op3z4d999-rajs-projects-6830d68b.vercel.app` (aliased to production) |
+| Rollback target if needed | The previously live deployment, commit `97d4bddc` (captured automatically by the workflow before this deploy) |
+| Outstanding limitations at time of deploy | Backup/PITR verification and named incident/rollback ownership — both still open, per above |
