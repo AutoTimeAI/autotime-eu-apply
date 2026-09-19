@@ -108,6 +108,31 @@ test("reconciliation covers empty, local, server, match and conflict", () => {
   assert.equal(kind(empty, "malformed", record), "malformed-local");
 });
 
+test("differing lastVerifiedAt alone is not a conflict, but real content differences still are", () => {
+  // InternationalModule.tsx's saveProfile bumps lastVerifiedAt to
+  // new Date() on every Save click, even one that changes nothing else.
+  // A re-save on one device must not look like a substantive edit and
+  // force a false "browser and account copies differ" prompt against
+  // another device's identical-content copy.
+  const kind = (localProfile, server) =>
+    reconcileMobilityProfiles({
+      emptyProfile: empty,
+      local: localProfile,
+      localKind: "saved",
+      server,
+    }).kind;
+  const localReVerified = { ...local, lastVerifiedAt: "2026-08-01T00:00:00.000Z" };
+  const serverRecord = {
+    ...record,
+    profile: { ...local, lastVerifiedAt: "2026-07-29T12:01:00.000Z" },
+  };
+  assert.equal(kind(localReVerified, serverRecord), "matching");
+  assert.equal(
+    kind({ ...localReVerified, currentCountry: "France" }, serverRecord),
+    "conflict",
+  );
+});
+
 test("synced requires a validated confirmed response matching the upload", () => {
   assert.deepEqual(
     confirmPersistedMobilityProfile({

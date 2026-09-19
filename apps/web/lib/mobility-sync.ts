@@ -65,18 +65,29 @@ export type MobilityReconciliation =
     }
   | { kind: "malformed-local"; profile: MobilityProfile };
 
-/** Serialises `profile` with its keys sorted alphabetically, so two structurally-equal profiles produce an identical string regardless of key order. */
+/**
+ * Serialises `profile` with its keys sorted alphabetically (so two
+ * structurally-equal profiles produce an identical string regardless of
+ * key order), excluding `lastVerifiedAt`. That field records *when* the
+ * candidate last confirmed their details, not the details themselves -
+ * InternationalModule.tsx's saveProfile bumps it to `new Date()` on every
+ * Save click, even one that changes nothing. Including it here made a
+ * plain re-save on one device look like a substantive edit and force a
+ * "browser and account copies differ, choose which to keep" conflict
+ * prompt against another device's identical-content copy, even though
+ * nothing meaningful actually differed.
+ */
 function stableProfile(profile: MobilityProfile) {
+  const { lastVerifiedAt: _lastVerifiedAt, ...comparable } =
+    mobilityProfileSchema.parse(profile);
   return JSON.stringify(
     Object.fromEntries(
-      Object.entries(mobilityProfileSchema.parse(profile)).sort(([a], [b]) =>
-        a.localeCompare(b),
-      ),
+      Object.entries(comparable).sort(([a], [b]) => a.localeCompare(b)),
     ),
   );
 }
 
-/** True if `left` and `right` are structurally equal (via stableProfile's key-order-independent comparison). */
+/** True if `left` and `right` are structurally equal (via stableProfile's key-order-independent comparison, ignoring lastVerifiedAt). */
 export function mobilityProfilesMatch(
   left: MobilityProfile,
   right: MobilityProfile,
