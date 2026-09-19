@@ -2638,3 +2638,30 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   now the third sweep this session to find test files silently not
   running, and a mechanical check would catch the next one immediately
   instead of waiting for someone to audit by hand.
+
+## 2026-09-19 — Two unstructured job pastes could be mistaken for duplicates
+
+- Found by continuing the sweep into `job-application-workflow.ts`'s
+  `duplicateJob`, used by both the Aggregated Jobs Browser and the
+  manual-paste Track Job flow. `extractJob` leaves `title`/`employer`
+  blank whenever a pasted vacancy lacks an explicit "Role:"/"Company:"/
+  "Job title:"/"Position:" label - a real, reachable case for any
+  unstructured paste, not a contrived edge case. `duplicateJob`'s
+  title+employer fallback match compared them without checking either
+  was non-empty, so two entirely different jobs that both happened to
+  lack that label matched trivially on `"" === ""` for both fields.
+- Practical impact: pasting a second, genuinely different unstructured
+  vacancy after a first one (both missing the label) got the user
+  "This job is already tracked." and the second job was silently never
+  added - a real, silent data-loss bug in the core job-tracking flow.
+- Fixed to require both `title` and `employer` be non-empty before
+  using them as a duplicate signal, mirroring the existing `url &&`
+  guard already on the same line for the URL-based match.
+- New test in `phase-3b-workflow.test.mjs` reproduces two different,
+  unstructured vacancy pastes (title/employer genuinely empty per
+  `extractJob`) and confirms they're no longer reported as duplicates -
+  confirmed to fail against the pre-fix code (returned the wrong job
+  instead of `undefined`) and pass after.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `e518dbd6`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green).
