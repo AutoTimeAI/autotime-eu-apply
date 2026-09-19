@@ -2406,3 +2406,51 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
   Committed as `4a1213b7`, pushed, and deployed to production via the
   manual production deployment workflow (verified green).
+
+## 2026-09-19 — Known limitation found, NOT fixed: sponsorship salary detection can conflate an allowance with the base salary
+
+- Found while sweeping `packages/shared/src/international/
+  sponsorship-readiness.ts`'s `detectAnnualSalaryEur`, used by
+  `assessSponsorshipReadiness` to check a candidate's salary against a
+  country's statutory sponsorship threshold. Reproduced live: for the
+  text `"Base salary: €60,000 per year, plus €2,000 per month housing
+  allowance."` against Germany's €50,700 EU Blue Card threshold, the
+  function reports a detected salary of €24,000 and blocks the pathway
+  as "Unlikely" - even though the real annual salary (€60,000) clears
+  the threshold comfortably.
+- Two compounding causes, investigated in order:
+  1. The "is this monthly?" check (`/per\s+month|monthly|.../`) tests
+     the *entire* input text once and applies `× 12` to every detected
+     number if the phrase appears anywhere - not scoped to the specific
+     figure it's near. A candidate scoping fix (bound the check to text
+     between neighbouring detected numbers) was written and verified
+     more correct in isolation, but:
+  2. It doesn't fix the actual observed bug, because the function's
+     final answer is always `Math.min(...allDetectedNumbers)` across
+     *every* currency-shaped figure found in the text - salary,
+     allowances, bonuses, anything. That's intentional for a genuine
+     salary *range* ("45,000-52,000" → conservatively pick the low end;
+     an existing test locks this in), but the code can't distinguish "a
+     range" from "a salary plus an unrelated allowance," so the minimum
+     always silently favours whichever smaller unrelated figure happens
+     to also appear in the text - independent of whether the monthly-
+     detection scoping is fixed.
+- The scoping fix was reverted rather than shipped: verified it does
+  not change the final output for either repro tried (the min-selection
+  issue produces the same wrong answer regardless), and a single-number
+  variant of the bug isn't touched by it at all. Properly closing this
+  needs a design decision on how to distinguish "a stated range" from
+  "a base figure plus something else" - not something to guess at
+  unilaterally in a module whose entire purpose is legal-consequence
+  accuracy. No code changed; `sponsorship-readiness.ts` is unmodified
+  from before this investigation.
+- Flagging for the founder/next session: this can currently cause a
+  genuinely eligible candidate to be told a job is "Unlikely"/blocked
+  on salary grounds when it is not, whenever a vacancy mentions any
+  other monetary figure (allowance, bonus, per-diem) alongside the base
+  salary. Recommend either requiring the matched figure to sit
+  immediately after a "salary"/"base pay"/"compensation" label (already
+  half-built via `salaryEvidenceFromVacancy`, but its 100-char/no-period
+  window is too permissive - see the repro) or preferring the *largest*
+  plausible annual figure over the smallest, revisiting the "range"
+  test's assumption if so.
