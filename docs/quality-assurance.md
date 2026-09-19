@@ -2072,3 +2072,29 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   keeping `NEXT_PUBLIC_*` variables as "Config" type generally, since
   they're public by design and "Secret" type only removes the ability to
   verify them later without adding real confidentiality.
+
+## 2026-09-19 — Guarded Stripe subscription writes against out-of-order webhook delivery
+
+- Found while sweeping the Stripe webhook handler after the auth root-cause
+  investigation: `upsertSubscriptionFromStripe` unconditionally upserted
+  onto `subscriptions` for every `customer.subscription.created/updated`
+  event, unlike every other sync table in this codebase (all of which CAS
+  on a timestamp). Stripe explicitly documents that webhook delivery order
+  is not guaranteed - a stale event processed after a newer one would
+  silently overwrite current plan/status/period-end with older data.
+- Fixed via a new `upsert_subscription_from_stripe` Postgres function
+  (migration `20260919120000_guard_subscription_event_ordering.sql`) that
+  gates the write atomically in SQL via `ON CONFLICT ... WHERE`, keyed on
+  a new `last_stripe_event_created_at` column tracking the Stripe event's
+  own `created` timestamp (not the row's `updated_at`, which a later
+  trigger-driven touch could bump independently of any real Stripe
+  event). Avoids the read-then-write race a select-then-upsert from
+  application code would have.
+- Verified live against the real function with disposable test data
+  (cleaned up immediately after): an initial write applies, a
+  subsequently-processed older event is correctly rejected with the row
+  left unchanged, and a genuinely newer event correctly applies.
+- Extended `environment-boundaries.test.mjs`'s route-wiring test to
+  assert the webhook route calls the new RPC and no longer upserts
+  `subscriptions` directly.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
