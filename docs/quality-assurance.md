@@ -3026,3 +3026,34 @@ and `pnpm build:web` all pass. Committed as `bc4aced4` (Stripe fixes) and
 `9fc23e36` (env-var docs + duplicate-doc cleanup), both pushed to `main`.
 Full findings reconciled into
 `docs/reports/release-assurance-pack-v1.0.1-evidence-2026-09-19.md`.
+
+## 2026-09-19 (later still): closed the Stripe webhook test-coverage gap
+
+Follow-up to the Stripe/billing audit above, which flagged that the
+webhook route's status mapping, period-end selection, and credit-pack
+metadata validation had never actually been invoked by a test - only
+checked by source-text regex confirming the right RPC name appeared.
+
+Extracted the pure, DB-free logic into a new `apps/web/lib/stripe-webhook-logic.ts`
+(type guards for all 5 relevant Stripe object shapes, `mapStripeStatus`,
+`getCurrentPeriodEnd`, `getCustomerId`/`getChargeCustomerId`, and a new
+`validateCreditPackMetadata` pulled directly out of `grantCreditPack`'s
+inline validation block), byte-for-byte behavior preserved in
+`app/api/stripe/webhook/route.ts` (confirmed via `pnpm typecheck`/`lint`
+both clean and `build:web` succeeding). Added
+`apps/web/tests/stripe-webhook-logic.test.mjs` (19 tests, wired into
+`test:unit` as `test:web:stripe-webhook-logic`): every subscription status
+mapping including the one that actually changes value (`canceled` ->
+`cancelled`), multi-item period-end selection picking the max timestamp,
+customer-id extraction from both string and expanded-object Stripe
+shapes, all 5 object type guards accepting only their own shape, and
+every credit-pack metadata failure mode (non-paid session, non-credit-pack
+purchase, missing user_id, non-numeric/zero/negative credits).
+
+Deliberately left untouched: the DB-touching async handlers
+(`upsertSubscriptionFromStripe`, `claimStripeEvent`, the webhook `POST`
+handler itself). Making those genuinely testable would mean adding
+dependency injection to live billing code that currently calls
+`createAdminClient()` directly - a larger, separate change with more
+regression surface than was proportionate to rush into the same pass as
+everything else today. Committed as `4436d838`, pushed.
