@@ -72,6 +72,7 @@ export function DashboardShell({
             <span className="brand-text">
               <span className="brand-title-line">
                 <span className="brand-name">EU Apply</span>
+                <span className="beta-badge">Beta</span>
               </span>
               <span className="brand-tagline">
                 Better applications, not more noise.

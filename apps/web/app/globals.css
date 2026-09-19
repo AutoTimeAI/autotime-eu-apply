@@ -6110,6 +6110,20 @@ h4 {
   color: #174ea6;
 }
 
+.beta-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 .brand-tagline {
   display: block;
   max-width: 230px;

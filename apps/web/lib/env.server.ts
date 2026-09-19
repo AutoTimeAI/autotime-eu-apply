@@ -95,3 +95,14 @@ export function getAnalyticsInternalEnv(): { secret: string } {
     ),
   }
 }
+
+/**
+ * Returns the shared beta-invite code, or null if unset - unlike the other
+ * getters above, an unconfigured invite code is not a configuration error:
+ * it just means self-serve redemption is unavailable and every pending user
+ * waits for manual admin approval instead. Never throws.
+ */
+export function getBetaInviteCode(): string | null {
+  const value = process.env.BETA_INVITE_CODE?.trim()
+  return value ? value : null
+}

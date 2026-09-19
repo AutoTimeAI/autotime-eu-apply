@@ -3,8 +3,10 @@
  *
  * Server component: authenticates the request (test-auth override first,
  * then a real Supabase session) and redirects unauthenticated visitors to
- * /login. On success it loads the user's plan and admin status and wraps
- * all dashboard page content in `DashboardShell` (the shared nav/chrome).
+ * /login. A signed-in user who isn't an admin and isn't beta-active is
+ * redirected to /waitlist instead of the dashboard. On success it loads
+ * the user's plan and admin status and wraps all dashboard page content in
+ * `DashboardShell` (the shared nav/chrome).
  * Also pulls in the CSS bundles used across the various dashboard phases
  * (foundations, brand, jobs, applications, interviews, profile, etc).
  */
@@ -21,6 +23,7 @@ import "./phase-7-profile.css";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { isAdminUser } from "../../lib/admin-access";
+import { isBetaActive } from "../../lib/beta-access";
 import { getUserPlan } from "../../lib/feature-gate";
 import { createServerClient } from "../../lib/supabase/server";
 import { getTestAuthUser } from "../../lib/test-auth";
@@ -56,9 +59,19 @@ export default async function DashboardLayout({
   }
 
   try {
+    const isAdmin = await isAdminUser(user);
+
+    // Admins and the test-auth user must never be blocked by their own
+    // beta_access row - an admin's own account getting gated by the same
+    // waitlist they're meant to be approving people out of would be a
+    // self-inflicted lockout, and the test-auth user has no real
+    // beta_access row to check in the first place.
+    if (!testUser && !isAdmin && !(await isBetaActive(user.id))) {
+      redirect("/waitlist");
+    }
+
     const plan = await getUserPlan(user.id);
     const email = user.email ?? "account";
-    const isAdmin = await isAdminUser(user);
 
     return (
       <DashboardShell email={email} isAdmin={isAdmin} plan={plan} userId={user.id}>
