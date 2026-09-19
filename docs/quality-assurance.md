@@ -2665,3 +2665,47 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
   Committed as `e518dbd6`, pushed, and deployed to production via the
   manual production deployment workflow (verified green).
+
+## 2026-09-19 — An unrelated years-of-experience mention could fabricate "Apply" for zero-match candidates
+
+- Found while continuing the sweep into `analyseJob` (the core
+  requirement-matching engine behind Apply/Consider/Skip). Its
+  years-of-experience check used `maxYearsMentioned(candidateEvidence)`,
+  which scans the candidate's *entire* evidence text for the single
+  largest "N years" figure mentioned anywhere - with no connection to
+  which specific requirement it's being checked against.
+- Reproduced directly, and it's severe: a vacancy requiring "5+ years
+  Python" and "3+ years Kubernetes", against candidate evidence reading
+  only *"10 years of experience in retail sales and customer service
+  management"* (zero mention of Python, zero mention of Kubernetes),
+  produced **both requirements marked "confirmed"** with the evidence
+  text `"Confirmed evidence states 10+ years experience (requirement: 5
+  years)"` - and an overall **"Apply" decision at 100% coverage**, for a
+  candidate with no matching skills whatsoever. This directly
+  contradicts the tool's own stated design principle that every
+  conclusion must trace back to a specific evidence field, not an
+  inference - and could genuinely mislead a candidate into applying to
+  a role they have no real qualification for.
+- Fixed by requiring at least one of the requirement's own topical
+  keywords to actually appear in the evidence (`matches.length >= 1`)
+  before a years match can count toward satisfying it. A first attempt
+  didn't actually close the gap: the word "years" itself was being
+  counted as a shared "meaningful" keyword between the requirement and
+  any evidence mentioning years of experience in *any* field, trivially
+  satisfying the new guard - fixed by adding "years"/"year"/"yrs" to the
+  function's existing stopword-style exclusion list (which already
+  excludes "experience"/"required"/"essential"/etc. for the identical
+  reason).
+- Verified the two pre-existing years-match regression tests (DQ-031,
+  DQ-032 - a single-requirement job with *genuinely relevant* years
+  evidence) continue to resolve "Apply" unchanged, confirming the fix
+  didn't regress the legitimate, intentional behavior the comment above
+  this logic describes ("an explicit years-of-experience match is a
+  much stronger, harder-to-game signal"). Added DQ-033 reproducing the
+  exact false-positive above; confirmed to fail against the pre-fix code
+  and pass after. Full decision-quality benchmark: 33/33.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `2f76d351`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green). Likely the
+  most consequential correctness fix of this session, given it could
+  fabricate a false "Apply" recommendation for any real candidate.
