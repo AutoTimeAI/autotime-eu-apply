@@ -2272,3 +2272,34 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
   Committed as `0abe0eb1`, pushed, and deployed to production via the
   manual production deployment workflow (verified green).
+
+## 2026-09-19 — Third instance of the same redaction bug, in GitHub CV import
+
+- Found by continuing the sweep for this bug shape into `enrichCvFromGitHub`
+  (`lib/cv/sources/github.ts`), the function backing the already-fixed
+  rate-limited GitHub import route. It throws a safe, actionable message
+  when GitHub's API returns a non-OK response - `` `GitHub returned
+  ${status}. Check the username or token.` `` - but `api/cv/github/route.ts`
+  mapped every non-Zod error to 502, and `toPublicApiError` redacts any
+  message at `status >= 500`, so the user lost the exact hint they need
+  (bad username vs. bad/expired token vs. GitHub rate limiting) behind a
+  generic failure message.
+- Fixed the same way as the two prior instances this session: added
+  `GitHubImportError extends Error` in `github.ts` as the throw type,
+  mapped it to 400 in the route's status ternary so the message survives
+  `toPublicApiError` unredacted.
+- New test file `github-import.test.mjs` stubs `globalThis.fetch` to
+  return a 404 and asserts the rejection is specifically a
+  `GitHubImportError` instance. Wired into `test:unit` as
+  `test:web:github-import`.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `510496dc`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green).
+- Note: this is the third occurrence of this exact bug shape (portfolio
+  fetch, outreach draft, now GitHub import) across the AI/CV-import
+  surface in one session. Worth a follow-up sweep of any remaining
+  non-AI routes using the same `toPublicApiError(message, status>=500)`
+  pattern with a hand-thrown `Error` that turns out to carry a genuinely
+  safe, user-actionable message - though every `api/ai/*` route has now
+  been checked and the rest use only `RateLimitError`/`FeatureGateError`/
+  `InterviewPrepGuardrailError`, which were already correctly wired.
