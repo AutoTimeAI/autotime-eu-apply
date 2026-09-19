@@ -2752,3 +2752,58 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   included before handing it off for Chrome Web Store submission - the
   version bump commit (`55d11a1a`) predated this fix, so the zip needed
   rebuilding to avoid shipping the bug in the very first store release.
+
+## 2026-09-19 — Two real production RPC bugs found by actually calling them, not just reading them
+
+- While live-testing the new beta-waitlist gate (see the checklist at
+  `docs/reports/beta-waitlist-release-checklist-2026-09-19.md`), called
+  `admin_change_beta_access` directly against production for a user who
+  already had a `beta_access` row - the real shape of every genuine admin
+  approve/suspend action, since the row only gets created once. It
+  failed: `ERROR 42702: column reference "user_id" is ambiguous`.
+- Root cause: the function's own `RETURNS TABLE(user_id uuid, status
+  text, updated_at timestamptz)` creates implicit PL/pgSQL variables of
+  those same names, colliding with `beta_access`'s own columns -
+  specifically breaking `on conflict (user_id)`. **This meant the entire
+  admin manual-approval fallback for the beta waitlist - the backstop
+  for anyone without an invite code - was silently broken in production**,
+  and had been since it was written; nothing in this session's earlier
+  static review of that route caught it, because the bug only manifests
+  on a genuine RPC call, not on reading the code.
+- Fixed with `#variable_conflict use_column` (PL/pgSQL's own documented
+  mechanism for this exact situation - resolves the ambiguity toward the
+  table column without changing the function's external RETURNS TABLE
+  contract). Verified live, immediately: called the RPC again for the
+  same user, both the approve and suspend branches now succeed.
+- Given one function had this bug, checked every other function in the
+  codebase sharing the same `RETURNS TABLE` + `ON CONFLICT` shape.
+  `admin_request_market_refresh` was checked live and confirmed clean
+  (no bare column collisions). `admin_update_feature_flag` had the exact
+  same bug - and worse: its `RETURNS TABLE(outcome text, key text,
+  environment text, ...)` collides with its own `on conflict (key,
+  environment)` *unconditionally*, confirmed live against a completely
+  empty `admin_feature_flags` table (a genuinely first-ever call, no
+  existing row at all). **The feature-flag admin tool had never worked
+  in production**, for any flag, in any environment, at all.
+- Fixed the same way, verified live for all three branches this time
+  (a real INSERT, the version-mismatch "conflict" branch, and - the
+  specific broken clause - a genuine `ON CONFLICT DO UPDATE` with
+  version correctly incrementing 1→2). The one flag row this testing
+  created (`role_pathways_enabled`/`production`/`enabled: true`) was
+  deliberately left in place after confirming it matches that flag's
+  own existing safe-default value in `admin-feature-flags.ts` - no
+  behavioural change to the running app.
+- New `scripts/admin-rpc-variable-conflict.test.mjs` covers both fixed
+  functions and documents the bug pattern, wired into `test:unit` as
+  `test:admin-rpc-variable-conflict`.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `619b89ff`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green). Both fixes
+  were also applied directly to the live database and re-verified live
+  before the app deploy, since these are pure-SQL fixes with no
+  app-code dependency.
+- This is the clearest illustration in this whole session of why the
+  live-testing pass mattered: two separate, real, currently-broken
+  admin capabilities existed silently in production, and no amount of
+  additional static code review would have found either - both required
+  an actual RPC call against real data to surface.
