@@ -2480,3 +2480,40 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   pushed - the extension ships via its own store-review release process,
   not the web app's Vercel deployment, so this fix will reach users on
   the next extension release rather than immediately.
+
+## 2026-09-19 — Concurrent application deletions in the extension could silently resurrect each other
+
+- Found by continuing the extension sweep into `lib/storage.ts`.
+  `saveApplication`/`deleteApplication`/`updateApplication` are each a
+  non-atomic read-modify-write over the same stored applications array,
+  with no serialization - unlike `updateApplicationSyncState` in the
+  same file, which already has a queue for exactly this hazard
+  (documented inline there from an earlier fix).
+- Concretely, directly reachable in existing code, not just theoretical:
+  `background/index.ts`'s `performApplicationSync` runs
+  `Promise.all(deletedApplicationIds.map((id) => deleteApplication(id)))`
+  whenever a dashboard sync response reports more than one deleted
+  application id at once (e.g. the user deleted several tracked jobs
+  from the dashboard on another device). Each concurrent call reads the
+  same pre-delete snapshot, filters out only its own id, and whichever
+  write finishes last wins - silently undoing every other call's
+  deletion. Reproduced directly: seeding 3 applications and running
+  `Promise.all(["a","b","c"].map(deleteApplication))` left all 3 still
+  present instead of deleting all of them.
+- The practical impact: all but one of the applications the dashboard
+  said were deleted resurrect in local extension storage, and since
+  local storage never actually reflects the deletion, they get
+  re-uploaded to the dashboard on the next sync - a delete that visibly
+  "worked" on the dashboard silently comes back.
+- Fixed by adding a shared queue (`applicationsQueue`) across all three
+  functions, the same `applicationSyncStateQueue` pattern already
+  established in this file, so every call sees the previous call's
+  write before it reads regardless of which operation or how many run
+  concurrently.
+- New test reproduces the race with the exact
+  `Promise.all(ids.map(deleteApplication))` shape the real call site
+  uses - confirmed to fail against the pre-fix code, passes after.
+  `pnpm --filter extension test` (83/83) and the extension's `tsc
+  --noEmit` typecheck both clean. Committed as `d7ad1b8b` and pushed -
+  reaches users on the next extension store release, same as the
+  voicemail/email fix above.
