@@ -2958,3 +2958,71 @@ of the bare `auth.uid()` form, and `custom_job_sources` now has only its
 redundant `_delete_own`/`_select_own`/`_update_own` policies are gone.
 No behavioural change intended or observed; this closes the last two
 open items from the deep pre-release validation pass.
+
+## 2026-09-19 (later still): Stripe billing audit + routing/config sweep, requested after founder flagged known payment/deployment issues
+
+Ran a dedicated, skeptical, read-only audit of the entire Stripe/billing
+subsystem (checkout, portal, webhook, subscription sync, credit packs) via
+a subagent, then fixed every finding that was real and cheap to close.
+
+**HIGH - fixed**: `PricingCard.tsx` displayed prices as independently
+hardcoded literal strings ("GBP 9/month", "GBP 19/3 months"), completely
+disconnected from `lib/stripe.ts`'s own `PLAN_DETAILS` constant. Worse,
+neither was checked against the live Stripe Price object for the monthly
+plan - `scripts/ensure-stripe-prices.mjs` (the prebuild verification
+script) already checked the quarterly and credit-pack prices against
+Stripe and failed the build on mismatch, but the monthly price (configured
+as a literal `STRIPE_PRO_MONTHLY_PRICE_ID` env var, not a lookup-key-managed
+price) was never checked at all. A manual edit to that Stripe Price, or a
+wrong price ID, could silently show one price on `/pricing` and charge a
+different amount at checkout - a real billing-trust risk, not cosmetic.
+Fixed by consolidating both the display strings and `PLAN_DETAILS` into a
+single source of truth (`apps/web/lib/pricing-configuration.ts`), and by
+adding the missing live-Stripe verification for the monthly price to
+`ensure-stripe-prices.mjs`, following the exact same pattern already used
+for the other two prices.
+
+**MEDIUM - fixed**: `/api/stripe/portal` had no QA-test-account block,
+while its sibling `/api/stripe/checkout` explicitly returns 403 for QA
+test accounts before creating a Stripe session. Added the same
+`isTestAccountUser()` guard to the portal route for consistent policy
+enforcement across both billing entry points.
+
+**MEDIUM/LOW - documented, not fixed this pass** (real gaps, deliberately
+scoped out as follow-ups rather than rushed): no functional test coverage
+of the actual webhook/checkout handler logic (existing tests only verify
+config wiring via source-text regex); `checkout.session.async_payment_failed`
+unhandled; credit-grant retries noisily on bad metadata with no
+distinguishing alert; `getSubscriptionPlan()` hardcoded to `"pro"`
+(harmless while only one paid tier exists); `isConfiguredStripePrice()` is
+unused dead code.
+
+**Confirmed NOT bugs**, ruling out the founder's stated concern being about
+these specific things: webhook signature verification happens before the
+payload is trusted; checkout/portal both require an authenticated user;
+the checkout Stripe-customer-creation race and out-of-order webhook
+delivery were both real bugs from earlier sessions (`00c3c106`, `713b47c8`,
+`e97200b5` per git history) and are confirmed still fixed and correct
+today, not regressed; refunds/disputes are logged for manual review per a
+documented, founder-approved policy.
+
+Also ran a full repo routing/config sweep in parallel (also requested):
+no broken internal routes; one apparent route conflict
+(`apps/web/app/admin/login/` vs `apps/web/app/(admin-auth)/admin/login/`)
+investigated and ruled out as a false positive (the former has no
+`page.tsx`, only a co-located component file - not a real Next.js route,
+and corroborated by `build:web` succeeding repeatedly today, which a
+genuine duplicate route would have failed outright); 6 undocumented env
+vars found and documented (`BETA_INVITE_CODE`,
+`AUTOTIME_MOBILITY_SERVER_SYNC_ENABLED`, `NEXT_PUBLIC_APP_ENV`,
+`SENTRY_TEST_API_ENABLED`, `COVERAGE_REPORT_HASH_SECRET`,
+`NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY`); one duplicate documentation file
+(`docs/reference/qa-test-account.md`, byte-identical to the actually-used
+`docs/qa-test-account.md`) found and removed, along with a duplicated
+env-file block referencing both paths.
+
+All fixes verified: `pnpm typecheck`, `pnpm lint`, full `pnpm test:unit`,
+and `pnpm build:web` all pass. Committed as `bc4aced4` (Stripe fixes) and
+`9fc23e36` (env-var docs + duplicate-doc cleanup), both pushed to `main`.
+Full findings reconciled into
+`docs/reports/release-assurance-pack-v1.0.1-evidence-2026-09-19.md`.

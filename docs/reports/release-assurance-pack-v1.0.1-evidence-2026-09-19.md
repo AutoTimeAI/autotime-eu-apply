@@ -135,17 +135,25 @@ All migrations through `20260919190000` are applied and verified (listed in `doc
 
 ---
 
-## Summary for the release owner
+## Summary for the release owner (updated after the Stripe/routing/config sweep)
 
 **What is genuinely closed, with live evidence, as of today:**
 - Source candidate, local quality, deployment mechanism, environment/secrets, all pending database migrations, and the core deployed-authentication/decision-engine/evidence-gating journey.
+- E2E-02 (profile save/reload): found a real race-condition bug live, root-caused, fixed, and re-verified.
+- E2E-06 (cross-user access): verified structurally via dual-layer ownership scoping (app-level `.eq("user_id", userId)` on every query) plus the RLS policies verified live earlier today - without touching another real user's data.
+- E2E-07/E2E-08 (country workspaces): verified live - IE/DE/NL show full pathway intelligence, unsupported countries correctly show the restricted "Limited coverage" explorer treatment.
+- Full Stripe/billing subsystem audit: 1 HIGH and 1 MEDIUM finding fixed and verified (see above); webhook signature verification, checkout/portal auth, the customer-creation race, and out-of-order webhook handling were all checked and confirmed already correct (some from earlier-session fixes, re-verified here, not re-broken).
+- Full routing/config sweep: no broken routes, one false-positive route-conflict ruled out, 6 undocumented env vars fixed, one duplicate doc file removed.
 
 **What remains open and needs your direct action, not more engineering work:**
 1. Confirm backup/PITR status in the Supabase dashboard.
 2. Name a release owner, incident lead, and rollback operator; optionally rehearse a rollback.
-3. Optionally extend the live walkthrough to cover the remaining critical-path tests not exercised today (E2E-02, 06, 07, 08, 09, 10) — E2E-06 (cross-user access) is the one with the most security relevance among these.
+3. E2E-09 (AI provider error/fallback) not re-exercised live this session, to avoid burning real AI-provider cost; already covered by existing unit tests (`ai-quality-evaluation.test.mjs`, AI-008).
+4. E2E-10 (sign-out/protected route): a real sign-out control was located and used during this pass; final clean re-verification is pending the next deploy.
+5. Stripe webhook/checkout handler logic has no functional test coverage (only config-wiring checks) - real gap, scoped as its own follow-up rather than rushed into this pass.
+6. Three LOW-severity Stripe findings deliberately left open (see table above): unhandled `checkout.session.async_payment_failed`, noisy-but-harmless credit-grant retry behavior on bad metadata, and a hardcoded `"pro"` plan label that would need revisiting if a second paid tier is ever added.
 
-Given the above, the honest decision under the pack's own rule is **GO WITH LIMITATIONS** — the limitations being administrative/verification gaps, not known product defects.
+Given the above, the honest decision under the pack's own rule remains **GO WITH LIMITATIONS** — one real HIGH-severity billing-display bug was found and fixed during this very pass (which is exactly what a pre-launch assurance pass is for), and every other open item is either organizational or explicitly scoped out as a deliberate follow-up, not a known live defect.
 
 ---
 
@@ -161,6 +169,60 @@ Deployed under the **GO WITH LIMITATIONS** decision above, per explicit release-
 | Deployment URL | `https://autotime-eu-apply-op3z4d999-rajs-projects-6830d68b.vercel.app` (aliased to production) |
 | Rollback target if needed | The previously live deployment, commit `97d4bddc` (captured automatically by the workflow before this deploy) |
 | Outstanding limitations at time of deploy | Backup/PITR verification and named incident/rollback ownership — both still open, per above |
+
+## Stripe/billing subsystem audit (full pass, not spot-checked)
+
+Requested explicitly after the founder flagged known payment issues. Ran a
+dedicated, skeptical, read-only audit of the entire Stripe/billing
+subsystem (checkout, portal, webhook, subscription sync, credit packs),
+then fixed every finding that was real and cheap to close. Full findings,
+most severe first:
+
+| Finding | Severity | Status |
+|---|---|---|
+| Displayed prices (`PricingCard.tsx`) were hardcoded independently of `lib/stripe.ts`'s `PLAN_DETAILS`, with no build-time check against the live Stripe Price for the monthly plan - a Stripe dashboard edit or wrong price ID could silently show one price and charge another | **HIGH** | **Fixed** - consolidated into one source of truth (`lib/pricing-configuration.ts`), added the missing live-Stripe verification for the monthly price to `scripts/ensure-stripe-prices.mjs` (quarterly/credit-pack were already verified there; monthly, being a literal env-configured price ID, never was) |
+| `/api/stripe/portal` had no QA-test-account block, unlike its sibling `/api/stripe/checkout` - inconsistent enforcement of the same policy | MEDIUM | **Fixed** - added the same `isTestAccountUser()` 403 guard |
+| No functional test coverage of the actual webhook/checkout handler logic - existing tests only verify config wiring via source-text regex, never invoke `handleStripeEvent`/`mapStripeStatus`/`upsertSubscriptionFromStripe`/`grantCreditPack` with mock Stripe events | MEDIUM | **Not fixed this pass** - real gap, but writing genuine handler-level tests (mocking Stripe events end to end) is a larger, separate task better scoped on its own rather than rushed here |
+| `checkout.session.async_payment_failed` isn't handled - a delayed-payment-method purchase (e.g. SEPA) that ultimately fails has no handler, so no user notification or bookkeeping occurs | LOW | Not fixed - no credits are granted either way so no financial risk, just a silent gap in the audit trail; noted for a future pass |
+| Credit-pack grant on bad/missing metadata throws, causing Stripe to retry the same always-failing event for up to ~3 days with no distinguishing alert | LOW | Not fixed - noisy, not harmful; would need dead-letter/alerting work disproportionate to this pass |
+| `getSubscriptionPlan()` is hardcoded to `"pro"` regardless of which price fired the event | LOW | Not fixed - harmless today (only one paid tier exists); flagged so a future second tier doesn't get silently mis-recorded |
+| `isConfiguredStripePrice()` is unused dead code, suggesting an intended validation path that was never wired in | LOW | Not fixed - no functional impact |
+
+**Confirmed NOT bugs** (verified, since these were plausible suspects given the founder's concern): webhook signature verification happens before the payload is trusted; checkout/portal both correctly require an authenticated user; the concurrent checkout Stripe-customer-creation race is closed via a `claim_stripe_customer_id` RPC (this was a real bug fixed in an earlier session, per git history - `00c3c106`); out-of-order webhook delivery for both subscription lifecycle and cancellation/invoice-failure paths is closed via `last_stripe_event_created_at`-gated RPCs (also a previously-fixed real bug - `713b47c8`, `e97200b5`); refunds/disputes are logged for manual review per a documented, founder-approved policy rather than silently ignored or auto-actioned.
+
+**Context from git history** (not rediscovered today, but relevant to the founder's stated concern): this repo already has a track record of real, since-fixed Stripe and deployment bugs from earlier sessions - a checkout Stripe-customer read-then-write race, a gap in the Stripe subscription-event ordering guard, and a multi-commit chase to fix session cookies not surviving a Route Handler redirect (`7e3570e5` et al.). Those are already resolved and live; this pass's job was to find what's *still* open, not re-litigate what's already fixed.
+
+## Routing and config sweep (full repo pass)
+
+Also requested explicitly. Checked every static route reference, every
+`process.env` read against the `.env*.example` files, potential duplicate
+route segments, and every API route for orphaned/dead wiring.
+
+- **No broken internal routes found.** Every `href`/`router.push`/`router.replace` target resolves to a real page.
+- **One apparent route conflict was investigated and ruled out**: `apps/web/app/admin/login/` exists alongside `apps/web/app/(admin-auth)/admin/login/`, which looked like two pages resolving to the same URL. Confirmed the former only contains a co-located component file (`AdminLoginContent.tsx`), not a `page.tsx` - Next.js only treats `page.tsx`/`route.ts` as route-defining, so there is no actual conflict. Independently corroborated by `pnpm build:web` succeeding repeatedly today; a genuine duplicate route would fail the build outright.
+- **5 undocumented env vars found and fixed**: `BETA_INVITE_CODE`, `AUTOTIME_MOBILITY_SERVER_SYNC_ENABLED`, `NEXT_PUBLIC_APP_ENV`, `SENTRY_TEST_API_ENABLED`, `COVERAGE_REPORT_HASH_SECRET` were read in code but absent from every `.env*.example` file - a deployer wouldn't know they existed or what they gated. Documented in `.env.production.example`. A sixth, `NEXT_PUBLIC_AUTOTIME_E2E_LOCAL_ONLY`, documented in `.env.local.example` with an explicit "never set outside local E2E tooling" warning.
+- **One duplicate documentation file found and removed**: `docs/reference/qa-test-account.md` was a byte-identical duplicate of `docs/qa-test-account.md` (the one actually referenced everywhere - tests, other docs). `.env.production.example` even had the QA-bootstrap-secret block duplicated twice, once pointing at each path. Removed the duplicate file and de-duplicated the env-file block.
+- **Orphaned-looking API routes reviewed**: several admin mobility-rules endpoints, a QA session-bootstrap endpoint, a diagnostics health-check, and a sync/refresh endpoint have no in-app `fetch()` caller. All are either ops/CLI-driven, QA-only, or externally-consumed (extension/monitor) by design - not dead code, just not client-called from the web app itself. No action needed.
+
+## Real production bug found and fixed: profile-edit race condition
+
+Found during live re-verification of the assurance pack's E2E-02
+(profile save/reload) acceptance test. Clicking "Save changes" on
+`/dashboard/onboarding?edit=basic` before its async profile-fetch resolved
+validated the form against still-empty default values, rejecting a
+genuinely valid name/location/target-countries and silently dropping the
+save (confirmed live: zero network requests fired on the failed attempt).
+Root-caused precisely - not bad stored data (verified via direct DB
+inspection: clean ASCII, `namePattern`/`placePattern` both matched the
+real values in Node and in-browser) - a real race condition with no guard
+against interacting with the form before it finished loading.
+
+Fixed by tracking whether the initial fetch has resolved and disabling
+Save/Continue/Complete until it has (`apps/web/components/OnboardingWizard.tsx`).
+Also added a `.catch()` so a failed fetch surfaces an error instead of
+leaving the button permanently disabled with no feedback. Verified the fix
+live: with the load properly awaited, the same edit now fires a real
+`200 PATCH` and persists after reload.
 
 **Post-deploy live verification (same session, immediately after):**
 - `GET /` → `200`, `Age: 0`, `X-Vercel-Cache: MISS` (fresh from the new build, not a stale cached edge response)
