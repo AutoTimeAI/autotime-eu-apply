@@ -477,6 +477,16 @@ export function analyseJob(
           "knowledge",
           "responsible",
           "responsibilities",
+          // Generic structural words for expressing a years-requirement,
+          // not a topical skill/domain keyword - without excluding them,
+          // any candidate evidence mentioning years of experience in any
+          // unrelated field shares this token with every years-based
+          // requirement, defeating the topical-match gate on
+          // yearsSatisfied below (matches.length >= 1 would trivially
+          // pass on "years" alone).
+          "years",
+          "year",
+          "yrs",
         ].includes(token),
     );
     const matches = meaningful.filter((token) => evidenceTokens.has(token));
@@ -486,10 +496,21 @@ export function analyseJob(
     const neededYears = requiredYears(requirement);
     const candidateYears =
       neededYears !== null ? maxYearsMentioned(candidateEvidence) : null;
+    // maxYearsMentioned scans the candidate's entire evidence text, not
+    // just wording relevant to this requirement - without also requiring
+    // at least one of this requirement's own keywords to appear in that
+    // evidence, an unrelated years claim (e.g. "10 years in retail sales")
+    // would satisfy every other requirement that happens to specify a
+    // years threshold (e.g. "5+ years Python", "3+ years Kubernetes"),
+    // even when neither skill is mentioned anywhere in the evidence at
+    // all - confirmed live: a candidate with zero Python/Kubernetes
+    // mentions got both requirements "confirmed" and an "Apply" decision
+    // purely from an unrelated years figure.
     const yearsSatisfied =
       neededYears !== null &&
       candidateYears !== null &&
-      candidateYears >= neededYears;
+      candidateYears >= neededYears &&
+      matches.length >= 1;
     yearsSatisfiedFlags.push(yearsSatisfied);
     const evidence = matches.map((item) => `Confirmed evidence mentions ${item}`);
     if (yearsSatisfied) {

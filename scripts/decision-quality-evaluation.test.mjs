@@ -353,10 +353,26 @@ const cases = [
       "Eight years of backend engineering experience delivering distributed systems.",
     expected: "Apply",
   },
+  {
+    id: "DQ-033",
+    name: "an unrelated years mention must not satisfy a different requirement's years threshold",
+    description: complete(
+      "Required 5 years Python experience. Required 3 years Kubernetes experience.",
+    ),
+    // Mentions years, but for an entirely different, unrelated field - not
+    // Python, not Kubernetes. maxYearsMentioned previously scanned the
+    // whole evidence blob for the single largest years figure and applied
+    // it to every years-based requirement regardless of topic, letting
+    // this satisfy both requirements and produce a false "Apply" for a
+    // candidate with zero matching skills.
+    evidence:
+      "10 years of experience in retail sales and customer service management.",
+    expected: "Skip",
+  },
 ];
 
-assert.equal(cases.length, 32, "The decision-quality benchmark must contain exactly 32 cases.");
-assert.equal(new Set(cases.map((item) => item.id)).size, 32, "Every benchmark case needs a unique ID.");
+assert.equal(cases.length, 33, "The decision-quality benchmark must contain exactly 33 cases.");
+assert.equal(new Set(cases.map((item) => item.id)).size, 33, "Every benchmark case needs a unique ID.");
 
 let failed = 0;
 
