@@ -37,8 +37,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       step: "check",
       hasUser: Boolean(user),
       userId: user?.id ?? null,
-      error: error ? toPublicApiError(error.message, 500) : null,
+      // Deliberately NOT redacted here (unlike everywhere else in the
+      // codebase): this diagnostic-only route is gated by a Vercel-only
+      // secret with no client-facing use, and the real getUser() error
+      // detail is exactly what this investigation needs to see.
+      error: error?.message ?? null,
+      errorStatus: error?.status ?? null,
+      errorCode: error?.code ?? null,
       incomingCookieNames: request.cookies.getAll().map((c) => c.name),
+      incomingCookieValuePreview: request.cookies.get("sb-dorqxmnslzzmrpjbhlcl-auth-token")?.value?.slice(0, 40) ?? null,
     })
   }
 
