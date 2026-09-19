@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   let photoUrl:string|null=null; if(data?.photo_url){const signed=await client.storage.from("profile-photos").createSignedUrl(data.photo_url,3600);photoUrl=signed.data?.signedUrl??null;}
   const countries=data?.countries_target?.length?data.countries_target:(data?.target_countries??"").split(",").map((item)=>item.trim()).filter(Boolean);
   const normalised=data?{...data,country_current:data.country_current||data.current_country,countries_target:countries,photoUrl}:null;
-  return NextResponse.json({data:normalised?{...normalised,onboarding_ready:hasCompletedRequiredOnboarding(normalised),onboarding_missing:getMissingOnboardingEvidence(normalised)}:null,error:error?.message??null},{status:error?500:200});
+  return NextResponse.json({data:normalised?{...normalised,onboarding_ready:hasCompletedRequiredOnboarding(normalised),onboarding_missing:getMissingOnboardingEvidence(normalised)}:null,error:toPublicApiError(error?.message??null,error?500:200)},{status:error?500:200});
 }
 export async function PATCH(request: NextRequest) {
   try { const {user}=await getRequestUser(request);if(!user)return NextResponse.json({data:null,error:"Unauthorised"},{status:401});const body=patchSchema.parse(await request.json());

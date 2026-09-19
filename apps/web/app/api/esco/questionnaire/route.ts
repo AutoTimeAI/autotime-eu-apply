@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
   const ids = (profile.data ?? []).map((item) => item.esco_skill_id);
   const labels = ids.length ? await db.from("esco_skills").select("id,preferred_label").in("id", ids) : { data: [], error: null };
   const labelMap = new Map((labels.data ?? []).map((item) => [item.id, item.preferred_label]));
-  return NextResponse.json({ data: { answers: answers.data ?? [], profile: (profile.data ?? []).map((item) => ({ ...item, preferred_label: labelMap.get(item.esco_skill_id) ?? item.esco_skill_id })), nextQuestion: answers.data?.at(-1)?.next_question || openQuestion, complete: (answers.data?.length ?? 0) >= 6 }, error: answers.error?.message ?? profile.error?.message ?? labels.error?.message ?? null });
+  const readError = answers.error?.message ?? profile.error?.message ?? labels.error?.message ?? null;
+  const status = readError ? 500 : 200;
+  return NextResponse.json({ data: readError ? null : { answers: answers.data ?? [], profile: (profile.data ?? []).map((item) => ({ ...item, preferred_label: labelMap.get(item.esco_skill_id) ?? item.esco_skill_id })), nextQuestion: answers.data?.at(-1)?.next_question || openQuestion, complete: (answers.data?.length ?? 0) >= 6 }, error: toPublicApiError(readError, status) }, { status });
 }
 
 export async function POST(request: NextRequest) {

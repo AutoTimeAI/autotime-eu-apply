@@ -73,16 +73,61 @@ const safeHelperPattern = /toPublicApiError|diagnosticJson|safeAdminError/
 const routeFiles = await findRouteFiles(apiRoot)
 assert.ok(routeFiles.length > 30, "expected to find the full apps/web/app/api route tree")
 
+// Scoped to the enclosing `return` statement, not "does this helper appear
+// anywhere in the file" - a file can legitimately use diagnosticJson/
+// toPublicApiError/safeAdminError in most of its responses while one
+// specific return still hands back a raw error.message unredacted (found
+// live in profile/onboarding/route.ts's GET: the file's PATCH handler used
+// toPublicApiError, which exempted the whole file, while GET's own
+// `error: error?.message` on a raw NextResponse.json(...) call went
+// unchecked). diagnosticJson(...) applies toPublicApiError internally to
+// whatever `error` value it's given, so a match is safe if it sits inside
+// a diagnosticJson(...) call OR the matched expression is itself passed
+// through toPublicApiError(...)/safeAdminError(...) within the same
+// return statement - not merely somewhere else in the file.
+// A match inside a logDiagnostic(...)/console.error(...) details object -
+// e.g. `logDiagnostic(diag, { userId, error: error.message })` - is never
+// sent to the client at all, so it isn't this bug regardless of whether
+// any redaction helper is nearby. Detected by finding whichever of these
+// three call names opens most recently before the match: if it's a
+// logging call rather than a response call, the match is out of scope.
+const loggingCallPattern = /(?:logDiagnostic|console\.(?:error|warn|info|log))\s*\(/g
+const responseCallPattern = /(?:NextResponse\.json|diagnosticJson)\s*\(/g
+
+function nearestPrecedingIndex(source, pattern, beforeIndex) {
+  let last = -1
+  for (const match of source.matchAll(pattern)) {
+    if (match.index >= beforeIndex) break
+    last = match.index
+  }
+  return last
+}
+
+function isInsideLoggingCall(source, matchIndex) {
+  const loggingIndex = nearestPrecedingIndex(source, loggingCallPattern, matchIndex)
+  const responseIndex = nearestPrecedingIndex(source, responseCallPattern, matchIndex)
+  return loggingIndex > responseIndex
+}
+
+function isMatchGuarded(source, matchIndex, matchEnd) {
+  const returnIndex = source.lastIndexOf("return", matchIndex)
+  if (returnIndex === -1) return false
+  const scopeEnd = Math.min(matchEnd + 200, source.length)
+  const scope = source.slice(returnIndex, scopeEnd)
+  return safeHelperPattern.test(scope)
+}
+
 const offenders = []
 for (const file of routeFiles) {
   const source = await readFile(file, "utf8")
-  if (safeHelperPattern.test(source)) continue
 
   for (const match of source.matchAll(clientFacingMessagePattern)) {
     const lineStart = source.lastIndexOf("\n", match.index) + 1
     const lineEnd = source.indexOf("\n", match.index + match[0].length)
     const line = source.slice(lineStart, lineEnd === -1 ? source.length : lineEnd)
     if (exemptionPattern.test(line)) continue
+    if (isInsideLoggingCall(source, match.index)) continue
+    if (isMatchGuarded(source, match.index, match.index + match[0].length)) continue
 
     offenders.push(path.relative(apiRoot, file))
     break
