@@ -2124,3 +2124,27 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   correctly gets back the first id, with storage unchanged.
 - Extended the route-wiring test to assert the checkout route calls this
   RPC. `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+
+## 2026-09-19 — Fixed two LinkedIn CSV import bugs (client-side only)
+
+- Found sweeping external-data-parsing code after the billing fixes.
+  Both bugs are client-side only (`lib/cv/sources/linkedin-import.ts`
+  runs in the browser during a user's own CV import) - no server or
+  other-user impact, but real correctness/hardening gaps worth closing.
+- **Fail-open zip-bomb guard**: `assertSafeEntrySize` relied on JSZip's
+  undocumented internal `_data.uncompressedSize` field, silently
+  no-op'ing (fail-open) if that field were ever unavailable. Now fails
+  closed - refuses to process the entry if the size can't be determined,
+  so a future JSZip internal change surfaces as an obvious error instead
+  of silently removing the zip-bomb protection.
+- **CSV quote-toggle bug**: the hand-rolled parser toggled quoted-mode on
+  any standalone `"` regardless of position, so a stray quote inside an
+  unquoted field (real LinkedIn exports aren't always RFC 4180-compliant
+  - e.g. a company name like `Bob's "Corner" Shop`) corrupted the rest of
+  that row's parsing and could swallow subsequent rows entirely. Now only
+  opens quoted mode when the quote is a field's first character.
+- New regression tests confirmed to fail against the pre-fix parser
+  (verified the exact corruption: dropped quotes, merged/missing rows)
+  before verifying they pass against the fix, plus a direct unit test of
+  the fail-closed size-check behavior.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
