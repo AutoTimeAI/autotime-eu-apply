@@ -105,6 +105,7 @@ function getCurrentPeriodEnd(subscription: Stripe.Subscription): string | null {
 
 async function upsertSubscriptionFromStripe(
   subscription: Stripe.Subscription,
+  eventCreatedAt: Date,
 ): Promise<{ periodEnd: Date | null; userId: string | null }> {
   try {
     const supabase = createAdminClient()
@@ -117,17 +118,18 @@ async function upsertSubscriptionFromStripe(
 
     const currentPeriodEnd = getCurrentPeriodEnd(subscription)
 
-    const { error } = await supabase.from("subscriptions").upsert(
-      {
-        user_id: userId,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscription.id,
-        plan: getSubscriptionPlan(),
-        status: mapStripeStatus(subscription.status),
-        current_period_end: currentPeriodEnd,
-      },
-      { onConflict: "user_id" },
-    )
+    // Stripe does not guarantee webhook delivery order - the RPC atomically
+    // skips this write if a newer event's data is already stored, rather
+    // than unconditionally overwriting current state with a stale one.
+    const { error } = await supabase.rpc("upsert_subscription_from_stripe", {
+      p_user_id: userId,
+      p_stripe_customer_id: customerId,
+      p_stripe_subscription_id: subscription.id,
+      p_plan: getSubscriptionPlan(),
+      p_status: mapStripeStatus(subscription.status),
+      p_current_period_end: currentPeriodEnd,
+      p_event_created_at: eventCreatedAt.toISOString(),
+    })
 
     if (error) {
       throw new Error(error.message)
@@ -403,7 +405,10 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
         event.type === "customer.subscription.updated") &&
       isStripeSubscription(eventObject)
     ) {
-      const result = await upsertSubscriptionFromStripe(eventObject)
+      const result = await upsertSubscriptionFromStripe(
+        eventObject,
+        new Date(event.created * 1000),
+      )
 
       if (
         event.type === "customer.subscription.created" &&

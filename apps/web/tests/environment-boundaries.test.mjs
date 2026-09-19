@@ -382,6 +382,11 @@ test("route wiring uses the executable boundary helpers", async () => {
   assert.doesNotMatch(sources[2], /getPlans|getStripePriceEnv/);
   assert.match(sources[3], /getWebhookStripeClient/);
   assert.doesNotMatch(sources[3], /getPlans|getStripePriceEnv/);
+  // Stripe doesn't guarantee webhook delivery order - subscription writes
+  // must go through the ordering-guarded RPC, not a raw upsert that would
+  // let a stale, out-of-order event silently overwrite newer state.
+  assert.match(sources[3], /rpc\(\s*["']upsert_subscription_from_stripe["']/);
+  assert.doesNotMatch(sources[3], /from\(\s*["']subscriptions["']\s*\)\s*\.upsert\(/);
   assert.match(sources[4], /getPlans/);
   assert.match(sources[5], /readPricingConfiguration/);
 });

@@ -1611,6 +1611,18 @@ export type Database = {
         };
         Returns: number;
       };
+      upsert_subscription_from_stripe: {
+        Args: {
+          p_user_id: string;
+          p_stripe_customer_id: string;
+          p_stripe_subscription_id: string;
+          p_plan: string;
+          p_status: string;
+          p_current_period_end: string | null;
+          p_event_created_at: string;
+        };
+        Returns: boolean;
+      };
       consume_ai_credit: {
         Args: { p_user_id: string; p_feature: string };
         Returns: boolean;
