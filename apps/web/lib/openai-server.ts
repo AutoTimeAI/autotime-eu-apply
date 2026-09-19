@@ -120,6 +120,19 @@ export class RateLimitError extends Error {
   }
 }
 
+// Thrown when the model's own output violates a channel length constraint
+// (LinkedIn note/character caps, word counts). The message is a safe,
+// specific, user-actionable string ("LinkedIn note exceeds 300
+// characters") describing what to shorten - callers should map this to a
+// 4xx status and let it pass through toPublicApiError unredacted, rather
+// than the generic 500 message a length-limit retry doesn't explain.
+export class OutreachDraftValidationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "OutreachDraftValidationError"
+  }
+}
+
 const model = "gpt-4.1-mini"
 const maxOutputTokens = 1200
 const modelPricesPerMillionTokens: Record<
@@ -875,10 +888,10 @@ const outreachDraftSchema = z.object({ subject: z.string().nullable(), body: z.s
 export async function draftOutreachWithOpenAI(context: OutreachContext) {
   const result = await createJsonResponse({ instructions: `${buildOutreachInstructions(context)}\n${UNTRUSTED_CONTENT_GUARD}`, input: context, schema: outreachDraftSchema })
   const wordCount = result.value.body.trim().split(/\s+/).filter(Boolean).length
-  if (context.channel === "linkedin_note" && result.value.body.length > 300) throw new Error("LinkedIn note exceeds 300 characters")
-  if (context.channel !== "linkedin_note" && wordCount > 150) throw new Error("Outreach draft exceeds 150 words")
+  if (context.channel === "linkedin_note" && result.value.body.length > 300) throw new OutreachDraftValidationError("LinkedIn note exceeds 300 characters")
+  if (context.channel !== "linkedin_note" && wordCount > 150) throw new OutreachDraftValidationError("Outreach draft exceeds 150 words")
   if (context.channel === "linkedin_note") result.value.subject = null
-  if (result.value.subject && result.value.subject.length > 60) throw new Error("Outreach subject exceeds 60 characters")
+  if (result.value.subject && result.value.subject.length > 60) throw new OutreachDraftValidationError("Outreach subject exceeds 60 characters")
   return result
 }
 
