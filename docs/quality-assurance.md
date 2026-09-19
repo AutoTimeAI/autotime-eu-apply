@@ -2709,3 +2709,46 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   manual production deployment workflow (verified green). Likely the
   most consequential correctness fix of this session, given it could
   fabricate a false "Apply" recommendation for any real candidate.
+
+## 2026-09-19 — Pre-submission live functional test found a real widget rendering bug on real host pages
+
+- Before submitting the packaged extension 0.0.5 build to the Chrome
+  Web Store, loaded the actual packaged build in a real Chromium
+  instance (Playwright's `launchPersistentContext` with
+  `--load-extension`) and injected the real, built content script via
+  the real `chrome.scripting.executeScript` API from inside the actual
+  background service worker - not a simulation, and not just static
+  code review - against live job postings on two different real ATS
+  sites (Ashby, Lever).
+- Found a real bug on the first live page tried (a real Ashby careers
+  page): the widget's own title text ("AutoTime EU Apply") was
+  invisible, and every "JOB DETAILS" row (Job title/Company/Location/
+  Platform/Source) had its label rendering directly on top of its value
+  text instead of stacking above it - confirmed via computed-style
+  inspection, not just visual impression.
+- Root cause: `:host { line-height: 1.4; ... }` in the widget's
+  stylesheet styles the light-DOM host `<div>` itself, which is a
+  normal node in the *page's own* document tree and is NOT
+  shadow-protected - only elements genuinely rendered inside the shadow
+  tree are immune to the host page's own CSS. Confirmed directly:
+  `:host`'s `font-size` (13px) survived on the live page, but
+  `line-height` was silently overridden to `0px` by Ashby's own page
+  CSS, collapsing every `dt`/`dd` line box to zero height so adjacent
+  rows' painted text visually overlapped even though the box model
+  reported zero height for each.
+- This means the bug wasn't Ashby-specific - it's a structural gap that
+  any host site with a similarly aggressive CSS reset could trigger,
+  since the extension's manifest whitelists over a dozen real job-board/
+  ATS domains as injection targets.
+- Fixed by re-declaring `color`/`font-family`/`font-size`/`line-height`
+  directly on `.widget` - a real element rendered *inside* the shadow
+  tree, which page CSS can never select at all - instead of relying
+  solely on `:host` inheritance for anything visually load-bearing.
+- Re-verified live on both Ashby and Lever post-fix: title text visible,
+  every detail row's label correctly stacks above its value with no
+  overlap on either site. `pnpm --filter extension test` (83/83) and
+  typecheck both clean. Committed as `3952a6c2`, pushed. Rebuilt the
+  release zip (`extension-0.0.5-chrome.zip`, 78.20 kB) with this fix
+  included before handing it off for Chrome Web Store submission - the
+  version bump commit (`55d11a1a`) predated this fix, so the zip needed
+  rebuilding to avoid shipping the bug in the very first store release.
