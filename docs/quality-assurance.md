@@ -2517,3 +2517,40 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   --noEmit` typecheck both clean. Committed as `d7ad1b8b` and pushed -
   reaches users on the next extension store release, same as the
   voicemail/email fix above.
+
+## 2026-09-19 — Legacy profile migration discarded confirmed "no sponsorship needed" evidence
+
+- Found by continuing the sweep into `packages/shared/src/international/
+  migration.ts`, the one-way adapter from the legacy `CandidateProfile`
+  shape to the newer `MobilityProfile` the International module reasons
+  over. It computes `applicantPosition` correctly - distinguishing a
+  confirmed "no sponsorship needed, has work-right details" state
+  (`"existing-country-permission"`) from a genuinely uninformative one
+  (`"unsure"`) via the same field (`workRightDetails`) - but the
+  parallel `sponsorshipRequired` output always collapsed
+  `sponsorshipNeeded: false` to `"unsure"`, even when `workRightDetails`
+  held real, confirmed evidence the candidate doesn't need sponsorship.
+- Real downstream impact: `apps/web/components/international/model.ts`
+  treats `sponsorshipRequired !== "unsure"` as "evidence complete" for
+  this field - so a candidate who explicitly and correctly answered "I
+  don't need sponsorship" during onboarding was treated by the mobility
+  module as if they had never answered at all.
+- The correct three-way mapping (`sponsorshipRequired ? "yes" :
+  workRightDetails ? "no" : "unsure"`) already existed elsewhere in this
+  exact codebase - `JobApplicationWorkspace.tsx`'s own separate legacy-
+  profile conversion - just hadn't been applied here. Fixed
+  `migration.ts` to mirror its own `applicantPosition` logic.
+- While tracing test coverage for this, found a second, distinct issue:
+  `scripts/international-module.test.mjs` - 18 real tests covering the
+  core `assessInternationalJob` engine, every country pack, and the
+  Stamp4 integration, actively maintained and referenced in past real
+  fix commits (`8faa691a`, `5dd2a444`) - had no `package.json` script at
+  all and was never running as part of `test:unit` or CI. Wired it in as
+  `test:international-module`, added two new regression tests there
+  (the confirmed-"no" case above, and a genuinely-uninformative-case
+  control), confirmed the new test fails against the pre-fix migration
+  code and passes after.
+- `pnpm --filter web typecheck` and `pnpm test:unit` (now including the
+  newly-wired file, 18/18) both clean. Committed as `07cb3c0b`, pushed,
+  and deployed to production via the manual production deployment
+  workflow (verified green).
