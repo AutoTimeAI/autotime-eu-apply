@@ -396,6 +396,24 @@ test("route wiring uses the executable boundary helpers", async () => {
   assert.match(sources[5], /readPricingConfiguration/);
 });
 
+test("GitHub CV import is rate-limited before fanning out to the GitHub API", async () => {
+  // enrichCvFromGitHub can make well over a dozen outbound GitHub API calls
+  // per invocation - an authenticated user spamming this route could
+  // exhaust GitHub's shared unauthenticated rate limit for the server's
+  // outbound IP, degrading the feature for everyone. The limit check must
+  // run before enrichCvFromGitHub, not after.
+  const source = await readFile(
+    new URL("../app/api/cv/github/route.ts", import.meta.url),
+    "utf8",
+  );
+  const rateLimitMatch = /rpc\(\s*["']increment_ai_rate_limit["']/.exec(source);
+  const enrichIndex = source.indexOf("enrichCvFromGitHub(");
+
+  assert.ok(rateLimitMatch, "expected a rate-limit RPC call");
+  assert.notEqual(enrichIndex, -1, "expected an enrichCvFromGitHub call");
+  assert.ok(rateLimitMatch.index < enrichIndex, "rate limit must be checked before fanning out to GitHub's API");
+});
+
 let failures = 0;
 for (const { name, run } of tests) {
   try {

@@ -34,10 +34,41 @@ const schema = z.object({ username: z.string().trim().regex(/^[a-z\d](?:[a-z\d-]
  * - 401: no authenticated user.
  * - 502: GitHub enrichment or unexpected failure.
  */
+// enrichCvFromGitHub can fan out to well over a dozen outbound GitHub API
+// calls per invocation (repos, an optional GraphQL pinned-repos call, then
+// languages/README/commits for up to 5 featured repos) - deliberately more
+// conservative than the AI routes' own 20-per-60s limit, since a spammed
+// authenticated user could otherwise exhaust GitHub's shared 60/hour
+// unauthenticated rate limit for the server's own outbound IP, degrading
+// this feature for every other user regardless of token use.
+const githubImportRateLimitWindowSeconds = 300;
+const githubImportRateLimitMaxRequests = 5;
+
 export async function POST(request: NextRequest) {
   try {
     const { user } = await getRequestUser(request);
     if (!user) return NextResponse.json({ data: null, error: "Unauthorised" }, { status: 401 });
+
+    const { data: withinLimit, error: rateLimitError } = await createAdminClient().rpc(
+      "increment_ai_rate_limit",
+      {
+        p_rate_limit_key: `github-cv-import:${user.id}`,
+        p_window_seconds: githubImportRateLimitWindowSeconds,
+        p_max_requests: githubImportRateLimitMaxRequests,
+      },
+    );
+
+    if (rateLimitError) {
+      throw new Error(rateLimitError.message);
+    }
+
+    if (!withinLimit) {
+      return NextResponse.json(
+        { data: null, error: "Too many GitHub import requests. Please try again shortly." },
+        { status: 429 },
+      );
+    }
+
     const body = schema.parse(await request.json());
     const data = await enrichCvFromGitHub(body.username, body.token || undefined);
     const client = createAdminClient();
