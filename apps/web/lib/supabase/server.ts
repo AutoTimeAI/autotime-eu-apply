@@ -44,7 +44,16 @@ export async function createServerClient(): Promise<SupabaseClient<Database>> {
             // DevTools access to the real session. Remove once resolved.
             console.info("autotime_supabase_cookies_set", {
               count: cookiesToSet.length,
-              names: cookiesToSet.map(({ name }) => name),
+              cookies: cookiesToSet.map(({ name, options }) => ({
+                name,
+                domain: options?.domain,
+                path: options?.path,
+                sameSite: options?.sameSite,
+                secure: options?.secure,
+                httpOnly: options?.httpOnly,
+                maxAge: options?.maxAge,
+                expires: options?.expires,
+              })),
             })
           } catch (error: unknown) {
             console.warn("autotime_supabase_cookies_set_failed", {
