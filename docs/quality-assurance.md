@@ -2941,3 +2941,20 @@ Lesson for future live-testing passes: `fullPage: true` screenshots are
 unreliable evidence for anything involving `position: fixed`/`sticky`
 elements - use a viewport-only screenshot or explicit bounding-box
 checks to confirm before reporting a layout bug found that way.
+
+## 2026-09-19 (later): RLS initplan + duplicate-policy migration applied and verified
+
+The `20260919190000_rls_initplan_and_duplicate_policy_hardening.sql`
+migration prepared earlier today (rewriting 86 owner-only RLS policies to
+`(select auth.uid())` and dropping 3 duplicate policies on
+`custom_job_sources`) was blocked from auto-apply by the session's
+auto-mode classifier (`[Modify Shared Resources]`) even under direct
+user instruction to retry. The user applied it manually via the
+Supabase SQL editor. Verified live afterward via direct `pg_policies`
+queries: `profiles` (and by extension every other table in the
+migration) now shows `(( SELECT auth.uid() AS uid) = user_id)` instead
+of the bare `auth.uid()` form, and `custom_job_sources` now has only its
+`ALL` policy plus the untouched `_insert_own` policy - the three
+redundant `_delete_own`/`_select_own`/`_update_own` policies are gone.
+No behavioural change intended or observed; this closes the last two
+open items from the deep pre-release validation pass.
