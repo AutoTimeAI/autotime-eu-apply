@@ -128,6 +128,7 @@ export type Database = {
           countries_target: string[];
           onboarding_step: number;
           onboarding_completed_at: string | null;
+          beta_terms_accepted_at: string | null;
           alert_frequency: "daily" | "weekly" | "off";
           alert_last_sent_at: string | null;
           work_authorisation_category: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
@@ -162,6 +163,7 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          beta_terms_accepted_at?: string | null;
           alert_frequency?: "daily" | "weekly" | "off";
           alert_last_sent_at?: string | null;
           work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;
@@ -196,6 +198,7 @@ export type Database = {
           countries_target?: string[];
           onboarding_step?: number;
           onboarding_completed_at?: string | null;
+          beta_terms_accepted_at?: string | null;
           alert_frequency?: "daily" | "weekly" | "off";
           alert_last_sent_at?: string | null;
           work_authorisation_category?: "eu_eea_swiss_citizen" | "existing_permission" | "sponsorship_required" | "country_specific" | "unsure" | null;

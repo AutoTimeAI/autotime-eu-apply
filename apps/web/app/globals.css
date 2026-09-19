@@ -5408,6 +5408,26 @@ h4 {
   box-shadow: 0 0 0 3px rgba(177, 61, 70, 0.12);
 }
 
+.onboarding-beta-terms {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.onboarding-beta-terms input {
+  width: auto;
+  margin-top: 3px;
+  flex: none;
+}
+
+.onboarding-beta-terms span {
+  flex: 1 1 260px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 .onboarding-field-error {
   color: var(--red);
   font-size: 0.78rem;

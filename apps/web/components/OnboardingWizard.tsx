@@ -37,6 +37,8 @@ type Values = {
   portfolioUrl: string;
   baseCvText: string;
   photoUrl: string | null;
+  betaTermsAcceptedAt: string | null;
+  betaTermsAccepted: boolean;
 };
 const empty: Values = {
   fullName: "",
@@ -51,6 +53,8 @@ const empty: Values = {
   portfolioUrl: "",
   baseCvText: "",
   photoUrl: null,
+  betaTermsAcceptedAt: null,
+  betaTermsAccepted: false,
 };
 const labels = [
   "Basic information",
@@ -189,6 +193,7 @@ export function OnboardingWizard() {
             githubUrl: "Enter a complete http:// or https:// GitHub URL.",
             portfolioUrl: "Enter a complete http:// or https:// portfolio URL.",
             baseCvText: "Add CV evidence containing at least 50 characters.",
+            betaTermsAccepted: "You must accept the beta terms to continue.",
           } as Record<string, string>
         )[field]
       : "";
@@ -232,6 +237,8 @@ export function OnboardingWizard() {
             portfolioUrl: data.portfolio_url ?? "",
             baseCvText: data.base_cv_text?.trim() || getBuiltCvEvidence(userId),
             photoUrl: data.photoUrl ?? null,
+            betaTermsAcceptedAt: data.beta_terms_accepted_at ?? null,
+            betaTermsAccepted: Boolean(data.beta_terms_accepted_at),
           });
         if (requested === null && data?.onboarding_ready) {
           router.replace("/dashboard/profile");
@@ -281,6 +288,14 @@ export function OnboardingWizard() {
         ...values,
         linkedinUrl,
         countriesTarget: countries,
+        // The API only accepts `true` (never `false`) so an already-accepted
+        // or not-yet-accepted state can't fail validation or be sent as a
+        // forgeable client value; omit the field entirely otherwise.
+        betaTermsAccepted:
+          values.betaTermsAccepted && !values.betaTermsAcceptedAt
+            ? true
+            : undefined,
+        betaTermsAcceptedAt: undefined,
         onboardingStep: nextStep,
         complete,
       }),
@@ -319,6 +334,9 @@ export function OnboardingWizard() {
         !countries.length ||
         countries.some((country) => !placePattern.test(country))
           ? "countriesTarget"
+          : "",
+        !values.betaTermsAcceptedAt && !values.betaTermsAccepted
+          ? "betaTermsAccepted"
           : "",
       ].filter(Boolean);
     }
@@ -519,6 +537,44 @@ export function OnboardingWizard() {
                 ) : null}
               </label>
             ))}
+            {!values.betaTermsAcceptedAt ? (
+              <label className="onboarding-beta-terms">
+                <input
+                  type="checkbox"
+                  checked={values.betaTermsAccepted}
+                  aria-invalid={invalidFields.includes("betaTermsAccepted")}
+                  onChange={(e) => {
+                    setValues({
+                      ...values,
+                      betaTermsAccepted: e.target.checked,
+                    });
+                    setInvalidFields((fields) =>
+                      fields.filter((item) => item !== "betaTermsAccepted"),
+                    );
+                  }}
+                />
+                <span>
+                  This is an early, invitation-only beta. Features may
+                  change, and AutoTime does not guarantee interviews, job
+                  offers, visa sponsorship or immigration eligibility, and
+                  does not submit applications without my review. I will
+                  verify country, sponsorship and salary facts
+                  independently, and review AI-generated content before
+                  use. I can report a defect or concern at{" "}
+                  <a href="mailto:hello@autotimeai.com">
+                    hello@autotimeai.com
+                  </a>
+                  . I have read the{" "}
+                  <Link href="/privacy">Privacy Policy</Link> and{" "}
+                  <Link href="/terms">Terms of Service</Link>.
+                </span>
+                {fieldError("betaTermsAccepted") ? (
+                  <span className="onboarding-field-error">
+                    {fieldError("betaTermsAccepted")}
+                  </span>
+                ) : null}
+              </label>
+            ) : null}
           </>
         ) : null}
         {step === 1 ? (

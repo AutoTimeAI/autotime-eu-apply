@@ -30,6 +30,7 @@ const patchSchema = z.object({
   linkedinUrl: optionalWebUrl.optional(), githubUrl: optionalWebUrl.optional(), portfolioUrl: optionalWebUrl.optional(),
   workAuthorisationCategory:z.enum(["eu_eea_swiss_citizen","existing_permission","sponsorship_required","country_specific","unsure"]).optional(),workRightDetails:z.string().trim().max(2000).optional(),
   baseCvText: z.string().max(100_000).optional(), onboardingStep: z.number().int().min(0).max(6).optional(), complete: z.boolean().optional(),
+  betaTermsAccepted: z.literal(true).optional(),
 }).superRefine((body,ctx)=>{
   if(((body.onboardingStep??0)>=3||body.complete)&&!isValidLinkedInProfile(body.linkedinUrl))ctx.addIssue({code:"custom",path:["linkedinUrl"],message:"A valid LinkedIn profile URL is required"});
   if(body.complete){
@@ -38,7 +39,7 @@ const patchSchema = z.object({
   }
 });
 
-const select = "full_name,email,phone,photo_url,country_current,countries_target,current_country,target_countries,linkedin_url,github_url,portfolio_url,target_roles,work_authorisation_category,work_right_details,base_cv_text,experience_highlights,project_summaries,onboarding_step,onboarding_completed_at,alert_frequency,alert_last_sent_at";
+const select = "full_name,email,phone,photo_url,country_current,countries_target,current_country,target_countries,linkedin_url,github_url,portfolio_url,target_roles,work_authorisation_category,work_right_details,base_cv_text,experience_highlights,project_summaries,onboarding_step,onboarding_completed_at,alert_frequency,alert_last_sent_at,beta_terms_accepted_at";
 export async function GET(request: NextRequest) {
   const { user } = await getRequestUser(request); if (!user) return NextResponse.json({ data:null,error:"Unauthorised" },{status:401});
   const client=createAdminClient(); const {data,error}=await client.from("profiles").select(select).eq("user_id",user.id).maybeSingle();
@@ -49,7 +50,10 @@ export async function GET(request: NextRequest) {
 }
 export async function PATCH(request: NextRequest) {
   try { const {user}=await getRequestUser(request);if(!user)return NextResponse.json({data:null,error:"Unauthorised"},{status:401});const body=patchSchema.parse(await request.json());
-    const countries=body.countriesTarget; const changes={...(body.fullName!==undefined&&{full_name:body.fullName}),...(body.email!==undefined&&{email:body.email||null}),...(body.phone!==undefined&&{phone:body.phone||null}),...(body.countryCurrent!==undefined&&{country_current:body.countryCurrent,current_country:body.countryCurrent}),...(countries!==undefined&&{countries_target:countries,target_countries:countries.join(", ")}),...(body.linkedinUrl!==undefined&&{linkedin_url:body.linkedinUrl||null}),...(body.githubUrl!==undefined&&{github_url:body.githubUrl||null}),...(body.portfolioUrl!==undefined&&{portfolio_url:body.portfolioUrl||null}),...(body.workAuthorisationCategory!==undefined&&{work_authorisation_category:body.workAuthorisationCategory,sponsorship_needed:body.workAuthorisationCategory==="sponsorship_required"}),...(body.workRightDetails!==undefined&&{work_right_details:body.workRightDetails}),...(body.baseCvText!==undefined&&{base_cv_text:body.baseCvText}),...(body.onboardingStep!==undefined&&{onboarding_step:body.onboardingStep}),...(body.complete?{onboarding_completed_at:new Date().toISOString(),onboarding_step:6}:{})};
+    const countries=body.countriesTarget; const changes={...(body.fullName!==undefined&&{full_name:body.fullName}),...(body.email!==undefined&&{email:body.email||null}),...(body.phone!==undefined&&{phone:body.phone||null}),...(body.countryCurrent!==undefined&&{country_current:body.countryCurrent,current_country:body.countryCurrent}),...(countries!==undefined&&{countries_target:countries,target_countries:countries.join(", ")}),...(body.linkedinUrl!==undefined&&{linkedin_url:body.linkedinUrl||null}),...(body.githubUrl!==undefined&&{github_url:body.githubUrl||null}),...(body.portfolioUrl!==undefined&&{portfolio_url:body.portfolioUrl||null}),...(body.workAuthorisationCategory!==undefined&&{work_authorisation_category:body.workAuthorisationCategory,sponsorship_needed:body.workAuthorisationCategory==="sponsorship_required"}),...(body.workRightDetails!==undefined&&{work_right_details:body.workRightDetails}),...(body.baseCvText!==undefined&&{base_cv_text:body.baseCvText}),...(body.onboardingStep!==undefined&&{onboarding_step:body.onboardingStep}),...(body.complete?{onboarding_completed_at:new Date().toISOString(),onboarding_step:6}:{}),
+      // Server-set timestamp, never client-supplied - the client can only ever
+      // request "true", so this can't be forged or backdated from the browser.
+      ...(body.betaTermsAccepted?{beta_terms_accepted_at:new Date().toISOString()}:{})};
     // Reading whether a profiles row exists, then branching to insert or
     // update, is a read-modify-write race: two concurrent PATCHes for the
     // same brand-new user (e.g. a double-clicked "Next" on the first
