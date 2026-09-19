@@ -15,12 +15,13 @@ the supporting detail.
 
 | Field | Value |
 |---|---|
-| Release artefact SHA (deployed to production) | `88b8eb4453062315d2897445fbf5a855f4f25071` |
-| Production deployment ID | `dpl_7wkKjt62gaJALhZMCedaXzSMUmog` (Vercel, `READY`) |
-| Deployment workflow run | `35461879433` (green) |
+| Deployed SHA | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` (docs-only vs. the `88b8eb44` application-code artefact evaluated in the dossier - no app-code delta) |
+| Production deployment ID | `dpl_2MNUvqNWHTqzdg1jf8UmQ1WPRVJv` (Vercel, `READY`) |
+| Deployment workflow run | `35469958800` (green) |
 | Documentation HEAD (may be later - docs-only commits) | see `git rev-parse origin/main` |
 | Current decision | **NO-GO for a new unqualified release; current deployed private beta is healthy** |
 | Decision date | 2026-09-19 |
+| Latest re-verification | 2026-09-19, same-day: typecheck/lint/unit/build clean, live smoke pass, Supabase security advisor clean (no new findings), 24h error-log scan clean - per the beta-milestone bar in `../reference/startup-test-validation-standard.md` |
 | Release owner sign-off | **Pending** - not yet signed by the founder |
 
 ## Canonical documents (read these; treat everything else as historical)
@@ -33,6 +34,7 @@ the supporting detail.
 | Documentation audit (meta) | [`release-readiness-documentation-audit-2026-09-19.md`](./release-readiness-documentation-audit-2026-09-19.md) | Current - explains why the two documents above exist and what corrections were applied |
 | Operational procedure for future releases | [`../reference/claude-code-pre-release-runbook.md`](../reference/claude-code-pre-release-runbook.md) + `.github/workflows/production-deploy.yml` | Procedure, not evidence a specific release passed |
 | Public-launch gate (separate, stricter bar) | [`../reference/testing/public-launch-gate-checklist.md`](../reference/testing/public-launch-gate-checklist.md) | Needs refresh from August evidence - do not treat as current without checking dates inside it |
+| Right-sized day-to-day testing bar | [`../reference/startup-test-validation-standard.md`](../reference/startup-test-validation-standard.md) | Current - defines what "properly tested" means for routine private-beta releases vs. the heavier dossier/pack, and when to escalate |
 
 ## Mandatory gates still open (v1.0.1)
 
@@ -41,8 +43,7 @@ See the gate checklist for full detail. Summary:
 | Gate | Status |
 |---|---|
 | Supabase backup/PITR confirmation | Open - needs a human to check the Supabase dashboard |
-| Accessibility critical-path scan | Open - not run this release cycle |
-| Login accessibility scan | Closed - fixed the non-terminating `networkidle` test wait (commit `2b8db35e`); passes, under 20s |
+| Automated accessibility (axe) scan | Closed - passes on all 11 covered critical surfaces including login (login's non-terminating `networkidle` test wait was fixed in commit `2b8db35e`; under 20s now) |
 | Keyboard/focus manual critical-path review | Open - automated axe doesn't cover this; needs a manual pass |
 | Named incident lead / rollback operator | Open - no names recorded |
 | Rollback rehearsal | Open - not run |
@@ -82,4 +83,5 @@ banner pointing back to this index:
 
 | Cycle | Artefact SHA | Decision | Date |
 |---|---|---|---|
-| Private Beta v1.0.1 | `88b8eb4453062315d2897445fbf5a855f4f25071` | GO WITH LIMITATIONS (pending sign-off) | 2026-09-19 |
+| Private Beta v1.0.1 (initial dossier) | `88b8eb4453062315d2897445fbf5a855f4f25071` | NO-GO for unqualified GO / deployed beta healthy | 2026-09-19 |
+| Private Beta v1.0.1 (docs-only redeploy + re-verification) | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` | Same decision, re-confirmed clean via the startup beta-milestone bar | 2026-09-19 |
