@@ -35,6 +35,7 @@ the supporting detail.
 | Operational procedure for future releases | [`../reference/claude-code-pre-release-runbook.md`](../reference/claude-code-pre-release-runbook.md) + `.github/workflows/production-deploy.yml` | Procedure, not evidence a specific release passed |
 | Public-launch gate (separate, stricter bar) | [`../reference/testing/public-launch-gate-checklist.md`](../reference/testing/public-launch-gate-checklist.md) | Needs refresh from August evidence - do not treat as current without checking dates inside it |
 | Right-sized day-to-day testing bar | [`../reference/startup-test-validation-standard.md`](../reference/startup-test-validation-standard.md) | Current - defines what "properly tested" means for routine private-beta releases vs. the heavier dossier/pack, and when to escalate |
+| 24-category testing coverage map + P0/P1/P2 priority | [`testing-categories-coverage-v1.0.1-2026-09-19.md`](./testing-categories-coverage-v1.0.1-2026-09-19.md) | Current - same underlying evidence as the dossier, organized by testing category instead of by gate |
 
 ## Mandatory gates still open (v1.0.1)
 
