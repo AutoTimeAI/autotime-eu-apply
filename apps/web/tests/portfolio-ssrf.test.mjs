@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { createSsrfSafeLookup, extractReadableText } from "../lib/cv/sources/portfolio.ts"
+import { createSsrfSafeLookup, extractReadableText, isPrivateAddress } from "../lib/cv/sources/portfolio.ts"
 
 const tests = []
 
@@ -70,6 +70,41 @@ test("rejects when only one of multiple resolved addresses is private", async ()
 test("rejects a loopback IPv6 address", async () => {
   const lookup = createSsrfSafeLookup(fakeLookup([{ address: "::1", family: 6 }]))
   await assert.rejects(() => runLookup(lookup, "v6.example.com", {}))
+})
+
+test("rejects an IPv4-mapped IPv6 loopback address (dotted-quad form)", async () => {
+  // RFC 4291: "::ffff:127.0.0.1" is a valid IPv6 address the OS socket
+  // layer connects to identically to plain 127.0.0.1 on any dual-stack
+  // host - a DNS server returning this in an AAAA record is a real,
+  // reachable SSRF bypass if the check only recognizes bare dotted-quad
+  // and the small set of pre-existing IPv6 prefixes.
+  const lookup = createSsrfSafeLookup(
+    fakeLookup([{ address: "::ffff:127.0.0.1", family: 6 }]),
+  )
+  await assert.rejects(() => runLookup(lookup, "mapped.example.com", {}))
+})
+
+test("rejects an IPv4-mapped IPv6 loopback address (hex-group form)", async () => {
+  // The same address as above, but in the compressed hex-group form
+  // Node's own dns.lookup / getaddrinfo can actually return
+  // ("::ffff:7f00:1" = 127.0.0.1) - both representations must be caught.
+  const lookup = createSsrfSafeLookup(
+    fakeLookup([{ address: "::ffff:7f00:1", family: 6 }]),
+  )
+  await assert.rejects(() => runLookup(lookup, "mapped-hex.example.com", {}))
+})
+
+test("isPrivateAddress recognizes bracketed IPv6 hosts, as produced by new URL().hostname", () => {
+  // new URL("http://[::1]/").hostname returns "[::1]" WITH the brackets -
+  // a real, directly reachable bypass (not just a DNS-rebinding scenario)
+  // since a literal-IP host never goes through the DNS-safe lookup at all.
+  assert.equal(isPrivateAddress("[::1]"), true)
+  assert.equal(isPrivateAddress("[fe80::1]"), true)
+  // new URL("http://[::ffff:127.0.0.1]/").hostname returns
+  // "[::ffff:7f00:1]" - bracketed AND hex-encoded.
+  assert.equal(isPrivateAddress("[::ffff:7f00:1]"), true)
+  assert.equal(isPrivateAddress("[::ffff:127.0.0.1]"), true)
+  assert.equal(isPrivateAddress("[2001:db8::1]"), false)
 })
 
 test("propagates the underlying DNS lookup error", async () => {

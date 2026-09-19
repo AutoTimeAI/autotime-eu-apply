@@ -2,8 +2,39 @@ import { lookup as dnsLookup } from "node:dns";
 import { isIP } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
 
-function isPrivateAddress(address: string) {
-  return /^(127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|fc|fd|fe80)/i.test(address);
+// An IPv4-mapped IPv6 address (RFC 4291) represents an IPv4 address inside
+// IPv6 syntax - "::ffff:127.0.0.1" or its hex-group form "::ffff:7f00:1" -
+// and the OS socket layer connects to it identically to the plain IPv4
+// form on any dual-stack system (virtually all modern hosts, including
+// this one). Converts either form back to a dotted-quad string so the
+// existing IPv4 range checks below actually see the real address instead
+// of an opaque IPv6-looking string that matches none of them.
+function ipv4MappedToDottedQuad(address: string): string | null {
+  const hexMatch = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(address);
+  if (hexMatch) {
+    const high = Number.parseInt(hexMatch[1], 16);
+    const low = Number.parseInt(hexMatch[2], 16);
+    if (Number.isNaN(high) || Number.isNaN(low)) return null;
+    return `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
+  }
+
+  const dottedMatch = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i.exec(address);
+  return dottedMatch ? dottedMatch[1] : null;
+}
+
+// Real, directly reachable SSRF bypass fixed here (not just a theoretical
+// hardening): `new URL("http://[::ffff:127.0.0.1]/").hostname` returns
+// "[::ffff:7f00:1]" - bracketed AND hex-encoded - which matched none of
+// this function's patterns before the bracket-stripping and IPv4-mapping
+// handling below, even though it's a literal-IP host that never goes
+// through the DNS-rebinding-safe lookup at all (there's no hostname to
+// resolve). The same bracket issue alone also let plain, unmapped IPv6
+// loopback/link-local addresses ("[::1]", "[fe80::1]") slip past this
+// check when submitted directly as a portfolio URL's host.
+export function isPrivateAddress(address: string) {
+  const unwrapped = address.replace(/^\[|\]$/g, "");
+  const candidate = ipv4MappedToDottedQuad(unwrapped) ?? unwrapped;
+  return /^(127\.|10\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|fc|fd|fe80)/i.test(candidate);
 }
 
 type DnsAddress = { address: string; family: number };
