@@ -388,6 +388,11 @@ test("route wiring uses the executable boundary helpers", async () => {
   assert.match(sources[3], /rpc\(\s*["']upsert_subscription_from_stripe["']/);
   assert.doesNotMatch(sources[3], /from\(\s*["']subscriptions["']\s*\)\s*\.upsert\(/);
   assert.match(sources[4], /getPlans/);
+  // getOrCreateStripeCustomer must resolve the "who won the race to create
+  // a customer" question atomically via this RPC, not a plain upsert that
+  // lets two concurrent checkout requests silently overwrite each other's
+  // stored customer id.
+  assert.match(sources[4], /rpc\(\s*["']claim_stripe_customer_id["']/);
   assert.match(sources[5], /readPricingConfiguration/);
 });
 

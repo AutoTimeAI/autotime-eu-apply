@@ -72,21 +72,21 @@ async function getOrCreateStripeCustomer({
       },
     })
 
-    const { error: upsertError } = await supabase.from("subscriptions").upsert(
-      {
-        user_id: userId,
-        stripe_customer_id: customer.id,
-        plan: "free",
-        status: "active",
-      },
-      { onConflict: "user_id" },
+    // Atomically claims the stored customer id rather than blindly
+    // upserting this newly-created one - if a concurrent request already
+    // won this race, this returns THAT customer id instead, so this
+    // checkout session gets attached to the single, consistent customer
+    // rather than one that may already be orphaned.
+    const { data: claimedCustomerId, error: claimError } = await supabase.rpc(
+      "claim_stripe_customer_id",
+      { p_user_id: userId, p_stripe_customer_id: customer.id },
     )
 
-    if (upsertError) {
-      throw new Error(upsertError.message)
+    if (claimError) {
+      throw new Error(claimError.message)
     }
 
-    return customer.id
+    return claimedCustomerId ?? customer.id
   } catch (error: unknown) {
     const message =
       error instanceof Error

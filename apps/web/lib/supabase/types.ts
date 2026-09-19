@@ -1623,6 +1623,13 @@ export type Database = {
         };
         Returns: boolean;
       };
+      claim_stripe_customer_id: {
+        Args: {
+          p_user_id: string;
+          p_stripe_customer_id: string;
+        };
+        Returns: string;
+      };
       consume_ai_credit: {
         Args: { p_user_id: string; p_feature: string };
         Returns: boolean;
