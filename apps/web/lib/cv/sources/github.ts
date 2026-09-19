@@ -4,6 +4,14 @@
 // shared CVEnrichment shape for the CV builder to merge in.
 import type { CVEnrichment } from "../types";
 
+// The message is a safe, user-actionable string ("check the username or
+// token") describing a non-OK GitHub API response, never raw internal
+// error detail. Callers should map this to a 4xx status and let the
+// message pass through toPublicApiError unredacted, rather than the
+// generic 500/502 message that would hide exactly the information a user
+// needs to fix their GitHub username or token.
+export class GitHubImportError extends Error {}
+
 type GitHubRepo = {
   name: string;
   description: string | null;
@@ -26,7 +34,7 @@ const githubHeaders = (token?: string) => ({
 /** Fetches `url` from the GitHub API and parses the JSON body, throwing with a user-facing message on a non-OK response. */
 async function githubJson<T>(url: string, token?: string): Promise<T> {
   const response = await fetch(url, { headers: githubHeaders(token) });
-  if (!response.ok) throw new Error(`GitHub returned ${response.status}. Check the username or token.`);
+  if (!response.ok) throw new GitHubImportError(`GitHub returned ${response.status}. Check the username or token.`);
   return response.json() as Promise<T>;
 }
 

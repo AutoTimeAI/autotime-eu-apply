@@ -16,7 +16,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
-import { enrichCvFromGitHub } from "../../../../lib/cv/sources/github";
+import { enrichCvFromGitHub, GitHubImportError } from "../../../../lib/cv/sources/github";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { toPublicApiError } from "../../../../lib/public-api-error";
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }))).filter((item): item is NonNullable<typeof item> => item !== null);
     return NextResponse.json({ data: { ...data, escoSuggestions }, error: null });
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 502;
+    const status = error instanceof z.ZodError ? 400 : error instanceof GitHubImportError ? 400 : 502;
     const message = error instanceof Error ? error.message : "GitHub enrichment failed";
     return NextResponse.json({ data: null, error: toPublicApiError(message, status) }, { status });
   }
