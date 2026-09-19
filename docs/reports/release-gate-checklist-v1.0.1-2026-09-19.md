@@ -18,24 +18,29 @@ These are deliberately different — documentation commits were made after the d
 | Clean locked install and builds pass | Engineering | `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`, `pnpm build:web` all exit 0, re-run repeatedly through the session including after every fix | **Pass** |
 | Exact-SHA production deployment succeeds | Engineering | Workflow run `35461879433` (commit `88b8eb84`) — all steps green, `pnpm smoke:web` passed; Vercel deployment `dpl_7wkKjt62gaJALhZMCedaXzSMUmog`, `state: READY` | **Pass** |
 | Environment values and secrets verified | Release owner | Split by evidence type, not combined: (a) **Required-variable presence** — all Stripe/Supabase/Sentry/PostHog/QA/beta keys confirmed present via `filter_project_envs`, values not exposed; (b) **Runtime functional verification** — `BETA_INVITE_CODE`, `QA_SESSION_BOOTSTRAP_SECRET`, `QA_TEST_ACCOUNT_USER_ID` confirmed actually working via a real live authenticated production session; (c) **Build-only observability credential** — `SENTRY_AUTH_TOKEN` presence was confirmed but its actual effect (successful source-map upload) was *not* verified this session; a missing/wrong token does not fail the build, so presence alone doesn't prove it worked | **Pass (a, b) / Open (c)** |
-| Backup and recovery readiness verified | Data owner | **No tool available to this agent inspects Supabase backup/PITR configuration.** Requires a human check of the Supabase dashboard (Settings → Database → Backups) for project `dorqxmnslzzmrpjbhlcl` | **Open — needs a human check** |
+| Backup and recovery readiness verified | Data owner | **Checked by the founder 2026-09-19: Supabase project `dorqxmnslzzmrpjbhlcl` is on the Free plan, which excludes scheduled backups and PITR entirely.** Zero backup coverage confirmed, not just unverified - if production data is lost or corrupted right now, there is no recovery path | **Fail — confirmed zero backup coverage; requires a Pro-plan upgrade decision or explicit written risk acceptance** |
 | Approved migrations applied and verified | Data owner | Every migration through `20260919190000_rls_initplan_and_duplicate_policy_hardening.sql` applied directly to production and independently re-verified via `pg_policies`/advisor re-scan (see `docs/quality-assurance.md`, 2026-09-19 entries) | **Pass** |
 | Non-admin QA identity and user isolation verified | Security/QA | Live QA session (`qa-test@autotimeai.com`, `app_metadata.is_test_account: true`) confirmed non-admin: `/admin` → `adminDenied=1`. Cross-user isolation verified structurally: every DB query is scoped with `.eq("user_id", userId)` at the app layer *and* RLS policies enforce `(select auth.uid()) = user_id` at the DB layer (dual-layer, verified via source + live `pg_policies` query) | **Pass** |
 | P0 deployed E2E tests all pass | QA | All 10 critical-path tests from the assurance pack's §5 table exercised live against production this session — see the table below | **Pass** |
 | No unresolved Critical or High defects | Release owner | Scoped statement, not a formal defect-register query (no such register exists in this repo): every defect found during this session's audits (Stripe billing audit, routing/config sweep, live E2E walkthrough) was fixed and re-verified before this checklist was written, with none left open. This does not prove no *undiscovered* Critical/High defect exists — only that none was found and left unresolved | **Pass, scoped as above** |
-| Accessibility critical path accepted | QA | Automated axe scans now pass on 11 critical surfaces (landing, home, jobs, applications, interviews, countries, career direction, profile, continuous journey, and login - login was found hanging on a broken test wait, fixed in commit `2b8db35e`, now passes in under 20s). **Manual keyboard/focus/contrast review has still not been performed** and axe alone does not substitute for it | **Partial — automated pass, manual review open** |
+| Accessibility critical path accepted | QA | Automated axe scans pass on 11 critical surfaces (landing, home, jobs, applications, interviews, countries, career direction, profile, continuous journey, and login - login was found hanging on a broken test wait, fixed in commit `2b8db35e`, now passes in under 20s). A real live keyboard-navigation pass was also run against production (login: 6 tab stops, dashboard: 8 tab stops) - every focused element had a visible indicator, tab order followed visual order, and Escape correctly closed the account menu. Not an exhaustive walkthrough of every screen/modal | **Pass** |
 | Monitoring, incident and rollback ready | Operations | Automatic rollback-on-failure confirmed wired into the deploy workflow (captures previous READY deployment, rolls back on failed `smoke:web`) and its correctness verified by reading the workflow source. **No named incident lead or rollback operator has been recorded**, and no rehearsal has been run | **Partial — mechanism ready, ownership not assigned** |
 | Privacy, beta terms and support channel ready | Founder | Not evidenced this session — this is a founder/business-process item (privacy notice, beta acknowledgement flow, support channel) outside this session's engineering scope | **Open — needs founder confirmation** |
 
-### Result: 8 Pass / 2 Open / 2 Partial
+### Result: 9 Pass / 1 Fail / 1 Open / 1 Partial
 
-Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO**. Two gates are genuinely open and neither is something this session can close alone:
-- Backup/PITR (needs Supabase dashboard access)
+Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO**.
+
+One gate now confirmed **Fail** (worse than "open" - actively checked and confirmed absent):
+- **Backup/PITR** - the founder checked the Supabase dashboard 2026-09-19: the project is on the Free plan, which has zero scheduled backups and no PITR. This is a real, current, material risk to the production database, not a documentation gap.
+
+One gate is genuinely open and not something this session can close alone:
 - Privacy/beta-terms/support-channel readiness (founder/business item)
 
-Two gates are partial:
-- Accessibility: automated axe now passes on all 11 covered critical surfaces (login was fixed this session — see the production dossier); manual keyboard/focus/contrast review has not been performed.
-- Rollback: the mechanism is ready and verified, but no human has been named to operate it, and no rehearsal has been run.
+One gate is partial:
+- Rollback: the mechanism is ready and verified, but no human has been named to operate it, and no rehearsal has been run. (This is now arguably more urgent given the confirmed backup gap - if the automatic rollback's captured previous deployment is ever insufficient, there is no database-level recovery path either.)
+
+Accessibility moved to Pass this session: automated axe passes on all 11 covered critical surfaces, and a real live keyboard/focus pass (tab order, focus visibility, Escape behavior) was added - see `testing-categories-coverage-v1.0.1-2026-09-19.md`.
 
 ---
 

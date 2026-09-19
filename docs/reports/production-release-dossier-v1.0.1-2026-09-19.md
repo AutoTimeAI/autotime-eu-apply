@@ -135,8 +135,8 @@ hesitation” standard requested for this release.
 |---|---|---|
 | Login accessibility scan | **PASS** | Fixed and verified in commit `2b8db35e` - see section 4. |
 | Keyboard/focus critical-path review | **OPEN** | Manual keyboard-only pass for login/invite, dashboard navigation, profile, job analysis, application review, pricing and sign-out; record focus order/visibility and modal/menu escape behaviour. |
-| Supabase backup/PITR | **OPEN** | Production dashboard screenshot/reference showing backup/PITR state, retention and operator/date. |
-| Restore readiness | **OPEN** | Prefer a non-production restore rehearsal with backup identifier, recovery result and duration. If plan limitations prevent it, document the tested alternative and owner acceptance. |
+| Supabase backup/PITR | **CONFIRMED: NOT AVAILABLE** | Checked live 2026-09-19: Supabase project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which explicitly excludes scheduled backups and PITR ("Free Plan does not include project backups. Upgrade to the Pro Plan for up to 7 days of scheduled backups."). This is not an unconfirmed gate - it is a confirmed zero-backup-coverage state. Real production data (currently real invited beta users) has no recovery path if lost or corrupted. |
+| Restore readiness | **BLOCKED - no backup exists to restore from** | A restore rehearsal is not possible until backups exist. Decision needed: upgrade to Supabase Pro (adds scheduled backups + PITR), or explicitly accept the zero-recovery risk in writing for the current beta scope. |
 | Release owner | **OPEN** | Named person and date accepted. |
 | Incident lead | **OPEN** | Named person, notification channel and response expectation. |
 | Rollback operator | **OPEN** | Named person with confirmed Vercel access. |

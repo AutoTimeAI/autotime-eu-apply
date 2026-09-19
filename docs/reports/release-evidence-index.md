@@ -7,6 +7,10 @@ this file whenever a new release cycle starts or a canonical evidence
 document changes — this page, not any individual report, is the entry
 point for "what is the current release status."
 
+## ⚠ Active risk: zero database backup coverage
+
+Confirmed 2026-09-19 by the founder checking the Supabase dashboard directly: project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which has no scheduled backups and no point-in-time recovery. This is not a documentation gap - it is a live, current fact about production. If the database is lost or corrupted right now, **there is no way to restore it.** See the gate checklist for detail. This is the single highest-priority open item in this entire evidence chain and should be resolved (Pro-plan upgrade, or an explicit written risk acceptance) before this beta scales beyond its current small invited cohort.
+
 ## Current release cycle: Private Beta v1.0.1
 
 Start with [`production-release-dossier-v1.0.1-2026-09-19.md`](./production-release-dossier-v1.0.1-2026-09-19.md).
@@ -43,9 +47,8 @@ See the gate checklist for full detail. Summary:
 
 | Gate | Status |
 |---|---|
-| Supabase backup/PITR confirmation | Open - needs a human to check the Supabase dashboard |
-| Automated accessibility (axe) scan | Closed - passes on all 11 covered critical surfaces including login (login's non-terminating `networkidle` test wait was fixed in commit `2b8db35e`; under 20s now) |
-| Keyboard/focus manual critical-path review | Open - automated axe doesn't cover this; needs a manual pass |
+| Supabase backup/PITR | **FAIL - confirmed zero backup coverage.** Founder checked the dashboard 2026-09-19: project is on Supabase's Free plan, which excludes scheduled backups and PITR entirely. Real production data has no recovery path right now. Needs a Pro-plan upgrade decision or explicit written risk acceptance |
+| Accessibility (automated axe + live keyboard/focus pass) | Closed - axe passes on all 11 covered critical surfaces including login; a real live keyboard-navigation pass (tab order, focus visibility, Escape behavior) was also run against production |
 | Named incident lead / rollback operator | Open - no names recorded |
 | Rollback rehearsal | Open - not run |
 | Founder privacy/beta-terms/support confirmation | Open - founder-owned |
