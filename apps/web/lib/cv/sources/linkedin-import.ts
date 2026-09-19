@@ -16,9 +16,16 @@ const maxDecompressedEntryBytes = 20 * 1024 * 1024;
 
 type JSZipCompressedData = { uncompressedSize?: number };
 
-function assertSafeEntrySize(entry: { name: string; _data?: JSZipCompressedData }) {
+// Fails closed, not open: if this internal field is ever unavailable (it's
+// a documented-but-unofficial JSZip field, not a stable public API), the
+// safety check must refuse to process the entry rather than silently
+// skipping the size check and decompressing an unbounded amount.
+export function assertSafeEntrySize(entry: { name: string; _data?: JSZipCompressedData }) {
   const uncompressedSize = entry._data?.uncompressedSize;
-  if (typeof uncompressedSize === "number" && uncompressedSize > maxDecompressedEntryBytes) {
+  if (typeof uncompressedSize !== "number") {
+    throw new Error(`${entry.name} could not be safely checked before processing.`);
+  }
+  if (uncompressedSize > maxDecompressedEntryBytes) {
     throw new Error(`${entry.name} is too large to process.`);
   }
 }
@@ -28,10 +35,23 @@ function parseCsv(text: string): string[][] {
   let row: string[] = [], value = "", quoted = false;
   for (let index = 0; index < text.length; index += 1) {
     const char = text[index];
-    if (char === '"' && quoted && text[index + 1] === '"') { value += '"'; index += 1; }
-    else if (char === '"') quoted = !quoted;
-    else if (char === "," && !quoted) { row.push(value); value = ""; }
-    else if ((char === "\n" || char === "\r") && !quoted) {
+    if (quoted) {
+      if (char === '"' && text[index + 1] === '"') { value += '"'; index += 1; }
+      else if (char === '"') quoted = false;
+      else value += char;
+      continue;
+    }
+    // A quote only opens quoted mode at the very start of a field (RFC 4180:
+    // a field containing special characters is quoted from its first
+    // character). Toggling on ANY standalone quote - the prior behavior -
+    // meant a stray quote inside an unquoted field (real-world messy
+    // exports aren't always RFC-compliant, e.g. a company name like
+    // `Bob's "Corner" Shop`) would incorrectly enter quoted mode partway
+    // through a field, swallowing the rest of that row's commas and
+    // newlines as literal text and corrupting the parse.
+    if (char === '"' && value === "") { quoted = true; }
+    else if (char === ",") { row.push(value); value = ""; }
+    else if (char === "\n" || char === "\r") {
       if (char === "\r" && text[index + 1] === "\n") index += 1;
       row.push(value); if (row.some(Boolean)) rows.push(row); row = []; value = "";
     } else value += char;
