@@ -2,7 +2,11 @@ import { timingSafeEqual } from "node:crypto"
 import { type NextRequest, NextResponse } from "next/server"
 import { resolveSafeRedirectPath } from "../../../../lib/safe-redirect-path"
 import { createAdminClient } from "../../../../lib/supabase/admin"
-import { createServerClient } from "../../../../lib/supabase/server"
+import {
+  applyPendingCookies,
+  createServerClient,
+  type PendingCookie,
+} from "../../../../lib/supabase/server"
 
 function notFound(): NextResponse {
   return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -84,7 +88,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  const supabase = await createServerClient()
+  const pendingCookies: PendingCookie[] = []
+  const supabase = await createServerClient((cookies) => pendingCookies.push(...cookies))
   const { error: verifyError } = await supabase.auth.verifyOtp({
     type: "magiclink",
     token_hash: hashedToken
@@ -99,5 +104,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   await logBootstrapUse(qaUserId, request)
 
-  return NextResponse.redirect(new URL(resolveSafeRedirectPath(requestUrl), requestUrl.origin))
+  return applyPendingCookies(
+    NextResponse.redirect(new URL(resolveSafeRedirectPath(requestUrl), requestUrl.origin)),
+    pendingCookies,
+  )
 }

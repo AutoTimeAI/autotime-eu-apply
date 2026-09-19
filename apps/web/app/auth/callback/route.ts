@@ -5,10 +5,23 @@ import { sendWelcomeEmail } from "../../../lib/email"
 import { isTestAccountUser } from "../../../lib/qa-test-account"
 import { resolveSafeRedirectPath } from "../../../lib/safe-redirect-path"
 import { createAdminClient } from "../../../lib/supabase/admin"
-import { createServerClient } from "../../../lib/supabase/server"
+import {
+  applyPendingCookies,
+  createServerClient,
+  type PendingCookie,
+} from "../../../lib/supabase/server"
 
+// Every redirect this route returns after createServerClient() is called
+// must carry `pendingCookies` via applyPendingCookies - Next.js does not
+// reliably merge cookies written through the ambient `cookies()` API onto a
+// separately-constructed NextResponse.redirect() in a Route Handler
+// (https://github.com/vercel/next.js/discussions/48434). Passing an empty
+// array (the common case on an error path, where no session was ever
+// established) is a harmless no-op, so every helper below takes it
+// unconditionally rather than only on the success path.
 function getErrorRedirect(
   request: NextRequest,
+  pendingCookies: PendingCookie[],
   stage = "unknown",
   message = "Sign-in could not be completed"
 ): NextResponse {
@@ -16,18 +29,21 @@ function getErrorRedirect(
   errorUrl.searchParams.set("stage", stage)
   errorUrl.searchParams.set("message", message.slice(0, 180))
 
-  return NextResponse.redirect(errorUrl)
+  return applyPendingCookies(NextResponse.redirect(errorUrl), pendingCookies)
 }
 
 function isAdminRedirect(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/")
 }
 
-function getAdminDeniedRedirect(request: NextRequest): NextResponse {
+function getAdminDeniedRedirect(
+  request: NextRequest,
+  pendingCookies: PendingCookie[],
+): NextResponse {
   const deniedUrl = new URL("/admin/login", request.url)
   deniedUrl.searchParams.set("adminDenied", "1")
 
-  return NextResponse.redirect(deniedUrl)
+  return applyPendingCookies(NextResponse.redirect(deniedUrl), pendingCookies)
 }
 
 function getPostAuthRedirectPath(pathname: string): string {
@@ -121,6 +137,8 @@ async function runFirstLoginSetup({
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const pendingCookies: PendingCookie[] = []
+
   try {
     const requestUrl = new URL(request.url)
     const oauthError =
@@ -129,19 +147,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const code = requestUrl.searchParams.get("code")
 
     if (oauthError) {
-      return getErrorRedirect(request, "provider-error", oauthError)
+      return getErrorRedirect(request, pendingCookies, "provider-error", oauthError)
     }
 
     if (!code) {
-      return getErrorRedirect(request, "missing-code", "OAuth code was missing")
+      return getErrorRedirect(request, pendingCookies, "missing-code", "OAuth code was missing")
     }
 
-    const supabase = await createServerClient()
+    const supabase = await createServerClient((cookies) => pendingCookies.push(...cookies))
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
       logAuthCallbackError("exchange-code", error)
-      return getErrorRedirect(request, "exchange-code", error.message)
+      return getErrorRedirect(request, pendingCookies, "exchange-code", error.message)
     }
 
     const {
@@ -152,7 +170,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (userError || !user) {
       const message = userError?.message ?? "User session was not available"
       logAuthCallbackError("read-user", userError ?? new Error(message))
-      return getErrorRedirect(request, "read-user", message)
+      return getErrorRedirect(request, pendingCookies, "read-user", message)
     }
 
     const redirectPath = resolveSafeRedirectPath(requestUrl)
@@ -160,7 +178,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (isAdminRedirect(redirectPath) && !(await isAdminUser(user))) {
       await supabase.auth.signOut()
 
-      return getAdminDeniedRedirect(request)
+      return getAdminDeniedRedirect(request, pendingCookies)
     }
 
     await runFirstLoginSetup({
@@ -170,16 +188,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       user
     })
 
-    return NextResponse.redirect(
-      new URL(getPostAuthRedirectPath(redirectPath), request.url)
+    return applyPendingCookies(
+      NextResponse.redirect(new URL(getPostAuthRedirectPath(redirectPath), request.url)),
+      pendingCookies,
     )
   } catch (error: unknown) {
     if (error instanceof Error) {
       logAuthCallbackError("session-exchange", error)
-      return getErrorRedirect(request, "session-exchange", error.message)
+      return getErrorRedirect(request, pendingCookies, "session-exchange", error.message)
     }
 
     logAuthCallbackError("unknown", error)
-    return getErrorRedirect(request)
+    return getErrorRedirect(request, pendingCookies)
   }
 }
