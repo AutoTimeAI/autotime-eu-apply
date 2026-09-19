@@ -27,6 +27,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const step = url.searchParams.get("step") ?? "bootstrap"
 
   if (step === "check") {
+    // Captures the ACTUAL outgoing request supabase-js makes for getUser(),
+    // to compare directly against a manual curl with the same credentials
+    // that already succeeded against Supabase's real API - if the headers
+    // differ, that's the bug; if they're identical, the difference must be
+    // something else entirely (e.g. network path, runtime).
+    const capturedRequests: { url: string; headers: Record<string, string> }[] = []
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url
+      if (url.includes("supabase.co")) {
+        const headers: Record<string, string> = {}
+        new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined)).forEach((v, k) => {
+          headers[k] = k.toLowerCase() === "apikey" || k.toLowerCase() === "authorization" ? `${v.slice(0, 20)}...(len=${v.length})` : v
+        })
+        capturedRequests.push({ url, headers })
+      }
+      return originalFetch(input, init)
+    }) as typeof fetch
+
     const supabase = await createServerClient()
     // Local, no-network parse of whatever session the SDK extracted from
     // the incoming cookie, checked before the network call that fails -
@@ -39,6 +58,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       error,
     } = await supabase.auth.getUser()
 
+    globalThis.fetch = originalFetch
+
     return NextResponse.json({
       step: "check",
       hasUser: Boolean(user),
@@ -46,6 +67,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       sessionParsed: Boolean(sessionResult.data.session),
       sessionAccessTokenPreview: sessionResult.data.session?.access_token?.slice(0, 24) ?? null,
       sessionError: sessionResult.error?.message ?? null,
+      capturedRequests,
       // Deliberately NOT redacted here (unlike everywhere else in the
       // codebase): this diagnostic-only route is gated by a Vercel-only
       // secret with no client-facing use, and the real getUser() error
