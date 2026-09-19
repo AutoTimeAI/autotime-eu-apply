@@ -2148,3 +2148,26 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   before verifying they pass against the fix, plus a direct unit test of
   the fail-closed size-check behavior.
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+
+## 2026-09-19 — Rate-limited the GitHub CV import route
+
+- Found while sweeping the GitHub CV enrichment source alongside the
+  LinkedIn import fixes: `enrichCvFromGitHub` can fan out to well over a
+  dozen outbound GitHub API calls per invocation (repos, an optional
+  GraphQL pinned-repos call, then languages/README/commits for up to 5
+  featured repos), but `/api/cv/github` had no rate limiting of its own -
+  unlike every AI route, which uses `assertAiRouteRateLimit`. An
+  authenticated user repeatedly hitting this route could exhaust GitHub's
+  shared 60/hour unauthenticated rate limit for the server's own outbound
+  IP, degrading the feature for every other user regardless of whether
+  they supply their own token. Lower severity than today's other findings
+  (requires a real account, worst case is a transient 502 for others, not
+  data loss or a security compromise) but a real, closeable gap.
+- Fixed by reusing the existing, already-verified-correct generic
+  `increment_ai_rate_limit` RPC with its own key namespace
+  (`github-cv-import:<user id>`) and a more conservative 5-per-5-minutes
+  limit given how many downstream calls one request here triggers.
+- Verified live against the real RPC with a disposable key (cleaned up
+  immediately after). New static-inspection test confirms the rate-limit
+  check runs before `enrichCvFromGitHub` is called.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
