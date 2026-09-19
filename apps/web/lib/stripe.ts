@@ -1,6 +1,7 @@
 import "server-only"
 import Stripe from "stripe"
 import { getStripePriceEnv, getStripeSecretEnv } from "./env.server.ts"
+import { PRICING_PLAN_DETAILS } from "./pricing-configuration.ts"
 
 let stripeClient: Stripe | null = null
 
@@ -18,11 +19,7 @@ export const getWebhookStripeClient = getStripeClient
 
 const LOOKUP_SELECTOR_PREFIX = "lookup:"
 
-export const PLAN_DETAILS = {
-  pro_monthly: { amount: 900, currency: "gbp", interval: "month" },
-  pro_quarterly: { amount: 1900, currency: "gbp", interval: "quarter" },
-  ai_credit_pack: { amount: 500, credits: 25, currency: "gbp" },
-} as const
+export const PLAN_DETAILS = PRICING_PLAN_DETAILS
 
 export type PlanKey = keyof typeof PLAN_DETAILS
 

@@ -49,13 +49,31 @@ const credits = await ensurePrice({
   name: "AutoTime AI Credit Pack",
 })
 
+// Unlike quarterly/credits above, the monthly price isn't lookup-key
+// managed by this script - its ID is a literal STRIPE_PRO_MONTHLY_PRICE_ID
+// set once in Vercel. That meant nothing ever verified its live Stripe
+// amount matched what /pricing displays, so a manual edit in the Stripe
+// dashboard (or a stale/wrong price ID) would silently show one price to
+// customers and charge a different one at checkout. Verify it the same
+// way, without trying to create/manage it.
+const monthlyPriceId = process.env.STRIPE_PRO_MONTHLY_PRICE_ID?.trim()
+if (!monthlyPriceId)
+  throw new Error("STRIPE_PRO_MONTHLY_PRICE_ID is required in production")
+const monthly = await stripe.prices.retrieve(monthlyPriceId)
+
 if (
   !quarterly.livemode ||
   quarterly.unit_amount !== 1900 ||
   quarterly.recurring?.interval !== "month" ||
   quarterly.recurring?.interval_count !== 3 ||
   !credits.livemode ||
-  credits.unit_amount !== 500
+  credits.unit_amount !== 500 ||
+  !monthly.active ||
+  !monthly.livemode ||
+  monthly.unit_amount !== 900 ||
+  monthly.currency !== "gbp" ||
+  monthly.recurring?.interval !== "month" ||
+  monthly.recurring?.interval_count !== 1
 ) {
   throw new Error("Stripe production prices failed verification")
 }

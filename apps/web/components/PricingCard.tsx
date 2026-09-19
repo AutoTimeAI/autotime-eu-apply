@@ -16,6 +16,8 @@ import type { SubscriptionPlan } from "../lib/supabase/types";
 import {
   billingUnavailableMessage,
   getBillingControlState,
+  PRICING_DISPLAY,
+  PRICING_PLAN_DETAILS,
 } from "../lib/pricing-configuration";
 
 type PricingCardAction = "checkout" | "link" | "portal";
@@ -259,7 +261,7 @@ export function PricingCards({
           features={freeFeatures}
           href={isSignedIn ? "/dashboard" : "/login"}
           name="Free"
-          price="GBP 0/month"
+          price={PRICING_DISPLAY.free}
         />
         <PricingCard
           action={isPaid ? "portal" : "checkout"}
@@ -271,7 +273,7 @@ export function PricingCards({
           }
           features={proFeatures}
           name="Pro Monthly"
-          price="GBP 9/month"
+          price={PRICING_DISPLAY.proMonthly}
           priceDetail="Cancel any time"
           priceId={monthlyPriceId}
         />
@@ -286,8 +288,8 @@ export function PricingCards({
           features={proFeatures}
           highlighted
           name="Pro Quarterly"
-          price="GBP 19/3 months"
-          priceDetail="Equivalent to GBP 6.33/month - save GBP 8"
+          price={PRICING_DISPLAY.proQuarterly}
+          priceDetail={PRICING_DISPLAY.proQuarterlyDetail}
           priceId={quarterlyPriceId}
         />
       </div>
@@ -337,12 +339,13 @@ function CreditPackPanel({
         <span className="pricing-card-badge">No subscription required</span>
         <h2 id="credit-pack-title">Need occasional extra AI?</h2>
         <p>
-          Add 25 non-expiring AI credits for GBP 5. One successful AI action
-          uses one credit after your monthly allowance.
+          Add {PRICING_PLAN_DETAILS.ai_credit_pack.credits} non-expiring AI
+          credits for {PRICING_DISPLAY.aiCreditPackPrice}. One successful AI
+          action uses one credit after your monthly allowance.
         </p>
       </div>
       <div className="credit-pack-action">
-        <strong>GBP 5</strong>
+        <strong>{PRICING_DISPLAY.aiCreditPackPrice}</strong>
         <button
           disabled={!billingAvailable || isPending}
           type="button"

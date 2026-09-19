@@ -13,6 +13,7 @@ import {
 } from "../../../../lib/return-url"
 import { getPortalStripeClient } from "../../../../lib/stripe"
 import { getTestAuthUser } from "../../../../lib/test-auth"
+import { isTestAccountUser } from "../../../../lib/qa-test-account"
 
 type ApiResponse<T> = {
   data: T | null
@@ -82,6 +83,17 @@ export async function POST(
       }
 
       user = sessionUser
+    }
+
+    if (isTestAccountUser(user)) {
+      return diagnosticJson({
+        area: "billing",
+        code: "billing.portal.test-account-blocked",
+        data: null,
+        error: "Billing is disabled for QA test accounts",
+        request,
+        status: 403,
+      })
     }
 
     const body = requestSchema.parse(await request.json())
