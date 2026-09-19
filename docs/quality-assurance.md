@@ -2098,3 +2098,29 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   assert the webhook route calls the new RPC and no longer upserts
   `subscriptions` directly.
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+
+## 2026-09-19 — Resolved the checkout Stripe-customer read-then-write race
+
+- Found immediately after the Stripe ordering-guard fix, while continuing
+  to sweep the billing flow: `getOrCreateStripeCustomer`
+  (`api/stripe/checkout/route.ts`) read `stripe_customer_id`, and if
+  absent, created a new Stripe customer via the API and upserted it - a
+  double-clicked "Subscribe" button (two concurrent requests) could have
+  both see no stored customer, both create a separate Stripe customer,
+  and both upsert, with whichever finished last silently winning. Lower
+  severity than the ordering bug (doesn't cause double-billing or wrong
+  access, since actual subscription/credit processing reads Stripe event
+  metadata directly, not this DB column) but still a real, deterministic-
+  outcome gap worth closing given the session's day.
+- Fixed via a new `claim_stripe_customer_id` RPC
+  (migration `20260919130000_claim_stripe_customer_id.sql`) that keeps
+  whatever customer id was already stored (`COALESCE`) rather than the
+  caller's newly-created one, returning the actual winning id so a caller
+  whose own customer lost the race attaches its checkout session to the
+  correct, single customer instead of an orphaned one.
+- Verified live against the real function with disposable test data
+  (cleaned up immediately after): a first claim stores and returns its
+  own id; a simulated concurrent second claim with a different id
+  correctly gets back the first id, with storage unchanged.
+- Extended the route-wiring test to assert the checkout route calls this
+  RPC. `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
