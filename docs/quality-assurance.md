@@ -2303,3 +2303,43 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   safe, user-actionable message - though every `api/ai/*` route has now
   been checked and the rest use only `RateLimitError`/`FeatureGateError`/
   `InterviewPrepGuardrailError`, which were already correctly wired.
+
+## 2026-09-19 — Gap found in the Stripe subscription-event ordering guard
+
+- Found while sweeping Stripe reconciliation logic (`api/stripe/webhook/
+  route.ts`) as a follow-up to the earlier session's ordering-race fix
+  (20260919120000, `upsert_subscription_from_stripe`), which guards only
+  `customer.subscription.created`/`updated`. Two other handlers in the
+  same file, `markSubscriptionCancelled` (`customer.subscription.deleted`)
+  and `markInvoicePaymentFailed` (`invoice.payment_failed`), still wrote
+  straight to `public.subscriptions` via a plain `.update()`, never
+  touching the `last_stripe_event_created_at` guard column the other RPC
+  depends on.
+- Concrete failure scenario: a subscription is updated at T1 (guard
+  column advances to T1 via the RPC), then cancelled at T2 via the
+  unguarded raw update (status becomes `cancelled`, but the guard column
+  stays at T1, since the raw update never touches it). A delayed or
+  Stripe-retried duplicate of an earlier "updated" event, carrying an
+  `event_created_at` between T1 and T2, then arrives and is processed
+  through `upsert_subscription_from_stripe` - its ordering check
+  (`event_created_at > last_stripe_event_created_at`) passes, because the
+  guard column was never advanced past T1, and the subscription is
+  silently resurrected as active after the user had already cancelled.
+  The same gap applied to `invoice.payment_failed` marking a subscription
+  `past_due`.
+- Fixed by adding `update_subscription_status_from_stripe` (migration
+  `20260919140000_guard_subscription_status_update_ordering.sql`), the
+  same ordering-guard pattern applied to status-only updates, keyed by
+  `stripe_subscription_id` rather than `user_id` (invoice events don't
+  carry a user id, so this couldn't reuse the existing RPC's conflict
+  target). Both handlers now call this RPC instead of a raw `.update()`.
+- Extended the existing "route wiring uses the executable boundary
+  helpers" static test in `environment-boundaries.test.mjs` to assert
+  both handlers call the new RPC and that no raw
+  `.from("subscriptions").update(...)` remains anywhere in the webhook
+  route.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean. Migration
+  applied directly to production (confirmed via `pg_proc` lookup:
+  `update_subscription_status_from_stripe` exists, `security definer`).
+  Committed as `713b47c8`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green).
