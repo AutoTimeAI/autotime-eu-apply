@@ -38,8 +38,10 @@ Reason: every engineering compilation/unit/security/deployment gate run in this
 audit passed, the current production deployment is healthy, and no application
 code differs from the deployed artefact. However, the release policy requires
 all mandatory gates to pass. Backup/PITR, incident ownership, privacy/beta/support
-approval, release-owner signature and one login accessibility scan are not yet
-closed. “GO WITH LIMITATIONS” is not equivalent to the clean GO requested here.
+approval, and release-owner signature are not yet closed (the login
+accessibility scan that was open at initial drafting has since been fixed and
+closed - see section 4). “GO WITH LIMITATIONS” is not equivalent to the clean
+GO requested here.
 
 Release becomes **GO** only after every item in section 5 is completed and the
 release owner signs section 8. No additional broad audit or checklist is needed.
@@ -118,11 +120,11 @@ artifacts only; none changed application code or the release artefact.
 | Live production smoke | `pnpm.cmd smoke:web` against production | **PASS** |
 | Recent production error scan | `vercel logs ... --since 1h --level error` | **PASS — no logs found** |
 | Axe-backed critical surfaces | Landing, home, jobs, applications, interviews, countries, career direction, profile and continuous journey | **PASS — 10 tests** |
-| Login axe scan | Page rendered; test blocked before axe by non-terminating `page.waitForLoadState("networkidle")`, reproduced at 120s and 240s | **BLOCKED — test harness** |
+| Login axe scan | Root cause found: `/login` keeps some background request (OAuth provider SDK/analytics) continuously in flight, so `page.waitForLoadState("networkidle")` never resolved (reproduced hanging past 240s), unlike "/" and the dashboard where the same wait works. Fixed by replacing the unbounded wait with a bounded, non-throwing one (`{ timeout: 5000 }.catch(() => {})`) immediately after the existing heading-visibility check, which already proves the page rendered. Commit `2b8db35e`. Rerun: `node scripts/run-playwright.mjs test tests/e2e/33-phase-8-landing-login.spec.ts` — all 4 tests pass, axe scan completes in under 20s | **PASS** |
 
-The login result is not an accessibility failure, but it is not a pass. Fix or
-replace the unsuitable `networkidle` wait, rerun the login axe scan, and attach
-the resulting `axe-report` evidence before closing the accessibility gate.
+Login axe scan is now closed. Remaining accessibility work is the manual
+keyboard/focus critical-path review (section 5), which automated axe does
+not cover.
 
 ## 5. Blocking closure checklist
 
@@ -131,7 +133,7 @@ hesitation” standard requested for this release.
 
 | Blocking item | Current status | Completion evidence required |
 |---|---|---|
-| Login accessibility scan | **BLOCKED** | Rerun axe after fixing/removing the non-terminating `networkidle` wait; record zero serious/critical violations or fix findings. |
+| Login accessibility scan | **PASS** | Fixed and verified in commit `2b8db35e` - see section 4. |
 | Keyboard/focus critical-path review | **OPEN** | Manual keyboard-only pass for login/invite, dashboard navigation, profile, job analysis, application review, pricing and sign-out; record focus order/visibility and modal/menu escape behaviour. |
 | Supabase backup/PITR | **OPEN** | Production dashboard screenshot/reference showing backup/PITR state, retention and operator/date. |
 | Restore readiness | **OPEN** | Prefer a non-production restore rehearsal with backup identifier, recovery result and duration. If plan limitations prevent it, document the tested alternative and owner acceptance. |

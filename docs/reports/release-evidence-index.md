@@ -42,7 +42,8 @@ See the gate checklist for full detail. Summary:
 |---|---|
 | Supabase backup/PITR confirmation | Open - needs a human to check the Supabase dashboard |
 | Accessibility critical-path scan | Open - not run this release cycle |
-| Login accessibility scan | Blocked by a reproducible non-terminating `networkidle` test wait; other axe-backed critical surfaces passed |
+| Login accessibility scan | Closed - fixed the non-terminating `networkidle` test wait (commit `2b8db35e`); passes, under 20s |
+| Keyboard/focus manual critical-path review | Open - automated axe doesn't cover this; needs a manual pass |
 | Named incident lead / rollback operator | Open - no names recorded |
 | Rollback rehearsal | Open - not run |
 | Founder privacy/beta-terms/support confirmation | Open - founder-owned |

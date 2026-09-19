@@ -23,18 +23,19 @@ These are deliberately different — documentation commits were made after the d
 | Non-admin QA identity and user isolation verified | Security/QA | Live QA session (`qa-test@autotimeai.com`, `app_metadata.is_test_account: true`) confirmed non-admin: `/admin` → `adminDenied=1`. Cross-user isolation verified structurally: every DB query is scoped with `.eq("user_id", userId)` at the app layer *and* RLS policies enforce `(select auth.uid()) = user_id` at the DB layer (dual-layer, verified via source + live `pg_policies` query) | **Pass** |
 | P0 deployed E2E tests all pass | QA | All 10 critical-path tests from the assurance pack's §5 table exercised live against production this session — see the table below | **Pass** |
 | No unresolved Critical or High defects | Release owner | Scoped statement, not a formal defect-register query (no such register exists in this repo): every defect found during this session's audits (Stripe billing audit, routing/config sweep, live E2E walkthrough) was fixed and re-verified before this checklist was written, with none left open. This does not prove no *undiscovered* Critical/High defect exists — only that none was found and left unresolved | **Pass, scoped as above** |
-| Accessibility critical path accepted | QA | **Not run this session.** No automated accessibility scan (axe/serious-critical) or manual keyboard/contrast pass was performed as part of this release cycle | **Open — not evidenced** |
+| Accessibility critical path accepted | QA | Automated axe scans now pass on 11 critical surfaces (landing, home, jobs, applications, interviews, countries, career direction, profile, continuous journey, and login - login was found hanging on a broken test wait, fixed in commit `2b8db35e`, now passes in under 20s). **Manual keyboard/focus/contrast review has still not been performed** and axe alone does not substitute for it | **Partial — automated pass, manual review open** |
 | Monitoring, incident and rollback ready | Operations | Automatic rollback-on-failure confirmed wired into the deploy workflow (captures previous READY deployment, rolls back on failed `smoke:web`) and its correctness verified by reading the workflow source. **No named incident lead or rollback operator has been recorded**, and no rehearsal has been run | **Partial — mechanism ready, ownership not assigned** |
 | Privacy, beta terms and support channel ready | Founder | Not evidenced this session — this is a founder/business-process item (privacy notice, beta acknowledgement flow, support channel) outside this session's engineering scope | **Open — needs founder confirmation** |
 
-### Result: 8 Pass / 3 Open / 1 Partial
+### Result: 8 Pass / 2 Open / 2 Partial
 
-Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO**. Three gates are genuinely open and none of them are things this session can close alone:
+Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO**. Two gates are genuinely open and neither is something this session can close alone:
 - Backup/PITR (needs Supabase dashboard access)
-- Accessibility critical-path scan (needs to actually be run — see follow-up below)
 - Privacy/beta-terms/support-channel readiness (founder/business item)
 
-One gate is partial: the rollback *mechanism* is ready and verified, but no human has been named to operate it.
+Two gates are partial:
+- Accessibility: automated axe now passes on all 11 covered critical surfaces (login was fixed this session — see the production dossier); manual keyboard/focus/contrast review has not been performed.
+- Rollback: the mechanism is ready and verified, but no human has been named to operate it, and no rehearsal has been run.
 
 ---
 
