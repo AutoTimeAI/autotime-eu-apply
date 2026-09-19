@@ -149,8 +149,10 @@ All migrations through `20260919190000` are applied and verified (listed in `doc
 1. Confirm backup/PITR status in the Supabase dashboard.
 2. Name a release owner, incident lead, and rollback operator; optionally rehearse a rollback.
 3. E2E-09 (AI provider error/fallback) not re-exercised live this session, to avoid burning real AI-provider cost; already covered by existing unit tests (`ai-quality-evaluation.test.mjs`, AI-008).
-4. E2E-10 (sign-out/protected route): a real sign-out control was located and used during this pass; final clean re-verification is pending the next deploy.
+4. E2E-10 (sign-out/protected route): **closed** - re-verified live against the `88b8eb84` deployment: sign-out redirects to `/login?loggedOut=1`, and revisiting `/dashboard` afterward correctly bounces back to `/login?redirectTo=%2Fdashboard` rather than showing any cached authenticated content.
 5. Stripe webhook pure logic (status mapping, period-end selection, credit-pack metadata validation, all object type guards) now has 19 real tests against Stripe-shaped fixtures - closed. The DB-touching async handlers and the webhook `POST` handler itself remain untested; scoped as a separate, larger follow-up since it needs live-billing-code refactoring for dependency injection.
+
+**E2E-02 re-verified against the deployed fix**: after deploying `88b8eb84` (which includes the profile-edit race-condition fix), re-ran the exact same live edit-and-reload check - the phone-number edit now persists correctly after reload. Restored to the original value afterward.
 6. Three LOW-severity Stripe findings deliberately left open (see table above): unhandled `checkout.session.async_payment_failed`, noisy-but-harmless credit-grant retry behavior on bad metadata, and a hardcoded `"pro"` plan label that would need revisiting if a second paid tier is ever added.
 
 Given the above, the honest decision under the pack's own rule remains **GO WITH LIMITATIONS** — one real HIGH-severity billing-display bug was found and fixed during this very pass (which is exactly what a pre-launch assurance pass is for), and every other open item is either organizational or explicitly scoped out as a deliberate follow-up, not a known live defect.
@@ -228,3 +230,15 @@ live: with the load properly awaited, the same edit now fires a real
 - `GET /` → `200`, `Age: 0`, `X-Vercel-Cache: MISS` (fresh from the new build, not a stale cached edge response)
 - `GET /dashboard`, `/waitlist`, `/admin` unauthenticated → all `307` (correctly redirect, no content leak, no error)
 - QA bootstrap session re-established against the live deployment and `GET /dashboard` authenticated → `200` (beta gate and session handling both survived the deploy correctly)
+
+## Final deployment record (this session's last deploy)
+
+| Field | Value |
+|---|---|
+| Deployed commit | `88b8eb4453062315d2897445fbf5a855f4f25071` |
+| Workflow run | `35461879433` - all steps green, `pnpm smoke:web` passed, no rollback triggered |
+| Vercel deployment | `dpl_7wkKjt62gaJALhZMCedaXzSMUmog`, state `READY` |
+| Includes | Beta-waitlist gate, both RPC variable-conflict fixes, security-advisor hardening, RLS initplan/duplicate-policy performance fixes, the profile-edit race-condition fix, both Stripe billing fixes (price-display consolidation + portal QA-account guard), and the Stripe webhook test-coverage addition |
+| Post-deploy checks | `/pricing` confirmed rendering the derived (not hardcoded) price strings correctly - "GBP 9/month", "GBP 19/3 months", "GBP 6.33/month - save GBP 8", "GBP 5" - byte-identical to the pre-refactor text, confirming the consolidation didn't change what users see; E2E-02 and E2E-10 both re-verified live and closed (see above) |
+
+**Final decision: GO WITH LIMITATIONS.** All engineering-side gates are closed with live evidence, including one real HIGH-severity billing bug and one real profile-edit bug found and fixed during this very pass. The two remaining open items are organizational, not technical: backup/PITR verification (needs a human check of the Supabase dashboard) and naming an incident lead/rollback operator. Nothing outstanding is a known live product defect.
