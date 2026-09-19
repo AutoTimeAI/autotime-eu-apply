@@ -2343,3 +2343,31 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   `update_subscription_status_from_stripe` exists, `security definer`).
   Committed as `713b47c8`, pushed, and deployed to production via the
   manual production deployment workflow (verified green).
+
+## 2026-09-19 — GDPR account export could silently omit a table on read failure
+
+- Found while sweeping the account-export/deletion flow. `api/account/
+  export/route.ts` queries all 32 tables in `exportedTables` in parallel;
+  any single table's query error (`{ data, error } = await ...`) was
+  swallowed into `error ? [] : (data ?? [])` with no logging and nothing
+  in the response indicating the table was skipped. A transient DB
+  error, an RLS misconfiguration, or schema drift on any one of the 32
+  tables would silently ship an export that looks complete but is
+  missing that table's rows entirely - directly undermining the GDPR
+  Article 20 completeness guarantee the route's own comment describes
+  (it already documents a prior 2026-08-21 completeness gap for the same
+  route, this is a second, distinct one).
+- Fixed by tracking any per-table failure into a new `incompleteTables`
+  array included in the export payload, and logging each one via
+  `logDiagnostic` (code `account.export.table-read-failed`) so it's
+  visible in operational logs even if the user never reports it.
+- `scripts/account-export-completeness.test.mjs` statically confirms the
+  route both logs and surfaces the failure path.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `521999b4`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green).
+- The account-deletion route (`api/account/route.ts`, `DELETE`) was also
+  swept in the same pass: clean, no bug found - its cascade-delete
+  rationale is already documented in detail, storage cleanup is
+  correctly best-effort/non-blocking, and its error responses go through
+  `diagnosticJson`, which already applies `toPublicApiError` internally.
