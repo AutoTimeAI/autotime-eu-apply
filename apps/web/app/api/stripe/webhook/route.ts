@@ -200,17 +200,20 @@ async function grantCreditPack(session: Stripe.Checkout.Session): Promise<void> 
 
 async function markSubscriptionCancelled(
   subscription: Stripe.Subscription,
+  eventCreatedAt: Date,
 ): Promise<void> {
   try {
     const supabase = createAdminClient()
-    const { error } = await supabase
-      .from("subscriptions")
-      .update({
-        plan: "free",
-        status: "cancelled",
-        current_period_end: getCurrentPeriodEnd(subscription),
-      })
-      .eq("stripe_subscription_id", subscription.id)
+    const { error } = await supabase.rpc(
+      "update_subscription_status_from_stripe",
+      {
+        p_stripe_subscription_id: subscription.id,
+        p_status: "cancelled",
+        p_plan: "free",
+        p_current_period_end: getCurrentPeriodEnd(subscription),
+        p_event_created_at: eventCreatedAt.toISOString(),
+      },
+    )
 
     if (error) {
       throw new Error(error.message)
@@ -342,6 +345,7 @@ async function handleDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
 
 async function markInvoicePaymentFailed(
   invoice: Stripe.Invoice,
+  eventCreatedAt: Date,
 ): Promise<void> {
   try {
     const parent = invoice.parent
@@ -357,10 +361,16 @@ async function markInvoicePaymentFailed(
     }
 
     const supabase = createAdminClient()
-    const { error } = await supabase
-      .from("subscriptions")
-      .update({ status: "past_due" })
-      .eq("stripe_subscription_id", subscriptionId)
+    const { error } = await supabase.rpc(
+      "update_subscription_status_from_stripe",
+      {
+        p_stripe_subscription_id: subscriptionId,
+        p_status: "past_due",
+        p_plan: null,
+        p_current_period_end: null,
+        p_event_created_at: eventCreatedAt.toISOString(),
+      },
+    )
 
     if (error) {
       throw new Error(error.message)
@@ -438,7 +448,10 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       event.type === "customer.subscription.deleted" &&
       isStripeSubscription(eventObject)
     ) {
-      await markSubscriptionCancelled(eventObject)
+      await markSubscriptionCancelled(
+        eventObject,
+        new Date(event.created * 1000),
+      )
       return
     }
 
@@ -446,7 +459,10 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       event.type === "invoice.payment_failed" &&
       isStripeInvoice(eventObject)
     ) {
-      await markInvoicePaymentFailed(eventObject)
+      await markInvoicePaymentFailed(
+        eventObject,
+        new Date(event.created * 1000),
+      )
       return
     }
 

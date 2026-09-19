@@ -1630,6 +1630,16 @@ export type Database = {
         };
         Returns: string;
       };
+      update_subscription_status_from_stripe: {
+        Args: {
+          p_stripe_subscription_id: string;
+          p_status: string;
+          p_plan: string | null;
+          p_current_period_end: string | null;
+          p_event_created_at: string;
+        };
+        Returns: boolean;
+      };
       consume_ai_credit: {
         Args: { p_user_id: string; p_feature: string };
         Returns: boolean;

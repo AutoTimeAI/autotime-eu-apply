@@ -387,6 +387,20 @@ test("route wiring uses the executable boundary helpers", async () => {
   // let a stale, out-of-order event silently overwrite newer state.
   assert.match(sources[3], /rpc\(\s*["']upsert_subscription_from_stripe["']/);
   assert.doesNotMatch(sources[3], /from\(\s*["']subscriptions["']\s*\)\s*\.upsert\(/);
+  // The subscription-cancelled and invoice-payment-failed handlers must go
+  // through the same ordering-guarded RPC, not a raw .update() - a raw
+  // update never advances last_stripe_event_created_at, which would let a
+  // delayed/retried customer.subscription.updated event pass the other
+  // RPC's ordering check and silently resurrect a subscription already
+  // marked cancelled or past_due by one of these two handlers.
+  assert.match(
+    sources[3],
+    /rpc\(\s*["']update_subscription_status_from_stripe["']/,
+  );
+  assert.doesNotMatch(
+    sources[3],
+    /from\(\s*["']subscriptions["']\s*\)\s*\n?\s*\.update\(/,
+  );
   assert.match(sources[4], /getPlans/);
   // getOrCreateStripeCustomer must resolve the "who won the race to create
   // a customer" question atomically via this RPC, not a plain upsert that
