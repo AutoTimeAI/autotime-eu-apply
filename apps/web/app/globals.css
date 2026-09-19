@@ -9606,6 +9606,18 @@ textarea:focus {
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* The base .eyebrow rule (color: var(--accent), a medium-dark blue meant
+   for light backgrounds) was never overridden for .auth-intro's own dark
+   navy gradient above - confirmed live via a real screenshot of the
+   waitlist page (which shares this exact markup with the /login page):
+   the eyebrow text was nearly invisible against the background. Every
+   other dark-background hero section in this file (.landing-hero-content,
+   .admin-console-hero, .admin-login-copy) already has its own eyebrow
+   color override; this one was missed. */
+.auth-intro .eyebrow {
+  color: #9dc4f5;
+}
+
 .auth-intro .auth-proof-grid div {
   border-color: rgba(255, 255, 255, 0.12);
   border-radius: 16px;
