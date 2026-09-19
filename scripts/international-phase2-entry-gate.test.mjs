@@ -132,7 +132,7 @@ test("server boundary derives ownership and rejects client user IDs", () => {
   assert.match(migration, /on delete cascade/i);
 });
 
-test("component controller is decomposed and navigation has six destinations", () => {
+test("component controller is decomposed and navigation includes International/Countries", () => {
   const controller = fs.readFileSync(
     "apps/web/components/InternationalModule.tsx",
     "utf8",
@@ -149,11 +149,20 @@ test("component controller is decomposed and navigation has six destinations", (
   ]) {
     assert.match(controller, new RegExp(component));
   }
+  // Bounded on the array literal alone (its own closing `];`), not on what
+  // function happens to follow it - a WorkflowNavIcon renderer was added
+  // between the array and isPathInSection since this test was first
+  // written, which broke the previous "immediately followed by
+  // isPathInSection" anchor even though the array itself was unchanged.
   const workflowBlock = nav.match(
-    /const dashboardWorkflowNavItems[\s\S]*?\n\];?\s*function isPathInSection/,
+    /const dashboardWorkflowNavItems[\s\S]*?\n\];/,
   )?.[0];
   assert.ok(workflowBlock);
-  assert.equal((workflowBlock.match(/label:/g) ?? []).length, 6);
+  // 7, not the original 6: "Career Direction" (role-pathways) was added
+  // as its own top-level destination alongside "Countries" after this
+  // test was first written.
+  assert.equal((workflowBlock.match(/label:/g) ?? []).length, 7);
+  assert.match(workflowBlock, /label: "Countries"/);
   for (const path of [
     "/dashboard/inbox",
     "/dashboard/match-score",

@@ -15,7 +15,6 @@ import {
   getInternationalCountryPack,
   isStamp4SponsorshipCovered,
   type MobilityProfile,
-  type Stamp4SponsorshipAssessment,
 } from "shared";
 import {
   emptyMobilityProfile,
@@ -28,6 +27,7 @@ import { InternationalSectionNavigation } from "./international/InternationalSec
 import { MobilityProfileForm } from "./international/MobilityProfileForm";
 import { MobilityPersistencePanel } from "./international/MobilityPersistencePanel";
 import { useMobilityPersistence } from "./international/useMobilityPersistence";
+import { useStamp4Check } from "./international/useStamp4Check";
 import { OfficialSourcesPanel } from "./international/OfficialSourcesPanel";
 import { SponsorEvidenceGuide } from "./international/SponsorEvidenceGuide";
 import {
@@ -53,11 +53,6 @@ export function InternationalModule() {
   const [selectedCountry, setSelectedCountry] = useState("Ireland");
   const [jobText, setJobText] = useState("");
   const [status, setStatus] = useState("");
-  const [stamp4Assessment, setStamp4Assessment] =
-    useState<Stamp4SponsorshipAssessment | null>(null);
-  const [stamp4CheckState, setStamp4CheckState] = useState<
-    "idle" | "loading" | "error"
-  >("idle");
   const persistence = useMobilityPersistence({ profile, setProfile, userId });
 
   useEffect(() => {
@@ -73,6 +68,8 @@ export function InternationalModule() {
 
   const pack = getInternationalCountryPack(selectedCountry);
   const completeness = profileCompleteness(profile);
+  const { stamp4Assessment, stamp4CheckState, checkStamp4Thresholds } =
+    useStamp4Check({ jobText, pack, selectedCountry });
   const assessment = useMemo(
     () =>
       assessInternationalJob({
@@ -85,45 +82,6 @@ export function InternationalModule() {
       }),
     [jobText, profile, selectedCountry, stamp4Assessment],
   );
-
-  // Re-check with Stamp4 is an explicit action (see checkStamp4Thresholds),
-  // not part of the assessment's own useMemo above - that recomputes on
-  // every keystroke as jobText changes, and a fetch on every keystroke would
-  // hammer the service. A previous check's result is only valid for the
-  // country/wording it was run against, so clear it whenever either changes.
-  useEffect(() => {
-    setStamp4Assessment(null);
-    setStamp4CheckState("idle");
-  }, [selectedCountry, jobText]);
-
-  const checkStamp4Thresholds = async () => {
-    if (!jobText.trim()) return;
-    setStamp4CheckState("loading");
-    try {
-      const response = await fetch("/api/international/stamp4-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          countryPackId: pack.id,
-          roleTitle: jobText.trim().split("\n")[0]?.slice(0, 200) || pack.displayName,
-          country: pack.displayName,
-          rawText: jobText,
-        }),
-      });
-      const body = (await response.json()) as {
-        data: Stamp4SponsorshipAssessment | null;
-        error: string | null;
-      };
-      if (!response.ok || body.error) {
-        setStamp4CheckState("error");
-        return;
-      }
-      setStamp4Assessment(body.data);
-      setStamp4CheckState("idle");
-    } catch {
-      setStamp4CheckState("error");
-    }
-  };
 
   const saveProfile = () => {
     try {
