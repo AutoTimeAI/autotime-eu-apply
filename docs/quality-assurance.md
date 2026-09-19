@@ -2554,3 +2554,38 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   newly-wired file, 18/18) both clean. Committed as `07cb3c0b`, pushed,
   and deployed to production via the manual production deployment
   workflow (verified green).
+
+## 2026-09-19 — Plain re-save of a mobility profile could look like a sync conflict
+
+- Found while continuing the sweep into `apps/web/components/
+  international/useMobilityPersistence.ts` and its reconciliation logic
+  in `lib/mobility-sync.ts`. `mobilityProfilesMatch` compared the entire
+  serialised profile, including `lastVerifiedAt` - but
+  `InternationalModule.tsx`'s `saveProfile` bumps that field to
+  `new Date()` on every Save click, even one that changes nothing else.
+  Reproduced directly: two profiles with identical substantive content
+  but different `lastVerifiedAt` timestamps were reported as
+  `mobilityProfilesMatch: false` / reconciliation kind `"conflict"`.
+- Practical impact: a candidate who saves the same mobility profile from
+  two devices (or just re-saves without editing anything) would be
+  shown "Browser and account copies differ. Choose which to keep." for
+  data that was never actually different - confusing and alarming for a
+  legally-sensitive profile, and a spurious extra step in a flow the
+  module otherwise goes to real lengths to make trustworthy.
+- Fixed by excluding `lastVerifiedAt` from `stableProfile`'s comparison
+  - it's "when was this confirmed" metadata, not profile content.
+  Verified genuine content differences (e.g. a changed `currentCountry`)
+  still correctly report a conflict.
+- New test in `international-mobility-persistence.test.mjs` reproduces
+  both cases (false-conflict avoided, real conflict preserved);
+  confirmed to fail against the pre-fix code and pass after.
+- While confirming this test's wiring, found this file was itself a
+  second orphaned test file (9 real tests: consent, reconciliation,
+  sync confirmation, account-deletion integration for this exact
+  module) - maintained but, like `international-module.test.mjs` fixed
+  in the previous entry, never wired into `test:unit` or CI. Added
+  `test:international-mobility-persistence` and wired it in.
+- `pnpm --filter web typecheck` and `pnpm test:unit` (now including
+  both newly-wired files) both clean. Committed as `99bf5961`, pushed,
+  and deployed to production via the manual production deployment
+  workflow (verified green).
