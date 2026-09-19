@@ -2807,3 +2807,114 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   admin capabilities existed silently in production, and no amount of
   additional static code review would have found either - both required
   an actual RPC call against real data to surface.
+
+## 2026-09-19 (later same day): pre-release deep validation - DB security advisor sweep + live authenticated walkthrough
+
+Requested explicitly as a second, deeper pre-release validation pass
+("release, test, checklist before release" -> "lot to check and validate
+before release") covering the whole web app on `main`, not just the
+beta-waitlist feature above. Two parts:
+
+**1. Production Supabase security advisor scan** (`get_advisors`,
+type=security). Found two real, fixable WARN-level gaps beyond the
+routine INFO-level "RLS enabled, no policy" noise (expected - those
+tables are only ever queried via the service-role admin client, never
+the anon/authenticated client roles):
+
+- `public.increment_ai_rate_limit(text, integer, integer)` had never had
+  its default PUBLIC EXECUTE grant revoked, meaning it was directly
+  callable via `/rest/v1/rpc/increment_ai_rate_limit` by any signed-in
+  *or fully anonymous* request, with attacker-chosen
+  `p_rate_limit_key`/`p_window_seconds`/`p_max_requests`. Confirmed via
+  grep that every real call site (`apps/web/lib/openai-server.ts`,
+  `apps/web/lib/diagnostics.ts`, the `cv/github` and `sync/refresh`
+  routes) exclusively uses `createAdminClient()` (service role) - client
+  role access was never needed by the app itself. Left open, this was a
+  real rate-limit-poisoning/DoS vector: anyone could reset or flood
+  another key's counter, or spam the `ai_rate_limits` table with
+  arbitrary keys.
+- `create_free_subscription_for_new_user()` and
+  `create_user_account_from_auth()` (both `auth.users` AFTER INSERT
+  triggers) had the same unused grant. Lower risk since Postgres blocks
+  calling a trigger function directly outside trigger context, but
+  Supabase's own linter recommends revoking it anyway as defense in
+  depth.
+- `set_updated_at()` and `autotime_normalize_application_url(text)` had
+  a mutable search_path (WARN).
+
+Fixed in `supabase/migrations/20260919180000_security_advisor_hardening.sql`:
+revokes the three unnecessary EXECUTE grants from
+`public, anon, authenticated`, and pins `search_path = pg_catalog, public`
+on the two flagged functions. Applied directly to production. Re-ran the
+advisor scan afterward: all three WARN findings gone, only the
+pre-existing INFO-level items remain.
+
+Also ran the performance advisor (via a subagent, to keep the ~111k-char
+raw output out of the main context): 230 findings, none release-blocking.
+Biggest is 119 `auth_rls_initplan` WARNs (`auth.uid()` re-evaluated per
+row instead of `(select auth.uid())`) across `profiles`, `applications`,
+`evidence_records`, etc - real but negligible at current beta scale, a
+mechanical low-risk fix, scheduled for right after release rather than
+blocking on it. 4 duplicate-policy WARNs on `custom_job_sources`, low
+risk. The rest (76 unindexed foreign keys, 31 unused indexes) is
+informational and deferred to a post-launch pass driven by real
+query-log data once there's real traffic to look at.
+
+Also flagged, not fixed here (not SQL-fixable): Supabase Auth's
+"leaked password protection" (HaveIBeenPwned check) is disabled - a
+manual Supabase Auth dashboard toggle, tracked as a non-blocking
+follow-up.
+
+**2. Live authenticated walkthrough against production.** This required
+a real session, which meant rotating `QA_SESSION_BOOTSTRAP_SECRET` (a
+write-only Vercel Secret) to a known value and triggering a fresh
+production deploy so the new value took effect - both of these hit the
+session's auto-mode classifier (`[Secret-Store Writes]`,
+`[Production Deploy]`) and needed explicit user action: the user
+approved the secret rotation directly, and manually triggered the
+"Manual production deployment" GitHub Actions workflow (run
+`35455483353`, green) since even a direct instruction to retry the
+deploy did not clear that classifier.
+
+With a live session established for the real QA test account
+(`qa-test@autotimeai.com`), drove the real dashboard end to end via
+Playwright, not curl-only checks:
+
+- Dashboard and Jobs pages both load cleanly (200, zero real console/
+  network errors - one benign Next.js RSC-prefetch abort on rapid
+  navigation, not a bug).
+- Pasted a genuinely new vacancy (a fabricated "NovaGrid Energy" Berlin
+  role, not a template already known to the test suite) through the
+  real "Add a job" form. Extraction correctly pulled skills
+  (TypeScript/React/Node/PostgreSQL), location (Berlin), work
+  arrangement (Hybrid), and the exact work-authorisation clause
+  ("EU work authorization required, we do not sponsor visas") straight
+  from the pasted free text.
+- Triggered the real fit-decision engine (not a stub): returned
+  "Consider" with 1/5 requirements confirmed - correctly withholding a
+  pass rather than hallucinating one, since the QA account has no CV/
+  evidence loaded. Governed-source citations rendered with real content
+  (EU Blue Card, Recognition in Germany - Make it in Germany federal
+  portal, dated "reviewed 2026-07-29").
+- Application tab correctly gated: "Prepare application" disabled,
+  "Prepare anyway" enabled with an explicit gap-acknowledgment framing -
+  matches the evidence-first design intent exactly.
+- `/admin` correctly redirected this non-admin account to
+  `/admin/login?adminDenied=1`.
+- Found one real, non-blocking bug: on the job-analysis result view, the
+  analytics-consent banner ("AutoTime uses privacy-conscious EU
+  analytics... Allow analytics / Decline") renders on top of and
+  truncates part of the recommendation heading text. Cosmetic only,
+  tracked for a follow-up fix, not release-blocking.
+- Cleaned up: deleted the test job (`job_workflow_jobs` row
+  `174f2b1c-6e17-41d4-bd54-df687a995289` and its analysis/application
+  rows) from the QA account afterward. Left the two pre-existing test
+  artifacts from earlier sessions (`QA Example Ltd`, `tcs`) untouched,
+  out of scope for this pass's cleanup.
+
+Full checklist updated:
+`docs/reports/beta-waitlist-release-checklist-2026-09-19.md`. Net
+result: nothing release-blocking found; two real security gaps fixed
+and verified; one cosmetic UI bug found and tracked; the core decision
+engine, evidence-first gating, and admin access control were all
+verified genuinely live against production, not just by static review.
