@@ -2171,3 +2171,41 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   immediately after). New static-inspection test confirms the rate-limit
   check runs before `enrichCvFromGitHub` is called.
 - `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+
+## 2026-09-19 — Fixed a directly exploitable SSRF bypass in the portfolio CV importer
+
+- Found while systematically sweeping the three CV-import sources
+  (LinkedIn, GitHub, portfolio URL) after the LinkedIn CSV fixes. This is
+  a real security finding, not just hardening: `isPrivateAddress`'s regex
+  never accounted for two standard address representations, and one of
+  the gaps was **directly reachable without any DNS rebinding at all**.
+- **Bracketed IPv6 hosts**: `new URL("http://[::1]/").hostname` returns
+  `"[::1]"` *with* the brackets, matching none of the existing patterns
+  (not even the pre-existing `::1$`/`fe80` ones, since the string starts
+  with `[`). This is immediately exploitable on its own: a literal-IP URL
+  host never goes through `createSsrfSafeLookup`'s DNS-resolution path at
+  all (there's no hostname to resolve), so the bracket-stripped pre-check
+  in `fetchPortfolioText` was the *only* defense for it, and it failed
+  open for `[::1]`, `[fe80::1]`, and similar.
+- **IPv4-mapped IPv6 addresses** (RFC 4291): `::ffff:127.0.0.1` or its
+  compressed hex form `::ffff:7f00:1`, which the OS socket layer connects
+  to identically to plain `127.0.0.1` on any dual-stack host (virtually
+  every modern server). `isIP()` correctly reports these as valid IPv6
+  (not 0), so even the DNS-rebinding-safe lookup's own `isIP`-based check
+  didn't catch an attacker-controlled AAAA record returning one.
+- Fixed by stripping brackets and converting either IPv4-mapped-IPv6 form
+  back to a plain dotted-quad address before the existing range checks
+  run, so they see the real address instead of an opaque IPv6-looking
+  string that matched nothing.
+- New regression tests confirmed to fail against the pre-fix logic
+  (isolated the actual regex bug, not just a missing export, by
+  temporarily exporting the old function unchanged first) before
+  verifying they pass against the fix - covering both the DNS-rebinding
+  path and a direct unit test of `isPrivateAddress` recognizing bracketed
+  hosts, while still correctly accepting a real public bracketed IPv6
+  address.
+- Verified the affected route (`/api/ai/cv-enrich`) is live and correctly
+  auth-gated post-deploy; the fix itself is a pure, deterministic
+  function with no external dependencies, exhaustively unit-tested
+  against the exact bypass vectors.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
