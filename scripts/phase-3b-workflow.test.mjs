@@ -70,6 +70,26 @@ assert.equal(
 assert.equal(isRestrictedJobUrl("https://jobs.example.test/123"), false);
 assert.equal(duplicateJob([job], job)?.id, job.id);
 
+// extractJob leaves title/employer blank whenever a pasted vacancy lacks
+// an explicit "Role:"/"Company:" label - a real, reachable case (any
+// unstructured paste), not a contrived edge case. Two different jobs
+// both missing that label must never be reported as duplicates of each
+// other just because they share the same "" == "" title/employer.
+const unstructuredVacancyA = extractJob({
+  description:
+    "Looking for a mid-level backend engineer to join a growing payments team. Node.js and TypeScript required, remote-friendly, competitive salary.",
+});
+const unstructuredVacancyB = extractJob({
+  description:
+    "We need a frontend developer experienced with React and accessibility. Hybrid role based in Berlin with relocation support available.",
+});
+assert.equal(unstructuredVacancyA.title.value, "");
+assert.equal(unstructuredVacancyA.employer.value, "");
+assert.equal(
+  duplicateJob([unstructuredVacancyA], unstructuredVacancyB),
+  undefined,
+);
+
 const apply = analyseJob(job, strongEvidence, { sponsorshipRequired: true });
 assert.equal(apply.decision, "Apply");
 assert.ok(apply.capability.every((item) => item.sourceText.length > 0));

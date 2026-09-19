@@ -829,11 +829,19 @@ export function duplicateJob(
   candidate: Pick<JobRecord, "sourceUrl" | "title" | "employer">,
 ) {
   const url = candidate.sourceUrl.toLowerCase().replace(/\/$/, "");
+  const title = candidate.title.value.trim().toLowerCase();
+  const employer = candidate.employer.value.trim().toLowerCase();
   return jobs.find(
     (job) =>
       (url && job.sourceUrl.toLowerCase().replace(/\/$/, "") === url) ||
-      (job.title.value.toLowerCase() === candidate.title.value.toLowerCase() &&
-        job.employer.value.toLowerCase() ===
-          candidate.employer.value.toLowerCase()),
+      // Both sides empty (extractJob leaves title/employer blank whenever a
+      // pasted vacancy lacks an explicit "Role:"/"Company:" label) must not
+      // count as a match - two different, unstructured job pastes would
+      // otherwise be indistinguishable and the second silently dropped as
+      // "already tracked".
+      (title &&
+        employer &&
+        job.title.value.trim().toLowerCase() === title &&
+        job.employer.value.trim().toLowerCase() === employer),
   );
 }
