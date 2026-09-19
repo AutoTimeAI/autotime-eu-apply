@@ -4,6 +4,10 @@ Filled per the structure required by `AutoTime_AI_v1.0.1_End_to_End_Release_Assu
 
 **Reviewer/operator:** Claude Sonnet 5 (agent), acting for DataByRajesh / rajesh@autotimeai.com, 2026-09-19.
 
+**Release artefact SHA (what is actually deployed to production):** `88b8eb4453062315d2897445fbf5a855f4f25071`
+**Documentation HEAD (this and later commits are docs-only, not re-deployed):** `70f359e86d75813912582fd316b94b36992b77d0`
+These are deliberately different — documentation commits were made after the deployment and were not themselves redeployed. Do not read documentation HEAD as the release artefact.
+
 ---
 
 ## Mandatory gate table (per §11)
@@ -13,12 +17,12 @@ Filled per the structure required by `AutoTime_AI_v1.0.1_End_to_End_Release_Assu
 | Immutable SHA and artefact baseline recorded | Engineering | `git rev-parse origin/main` = `88b8eb4453062315d2897445fbf5a855f4f25071`; ancestor-of-`origin/main` confirmed at every step this session | **Pass** |
 | Clean locked install and builds pass | Engineering | `pnpm typecheck`, `pnpm lint`, `pnpm test:unit`, `pnpm build:web` all exit 0, re-run repeatedly through the session including after every fix | **Pass** |
 | Exact-SHA production deployment succeeds | Engineering | Workflow run `35461879433` (commit `88b8eb84`) — all steps green, `pnpm smoke:web` passed; Vercel deployment `dpl_7wkKjt62gaJALhZMCedaXzSMUmog`, `state: READY` | **Pass** |
-| Environment values and secrets verified | Release owner | `BETA_INVITE_CODE`, `QA_SESSION_BOOTSTRAP_SECRET`, `QA_TEST_ACCOUNT_USER_ID` confirmed present and functioning via a real live authenticated session against production; all Stripe/Supabase/Sentry/PostHog keys confirmed present via `filter_project_envs` (values not exposed) | **Pass** |
+| Environment values and secrets verified | Release owner | Split by evidence type, not combined: (a) **Required-variable presence** — all Stripe/Supabase/Sentry/PostHog/QA/beta keys confirmed present via `filter_project_envs`, values not exposed; (b) **Runtime functional verification** — `BETA_INVITE_CODE`, `QA_SESSION_BOOTSTRAP_SECRET`, `QA_TEST_ACCOUNT_USER_ID` confirmed actually working via a real live authenticated production session; (c) **Build-only observability credential** — `SENTRY_AUTH_TOKEN` presence was confirmed but its actual effect (successful source-map upload) was *not* verified this session; a missing/wrong token does not fail the build, so presence alone doesn't prove it worked | **Pass (a, b) / Open (c)** |
 | Backup and recovery readiness verified | Data owner | **No tool available to this agent inspects Supabase backup/PITR configuration.** Requires a human check of the Supabase dashboard (Settings → Database → Backups) for project `dorqxmnslzzmrpjbhlcl` | **Open — needs a human check** |
 | Approved migrations applied and verified | Data owner | Every migration through `20260919190000_rls_initplan_and_duplicate_policy_hardening.sql` applied directly to production and independently re-verified via `pg_policies`/advisor re-scan (see `docs/quality-assurance.md`, 2026-09-19 entries) | **Pass** |
 | Non-admin QA identity and user isolation verified | Security/QA | Live QA session (`qa-test@autotimeai.com`, `app_metadata.is_test_account: true`) confirmed non-admin: `/admin` → `adminDenied=1`. Cross-user isolation verified structurally: every DB query is scoped with `.eq("user_id", userId)` at the app layer *and* RLS policies enforce `(select auth.uid()) = user_id` at the DB layer (dual-layer, verified via source + live `pg_policies` query) | **Pass** |
 | P0 deployed E2E tests all pass | QA | All 10 critical-path tests from the assurance pack's §5 table exercised live against production this session — see the table below | **Pass** |
-| No unresolved Critical or High defects | Release owner | One real HIGH (Stripe price-display/verification gap) and one unclassified-but-functionally-blocking bug (profile-edit race condition) were found *and fixed* during this session, both re-verified live post-deploy. Zero open Critical/High as of `88b8eb84` | **Pass** |
+| No unresolved Critical or High defects | Release owner | Scoped statement, not a formal defect-register query (no such register exists in this repo): every defect found during this session's audits (Stripe billing audit, routing/config sweep, live E2E walkthrough) was fixed and re-verified before this checklist was written, with none left open. This does not prove no *undiscovered* Critical/High defect exists — only that none was found and left unresolved | **Pass, scoped as above** |
 | Accessibility critical path accepted | QA | **Not run this session.** No automated accessibility scan (axe/serious-critical) or manual keyboard/contrast pass was performed as part of this release cycle | **Open — not evidenced** |
 | Monitoring, incident and rollback ready | Operations | Automatic rollback-on-failure confirmed wired into the deploy workflow (captures previous READY deployment, rolls back on failed `smoke:web`) and its correctness verified by reading the workflow source. **No named incident lead or rollback operator has been recorded**, and no rehearsal has been run | **Partial — mechanism ready, ownership not assigned** |
 | Privacy, beta terms and support channel ready | Founder | Not evidenced this session — this is a founder/business-process item (privacy notice, beta acknowledgement flow, support channel) outside this session's engineering scope | **Open — needs founder confirmation** |
@@ -43,13 +47,13 @@ One gate is partial: the rollback *mechanism* is ready and verified, but no huma
 | E2E-03 | Job analysis with unknown sponsorship | **Pass** | Pasted job had no salary field; engine correctly returned "Consider" with "missing" rather than a false pass |
 | E2E-04 | Explicit no-sponsorship vacancy | **Pass** | "We do not sponsor visas" correctly extracted and surfaced, not dropped |
 | E2E-05 | Unsupported claim in application | **Pass** | Application tab correctly blocks "Prepare application", requires explicit "Prepare anyway" acknowledgment |
-| E2E-06 | Cross-user object access | **Pass (verified structurally)** | Dual-layer ownership scoping (app-level query filter + RLS) confirmed via source and live `pg_policies`; not tested with two real live accounts, to avoid touching real users' data |
+| E2E-06 | Cross-user object access | **Pass — structural** | Dual-layer ownership scoping (app-level query filter + RLS) confirmed via source and live `pg_policies`; NOT a deployed two-account access test — deliberately not run live to avoid touching real users' data. This is code-inspection evidence, not deployed E2E evidence, and should not be counted toward a "live E2E" tally |
 | E2E-07 | Ireland, Germany, Netherlands workspaces | **Pass** | Live: correct "Full pathway intelligence" badge for IE/DE/NL |
 | E2E-08 | Unsupported country | **Pass** | Live: Belgium correctly shows "Limited coverage — verification required", explorer mode, no eligibility claim |
-| E2E-09 | Error and provider fallback | **Pass (via existing unit tests, not re-run live)** | `ai-quality-evaluation.test.mjs` AI-008 already covers provider-failure → clean Error, not re-exercised live to avoid real AI-provider cost |
+| E2E-09 | Error and provider fallback | **Pass — unit** | `ai-quality-evaluation.test.mjs` AI-008 covers provider-failure → clean Error at the unit level; NOT a deployed live-provider-failure test — deliberately not re-run live to avoid real AI-provider cost. This is unit-test evidence, not deployed E2E evidence |
 | E2E-10 | Sign-out and protected route | **Pass** | Live: sign-out → `/login?loggedOut=1`; revisiting `/dashboard` afterward → redirected to `/login?redirectTo=%2Fdashboard`, no cached content served |
 
-**10/10 pass.**
+**8/10 pass — deployed live evidence. 2/10 (E2E-06, E2E-09) pass on structural/unit evidence, not deployed live evidence.** Correcting an overclaim from an earlier version of this checklist, which labelled all ten "live E2E" without this distinction — flagged by an independent documentation audit (`docs/reports/release-readiness-documentation-audit-2026-09-19.md`). Structural/unit evidence is legitimate and was gathered deliberately (to avoid touching real users' data or spending real AI-provider cost), but must not be counted as equivalent to a deployed live test.
 
 ---
 
