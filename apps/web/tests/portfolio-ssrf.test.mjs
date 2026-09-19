@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { createSsrfSafeLookup, extractReadableText, isPrivateAddress } from "../lib/cv/sources/portfolio.ts"
+import { createSsrfSafeLookup, extractReadableText, fetchPortfolioText, isPrivateAddress, PortfolioFetchError } from "../lib/cv/sources/portfolio.ts"
 
 const tests = []
 
@@ -105,6 +105,20 @@ test("isPrivateAddress recognizes bracketed IPv6 hosts, as produced by new URL()
   assert.equal(isPrivateAddress("[::ffff:7f00:1]"), true)
   assert.equal(isPrivateAddress("[::ffff:127.0.0.1]"), true)
   assert.equal(isPrivateAddress("[2001:db8::1]"), false)
+})
+
+test("fetchPortfolioText throws PortfolioFetchError (not a generic Error) for user-actionable input problems", async () => {
+  // The route mapping these to a 4xx status relies on `instanceof
+  // PortfolioFetchError` specifically - a plain Error here would silently
+  // fall through to the generic 500 branch and get its safe, actionable
+  // message redacted by toPublicApiError.
+  await assert.rejects(() => fetchPortfolioText("not-a-url"), (error) => {
+    assert.ok(error instanceof Error)
+    return true
+  })
+  await assert.rejects(() => fetchPortfolioText("ftp://example.com/"), PortfolioFetchError)
+  await assert.rejects(() => fetchPortfolioText("http://127.0.0.1/"), PortfolioFetchError)
+  await assert.rejects(() => fetchPortfolioText("http://localhost/"), PortfolioFetchError)
 })
 
 test("propagates the underlying DNS lookup error", async () => {

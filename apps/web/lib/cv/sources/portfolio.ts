@@ -2,6 +2,15 @@ import { lookup as dnsLookup } from "node:dns";
 import { isIP } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
 
+// Every message thrown as this type (below) is a deliberately safe,
+// user-actionable string - "enter a public URL", "private addresses
+// aren't allowed", "not enough readable content" - never raw internal
+// error detail. Callers should map this to a 4xx status and let the
+// message pass through unredacted, rather than the generic "something
+// went wrong" a blanket 500 would produce via toPublicApiError - hiding
+// exactly the information a user needs to fix their input.
+export class PortfolioFetchError extends Error {}
+
 // An IPv4-mapped IPv6 address (RFC 4291) represents an IPv4 address inside
 // IPv6 syntax - "::ffff:127.0.0.1" or its hex-group form "::ffff:7f00:1" -
 // and the OS socket layer connects to it identically to the plain IPv4
@@ -71,7 +80,7 @@ export function createSsrfSafeLookup(
       const list = addresses as DnsAddress[];
 
       if (!list.length || list.some((entry) => isIP(entry.address) === 0 || isPrivateAddress(entry.address))) {
-        cb(new Error("The portfolio must resolve to a public address."), wantsAll ? [] : "");
+        cb(new PortfolioFetchError("The portfolio must resolve to a public address."), wantsAll ? [] : "");
         return;
       }
 
@@ -100,11 +109,11 @@ export async function fetchPortfolioText(rawUrl: string): Promise<{ text: string
   const url = new URL(rawUrl);
 
   if (!(["http:", "https:"] as string[]).includes(url.protocol) || url.username || url.password) {
-    throw new Error("Enter a public HTTP or HTTPS portfolio URL.");
+    throw new PortfolioFetchError("Enter a public HTTP or HTTPS portfolio URL.");
   }
 
   if (url.hostname === "localhost" || isPrivateAddress(url.hostname)) {
-    throw new Error("Private network addresses are not allowed.");
+    throw new PortfolioFetchError("Private network addresses are not allowed.");
   }
 
   const agent = new Agent({ connect: { lookup: createSsrfSafeLookup() } });
@@ -125,18 +134,18 @@ export async function fetchPortfolioText(rawUrl: string): Promise<{ text: string
   }
 
   if (!response.ok) {
-    throw new Error(`Portfolio returned ${response.status}.`);
+    throw new PortfolioFetchError(`Portfolio returned ${response.status}.`);
   }
 
   if (!(response.headers.get("content-type") || "").includes("text/html")) {
-    throw new Error("Portfolio URL must return an HTML page.");
+    throw new PortfolioFetchError("Portfolio URL must return an HTML page.");
   }
 
   const html = (await response.text()).slice(0, 500_000);
   const text = extractReadableText(html);
 
   if (text.length < 80) {
-    throw new Error("Not enough readable portfolio content was found.");
+    throw new PortfolioFetchError("Not enough readable portfolio content was found.");
   }
 
   return { text: text.slice(0, 40_000), url: url.toString() };

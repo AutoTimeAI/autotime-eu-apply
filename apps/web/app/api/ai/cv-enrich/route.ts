@@ -2,7 +2,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getRequestUser } from "../../../../lib/api-auth";
-import { fetchPortfolioText } from "../../../../lib/cv/sources/portfolio";
+import { fetchPortfolioText, PortfolioFetchError } from "../../../../lib/cv/sources/portfolio";
 import { assertAiRouteRateLimit, extractCvEnrichmentWithOpenAI, RateLimitError } from "../../../../lib/openai-server";
 import { reserveAiCall, releaseAiCall, FeatureGateError, finalizeAiCall } from "../../../../lib/feature-gate";
 import { toPublicApiError } from "../../../../lib/public-api-error";
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     await finalizeAiCall(reservationId, { feature: `cv-enrichment-${body.source}`, model: result.model, promptTokens: result.promptTokens, completionTokens: result.completionTokens, costUsd: result.costUsd });
     return NextResponse.json({ data: { ...result.value, sourceLabel: result.sourceUrl, notes: ["AI-extracted suggestion. Verify every claim before applying it to your CV."] }, error: null });
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : error instanceof FeatureGateError ? 402 : error instanceof RateLimitError ? 429 : 500;
+    const status = error instanceof z.ZodError ? 400 : error instanceof PortfolioFetchError ? 400 : error instanceof FeatureGateError ? 402 : error instanceof RateLimitError ? 429 : 500;
     return NextResponse.json({ data: null, error: toPublicApiError(error instanceof Error ? error.message : "CV enrichment failed", status) }, { status });
   }
 }
