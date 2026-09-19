@@ -11,12 +11,22 @@ import {
   getSupabaseServiceRoleEnv,
 } from "../../../../lib/env.server"
 import { createAdminClient } from "../../../../lib/supabase/admin"
-import type {
-  Json,
-  SubscriptionPlan,
-  SubscriptionStatus,
-} from "../../../../lib/supabase/types"
+import type { Json, SubscriptionPlan } from "../../../../lib/supabase/types"
 import { getWebhookStripeClient } from "../../../../lib/stripe"
+import {
+  getChargeCustomerId,
+  getCurrentPeriodEnd,
+  getCustomerId,
+  getString,
+  getSubscriptionPlan,
+  isStripeCharge,
+  isStripeCheckoutSession,
+  isStripeDispute,
+  isStripeInvoice,
+  isStripeSubscription,
+  mapStripeStatus,
+  validateCreditPackMetadata,
+} from "../../../../lib/stripe-webhook-logic"
 
 type ApiResponse<T> = {
   data: T | null
@@ -32,75 +42,6 @@ function jsonResponse(
   body: ApiResponse<WebhookRouteData>,
 ): NextResponse<ApiResponse<WebhookRouteData>> {
   return NextResponse.json(body, { status: body.status })
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
-function getString(value: unknown): string | null {
-  return typeof value === "string" ? value : null
-}
-
-function isStripeSubscription(value: unknown): value is Stripe.Subscription {
-  return isRecord(value) && value.object === "subscription"
-}
-
-function isStripeInvoice(value: unknown): value is Stripe.Invoice {
-  return isRecord(value) && value.object === "invoice"
-}
-
-function isStripeCheckoutSession(
-  value: unknown,
-): value is Stripe.Checkout.Session {
-  return isRecord(value) && value.object === "checkout.session"
-}
-
-function isStripeCharge(value: unknown): value is Stripe.Charge {
-  return isRecord(value) && value.object === "charge"
-}
-
-function isStripeDispute(value: unknown): value is Stripe.Dispute {
-  return isRecord(value) && value.object === "dispute"
-}
-
-function getSubscriptionPlan(): SubscriptionPlan {
-  return "pro"
-}
-
-function mapStripeStatus(
-  status: Stripe.Subscription.Status,
-): SubscriptionStatus {
-  switch (status) {
-    case "active":
-    case "trialing":
-    case "past_due":
-    case "incomplete":
-    case "incomplete_expired":
-    case "unpaid":
-    case "paused":
-      return status
-    case "canceled":
-      return "cancelled"
-  }
-}
-
-function getCustomerId(
-  customer: Stripe.Subscription["customer"],
-): string | null {
-  return typeof customer === "string" ? customer : customer.id
-}
-
-function getCurrentPeriodEnd(subscription: Stripe.Subscription): string | null {
-  const periodEnds = subscription.items.data
-    .map((item) => item.current_period_end)
-    .filter((periodEnd) => typeof periodEnd === "number")
-
-  if (periodEnds.length === 0) {
-    return null
-  }
-
-  return new Date(Math.max(...periodEnds) * 1000).toISOString()
 }
 
 async function upsertSubscriptionFromStripe(
@@ -173,19 +114,13 @@ async function sendUpgradeEmailForUser(
 }
 
 async function grantCreditPack(session: Stripe.Checkout.Session): Promise<void> {
-  if (
-    session.payment_status !== "paid" ||
-    session.metadata?.purchase_type !== "ai_credits"
-  ) {
+  const validated = validateCreditPackMetadata(session)
+
+  if (!validated) {
     return
   }
 
-  const userId = session.metadata.user_id
-  const credits = Number.parseInt(session.metadata.credits ?? "", 10)
-
-  if (!userId || !Number.isSafeInteger(credits) || credits <= 0) {
-    throw new Error("Credit checkout metadata is invalid")
-  }
+  const { userId, credits } = validated
 
   const { error } = await createAdminClient().rpc("grant_ai_credit_pack", {
     p_checkout_session_id: session.id,
@@ -224,16 +159,6 @@ async function markSubscriptionCancelled(
 
     throw new Error(message)
   }
-}
-
-function getChargeCustomerId(charge: Stripe.Charge): string | null {
-  if (!charge.customer) {
-    return null
-  }
-
-  return typeof charge.customer === "string"
-    ? charge.customer
-    : charge.customer.id
 }
 
 async function resolveUserIdByCustomerId(
