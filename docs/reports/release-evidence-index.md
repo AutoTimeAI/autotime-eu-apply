@@ -9,13 +9,17 @@ point for "what is the current release status."
 
 ## Current release cycle: Private Beta v1.0.1
 
+Start with [`production-release-dossier-v1.0.1-2026-09-19.md`](./production-release-dossier-v1.0.1-2026-09-19.md).
+It is the canonical consolidated go/no-go record. The documents below provide
+the supporting detail.
+
 | Field | Value |
 |---|---|
 | Release artefact SHA (deployed to production) | `88b8eb4453062315d2897445fbf5a855f4f25071` |
 | Production deployment ID | `dpl_7wkKjt62gaJALhZMCedaXzSMUmog` (Vercel, `READY`) |
 | Deployment workflow run | `35461879433` (green) |
 | Documentation HEAD (may be later - docs-only commits) | see `git rev-parse origin/main` |
-| Current decision | **GO WITH LIMITATIONS** (private beta only - not an unqualified GO, not public-launch ready) |
+| Current decision | **NO-GO for a new unqualified release; current deployed private beta is healthy** |
 | Decision date | 2026-09-19 |
 | Release owner sign-off | **Pending** - not yet signed by the founder |
 
@@ -23,6 +27,7 @@ point for "what is the current release status."
 
 | Purpose | Document | Status |
 |---|---|---|
+| Consolidated production go/no-go dossier | [`production-release-dossier-v1.0.1-2026-09-19.md`](./production-release-dossier-v1.0.1-2026-09-19.md) | **Canonical entry point — current** |
 | Mandatory gate table + decision record | [`release-gate-checklist-v1.0.1-2026-09-19.md`](./release-gate-checklist-v1.0.1-2026-09-19.md) | Current - update after every remaining gate closes |
 | Detailed narrative evidence | [`release-assurance-pack-v1.0.1-evidence-2026-09-19.md`](./release-assurance-pack-v1.0.1-evidence-2026-09-19.md) | Current, but read the gate checklist first for the authoritative pass/fail state |
 | Documentation audit (meta) | [`release-readiness-documentation-audit-2026-09-19.md`](./release-readiness-documentation-audit-2026-09-19.md) | Current - explains why the two documents above exist and what corrections were applied |
@@ -37,6 +42,7 @@ See the gate checklist for full detail. Summary:
 |---|---|
 | Supabase backup/PITR confirmation | Open - needs a human to check the Supabase dashboard |
 | Accessibility critical-path scan | Open - not run this release cycle |
+| Login accessibility scan | Blocked by a reproducible non-terminating `networkidle` test wait; other axe-backed critical surfaces passed |
 | Named incident lead / rollback operator | Open - no names recorded |
 | Rollback rehearsal | Open - not run |
 | Founder privacy/beta-terms/support confirmation | Open - founder-owned |

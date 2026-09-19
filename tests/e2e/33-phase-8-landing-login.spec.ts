@@ -85,7 +85,14 @@ test("login page sign-in buttons are green-free with a single primary action", a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Open your dashboard" })).toBeVisible();
-  await page.waitForLoadState("networkidle");
+  // Unlike "/" and the dashboard, this page never reaches networkidle - the
+  // GitHub/Google sign-in button rendering keeps some background request
+  // (OAuth provider SDK/analytics) continuously in flight, so an unbounded
+  // wait here hangs indefinitely (reproduced past 240s). The heading-visible
+  // check above already proves the page rendered; this is just letting any
+  // late-arriving assets settle before the screenshot/axe scan, so a bounded,
+  // non-throwing wait is the correct fix rather than waiting forever.
+  await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
   await page.mouse.move(0, 0);
   await capture(page, "login-1440x900.png");
   await forbiddenGreen(".auth-shell")(page);
