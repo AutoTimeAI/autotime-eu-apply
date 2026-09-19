@@ -2454,3 +2454,29 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   window is too permissive - see the repro) or preferring the *largest*
   plausible annual figure over the smallest, revisiting the "range"
   test's assumption if so.
+
+## 2026-09-19 — Extension could autofill the candidate's email into a voicemail field
+
+- Found while sweeping the browser extension's autofill field-detection
+  logic (`apps/extension/lib/autofill.ts`). `detectFieldFromText`'s email
+  check used a bare substring match against `["email", "e-mail"]` - and
+  `"voicemail".includes("email")` is `true` (confirmed live). A form
+  field labelled "Voicemail number" or "Preferred voicemail greeting"
+  (real fields on some ATS/HR forms) would be misdetected as an email
+  field and silently filled with the candidate's actual email address.
+- This is the exact same false-positive class the phone check right
+  below it in the same function was already hardened against
+  (`includesAnyWholeWord`, added earlier for "hotel"/"intel"/
+  "microphone"/"automobile" falsely matching "tel"/"phone"/"mobile" as
+  bare substrings, with its own regression tests already in place) - the
+  email check just hadn't been given the same treatment.
+- Fixed by switching the email check to the same whole-word matcher.
+  Added a regression test alongside the existing phone false-positive
+  test, confirming "voicemail number"/"preferred voicemail greeting"
+  correctly return `null` while "email address"/"e-mail" still detect
+  correctly.
+- `pnpm --filter extension test` (all 82 tests) and the extension's
+  `tsc --noEmit` typecheck both clean. Committed as `0cf4a7a8` and
+  pushed - the extension ships via its own store-review release process,
+  not the web app's Vercel deployment, so this fix will reach users on
+  the next extension release rather than immediately.
