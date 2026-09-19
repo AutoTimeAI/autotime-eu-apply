@@ -2371,3 +2371,38 @@ suite. Timeline of what was tried, ruled out, and finally confirmed:
   rationale is already documented in detail, storage cleanup is
   correctly best-effort/non-blocking, and its error responses go through
   `diagnosticJson`, which already applies `toPublicApiError` internally.
+
+## 2026-09-19 — Two raw error-message leaks, hidden by the scanner's own file-wide exemption
+
+- Found while sweeping `api/profile/onboarding/route.ts` and `api/esco/
+  questionnaire/route.ts`. Both GET handlers built their `NextResponse.json`
+  response by hand and returned a raw Supabase `error.message` straight
+  to the client on a DB read failure - unredacted internal error text,
+  the exact bug `diagnostic-response.test.mjs` exists to catch (its own
+  comment already documents four prior occurrences of this same shape).
+- Both slipped past that scanner because it exempted an entire file from
+  the check if `toPublicApiError`/`diagnosticJson`/`safeAdminError`
+  appeared *anywhere* in it. Both files use one of those helpers
+  elsewhere (onboarding's `PATCH`, esco's `POST`/`PATCH`) - which
+  silently exempted their own `GET` handlers too, even though those
+  handlers never touched the helper at all.
+- `esco/questionnaire`'s `GET` had a second, compounding bug: it always
+  returned HTTP status 200 even when a read genuinely failed, which
+  independently defeats `toPublicApiError`'s `status >= 500` redaction
+  gate regardless of whether the helper is applied - fixed to return 500
+  (and `data: null`) when any of its three parallel reads errors.
+- Fixed both routes to route the error through `toPublicApiError` at the
+  correct status. Tightened the scanner from a whole-file exemption to a
+  per-return-statement one: a match is now only considered guarded if a
+  redaction helper appears within the same `return` statement, not
+  merely somewhere else in the file. Verified the tightened scanner
+  fails against the pre-fix code for both files, and passes after the
+  fix.
+- Tightening the check surfaced one false positive in `account/route.ts`:
+  a `logDiagnostic(...)` details argument (server-side logging only,
+  never sent to the client) matched the same regex shape as a real leak.
+  Fixed by excluding matches whose nearest enclosing call is a logging
+  call rather than a response call.
+- `pnpm --filter web typecheck` and `pnpm test:unit` both clean.
+  Committed as `4a1213b7`, pushed, and deployed to production via the
+  manual production deployment workflow (verified green).
