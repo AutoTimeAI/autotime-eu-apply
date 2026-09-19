@@ -1524,6 +1524,18 @@ function getWidgetMarkup({
         box-sizing: border-box;
       }
 
+      /* The properties on :host above style the light-DOM host element
+         itself, which sits in the page's own document tree and is NOT
+         shadow-protected - a host site's own CSS (e.g. an aggressive
+         line-height/icon-font reset) can win the specificity fight
+         against :host and override them silently. Confirmed live on a
+         real Ashby careers page: :host's font-size (13px) survived, but
+         line-height was overridden to 0, collapsing every dt/dd row's
+         line box to zero height and making every "JOB DETAILS" label
+         visually overlap its value text. Re-declaring the load-bearing
+         text properties on .widget - a real element rendered INSIDE the
+         shadow tree, which page CSS can never select at all - makes this
+         immune to the same class of collision on any other host site. */
       .widget {
         display: grid;
         grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -1536,6 +1548,10 @@ function getWidgetMarkup({
         background: linear-gradient(135deg, #ffffff 0%, #edf8f7 100%);
         box-shadow: 0 18px 45px rgba(6, 22, 47, 0.18);
         overflow: hidden;
+        color: #172033;
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.4;
       }
 
       .launcher {
