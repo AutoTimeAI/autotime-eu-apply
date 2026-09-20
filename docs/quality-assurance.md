@@ -3804,3 +3804,83 @@ under-tested language-detection fix for a comparatively low-harm case.
 Full `pnpm test:unit` re-run clean, zero regressions. This brings the
 country/location fit-scoring fixes to 5 real false-positive collisions
 found and fixed today, all in the tool's oldest, most-used scoring path.
+
+## 2026-09-20 (continued): SEVERITY-CRITICAL - GDPR export completeness gap, and account deletion could fail outright for real users
+
+Moved the scrutiny method to the GDPR account-export/deletion pair,
+previously touched once (2026-09-19, fixed silent per-table read
+failures). This pass checked a different question: does the static
+`exportedTables` list, and the deletion route's cascade assumption, still
+match the *live* database schema - queried directly via
+`information_schema`/`pg_constraint` against production, not inferred
+from migration files or trusted from either route's own comments.
+
+**Finding 1 - export completeness**: diffed every `public.*` table with a
+`user_id` column against `exportedTables` plus the export route's own
+documented exclusion list. **10 tables were in neither list** - not
+included, not deliberately excluded, simply never accounted for by
+whoever added each table: `mobility_learning_assignments`,
+`mobility_decision_comprehension_responses`, `career_search_profiles`,
+`custom_job_sources`, `custom_sponsor_companies`, `tracked_jobs`,
+`seen_job_postings`, `user_app_settings`, `beta_feedback`,
+`capture_handoffs`. Checked row counts before concluding severity, since
+an empty table is a latent gap and a populated one is active harm:
+`seen_job_postings` held **3,118 rows for one real user**;
+`tracked_jobs`, `career_search_profiles`, and `user_app_settings` also
+held real (small) row counts; the two mobility-governance tables were
+confirmed empty (consistent with that feature's governance-enforcement
+flag being off in production). Fixed by adding all 10 to `exportedTables`
+and correcting both the module's own comment and the export route's
+comment, which had claimed the set matched "every table with an ON
+DELETE CASCADE ownership link" - a claim the live schema directly
+contradicted.
+
+**Finding 2, more severe - account deletion could hard-fail**: while
+checking each newly-found table's foreign-key `delete_rule` against the
+export route's CASCADE claim, found that **4 of the 10** -
+`tracked_jobs`, `custom_sponsor_companies`, `seen_job_postings`,
+`capture_handoffs` - use `ON DELETE NO ACTION`, not `CASCADE`, on their
+`user_id` foreign key to `auth.users`. The account-deletion route
+(`api/account/route.ts`) relies entirely on cascade to clean up owned
+data before calling `auth.admin.deleteUser()`, and its own comment
+explicitly claimed "every per-user table... has ON DELETE CASCADE" - also
+false against the live schema. With `NO ACTION`, Postgres raises a
+foreign-key violation and blocks the delete entirely for any user who has
+a row in any of these four tables - confirmed `seen_job_postings` already
+has exactly one such real user in production today. This is a live
+Article 17 (right to erasure) bug: that user cannot currently delete
+their account through this route at all, and it's not a rare edge case -
+`seen_job_postings` is populated by ordinary product usage (the
+job-matching/ingestion pipeline), not a special/admin path.
+
+**Fixed**: added `deleteNoActionOwnedRows`, which explicitly deletes rows
+from the four NO ACTION tables before `deleteUser()` is called - and,
+unlike `deleteProfilePhotos`'s deliberately best-effort storage cleanup,
+this one throws on failure rather than swallowing it, since a failure
+here means the very next line would hit the identical constraint
+violation anyway; surfacing it immediately is strictly more diagnosable
+than a delayed, identical failure one step later. Corrected the route's
+own comment to stop claiming universal cascade coverage.
+
+**Verification**: `pnpm --filter web typecheck` clean. Added regression
+tests rather than only fixing the immediate bug: extended the existing
+`apps/web/tests/account-export.test.mjs`'s `mustInclude` list with all 10
+newly-found tables (the correct, pre-existing home for this check - found
+and reused it rather than creating a parallel duplicate, after initially
+adding a redundant test elsewhere and catching it before committing); and
+added a new `scripts/account-deletion-no-action-cleanup.test.mjs`
+asserting the deletion route references each of the four NO ACTION
+tables, that the cleanup runs before `deleteUser`, and that a cleanup
+failure throws rather than being silently swallowed. Both wired into
+`pnpm test:unit`. Full suite re-run clean, zero regressions.
+
+**Why this ranks above every other finding today**: the country-fit and
+mobility-engine bugs produce a wrong recommendation, which a careful
+candidate can catch by double-checking. A GDPR data-subject right
+(export completeness, or worse, the ability to delete your account at
+all) either works or it doesn't - there's no "the candidate should verify
+this themselves" mitigation available for a legal compliance mechanism,
+and a live account-deletion failure is about as concrete as a bug gets:
+a specific, real, current user cannot exercise a specific legal right
+through this route today, confirmed by direct production-database query,
+not inference.

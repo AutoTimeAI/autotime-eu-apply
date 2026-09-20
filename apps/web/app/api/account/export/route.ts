@@ -9,9 +9,9 @@ import { createAdminClient } from "../../../../lib/supabase/admin"
 import { createDiagnosticId, diagnosticJson, logDiagnostic } from "../../../../lib/diagnostics"
 import { exportedTables } from "../../../../lib/account-export"
 
-// GDPR Article 20 (right to data portability). The exported set matches
-// every table with an ON DELETE CASCADE ownership link to auth.users(id),
-// except genuine operational/metering tables (operational_logs, ai_usage,
+// GDPR Article 20 (right to data portability). The exported set is every
+// public.* table with a user_id column holding genuine personal content,
+// except operational/metering tables (operational_logs, ai_usage,
 // ai_credit_ledger, sync_events, extension_connections,
 // deleted_application_tombstones, workflow_operational_events - non-content
 // telemetry about the account, not data the user provided or generated)
@@ -23,6 +23,22 @@ import { exportedTables } from "../../../../lib/account-export"
 // esco_questionnaire_answers, and profile_revisions - all real,
 // server-synced user content that an earlier version of this comment
 // incorrectly described as living only in browser localStorage.
+//
+// Found and fixed 2026-09-20: this comment previously claimed the set
+// matched "every table with an ON DELETE CASCADE ownership link" - false
+// against the live schema, confirmed by querying pg_constraint directly.
+// 10 tables (mobility_learning_assignments,
+// mobility_decision_comprehension_responses, career_search_profiles,
+// custom_job_sources, custom_sponsor_companies, tracked_jobs,
+// seen_job_postings, user_app_settings, beta_feedback, capture_handoffs)
+// held genuine personal content - including one table with 3,118 real
+// rows for a real user - but were in neither exportedTables nor this
+// comment's exclusion list, simply never accounted for either way. All
+// added to exportedTables regardless of their actual delete-cascade
+// behaviour (that's a separate concern - see api/account/route.ts, which
+// had its own related bug: four of these tables use ON DELETE NO ACTION,
+// not CASCADE, which would have made account deletion itself fail with a
+// foreign-key violation for any user holding a row in them).
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { user, error: userError } = await getRequestUser(request)

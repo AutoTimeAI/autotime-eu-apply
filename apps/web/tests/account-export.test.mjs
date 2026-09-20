@@ -33,6 +33,25 @@ test("includes every real per-user content table with an ownership link to auth.
     "mobility_decision_replays",
     "mobility_learning_consents",
     "mobility_learning_events",
+    // Found 2026-09-20 by querying the live database's
+    // information_schema/pg_constraint directly rather than trusting this
+    // file or the export route's own comment: these 10 tables held
+    // genuine personal content (career/job-search data, tracked jobs -
+    // including one table with 3,118 real rows for a real user, app
+    // settings, feedback text, mobility governance responses) but were in
+    // neither exportedTables nor the export route's documented exclusion
+    // list - simply never accounted for either way. See
+    // docs/quality-assurance.md's 2026-09-20 entry for the full sweep.
+    "mobility_learning_assignments",
+    "mobility_decision_comprehension_responses",
+    "career_search_profiles",
+    "custom_job_sources",
+    "custom_sponsor_companies",
+    "tracked_jobs",
+    "seen_job_postings",
+    "user_app_settings",
+    "beta_feedback",
+    "capture_handoffs",
   ]
 
   for (const table of mustInclude) {

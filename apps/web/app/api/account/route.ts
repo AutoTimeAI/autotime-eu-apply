@@ -47,6 +47,41 @@ async function deleteProfilePhotos(
   }
 }
 
+// These four tables' user_id foreign key to auth.users is NO ACTION, not
+// CASCADE - found by querying pg_constraint directly against production,
+// which contradicted this file's own prior comment claiming "every
+// per-user table... has ON DELETE CASCADE". Left as-is, deleting the auth
+// user would raise a foreign-key violation and the whole deletion would
+// fail outright for any user who has ever had a row in any of these -
+// seen_job_postings alone already holds one real user's rows. Unlike
+// deleteProfilePhotos (storage has no FK, so a cleanup failure there is
+// genuinely non-blocking), a failure here must surface as a deletion
+// failure rather than being swallowed, since the very next line would
+// hit the identical constraint violation anyway - silently continuing
+// would just produce a worse, less diagnosable error one step later.
+const noActionUserTables = [
+  "tracked_jobs",
+  "custom_sponsor_companies",
+  "seen_job_postings",
+  "capture_handoffs",
+] as const
+
+async function deleteNoActionOwnedRows(
+  client: ReturnType<typeof createAdminClient>,
+  userId: string,
+): Promise<void> {
+  for (const table of noActionUserTables) {
+    const { error } = await (client as unknown as {
+      from(name: string): { delete(): { eq(column: string, value: string): PromiseLike<{ error: unknown }> } }
+    }).from(table).delete().eq("user_id", userId)
+    if (error) {
+      throw new Error(
+        `Could not delete "${table}" rows before account deletion: ${String(error)}`,
+      )
+    }
+  }
+}
+
 type AccountDeleteRouteData = {
   deleted: true
 }
@@ -64,12 +99,11 @@ function deleteJsonResponse(
 }
 
 // GDPR Article 17 (right to erasure). This removes the auth.users row
-// itself, not just the profiles row — every per-user table in the schema
-// (profiles, subscriptions, mobility_profiles, applications,
-// evidence_records, outcome_records, interview_prep_packs,
-// reusable_answers, account_settings, user_accounts,
-// extension_connections, beta_access) has ON DELETE CASCADE on its
-// user_id foreign key, so deleting the auth user cascades correctly.
+// itself, not just the profiles row — most per-user tables in the schema
+// have ON DELETE CASCADE on their user_id foreign key, so deleting the
+// auth user cascades correctly for those. `noActionUserTables` above are
+// the confirmed exception (NO ACTION, would otherwise block deletion with
+// a foreign-key violation) and are cleaned up explicitly first.
 // admin_audit_events and market_refresh_requests intentionally use ON
 // DELETE RESTRICT for actor/requester columns, so an admin account with
 // audit history cannot self-delete here — that is a deliberate audit
@@ -107,6 +141,7 @@ export async function DELETE(
 
     const adminClient = createAdminClient()
     await deleteProfilePhotos(adminClient, user.id)
+    await deleteNoActionOwnedRows(adminClient, user.id)
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(
       user.id,
     )

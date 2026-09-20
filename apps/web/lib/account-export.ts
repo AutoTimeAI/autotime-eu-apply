@@ -1,7 +1,20 @@
-// Tables holding a user's own data, each with a user_id column and an
-// ON DELETE CASCADE ownership link to auth.users(id) - see
+// Tables holding a user's own data, each with a user_id column - see
 // app/api/account/export/route.ts for the GDPR Article 20 rationale and
 // the deliberately-excluded operational/metering tables.
+//
+// Found 2026-09-20 by diffing this list against every public.* table with
+// a user_id column (live database query, not migration-file inspection):
+// 10 tables held genuine personal content but were in neither this list
+// nor the export route's documented exclusion comment - simply never
+// accounted for. Added the 9 below that hold real content (career/job
+// search data, tracked jobs, app settings, feedback text, mobility
+// governance responses); `capture_handoffs` was included too despite
+// being a short-lived pass-through token record, since it can contain
+// `raw_text` (pasted vacancy text) and costs nothing extra to include.
+// `admin_memberships`, `deleted_application_tombstones`,
+// `extension_connections`, and the operational/metering tables named in
+// the export route's own comment remain deliberately excluded - see that
+// comment for the reasoning.
 export const exportedTables = [
   "profiles",
   "profile_revisions",
@@ -35,4 +48,14 @@ export const exportedTables = [
   "mobility_decision_replays",
   "mobility_learning_consents",
   "mobility_learning_events",
+  "mobility_learning_assignments",
+  "mobility_decision_comprehension_responses",
+  "career_search_profiles",
+  "custom_job_sources",
+  "custom_sponsor_companies",
+  "tracked_jobs",
+  "seen_job_postings",
+  "user_app_settings",
+  "beta_feedback",
+  "capture_handoffs",
 ] as const
