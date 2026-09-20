@@ -39,7 +39,7 @@ export default function ErrorFallback({
         digest: error.digest ?? null
       }
     })
-  }, [error.digest, message])
+  }, [error, message])
 
   return (
     <main className="error-shell" role="alert">

@@ -199,6 +199,10 @@ export function useProfileProtocolReadiness(userId?: string) {
     }
 
     if (!userId) {
+      // Part of a data-loading effect that otherwise reads localStorage
+      // and an async synced-readiness fetch - this branch is just the
+      // deterministic "no user" default.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReadinessScore(0)
       return
     }

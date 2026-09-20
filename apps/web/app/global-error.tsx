@@ -39,7 +39,7 @@ export default function GlobalError({
         digest: error.digest ?? null
       }
     })
-  }, [error.digest, message])
+  }, [error, message])
 
   return (
     <html lang="en">

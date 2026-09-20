@@ -47,10 +47,10 @@ export function WaitlistContent({ email }: { email: string }) {
         <div>
           <p className="eyebrow">AutoTime EU Apply · Beta</p>
           <h1 id="waitlist-intro-title">
-            You're on the beta waitlist.
+            You&apos;re on the beta waitlist.
           </h1>
           <p>
-            We'll email {email} as soon as your account is approved. If you
+            We&apos;ll email {email} as soon as your account is approved. If you
             already have an invite code, you can unlock access right now.
           </p>
         </div>

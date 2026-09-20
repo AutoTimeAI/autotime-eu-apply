@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { CountryPack, Stamp4SponsorshipAssessment } from "shared";
 
 /**
@@ -27,10 +27,17 @@ export function useStamp4Check({
     "idle" | "loading" | "error"
   >("idle");
 
-  useEffect(() => {
+  // Clears a previous check's result when the country/wording it was run
+  // against changes - done during render (React's recommended pattern for
+  // "adjusting state when a value changes") rather than in an effect,
+  // avoiding an extra render pass.
+  const [lastCheckKey, setLastCheckKey] = useState(`${selectedCountry}:${jobText}`);
+  const checkKey = `${selectedCountry}:${jobText}`;
+  if (checkKey !== lastCheckKey) {
+    setLastCheckKey(checkKey);
     setStamp4Assessment(null);
     setStamp4CheckState("idle");
-  }, [selectedCountry, jobText]);
+  }
 
   const checkStamp4Thresholds = async () => {
     if (!jobText.trim()) return;

@@ -27,6 +27,10 @@ export default function OutreachWorkspace() {
   }, []);
 
   useEffect(() => {
+    // The setState calls this reaches all happen after an await inside
+    // `load` (a real network fetch) - deferred, asynchronous updates, not
+    // a synchronous cascading re-render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -51,6 +55,10 @@ export default function OutreachWorkspace() {
     else setStatus(payload.error);
   }, []);
 
+  // The setState calls this reaches all happen after an await inside
+  // `loadContacts` (a real network fetch) - deferred, asynchronous
+  // updates, not a synchronous cascading re-render.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadContacts(); }, [loadContacts]);
 
   return (

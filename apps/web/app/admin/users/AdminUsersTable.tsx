@@ -57,7 +57,6 @@ export function AdminUsersTable({
       void loadPage(data.page)
     }, POLL_INTERVAL_MS)
     return () => window.clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, data.page])
 
   const { firstRow, lastRow } = getVisibleRowRange(

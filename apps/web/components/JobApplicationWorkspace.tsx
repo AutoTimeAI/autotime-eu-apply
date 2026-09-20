@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ProductEmptyState,
@@ -153,6 +154,9 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
       (view.kind === "applications" || view.kind === "application") &&
       fixture === "loading"
     ) {
+      // localStorage doesn't exist during SSR, so this E2E-only test
+      // fixture can only be read client-side post-mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setApplicationSystemState("loading");
       return;
     }
@@ -396,7 +400,7 @@ function JobsList({
         }
       />
       <SyncStatusLine state={sync.state} status={sync.status} />
-      <p><a className="text-link" href="/dashboard/jobs/browse">Browse aggregated EU jobs</a></p>
+      <p><Link className="text-link" href="/dashboard/jobs/browse">Browse aggregated EU jobs</Link></p>
       {adding ? (
         <JobCapture
           state={state}
@@ -785,9 +789,9 @@ function JobDetail({
   };
   return (
     <main className="workflow-page phase-two-jobs phase-two-job-detail">
-      <a href="/dashboard/jobs" className="text-link phase-two-job-back">
+      <Link href="/dashboard/jobs" className="text-link phase-two-job-back">
         {"\u2190"} Jobs
-      </a>
+      </Link>
       <ProductPageHeader
         eyebrow={job.source}
         title={job.title.value || "Untitled role"}
@@ -881,7 +885,7 @@ function RecruiterOutreachForm({ applicationId, job }: { applicationId?: string;
     <div className="workflow-form-grid"><label>Contact type<select value={contactType} onChange={(e)=>setContactType(e.target.value as typeof contactType)}><option value="recruiter">Recruiter</option><option value="hiring_manager">Hiring manager</option><option value="peer_target_role">Peer in target role</option></select></label><label>Name<input value={recruiterName} onChange={(e) => setRecruiterName(e.target.value)} /></label><label>Role<input value={recruiterRole} onChange={(e) => setRecruiterRole(e.target.value)} /></label><label>Email <span>optional</span><input type="email" value={recruiterEmail} onChange={(e) => { setRecruiterEmail(e.target.value); if (e.target.value) setChannel("email"); }} /></label><label>Channel<select value={channel} onChange={(e) => setChannel(e.target.value as typeof channel)}><option value="email">Email</option><option value="linkedin_note">LinkedIn note</option><option value="linkedin_inmail">LinkedIn InMail</option></select></label><label className="full-span">Candidate summary<textarea value={candidateSummary} onChange={(e) => setCandidateSummary(e.target.value)} /></label><label className="full-span">Strongest matching evidence (comma separated)<input value={strengths} onChange={(e) => setStrengths(e.target.value)} /></label></div>
     {contactType==="peer_target_role"?<p className="notice-warning">Peer outreach is informational only: ask about the role or team, never for an application update or referral.</p>:null}
     <button className="button-secondary" disabled={!applicationId} onClick={async () => { setStatus("Drafting outreach…"); const response = await fetch("/api/outreach", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jobId: applicationId, jobTitle: job.title.value, companyName: job.employer.value, jobDescription: job.description, recruiterName, recruiterRole, recruiterEmail, contactType, candidateSummary, candidateKeyStrengths: strengths.split(",").map((item) => item.trim()).filter(Boolean), channel }) }); const payload = await response.json(); setStatus(response.ok ? "Draft saved. Open Recruiter outreach to review and copy it." : payload.error || "Drafting failed."); }}>Draft outreach</button>
-    {!applicationId ? <p className="notice-warning">Prepare an application first so outreach can be linked to the private application record.</p> : null}<p role="status">{status}</p>{status.startsWith("Draft saved") ? <a className="text-link" href="/dashboard/follow-ups">Open recruiter outreach</a> : null}
+    {!applicationId ? <p className="notice-warning">Prepare an application first so outreach can be linked to the private application record.</p> : null}<p role="status">{status}</p>{status.startsWith("Draft saved") ? <Link className="text-link" href="/dashboard/follow-ups">Open recruiter outreach</Link> : null}
   </section>;
 }
 
@@ -1148,8 +1152,8 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
             </p>
             <p>Mobility facts stay separate from capability scoring.</p>
             <nav aria-label="Related checks">
-              <a href="/dashboard/international">View country facts</a>
-              <a href="/dashboard/autofill-profile">Review profile evidence</a>
+              <Link href="/dashboard/international">View country facts</Link>
+              <Link href="/dashboard/autofill-profile">Review profile evidence</Link>
             </nav>
           </section>
         </aside>
@@ -1659,8 +1663,8 @@ function ApplicationsList({
       />
       <SyncStatusLine state={sync.state} status={sync.status} />
       <div className="workflow-actions">
-        <a className="button-secondary" href="/dashboard/cv-tailor">Tailor CV</a>
-        <a className="button-secondary" href="/dashboard/follow-ups">Recruiter outreach</a>
+        <Link className="button-secondary" href="/dashboard/cv-tailor">Tailor CV</Link>
+        <Link className="button-secondary" href="/dashboard/follow-ups">Recruiter outreach</Link>
       </div>
       {reviewQueue.length ? (
         <section className="workflow-section" aria-labelledby="review-queue-title">
@@ -1785,9 +1789,9 @@ function ApplicationsList({
           title="No applications yet"
           description="Choose an analysed job when you are ready to prepare an application."
           action={
-            <a className="button-primary" href="/dashboard/jobs">
+            <Link className="button-primary" href="/dashboard/jobs">
               Review jobs
-            </a>
+            </Link>
           }
         />
       )}
@@ -1982,12 +1986,12 @@ function ApplicationDetail({
     ) : null;
   return (
     <main className="workflow-page phase-three-applications phase-three-application-detail">
-      <a
+      <Link
         href="/dashboard/applications"
         className="text-link phase-three-back-link"
       >
         ← Applications
-      </a>
+      </Link>
       <ProductPageHeader
         eyebrow={job.employer.value || "Employer unknown"}
         title={job.title.value || "Application workspace"}

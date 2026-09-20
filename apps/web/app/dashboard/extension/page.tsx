@@ -263,9 +263,9 @@ export default async function DashboardExtensionPage() {
             <div className="extension-download-actions">
               {activeConnection ? (
                 <>
-                  <a className="primary-link" href="/dashboard/applications">
+                  <Link className="primary-link" href="/dashboard/applications">
                     Open tracker
-                  </a>
+                  </Link>
                   <a
                     className="secondary-link"
                     href={

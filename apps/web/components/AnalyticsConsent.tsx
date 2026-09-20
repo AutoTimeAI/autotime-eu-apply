@@ -21,6 +21,9 @@ export default function AnalyticsConsent() {
   const [choice, setChoice] = useState<string | null>(null)
 
   useEffect(() => {
+    // localStorage doesn't exist during SSR, so this can only be read
+    // client-side post-mount - there's no render-time alternative here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setChoice(window.localStorage.getItem(analyticsConsentStorageKey))
   }, [])
 

@@ -58,8 +58,11 @@ export default async function DashboardLayout({
     user = sessionUser;
   }
 
+  let isAdmin: boolean;
+  let plan: Awaited<ReturnType<typeof getUserPlan>>;
+
   try {
-    const isAdmin = await isAdminUser(user);
+    isAdmin = await isAdminUser(user);
 
     // Admins and the test-auth user must never be blocked by their own
     // beta_access row - an admin's own account getting gated by the same
@@ -70,14 +73,7 @@ export default async function DashboardLayout({
       redirect("/waitlist");
     }
 
-    const plan = await getUserPlan(user.id);
-    const email = user.email ?? "account";
-
-    return (
-      <DashboardShell email={email} isAdmin={isAdmin} plan={plan} userId={user.id}>
-        {children}
-      </DashboardShell>
-    );
+    plan = await getUserPlan(user.id);
   } catch (error: unknown) {
     console.error("dashboard_layout_render_failed", {
       userId: user.id,
@@ -85,4 +81,12 @@ export default async function DashboardLayout({
     });
     throw error;
   }
+
+  const email = user.email ?? "account";
+
+  return (
+    <DashboardShell email={email} isAdmin={isAdmin} plan={plan} userId={user.id}>
+      {children}
+    </DashboardShell>
+  );
 }

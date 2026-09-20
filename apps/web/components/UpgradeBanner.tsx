@@ -23,6 +23,9 @@ export function UpgradeBanner({ remainingCalls }: UpgradeBannerProps) {
   const [isDismissed, setIsDismissed] = useState(true)
 
   useEffect(() => {
+    // sessionStorage doesn't exist during SSR, so this can only be read
+    // client-side post-mount - there's no render-time alternative here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsDismissed(sessionStorage.getItem(dismissedKey) === "true")
   }, [])
 

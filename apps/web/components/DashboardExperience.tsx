@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   type ChangeEvent,
   type ReactNode,
@@ -975,7 +976,10 @@ export default function HomePage({
     (application) => application.status === "Interview"
   )
   const persistedEvidenceRecords = state.evidenceRecords ?? []
-  const persistedOutcomeRecords = state.outcomeRecords ?? []
+  const persistedOutcomeRecords = useMemo(
+    () => state.outcomeRecords ?? [],
+    [state.outcomeRecords]
+  )
   const selectedApplication = applicationId
     ? state.applications.find((application) => application.id === applicationId)
     : undefined
@@ -1761,6 +1765,13 @@ export default function HomePage({
       void loadDashboardSnapshot({ force: true, silent: true })
       void loadProfileSnapshot({ silent: true })
     }
+    // `currentTab` is deliberately excluded: this effect initializes
+    // dashboard state from storage once per user session (it also derives
+    // and sets several other pieces of state from storage/recovery).
+    // Including it would re-run this whole initialization - and
+    // setState(prefilledState) - every time the user switches tabs,
+    // clobbering any in-progress unsaved edits on every tab switch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudSyncReadiness.configured, loadDashboardSnapshot, loadProfileSnapshot, userId])
 
   useEffect(() => {
@@ -1797,6 +1808,7 @@ export default function HomePage({
       window.clearInterval(intervalId)
     }
   }, [
+    cloudSyncReadiness.configured,
     loadDashboardSnapshot,
     loadProfileSnapshot,
     syncPreferences.profileAccountSyncEnabled
@@ -2691,8 +2703,7 @@ export default function HomePage({
     )
   }, [
     activeFocus,
-    activeKitApplication?.contentSnapshot,
-    activeKitApplication?.id,
+    activeKitApplication,
     applicationPositioningPack,
     state.jobAnalysis,
     state.profile,
@@ -4228,9 +4239,9 @@ export default function HomePage({
           <li>Interview answers use your saved profile details.</li>
         </ol>
       </details>
-      <a className="secondary-button" href="/dashboard/autofill-profile">
+      <Link className="secondary-button" href="/dashboard/autofill-profile">
         Unlock profile
-      </a>
+      </Link>
     </section>
   ) : null
 
@@ -4250,13 +4261,13 @@ export default function HomePage({
           {showHeaderJobActions ? (
             <div className="command-header-tools">
               {currentTab !== "jobs" ? (
-                <a className="secondary-button" href="/dashboard/match-score">
+                <Link className="secondary-button" href="/dashboard/match-score">
                   Check EU fit
-                </a>
+                </Link>
               ) : null}
-              <a className="secondary-button" href="/dashboard/applications">
+              <Link className="secondary-button" href="/dashboard/applications">
                 Tracked Jobs
-              </a>
+              </Link>
             </div>
           ) : null}
         </div>
@@ -4380,9 +4391,9 @@ export default function HomePage({
                     tools. Current profile readiness is {readinessScore}%.
                   </p>
                 </div>
-                <a className="secondary-button" href="/dashboard/autofill-profile">
+                <Link className="secondary-button" href="/dashboard/autofill-profile">
                   Complete profile
-                </a>
+                </Link>
               </div>
             ) : null}
             <div
@@ -4416,18 +4427,18 @@ export default function HomePage({
                     </a>
                     {profileReadyForExecution ? (
                       <>
-                        <a
+                        <Link
                           className="secondary-button"
                           href="/dashboard/match-score"
                         >
                           Check EU fit
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                           className="secondary-button"
                           href="/dashboard/applications"
                         >
                           Open tracker
-                        </a>
+                        </Link>
                       </>
                     ) : null}
                   </>
@@ -4487,12 +4498,12 @@ export default function HomePage({
                   </>
                 ) : activeFocus === "follow-ups" ? (
                   <>
-                    <a className="secondary-button" href="/dashboard/applications">
+                    <Link className="secondary-button" href="/dashboard/applications">
                       Open tracked jobs
-                    </a>
-                    <a className="secondary-button" href="/dashboard/insights">
+                    </Link>
+                    <Link className="secondary-button" href="/dashboard/insights">
                       Review progress
-                    </a>
+                    </Link>
                   </>
                 ) : activeFocus === "insights" ? (
                   <>
@@ -4503,18 +4514,18 @@ export default function HomePage({
                     >
                       Run evidence report
                     </button>
-                    <a className="secondary-button" href="/dashboard/applications">
+                    <Link className="secondary-button" href="/dashboard/applications">
                       Open tracked jobs
-                    </a>
+                    </Link>
                   </>
                 ) : currentTab === "applications" ? (
                   <>
-                    <a className="secondary-button" href="/dashboard/follow-ups">
+                    <Link className="secondary-button" href="/dashboard/follow-ups">
                       Open follow-ups
-                    </a>
-                    <a className="secondary-button" href="/dashboard/interview">
+                    </Link>
+                    <Link className="secondary-button" href="/dashboard/interview">
                       Open interview prep
-                    </a>
+                    </Link>
                   </>
                 ) : (
                   <>
@@ -4571,7 +4582,7 @@ export default function HomePage({
                           Candidate evidence, work-right details and role
                           targets.
                         </p>
-                        <a href="/dashboard/autofill-profile">Edit profile</a>
+                        <Link href="/dashboard/autofill-profile">Edit profile</Link>
                       </article>
                       <article>
                         <span>Account saving</span>
@@ -4607,7 +4618,7 @@ export default function HomePage({
                           Connect Chrome to parse JDs and prove job source
                           quality.
                         </p>
-                        <a href="/dashboard/extension">Open extension</a>
+                        <Link href="/dashboard/extension">Open extension</Link>
                       </article>
                       <article>
                         <span>Plan</span>
@@ -4618,7 +4629,7 @@ export default function HomePage({
                           See what is included and what unlocks after profile
                           completion.
                         </p>
-                        <a href="/pricing">View pricing</a>
+                        <Link href="/pricing">View pricing</Link>
                       </article>
                       <article>
                         <span>Your data</span>
@@ -5615,7 +5626,7 @@ export default function HomePage({
                       {mobilityPrefillNote.currentCountry ? (
                         <p>
                           Pre-filled from your saved{" "}
-                          <a href="/dashboard/international">Countries</a>{" "}
+                          <Link href="/dashboard/international">Countries</Link>{" "}
                           profile. Edit it if this is not correct.
                         </p>
                       ) : null}
@@ -5656,7 +5667,7 @@ export default function HomePage({
                       {mobilityPrefillNote.targetCountries ? (
                         <p>
                           Pre-filled from your saved{" "}
-                          <a href="/dashboard/international">Countries</a>{" "}
+                          <Link href="/dashboard/international">Countries</Link>{" "}
                           profile. Edit it if this is not correct.
                         </p>
                       ) : null}

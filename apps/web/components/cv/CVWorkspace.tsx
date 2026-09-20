@@ -66,6 +66,9 @@ export default function CVWorkspace({
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(key) || "null") || empty;
+      // localStorage doesn't exist during SSR, so this can only be read
+      // client-side post-mount - there's no render-time alternative here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCv(saved);
       void fetch("/api/profile/onboarding")
         .then(async (response) => ({ response, payload: await response.json() }))

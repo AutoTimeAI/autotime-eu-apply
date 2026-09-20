@@ -4038,9 +4038,11 @@ indexes have no query history yet and will clear from that list as real
 traffic hits them. Full `pnpm test:unit` clean afterward (schema-only
 change, no application code touched).
 
-Deliberately left as real, disclosed decisions rather than executed:
-ESLint bootstrap (scope/strictness call) and the 53 RLS-enabled-no-policy
-tables (needs per-feature policy design, not a blind blanket fix).
+Deliberately left as real, disclosed decisions rather than executed at
+the time: ESLint bootstrap (scope/strictness call) and the 53
+RLS-enabled-no-policy tables (needs per-feature policy design, not a
+blind blanket fix). ESLint was subsequently bootstrapped for real - see
+the entry below.
 
 **Correction, same day**: leaked-password-protection was initially
 described here as "just a dashboard toggle." The founder confirmed this
@@ -4054,3 +4056,93 @@ something fixable by finding the right menu. Recording this explicitly
 so it isn't mistaken for an actionable toggle in any future pass: **compromised-password
 checking (HaveIBeenPwned) is unavailable on Free-tier Supabase, full
 stop, until the project is upgraded to Pro or higher.**
+
+## 2026-09-20 (continued): ESLint bootstrapped for real, 43 of 55 findings fixed
+
+Ran the ESLint diagnostic pass previously deferred as a scope decision.
+It failed immediately: `eslint-plugin-react@7.37.5` (bundled by
+`eslint-config-next`) crashed on the very first file with
+`contextOrFilename.getFilename is not a function` - an internal-API
+incompatibility, not a config problem. Confirmed via each plugin's own
+`peerDependencies` before touching anything: `eslint-plugin-react`,
+`-hooks`, `-import`, and `-jsx-a11y` all cap at `eslint: "^9.x"`, while
+`apps/web` had pinned `eslint@^10.2.0` - a version no currently-published
+release of these plugins supports. This fully explains why ESLint was
+installed but never wired up; it wasn't oversight, it genuinely couldn't
+run. Downgraded to `eslint@^9.38.0` (matching what the workspace root
+already resolved elsewhere) and it ran cleanly.
+
+**Diagnostic result: 55 problems (18 errors, 37 warnings).** Fixed 43,
+left 12 with documented reasoning rather than forcing them:
+
+- **`@next/next/no-html-link-for-pages` (15, all fixed)**: bare `<a
+  href="/dashboard/...">` internal links, converted to `<Link>` -
+  mechanical, no behaviour change (SPA navigation was already the
+  intended behaviour). Fixed several more instances of the identical
+  pattern than ESLint happened to flag in the same files, for
+  consistency.
+- **`react-hooks/exhaustive-deps` (8, all fixed)**: two were genuine gaps
+  (`error.tsx`/`global-error.tsx` not re-running Sentry capture if
+  `error` changed without `.digest` changing; a `DashboardExperience.tsx`
+  effect not re-arming its cloud-sync poller if `cloudSyncReadiness`
+  loaded async - confirmed safe since `cloudSyncReadiness` itself is
+  computed once via `useMemo(..., [])` and never changes thereafter). One
+  (`OutreachDraftForm.tsx`) needed wrapping `selectJob` in `useCallback`
+  first, since adding an unmemoized function straight to a dep array
+  would re-fire the effect every render. One
+  (`DashboardExperience.tsx`'s `currentTab`) was deliberately **not**
+  added - it's read only for one-time initial-load logic inside a
+  mount/user-init effect that also resets several other pieces of state;
+  adding it would re-run that whole initialization on every tab switch,
+  clobbering in-progress unsaved edits - documented with an inline
+  eslint-disable and full reasoning instead of a blind "just add the
+  dep."
+- **`react-hooks/set-state-in-effect` (15, all resolved - 3 restructured, 12 documented-suppressed)**:
+  split into two real categories. Three were genuine "reset state when a
+  dependency changes" patterns (`AggregatedJobsBrowser.tsx`,
+  `InterviewsWorkspace.tsx`'s practice-question reset,
+  `useStamp4Check.ts`) - restructured to React's own documented
+  recommended pattern (compare against a tracked previous value during
+  render, not via effect) rather than fixing the symptom. The other 12
+  are legitimate, unavoidable effect patterns the rule over-flags:
+  reading `localStorage`/`sessionStorage`/test-only globals on mount
+  (impossible during render - those APIs don't exist during SSR), and
+  async data-fetching effects where the actual `setState` calls happen
+  after an `await` (a genuinely deferred update, not the synchronous
+  cascading re-render this rule exists to catch, despite the rule's
+  static analysis treating a traced-through function call the same way).
+  Each of the 12 got a one-line `eslint-disable-next-line` with a
+  specific reason, not a blanket suppression.
+- **`react-hooks/error-boundaries` (1, fixed)**: `app/dashboard/layout.tsx`
+  constructed its `<DashboardShell>` JSX inside the same `try` block as
+  its data-fetching calls. The code's own comment already documented
+  correct intent (log then re-throw so the real error boundary handles
+  it) - not a swallowed-error bug. Restructured so the `try` scopes only
+  the actual async calls that can throw, with the JSX return moved
+  outside it - zero behaviour change, confirmed via typecheck.
+- **`@next/next/no-location-assign-relative-destination` (10, deliberately left)**:
+  7 of these 10 cross a real auth/onboarding/checkout state boundary
+  (login redirects, onboarding completion, waitlist-to-dashboard,
+  navigating to a record just created in the same handler).
+  `window.location.assign()`'s full-page-reload is very plausibly
+  intentional there - it forces fresh server-rendered state and
+  re-evaluates middleware/auth gates, which `router.push()` does not do
+  automatically. Converting these without live-testing each one risks
+  trading a style warning for a real stale-data regression across
+  login/onboarding/checkout - exactly the kind of thing that wouldn't
+  surface until a real user hit it. Left as-is.
+- **`@next/next/no-img-element` (2, deliberately left)**: both are
+  user-uploaded profile-photo previews with dynamic `src` URLs.
+  `next.config.ts` has no `images.remotePatterns`/`domains` configured at
+  all - switching to `next/image` would break photo display outright in
+  production (Next.js refuses any unlisted remote host) until a proper
+  config change naming the exact Supabase Storage hostname is made. Not
+  a safe mechanical fix. Left as-is.
+
+Wired `apps/web`'s `lint` script to actually run `eslint .` (it was
+previously an alias for `tsc --noEmit`, duplicating `typecheck`).
+`pnpm lint` from the repo root now passes clean across all three
+workspaces: 0 errors, 12 documented warnings. Verified throughout with
+`pnpm typecheck`, the full `pnpm test:unit` suite, `pnpm test:component`,
+and a full `pnpm build:web` (0 warnings in the build log) - all clean,
+zero regressions.

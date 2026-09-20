@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   companionDashboardStateSchema,
@@ -263,9 +264,9 @@ function OnboardingStep({
               ? "Add your CV"
               : "Continue"}
           </button>
-          <a className="secondary-button" href="/dashboard/autofill-profile">
+          <Link className="secondary-button" href="/dashboard/autofill-profile">
             Add evidence in Profile
-          </a>
+          </Link>
         </div>
       </section>
     );
@@ -396,6 +397,9 @@ export default function HomeExperience({
 
   useEffect(() => {
     if (testMode) {
+      // Test-only global, only ever populated client-side by the test
+      // harness after mount - there's no render-time alternative.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTestFixture(window.__AUTOTIME_HOME_TEST_FIXTURE__);
     }
   }, [testMode]);
@@ -484,7 +488,7 @@ export default function HomeExperience({
       );
       window.removeEventListener("storage", refresh);
     };
-  }, [router, testFixture, userId]);
+  }, [router, testFixture, testMode, userId]);
 
   const liveContext = useMemo(
     () =>
@@ -723,7 +727,7 @@ export default function HomeExperience({
           <div>
             <h2 id="search-progress">Current search</h2>
           </div>
-          <a href="/dashboard/applications">View applications</a>
+          <Link href="/dashboard/applications">View applications</Link>
         </div>
         <dl className="home-facts">
           <div>

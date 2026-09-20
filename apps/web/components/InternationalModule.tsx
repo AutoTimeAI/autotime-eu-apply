@@ -56,7 +56,10 @@ export function InternationalModule() {
   const persistence = useMobilityPersistence({ profile, setProfile, userId });
 
   useEffect(() => {
+    // localStorage doesn't exist during SSR, so the saved mobility profile
+    // can only be hydrated client-side post-mount.
     const loaded = loadMobilityProfile(localStorage, userId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProfile(loaded.profile);
     setSelectedCountry(loaded.profile.targetCountries[0] ?? "Ireland");
     if (loaded.source === "legacy-migration") {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { SavedOutreachContact } from "./ContactCsvImport";
 
 export type OutreachMessage = { id: string; job_id: string; recruiter_name: string | null; recruiter_role: string | null; recruiter_email: string | null; contact_type: "recruiter"|"hiring_manager"|"peer_target_role"; channel: "linkedin_note"|"linkedin_inmail"|"email"; draft_subject: string|null; draft_body: string; status: "drafted"|"sent"|"replied"|"no_response"; follow_up_due: string|null };
@@ -11,13 +11,19 @@ const initial = { jobId: "", jobTitle: "", companyName: "", jobDescription: "", 
 export function OutreachDraftForm({ jobs, initialJobId = "", selectedContact, onCreated }: { jobs: OutreachJob[]; initialJobId?: string; selectedContact?: SavedOutreachContact | null; onCreated: (message: OutreachMessage) => void }) {
   const [form, setForm] = useState(initial);
   const [status, setStatus] = useState("");
-  const selectJob = (jobId: string) => {
+  const selectJob = useCallback((jobId: string) => {
     const job = jobs.find((item) => item.id === jobId);
     setForm((current) => ({ ...current, jobId, jobTitle: job?.role_title || job?.title || "", companyName: job?.company || "", jobDescription: job?.notes || JSON.stringify(job?.job_snapshot ?? "") }));
-  };
-  useEffect(() => { if (initialJobId) selectJob(initialJobId); }, [initialJobId, jobs]);
+  }, [jobs]);
+  // Syncs local form state from the initialJobId/selectedContact props -
+  // a resetting-a-key-based-remount would also clobber unrelated
+  // already-edited fields (candidateSummary, strengths), which these
+  // targeted updates deliberately preserve.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (initialJobId) selectJob(initialJobId); }, [initialJobId, selectJob]);
   useEffect(() => {
     if (!selectedContact) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm((current) => ({ ...current, recruiterName: selectedContact.name, recruiterRole: selectedContact.role || selectedContact.contact_type.replaceAll("_", " "), recruiterEmail: selectedContact.email || "", companyName: current.companyName || selectedContact.company, contactType: selectedContact.contact_type }));
   }, [selectedContact]);
   return <section className="workflow-editor"><h3>Draft outreach</h3><p>AutoTime drafts only. You review, copy, and send it yourself.</p><div className="workflow-form-grid">

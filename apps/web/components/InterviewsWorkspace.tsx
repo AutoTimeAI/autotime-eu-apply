@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useDashboardPlan } from "./UserNav";
 import {
   ProductEmptyState,
@@ -67,6 +68,9 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState("");
   useEffect(() => {
+    // localStorage doesn't exist during SSR, so the saved workflow can
+    // only be hydrated client-side post-mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWorkflow(loadJobWorkflow(userId));
     setState(loadInterviewWorkflow(userId));
     setReady(true);
@@ -132,9 +136,9 @@ export default function InterviewsWorkspace({ view }: { view: View }) {
             title="Interview not found"
             description="This interview is not present in your authenticated workspace."
             action={
-              <a className="button-primary" href="/dashboard/interviews">
+              <Link className="button-primary" href="/dashboard/interviews">
                 Return to interviews
-              </a>
+              </Link>
             }
           />
         </main>
@@ -366,9 +370,9 @@ function InterviewList({
                 Add interview
               </button>
             ) : null}
-            <a className="button-secondary" href="/dashboard/applications">
+            <Link className="button-secondary" href="/dashboard/applications">
               Applications
-            </a>
+            </Link>
           </div>
         }
       />
@@ -627,9 +631,9 @@ function InterviewList({
               >
                 Add interview
               </button>
-              <a className="button-secondary" href="/dashboard/applications">
+              <Link className="button-secondary" href="/dashboard/applications">
                 View applications
-              </a>
+              </Link>
             </div>
           }
         />
@@ -695,9 +699,9 @@ function InterviewDetail({
     );
   return (
     <main className="workflow-page phase-four-interviews phase-four-interview-detail">
-      <a className="text-link phase-four-back-link" href="/dashboard/interviews">
+      <Link className="text-link phase-four-back-link" href="/dashboard/interviews">
         ← Interviews
-      </a>
+      </Link>
       <ProductPageHeader
         eyebrow={stageLabel(interview.stage)}
         title={job.title.value || "Interview"}
@@ -807,7 +811,7 @@ function InterviewOverview({
           <a href={`/dashboard/applications/${application.id}`}>
             Application workspace
           </a>
-          <a href="/dashboard/autofill-profile">Proof Library</a>
+          <Link href="/dashboard/autofill-profile">Proof Library</Link>
         </div>
       </section>
       <section className="workflow-section phase-four-section">
@@ -1141,7 +1145,18 @@ function InterviewPractice({
     }, 1000);
     return () => window.clearInterval(timer);
   }, [startedAt]);
-  useEffect(() => { setResponse(""); setStartedAt(null); setRemaining(timeLimit); }, [index, timeLimit]);
+  // Resets the practice-question state when moving to a new question -
+  // done during render (React's recommended pattern for "adjusting state
+  // when a value changes") rather than in an effect, avoiding an extra
+  // render pass.
+  const [lastQuestionKey, setLastQuestionKey] = useState(`${index}:${timeLimit}`);
+  const questionKey = `${index}:${timeLimit}`;
+  if (questionKey !== lastQuestionKey) {
+    setLastQuestionKey(questionKey);
+    setResponse("");
+    setStartedAt(null);
+    setRemaining(timeLimit);
+  }
   if (!question)
     return (
       <ProductEmptyState

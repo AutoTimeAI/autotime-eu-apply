@@ -7,7 +7,8 @@
 // job record. Owns only transient search/pagination state — the listings
 // themselves are passed in from the server route that queried them.
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useDashboardPlan } from "./UserNav";
 import { extractJob, duplicateJob } from "../lib/job-application-workflow";
 import { loadJobWorkflow, saveJobWorkflow } from "../lib/job-workflow-storage";
@@ -33,11 +34,19 @@ export default function AggregatedJobsBrowser({ listings, unavailable }: { listi
   const [visibleCount, setVisibleCount] = useState(25);
   const visible = useMemo(() => listings.filter((item) => `${item.title} ${item.company} ${item.location ?? ""}`.toLowerCase().includes(query.toLowerCase())), [listings, query]);
 
-  useEffect(() => setVisibleCount(25), [query]);
+  // Resets the pagination window when the search query changes - done
+  // during render (React's own recommended pattern for "adjusting state
+  // when a prop/value changes") rather than in an effect, which would
+  // cause an extra render pass for a value this cheap to compute inline.
+  const [lastQuery, setLastQuery] = useState(query);
+  if (query !== lastQuery) {
+    setLastQuery(query);
+    setVisibleCount(25);
+  }
 
   return <main className="workflow-page phase-two-jobs">
     <ProductPageHeader eyebrow="EU job feed" title="Browse verified job sources" description="Listings come from approved public or licensed feeds. Tracking copies a listing into your private workflow." />
-    <a className="text-link" href="/dashboard/jobs">← Tracked jobs</a>
+    <Link className="text-link" href="/dashboard/jobs">← Tracked jobs</Link>
     <label>Search listings<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Role, employer or location" /></label>
     <p role="status">{status}</p>
     {unavailable ? <ProductEmptyState title="Job feed unavailable" description="The listings database is not ready. Apply the latest Supabase migration and run a sync." /> : visible.length ? <section className="workflow-list" aria-label="Aggregated job listings">
