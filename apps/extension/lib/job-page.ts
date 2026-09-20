@@ -20,6 +20,13 @@ export function getJobCaptureMode(url = ""): JobCaptureMode {
   if (isLinkedInUrl(url)) return "manual-only"
   if (isApiCoveredJobUrl(url)) return "api-reference"
   const ats = detectATS(url)
+  // `ats === "workday"` is currently unreachable: Workday's `nativeFeed`
+  // is "verified" in platform-coverage.ts today, so `isApiCoveredJobUrl`
+  // above already catches it. Kept (not dead code to delete) as the
+  // correct fallback if that status is ever downgraded (e.g. the
+  // undocumented CXS API it relies on breaks) - `API_COVERED_ATS` is
+  // computed dynamically from the coverage table, so this line would
+  // silently become live again exactly when it's needed.
   return ats === "workday" || ats === "icims" || ats === "unknown" ? "selector-extraction" : "manual-only"
 }
 

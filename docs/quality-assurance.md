@@ -3884,3 +3884,42 @@ and a live account-deletion failure is about as concrete as a bug gets:
 a specific, real, current user cannot exercise a specific legal right
 through this route today, confirmed by direct production-database query,
 not inference.
+
+## 2026-09-20 (continued): extension job-capture/ATS-detection - well-hardened, one clarity fix, no functional bugs
+
+Moved the scrutiny method to the browser extension's job-capture/ATS-
+detection logic (`packages/shared/src/{ats-detector,platform-coverage}.ts`,
+`apps/extension/lib/job-page.ts`), the last of the two remaining
+suggested targets. Different character from every other area checked
+today: `platform-coverage.ts` is a hand-maintained, dated, evidence-based
+registry (every entry carries a `lastVerifiedAt` and a specific live-check
+citation, e.g. "confirmed: Recruitee", "returns a CloudFront 403 in a real
+browser session") - the same rigor this session has been applying, already
+applied by whoever built it. Domain matching in both `detectATS` and
+`getCoveragePlatform` already uses the correct dot-boundary check
+(`host === domain || host.endsWith(".domain")`) with an explicit comment
+about a prior "fake-adzuna.com" false-positive class already fixed
+before today.
+
+One finding, not a functional bug: `job-page.ts`'s `getJobCaptureMode`
+has an `ats === "workday"` branch that is currently unreachable, since
+Workday's `nativeFeed` is "verified" in the coverage table, so
+`isApiCoveredJobUrl` already catches it earlier in the same function
+(confirmed live: `detectATS` returns "workday", `isApiCoveredJobUrl`
+returns `true`). Considered removing it as dead code, then reconsidered:
+`API_COVERED_ATS` is computed dynamically from the coverage table at
+module load, so this branch would silently become live again exactly if
+Workday's `nativeFeed` status is ever downgraded (e.g. the undocumented
+CXS API it depends on breaks) - deleting it would quietly worsen that
+future scenario from "falls back to selector-extraction" to "falls back
+to manual-only". Left the logic unchanged and added a comment explaining
+why it looks unreachable and why it stays. `pnpm --filter extension test`
+(29 tests) and the full `pnpm test:unit` both clean.
+
+This closes the two remaining suggested targets from this session
+(extension capture/detection, GDPR export/deletion). Total for the full
+scrutiny session: 12 real bugs found and fixed (5 mobility engine, 5
+country-fit scoring, 1 interview pipeline, 1 GDPR export/deletion
+covering 2 distinct compliance issues), 1 dependency vulnerability
+resolved, and 3 areas confirmed already well-hardened (Stripe billing,
+AI-call gating, extension ATS-detection).
