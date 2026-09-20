@@ -4000,11 +4000,46 @@ Flagged, not executed as a unilateral 76-item schema migration.
 **What's left, honestly**: no real ESLint configuration (flagged, scope
 decision needed), 53 tables with no RLS policy (verified harmless today,
 needs deliberate design before any direct end-user access path),
-leaked-password protection (dashboard-only toggle, founder action), 76
-unindexed foreign keys + 29 unused indexes (real but non-urgent
-performance backlog), and the two items already tracked from earlier in
-this session (Supabase Free-tier backup/PITR risk-accepted in writing,
-ICO registration reference pending for public launch). None of these are
-"bugs" in the sense of producing wrong behavior for a real user today -
-they're the honest remainder after fixing everything the automated
-checks could actually catch and confirm fixed.
+leaked-password protection (dashboard-only toggle, founder action), and
+the two items already tracked from earlier in this session (Supabase
+Free-tier backup/PITR risk-accepted in writing, ICO registration
+reference pending for public launch). None of these are "bugs" in the
+sense of producing wrong behavior for a real user today - they're the
+honest remainder after fixing everything the automated checks could
+actually catch and confirm fixed.
+
+## 2026-09-20 (continued): closed the unindexed-foreign-keys backlog item
+
+Asked to also close the 76-unindexed-foreign-keys item rather than leave
+it as backlog, given the actual risk was low (additive change, current
+table sizes mostly 0 rows).
+
+Resolved each of the 76 advisor-flagged constraint names against a
+direct `pg_constraint` query first (not the advisor's own ordinal-column
+metadata, which doesn't give real column names) - confirmed all 76
+matched exactly, no drift between the report and the live schema.
+Generated one `CREATE INDEX IF NOT EXISTS` per finding programmatically
+(not hand-typed, to avoid transcription errors across 76 statements),
+then caught two of my own mistakes before applying anything: two
+generated index names exceeded Postgres's 63-character identifier limit
+(would have silently truncated and risked a collision) - shortened both
+by hand; and `CREATE INDEX CONCURRENTLY` cannot run inside a transaction
+block, which the migration tool wraps everything in - confirmed this
+with a one-statement test first, then switched to plain `CREATE INDEX`
+for all 76, which is safe at these table sizes rather than trying to
+force `CONCURRENTLY` through.
+
+Applied directly to production
+(`20260920184000_add_missing_foreign_key_indexes.sql`) and re-queried
+the live performance advisor afterward: `unindexed_foreign_keys` dropped
+from 76 findings to zero. `unused_index` correctly jumped from 29 to 105
+immediately after - expected, not a new problem: the 76 brand-new
+indexes have no query history yet and will clear from that list as real
+traffic hits them. Full `pnpm test:unit` clean afterward (schema-only
+change, no application code touched).
+
+Deliberately left as real, disclosed decisions rather than executed:
+ESLint bootstrap (scope/strictness call), the 53 RLS-enabled-no-policy
+tables (needs per-feature policy design, not a blind blanket fix), and
+leaked-password-protection (dashboard-only toggle, no code/migration
+path exists for it).
