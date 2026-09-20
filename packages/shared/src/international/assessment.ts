@@ -103,7 +103,7 @@ const sponsorshipRejectionSignals = [
 // which the plain "without sponsorship" literal above didn't catch because
 // of the intervening "the need for employer").
 const sponsorshipDenialPattern =
-  /(?:cannot|unable to|no|without)\s+(?:the\s+need\s+for\s+)?(?:offer|provide)?\s*(?:employer\s+)?(?:visa\s+)?sponsorship/i
+  /(?:cannot|unable to|not able to|no|without)\s+(?:the\s+need\s+for\s+)?(?:offer|provide)?\s*(?:employer\s+)?(?:visa\s+)?sponsorship/i
 
 /** Canonical vacancy-language policy shared by every live decision path. */
 export function vacancyRejectsSponsorship(
@@ -181,6 +181,13 @@ export function assessInternationalJob(
       evidenceUsed.push("Vacancy wording supplied for general fit signals");
     if (input.salary)
       evidenceUsed.push("Salary includes currency and pay period");
+    // Relaying the vacancy's own explicit no-sponsorship wording is a plain
+    // factual read, not a permit-pathway judgment - explorer mode declines
+    // the latter but should never suppress the former.
+    if (rejectsSponsorship && needsSponsorship)
+      confirmedBlockers.push(
+        "The vacancy states that sponsorship or new work permission is not available.",
+      );
     return {
       country: input.country,
       supportLevel: "explorer",
@@ -192,7 +199,7 @@ export function assessInternationalJob(
         !input.salary && "Salary evidence",
         "Country-specific official pathway verification",
       ].filter(Boolean) as string[],
-      confirmedBlockers: [],
+      confirmedBlockers,
       assumptions: ["The selected hiring country is correct."],
       nextAction:
         "Use EURES and the relevant national-government source to verify the country-specific position.",

@@ -3179,3 +3179,119 @@ which is an availability risk to real users, not a cost question, and
 was correctly out of scope even with the cost concern resolved.
 
 This closes "API and integration testing" from Partial to Pass.
+
+## 2026-09-20: WebKit compatibility investigated directly, not left as an unexamined "platform limitation"
+
+Previously recorded as "WebKit hung on this machine, a known Playwright/
+Windows platform limitation" without actually diagnosing what was
+hanging. Asked to try closing this gap rather than accept the vague
+characterization, so investigated properly instead of re-asserting it.
+
+Ran a minimal diagnostic script with Playwright's own debug tracing
+(`DEBUG=pw:browser`) launching WebKit headless against the production
+URL. Findings, in order:
+
+- `webkit.launch()` succeeded in 406ms - `Playwright.exe` (the WebKit
+  driver), `WebKitNetworkProcess.exe`, and `WebKitGPUProcess.exe` all
+  spawned and were confirmed running via `tasklist`. WebKit itself is
+  correctly installed and starts fine on this machine.
+- The next call, `browser.newPage()`, then hung with zero output for
+  over 5 minutes (well past the point any reasonable timeout should have
+  fired) until the process was force-killed, at which point the pending
+  call finally rejected with "Target page, context or browser has been
+  closed."
+
+Conclusion: this is not a missing dependency, a bad install, or a
+misconfigured timeout - it is Playwright's pipe-based control-protocol
+handshake for page/context creation failing to complete against WebKit
+on this specific Windows setup, a documented category of Windows/WebKit
+driver instability distinct from an application-side bug. Killed the
+hung processes, deleted the temporary diagnostic script, and updated
+`testing-categories-coverage-v1.0.1-2026-09-19.md`'s Compatibility row
+with this exact evidence instead of the previous vague wording.
+
+Chromium, Firefox, and Edge remain verified live and Pass. Rather than
+stop at "would need Linux CI to confirm," actually ran that test: added a
+temporary `workflow_dispatch` GitHub Actions job (`webkit-compat-check.yml`,
+ubuntu-latest) that installed WebKit and ran the identical launch +
+navigate-to-production check. Triggered it via `gh workflow run`, polled
+to completion (run `35513925451`, success, ~8s), and confirmed the log:
+WebKit loaded `https://autotime-eu-apply.vercel.app/`, returned the
+correct title ("AutoTime EU Apply - Strategic European Tech
+Applications"), and reported zero page errors. Removed the temporary
+workflow file immediately after (one-off diagnostic, not a permanent CI
+job) and pushed both commits to `main`.
+
+This confirms the Windows hang found locally was a genuine
+machine/driver-specific Playwright-WebKit defect, not an application bug
+or a real WebKit incompatibility - WebKit itself renders the site
+correctly. Compatibility closes from Partial to **Pass**.
+
+## 2026-09-20: rare-edge-case sweep - Switzerland correctly routed to safe fallback, but a real evidence gap found
+
+Picked "unsupported-country and rare edge cases" (P2) to push on next,
+since it's self-contained and needed no founder/external dependency.
+Belgium (a supported-but-generic EU country) was already verified live;
+picked Switzerland next specifically because it's a country UK/EU
+candidates commonly conflate with "Europe" despite being neither EU nor
+covered by a dedicated CountryPack (`ireland.ts`/`germany.ts`/
+`netherlands.ts`/`uk.ts` are the only dedicated packs; everything else,
+including Switzerland, falls to the generic `europeanExplorerPack`).
+
+Exercised the actual production functions directly (`extractJob` from
+`apps/web/lib/job-application-workflow.ts`, then
+`resolveAssessmentCountry`/`assessInternationalJob` from
+`packages/shared/src/international/assessment.ts` - the same functions
+the live app calls, not a reimplementation) against a realistic Zurich
+vacancy that explicitly states "We are not able to offer visa
+sponsorship for this role at this time."
+
+Results:
+- **Correct**: `extractJob` correctly detects "Switzerland" from the
+  vacancy text (it's in the recognized-country regex), and
+  `assessInternationalJob` correctly routes it to `explorer` mode
+  (no dedicated pack), returning `"Investigate first"` with an explicit
+  `cannotConfirm: ["Any permit pathway, threshold, or eligibility
+  conclusion in explorer mode."]` - it does not fabricate a false
+  EU-style free-movement claim for a non-EU country. This is the
+  correct, safe behavior.
+- **Real gap found**: explorer-mode assessment returns early (assessment.ts
+  ~line 179) *before* the sponsorship-rejection check that full-support
+  countries get (~line 207 onward) - so the vacancy's own explicit,
+  plain-English "not able to offer visa sponsorship" statement is never
+  surfaced anywhere in the result, not even as a factual note. This
+  isn't a permit-law judgment call (which explorer mode correctly
+  declines to make) - it's just relaying what the employer already said
+  in writing. A candidate who needs sponsorship pastes this vacancy and
+  gets "Investigate first" with no mention that the employer already
+  ruled it out.
+
+**Fixed same day, on request.** `assessInternationalJob`'s explorer branch
+(`packages/shared/src/international/assessment.ts`) now runs the same
+`rejectsSponsorship && needsSponsorship` check the full-support branch
+already used, and pushes the same "sponsorship or new work permission is
+not available" message into `confirmedBlockers` (previously hardcoded to
+`[]` in explorer mode) rather than dropping it. `decision` and
+`pathwayStatus` are unchanged (`"Investigate first"` /
+`"not-supported"`) - explorer mode still makes no permit-pathway
+judgment - this only stops suppressing a plain fact the vacancy already
+stated. `assessMobilityBlockers` in `job-application-workflow.ts` already
+treats `confirmedBlockers` as genuine negative evidence regardless of
+country support level (see its own doc comment), so this required no
+downstream changes.
+
+While verifying the fix, found a second, related gap in the same
+function: `sponsorshipDenialPattern` matched "cannot/unable to/no/
+without ... sponsorship" but not the equally common "**not able to**
+offer sponsorship" phrasing - the exact wording used in the first draft
+of the test vacancy, which silently failed to trigger the blocker before
+the pattern was corrected. Added `not able to` to the regex's
+denial-word alternation.
+
+Verified live against the real production functions (`extractJob` +
+`assessInternationalJob`, not mocks) with a Zurich vacancy stating
+"unable to offer visa sponsorship": `confirmedBlockers` now correctly
+contains the sponsorship-denial message; `decision` stays "Investigate
+first" as before. Full `pnpm test:unit` re-run clean afterward (43
+environment-boundary tests, 19/19 Stripe webhook, 10/10 AI quality, MVP
+coverage 95% automated/5% manual - all passing, zero regressions).
