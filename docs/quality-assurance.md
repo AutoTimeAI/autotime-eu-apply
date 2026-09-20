@@ -3140,3 +3140,42 @@ remaining gap in E2E-06.
 The throwaway test job was deleted immediately after the test completed;
 no other data belonging to the second account was read, modified, or
 exposed at any point.
+
+## 2026-09-20: real live OpenAI integration test, and a cost estimate that corrected an earlier overcautious assumption
+
+Earlier in this session, "API and integration testing" was marked Partial
+because the AI-provider fallback path was only unit-tested, with the
+stated reason being to "avoid real cost." Asked to estimate that cost
+concretely rather than leave it as a vague justification.
+
+Found the exact pricing the codebase itself uses
+(`apps/web/lib/openai-server.ts`): gpt-4.1-mini at $0.40/1M input tokens,
+$1.60/1M output tokens, capped at 1,200 output tokens per call. Estimated
+a realistic test at under 2 cents total. Given the go-ahead, ran a real
+live test directly against production's `/api/ai/cover-letter` route as
+the QA account (a genuine CV + job posting payload, no UI navigation
+needed - this is an API test, so calling the API directly is the more
+direct evidence anyway): returned a real, coherent, contextually-accurate
+cover letter genuinely referencing both the CV's specifics (Go,
+TypeScript, Kubernetes, prior employer) and the job posting's details
+(company name, Terraform, sponsorship, salary context). Confirmed the
+full integration path fired for real: auth, rate-limit check, feature-gate
+credit reservation, the actual OpenAI call, and billing finalization.
+
+**Actual recorded cost: $0.000509** (388 prompt + 221 completion tokens) -
+even cheaper than the estimate, confirming the earlier cost-avoidance
+reasoning was overly cautious for this specific route.
+
+Also tested the zero-cost failure path: a request with an invalid
+`jobDescription` (below the 80-character minimum) correctly returns a
+clean 400 with a structured validation error before ever reaching OpenAI
+- no cost, and no leakage of anything beyond the client's own invalid
+input.
+
+Deliberately did NOT simulate a full "AI provider is down" scenario by
+revoking or swapping the real production `OPENAI_API_KEY` - that would
+risk breaking AI generation for every real user during the test window,
+which is an availability risk to real users, not a cost question, and
+was correctly out of scope even with the cost concern resolved.
+
+This closes "API and integration testing" from Partial to Pass.
