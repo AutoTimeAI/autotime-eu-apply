@@ -27,13 +27,13 @@ the supporting detail.
 
 | Field | Value |
 |---|---|
-| Deployed SHA | `dd122ca309c2aca6a33a36aa3189594e5b918eae` (adds the beta-terms acceptance feature) |
-| Production deployment ID | `dpl_TU4JzVKaoVyfGrT2bL4Eq3hmj7Xp` (Vercel, `READY`) |
-| Deployment workflow run | `35474963453` (green) |
+| Deployed SHA | `c791e7f2aacd246d8768ab239f76b1edf43fd564` (closes today's full scrutiny pass - 12 real bugs fixed, GDPR export/deletion fixes, ESLint bootstrap, Supabase advisor hardening) |
+| Production deployment ID | `dpl_GWJbTExcaRD1TpFHb7HDGrMJwvKb` (Vercel, `READY`) |
+| Deployment workflow run | `35534688255` (green) |
 | Documentation HEAD (may be later - docs-only commits) | see `git rev-parse origin/main` |
-| Current decision | **GO WITH LIMITATIONS.** Every mandatory gate passes with real evidence except backup/PITR, which remains a genuine technical Fail explicitly accepted in writing by the release owner (see risk callout above). |
+| Current decision | **GO WITH LIMITATIONS.** Every mandatory gate passes with real evidence except backup/PITR and leaked-password protection, both genuine technical Fails explicitly accepted in writing by the release owner (see risk callouts above - both are the same Supabase Free-tier plan limitation, resolved together by one Pro-plan upgrade). |
 | Decision date | 2026-09-20 |
-| Latest re-verification | 2026-09-20: beta-terms acceptance feature verified live end to end; cross-user isolation closed with a genuine two-real-account test (previously structural only). Found and fixed a real deployment bug along the way - see `docs/quality-assurance.md`'s 2026-09-20 entries: the production domain alias hadn't been reclaimed by the deploy after an earlier rollback rehearsal, silently serving a stale build despite the workflow reporting success. Fixed via a direct alias reassignment and fully re-verified |
+| Latest re-verification | 2026-09-20: **the exact same stale-alias deployment bug from the prior cycle recurred** - the manual deploy workflow reported success (green run, `READY`/`target: production` deployment created) but the live domain `autotime-eu-apply.vercel.app` was still serving the *previous* deployment (`dd122ca3`) until explicitly checked via `get_deployment` by hostname and fixed with a direct alias reassignment. Re-verified via `get_deployment` (now resolves to `c791e7f2`) and a live smoke check (homepage 200, login 200, unauthenticated `/dashboard` correctly 307s). This confirms the workflow's own "deploy succeeded" signal is not sufficient evidence on its own - explicit alias verification by hostname is now a required step, not optional, every time |
 | Release owner sign-off | **Signed 2026-09-20** - DataByRajesh (founder), GO WITH LIMITATIONS, per §8 of the production dossier |
 
 ## Canonical documents (read these; treat everything else as historical)
@@ -102,3 +102,4 @@ banner pointing back to this index:
 | Private Beta v1.0.1 (rollback rehearsal + named owners) | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` | Rollback rehearsal run live and passed; named owners recorded | 2026-09-19 |
 | Private Beta v1.0.1 (beta-terms acceptance feature) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | NO-GO for unqualified GO; only remaining blocker is confirmed zero backup coverage | 2026-09-20 |
 | Private Beta v1.0.1 (cross-user isolation closed; risk accepted; signed) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | **GO WITH LIMITATIONS - signed** | 2026-09-20 |
+| Private Beta v1.0.1 (full scrutiny pass: 12 real bugs, GDPR fixes, ESLint bootstrap, DB hardening, second risk accepted) | `c791e7f2aacd246d8768ab239f76b1edf43fd564` | **GO WITH LIMITATIONS - signed** (two accepted risks, one Pro-plan upgrade resolves both) | 2026-09-20 |

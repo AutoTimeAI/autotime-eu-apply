@@ -4185,3 +4185,43 @@ new or unaddressed. All 28 commits from today's session are verified
 clean and ready; none have been deployed to production yet (still
 serving `dd122ca3` from the prior session) - deployment is a separate,
 explicit decision pending founder confirmation.
+
+## 2026-09-20 (continued): deployed today's full session to production - and the exact same stale-alias bug recurred
+
+Founder confirmed and triggered the manual production deployment
+(`.github/workflows/production-deploy.yml`) for commit `c791e7f2`
+(the 29th and final commit of today's session). Workflow run `35534688255`
+completed green.
+
+**Checked anyway rather than trusting the green run** - per the lesson
+already documented from the prior cycle's identical incident (a deploy
+reporting success without the live domain actually being reassigned).
+Queried `get_deployment` by hostname
+(`autotime-eu-apply.vercel.app`) directly rather than trusting the
+deployments list, and it resolved to the *previous* deployment
+(`dpl_TU4JzVKaoVyfGrT2bL4Eq3hmj7Xp`, commit `dd122ca3`) - the new
+deployment (`dpl_GWJbTExcaRD1TpFHb7HDGrMJwvKb`, commit `c791e7f2`) was
+`READY` and correctly marked `target: production` in the deployments
+list, but had not actually claimed the live domain alias. Exactly the
+same failure shape as the incident documented earlier this cycle
+(after a rollback rehearsal), now confirmed to also happen on an
+ordinary forward deployment, not just after a manual rollback - this
+manual deploy workflow does not reliably claim the production alias on
+its own, full stop, regardless of what triggered it.
+
+Fixed via a direct `assign_alias` call reassigning
+`autotime-eu-apply.vercel.app` to the new deployment. Re-verified by
+querying `get_deployment` by hostname again (now correctly resolves to
+`c791e7f2`) and a live functional smoke check: homepage 200, `/login`
+200, unauthenticated `/dashboard` correctly 307-redirects (the auth
+gate is genuinely active on the new build, not just serving a 200 from
+a cached edge response).
+
+**Standing lesson, now confirmed twice**: a "deploy succeeded" signal
+from this project's CI workflow is not sufficient evidence that
+production is actually serving the new build. Checking the live domain's
+actual resolved deployment via `get_deployment`-by-hostname (or
+equivalent) is now a mandatory, non-skippable step after every
+deployment through this workflow, not a nice-to-have - added to
+`release-evidence-index.md`'s current-cycle table as the explicit
+verification record for this deploy.
