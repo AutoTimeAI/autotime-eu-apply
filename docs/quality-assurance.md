@@ -3371,3 +3371,65 @@ once-already-accepted, rejects-invalid-name, advances-when-valid), all
 passing in under 4 seconds total, zero regressions in the full
 `pnpm test:unit` run. This closes "Component testing" from Partial to
 Pass with real evidence, not a framework-added-but-empty checkbox.
+
+## 2026-09-20: SEVERITY-HIGH - a real, silent false-negative in the mobility-check gate, found by tracing logical flow rather than testing more edge countries
+
+Asked to scrutinize the system's logical flow more deeply rather than
+sweep more edge-case countries. Traced `needsMobilityCheck` in
+`apps/web/lib/job-application-workflow.ts` (the gate that decides whether
+a job even gets a cross-border mobility assessment at all) end to end
+against how the onboarding UI actually populates it.
+
+**The bug**: `needsMobilityCheck` treated
+`applicantPosition === "existing-country-permission"` as an unconditional
+skip - identical treatment to `"eu-eea-swiss-citizen"` (a genuine blanket
+exemption). But `existing-country-permission` is set from the onboarding
+option whose own label reads *"I already have permission to work in at
+least one target country"* (`OnboardingWizard.tsx`) - explicitly scoped
+to specific countries, not a blanket claim. Nothing anywhere cross-checked
+the vacancy's actual country against which country the candidate's
+permission applies to.
+
+**Reproduced live** against the real production functions (`extractJob` +
+`analyseJob`, not mocks): a candidate profile with a UK-only work permit
+(`currentCountry: "United Kingdom"`, `applicantPosition:
+"existing-country-permission"`) applying to a real-shaped Berlin vacancy
+that does **not** spell out its own authorisation requirement (a very
+common real-world case) got back `decision: "Consider"`,
+`criticalRisk: "Salary"` - a completely clean-looking result with **zero
+mention anywhere** that this candidate may have no legal right to work in
+Germany at all. The only thing that would have caught this by accident
+was the independent text-requirement matcher, and only if the vacancy
+happened to spell out "must have the right to work in the EU" in scannable
+text - many real postings don't.
+
+This is worse than the Switzerland/India findings earlier today: those
+were correctly *cautious* explorer-mode responses missing one piece of
+detail. This was a **false "no concern here"** for the tool's own stated
+purpose (catching exactly this kind of cross-border mismatch) in what is
+likely a common real scenario - anyone who selected "I already have
+permission" during onboarding, then applies to a job in a country other
+than the one their permission is actually for.
+
+**Fixed**: `needsMobilityCheck` now takes the resolved target country and,
+for `existing-country-permission` specifically, only skips the check when
+the vacancy's country matches `profile.currentCountry` (the only country
+this profile schema records a confirmed permission for today - there's no
+structured per-target-country permission field yet, which is itself a
+gap worth a future structured fix, not solved here). `assessMobilityBlockers`
+reordered to resolve `targetCountry` before the gate check instead of
+after.
+
+**Verified live, both directions**: the Berlin case now correctly
+surfaces `"Mobility pathway verification against the governed sources"`
+in `unknowns`. A same-country control case (UK candidate, UK vacancy,
+same profile) was re-run to confirm no regression - it correctly still
+skips the check, since the permission genuinely applies there. Full
+`pnpm test:unit` re-run clean, zero regressions, zero failures.
+
+**Lesson for future scrutiny passes**: this bug wasn't found by testing
+more countries - it was found by tracing which real onboarding answer
+maps to which internal flag, and asking "does anything actually check
+what this flag's own UI label promises?" That's a different, and
+apparently higher-yield, kind of review than exercising more input
+combinations against already-correct logic.

@@ -386,13 +386,37 @@ const requirements = (description: string) =>
  * is included deliberately: when the candidate's own position is unclear,
  * running the check (rather than skipping it) is the honest default.
  */
-function needsMobilityCheck(profile: MobilityProfile): boolean {
-  return (
+function needsMobilityCheck(
+  profile: MobilityProfile,
+  targetCountry: string | null,
+): boolean {
+  if (
     profile.applicantPosition === "international-applicant" ||
     profile.applicantPosition === "sponsorship-required" ||
     profile.applicantPosition === "unsure" ||
     profile.sponsorshipRequired === "yes"
-  );
+  )
+    return true;
+  // "existing-country-permission" means the candidate confirmed work
+  // rights for AT LEAST ONE of their target countries (the onboarding
+  // form's own wording), not every country they might apply to. Treating
+  // it as a blanket skip - as this previously did - silently produced a
+  // false "no mobility concern" for a vacancy in a country the candidate
+  // never actually confirmed permission for (found live: a UK-only work
+  // permit holder applying to a Germany vacancy with no explicit
+  // authorisation wording got a clean "Consider" with zero mention that
+  // their UK permission may not apply). `currentCountry` is the only
+  // country this profile records a confirmed permission for today (no
+  // per-target-country structure exists yet), so this only skips when the
+  // vacancy is actually in that country - otherwise it still runs the
+  // check rather than silently assuming coverage.
+  if (profile.applicantPosition === "existing-country-permission")
+    return (
+      !!targetCountry &&
+      targetCountry.trim().toLowerCase() !==
+        profile.currentCountry.trim().toLowerCase()
+    );
+  return false;
 }
 
 /**
@@ -420,13 +444,13 @@ function assessMobilityBlockers(
   job: JobRecord,
   profile: MobilityProfile | undefined,
 ): { blockers: string[]; pathwayUnknown: string | null } {
-  if (!profile || !needsMobilityCheck(profile))
-    return { blockers: [], pathwayUnknown: null };
+  if (!profile) return { blockers: [], pathwayUnknown: null };
   const targetCountry = resolveAssessmentCountry({
     vacancyCountry: job.facts.country.value,
     profileTargetCountries: profile.targetCountries,
   });
-  if (!targetCountry) return { blockers: [], pathwayUnknown: null };
+  if (!targetCountry || !needsMobilityCheck(profile, targetCountry))
+    return { blockers: [], pathwayUnknown: null };
   const assessment = assessInternationalJob({
     country: targetCountry,
     mobilityProfile: profile,
