@@ -3923,3 +3923,88 @@ country-fit scoring, 1 interview pipeline, 1 GDPR export/deletion
 covering 2 distinct compliance issues), 1 dependency vulnerability
 resolved, and 3 areas confirmed already well-hardened (Stripe billing,
 AI-call gating, extension ATS-detection).
+
+## 2026-09-20 (continued): "zero issues" sweep - every objective automated check run, everything fixable fixed
+
+Asked to treat "ensure zero issues/errors/bugs/warnings" as a real
+challenge. Pushed back on the literal framing first - "zero issues" isn't
+a verifiable end-state for any nontrivial codebase, and claiming it would
+be exactly the kind of overclaim this session has spent all day
+correcting - then executed the honest version: run every objective,
+automated check this project has, fix everything that surfaces, and be
+explicit about what's left uncheckable.
+
+**Typecheck** (`pnpm --filter web typecheck`, `pnpm --filter extension
+typecheck`): both clean.
+
+**"Lint"**: found this script is actually just `tsc --noEmit` again, not
+real ESLint - `eslint`/`eslint-config-next`/several `eslint-plugin-*`
+packages are installed as devDependencies but no `eslint.config.js`
+(required for ESLint 9+) exists anywhere in the repo. This is real,
+pre-existing dead tooling. Did not bootstrap a fresh ESLint config during
+this pass - introducing one across 300K+ lines would surface an unknown,
+possibly large number of style findings, and choosing rule strictness is
+a scope decision for the founder, not something to force through
+unilaterally. Flagged, not fixed.
+
+**Full `pnpm test:unit`**: clean throughout (checked multiple times
+across this session's fixes).
+
+**Production build** (`pnpm build:web`): surfaced one real warning -
+"The Edge Runtime is deprecated" - from `api/og/route.tsx`, the only
+route still declaring `runtime = "edge"`. Fixed by removing the
+declaration (next/og's `ImageResponse` works fine under the default Node
+runtime in this Next.js version) - verified by rebuilding clean with the
+warning gone, then actually starting a local production server and
+confirming the route still renders a real 1200x630 PNG, not just trusting
+a clean build log. `pnpm build:extension`: clean, zero warnings, no
+changes needed.
+
+**Supabase advisors** (queried directly against production, not
+inferred): security advisors showed only two items, both already known -
+53 tables with RLS enabled and no policy (INFO; traced the
+candidate-facing ones - `beta_feedback`,
+`mobility_decision_comprehension_responses`,
+`mobility_learning_assignments` - and confirmed zero write paths exist
+anywhere in the app outside the admin/service-role client, so this is
+currently harmless dormant/admin-only schema, not an active hole; flagged
+as needing deliberate policy design before any of these ever gets a
+direct end-user access path, not fixed blind) and leaked-password
+protection disabled (WARN; a dashboard-only toggle, not something
+fixable via code or migration - flagged for the founder, same category as
+the earlier backup/PITR gap).
+
+Performance advisors surfaced two WARN-level, genuinely fixable findings
+that were missed by the earlier RLS work: the 2026-09-19 initplan fix
+(rewriting bare `auth.uid()` to `(select auth.uid())`) only touched
+policies' `USING` clauses - every INSERT/UPSERT policy's `WITH CHECK`
+clause across 29 tables still had the unwrapped, per-row-evaluated
+version (confirmed by direct `pg_policies` query: exactly 29 matched,
+exactly the advisor's count of 30 including one more found via the
+second issue below). Also found `custom_job_sources` had two fully
+redundant permissive INSERT policies (one broad `ALL`-command policy
+already covering insert with an identical check, plus a separate,
+narrower INSERT-only duplicate) - confirmed via `pg_policies` before
+touching anything, since dropping the wrong one would have been a real
+regression. Fixed both in
+`20260920183000_rls_with_check_initplan_and_duplicate_policy.sql`,
+applied directly to production, and **re-queried the live advisors
+afterward to confirm** both findings dropped to zero rather than trusting
+the migration's exit code alone. Remaining performance findings (76
+unindexed foreign keys, 29 unused indexes) are INFO-level only - a real,
+larger backlog item, not correctness bugs, and many of the "unused"
+indexes are unused simply because their tables are currently empty
+dormant governance features, not because the index itself is wrong.
+Flagged, not executed as a unilateral 76-item schema migration.
+
+**What's left, honestly**: no real ESLint configuration (flagged, scope
+decision needed), 53 tables with no RLS policy (verified harmless today,
+needs deliberate design before any direct end-user access path),
+leaked-password protection (dashboard-only toggle, founder action), 76
+unindexed foreign keys + 29 unused indexes (real but non-urgent
+performance backlog), and the two items already tracked from earlier in
+this session (Supabase Free-tier backup/PITR risk-accepted in writing,
+ICO registration reference pending for public launch). None of these are
+"bugs" in the sense of producing wrong behavior for a real user today -
+they're the honest remainder after fixing everything the automated
+checks could actually catch and confirm fixed.
