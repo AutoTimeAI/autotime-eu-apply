@@ -3317,3 +3317,57 @@ unresolved. This is a different, already-working mechanism
 above, and it already does the right thing here. No fix needed - logging
 as a confirmed-pass finding, not leaving the sweep's only checked case be
 the one that surfaced a bug.
+
+## 2026-09-20: added real component testing (Vitest + RTL), and found two more real bugs while building it
+
+Asked to invest in one of the bigger remaining P1 gaps. Component testing
+was the only one of the three (Component/Usability/UAT) achievable
+without real external participants, so built it for real rather than
+adding a token single test.
+
+Installed Vitest + React Testing Library + jsdom into `apps/web`
+(`vitest.config.ts`, `tests/component/setup.ts`), wired as
+`apps/web`'s `test:component` script and the root's `test:web:component`,
+now part of the `pnpm test:unit` chain. Targeted `OnboardingWizard.tsx`
+specifically because it's a component actually modified this session (the
+beta-terms acceptance checkbox), previously covered only indirectly
+through Playwright E2E.
+
+**Bug 1 - a genuine slow-memory-leak render loop, not a flaky test.**
+The first version of the test suite reliably crashed with
+`JavaScript heap out of memory` after 2-3 minutes, even with the heap
+raised to 4GB and pooling reduced to a single fork. Bisected step by
+step (isolated import vs. render, pending vs. resolved fetch, typed
+interaction vs. none) rather than guessing: a trivial smoke-render passed
+in milliseconds, resolving the initial fetch passed in milliseconds, but
+adding a single `userEvent.type()` keystroke reliably triggered the OOM
+in ~2 minutes. Root cause: the test's `next/navigation` mock returned a
+**new** `{ replace, push }` object on every call
+(`useRouter: () => ({...})`), but real Next.js guarantees `useRouter()`
+returns the *same* reference across a component's re-renders.
+`OnboardingWizard`'s data-fetch `useEffect` lists `router` in its
+dependency array, so with the unstable mock, every keystroke's re-render
+made the effect see a "changed" dependency, re-run the effect, re-fetch,
+and re-`setState` - which triggers another render, which returns another
+new `router` object, forever. This is a legitimate, slow-growing render
+loop that would exhaust real memory, not a test-authoring mistake in the
+narrow sense - it just happens to only manifest in a mock, since real
+Next.js can't produce an unstable router reference. Fixed by memoizing
+the mock's return value at module scope.
+
+**Bug 2 - RTL wasn't cleaning up between tests.** After fixing the OOM,
+4 of 6 tests failed with "Found multiple elements with role=status" -
+each test's rendered DOM was leaking into the next test in the same
+file. `@testing-library/react`'s automatic `afterEach(cleanup)` only
+self-registers when it detects `afterEach` already on `globalThis`, which
+requires Vitest's `test.globals: true` - this project doesn't enable
+that (tests import `afterEach` explicitly from `"vitest"` instead), so
+cleanup was silently never running. Fixed with an explicit
+`afterEach(() => cleanup())` in `tests/component/setup.ts`.
+
+Final suite: 5 real component tests for `OnboardingWizard`'s step-0
+validation (blocks-without-consent, clears-error-on-check, hides-checkbox-
+once-already-accepted, rejects-invalid-name, advances-when-valid), all
+passing in under 4 seconds total, zero regressions in the full
+`pnpm test:unit` run. This closes "Component testing" from Partial to
+Pass with real evidence, not a framework-added-but-empty checkbox.
