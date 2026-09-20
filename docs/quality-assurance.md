@@ -4264,3 +4264,46 @@ match the source prose document's own structure.
 
 Linked from `release-summary-v1.0.1-2026-09-20.md`'s reference section
 for discoverability.
+
+## 2026-09-20 (continued): Word (.docx) release deliverable, generated not hand-typed
+
+Produced `docs/reports/AutoTime-EU-Apply-Private-Beta-v1.0.1-Release-Summary-2026-09-20.docx`,
+a formatted Word version of the release summary for sharing outside the
+repo (e.g. with the founder or an external party who won't read raw
+markdown). Rather than hand-authoring a second, parallel copy of the
+content that could silently drift from the markdown source of truth,
+wrote `scripts/generate-release-docx.py` (`python-docx`, confirmed
+available locally: v1.2.0) which re-reads
+`release-summary-v1.0.1-2026-09-20.md` and
+`testing-categories-v1.0.1-2026-09-20.csv` at build time and renders
+them into a title page + narrative + two structured appendix tables +
+a provenance note, rather than embedding static content in the script
+itself.
+
+Before generating, re-verified ground truth rather than trusting the
+prior session's cached facts: confirmed local `HEAD` == `origin/main`
+== `7e427e70` (`git fetch` + `rev-parse` both sides), and confirmed the
+working tree had no undisclosed changes beyond known screenshot/temp
+noise. The generated document's title page stamps this exact SHA plus
+the deployed production commit/deployment IDs, so the artefact is
+traceable to a specific, verifiable moment rather than an undated claim.
+
+**Bug found and fixed during generation, not before shipping it**: the
+first two run attempts hung indefinitely with zero output or error -
+traced to a genuine infinite loop in the markdown-to-Word converter
+(the H1-heading branch called `continue` without incrementing the line
+index, so the same line index looped forever once a `# ` line was
+reached). Diagnosed by isolating each stage (`python-docx` import/save
+confirmed fast and fine standalone; the app-level script was the only
+thing hanging), fixed, and re-run clean in under a few seconds.
+
+Verified the output file directly rather than trusting the "wrote file"
+print statement alone: re-opened the generated `.docx` with
+`python-docx` and confirmed 108 non-empty paragraphs, 2 tables sized
+27x6 and 27x5 (header + all 26 CSV data rows, split into two
+readability-sized tables), and spot-checked first/last paragraph text
+against the source markdown.
+
+Committed as `905c047b` and pushed to `origin/main`, alongside the
+generator script (so the deliverable can be regenerated on demand
+rather than being a one-off artifact that goes stale).
