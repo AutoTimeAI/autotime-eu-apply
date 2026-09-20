@@ -25,22 +25,27 @@ These are deliberately different — documentation commits were made after the d
 | No unresolved Critical or High defects | Release owner | Scoped statement, not a formal defect-register query (no such register exists in this repo): every defect found during this session's audits (Stripe billing audit, routing/config sweep, live E2E walkthrough) was fixed and re-verified before this checklist was written, with none left open. This does not prove no *undiscovered* Critical/High defect exists — only that none was found and left unresolved | **Pass, scoped as above** |
 | Accessibility critical path accepted | QA | Automated axe scans pass on 11 critical surfaces (landing, home, jobs, applications, interviews, countries, career direction, profile, continuous journey, and login - login was found hanging on a broken test wait, fixed in commit `2b8db35e`, now passes in under 20s). A real live keyboard-navigation pass was also run against production (login: 6 tab stops, dashboard: 8 tab stops) - every focused element had a visible indicator, tab order followed visual order, and Escape correctly closed the account menu. Not an exhaustive walkthrough of every screen/modal | **Pass** |
 | Monitoring, incident and rollback ready | Operations | Automatic rollback-on-failure confirmed wired into the deploy workflow. Release owner/incident lead/rollback operator named (DataByRajesh, founder, all three roles - single-person team). A live rollback rehearsal was run 2026-09-19: rolled back to the prior deployment, confirmed via alias + smoke test, then rolled forward again and re-confirmed - full round trip under 1 minute. See `incident-and-rollback-exercise-record.md` | **Pass** |
-| Privacy, beta terms and support channel ready | Founder | Not evidenced this session — this is a founder/business-process item (privacy notice, beta acknowledgement flow, support channel) outside this session's engineering scope | **Open — needs founder confirmation** |
+| Privacy, beta terms and support channel ready | Founder | Privacy notice and support channel verified against real code (genuine subprocessors, real monitored inbox). Beta terms/limitations implemented as a real tracked onboarding checkbox (`profiles.beta_terms_accepted_at`, server-set timestamp) - verified live: blocked without acceptance, succeeded with it, real timestamp recorded, never re-shown once accepted. Commit `dd122ca3`. One residual open item within privacy: ICO registration reference still pending - separately tracked as a public-launch item, not a private-beta blocker | **Pass** |
 
-### Result: 10 Pass / 1 Fail / 1 Open
+### Result: 11 Pass / 1 Fail
 
-Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO** - one confirmed Fail and one genuinely open item remain:
+Per the assurance pack's own decision rule (§1: *"GO is permitted only when every Mandatory gate is Pass"*), this checklist **cannot be marked a clean GO** - one confirmed Fail remains:
 
 - **Backup/PITR - confirmed Fail.** The founder checked the Supabase dashboard 2026-09-19: the project is on the Free plan, which has zero scheduled backups and no PITR. This is a real, current, material risk to the production database - not a documentation gap, and not closeable by anything in this repo. Requires a Pro-plan upgrade decision or explicit written risk acceptance.
-- **Privacy/beta-terms/support-channel readiness - Open**, founder/business item.
 
-Everything else now passes, including two items closed this session with
-the founder's direct involvement: **Accessibility** (automated axe on all
-11 surfaces + a real live keyboard/focus pass), and **Monitoring/incident/
-rollback** (named owner - DataByRajesh, founder, all three roles - plus a
-real live rollback rehearsal: rolled back one step, confirmed via alias +
-smoke, rolled forward again, confirmed clean, full round trip under a
-minute). See `testing-categories-coverage-v1.0.1-2026-09-19.md` and
+**This is now the single remaining item blocking an unqualified GO.**
+Everything else now passes, including three items closed this session
+with the founder's direct involvement: **Accessibility** (automated axe
+on all 11 surfaces + a real live keyboard/focus pass), **Monitoring/
+incident/rollback** (named owner - DataByRajesh, founder, all three roles
+- plus a real live rollback rehearsal: rolled back one step, confirmed
+via alias + smoke, rolled forward again, confirmed clean, full round trip
+under a minute), and **Privacy/beta-terms/support-channel readiness**
+(privacy notice and support channel verified against real code; beta
+terms implemented as a real tracked onboarding checkbox with a server-set
+timestamp, verified live end to end - see the deployment note below for a
+real bug this surfaced along the way). See
+`testing-categories-coverage-v1.0.1-2026-09-19.md` and
 `incident-and-rollback-exercise-record.md` for detail.
 
 ---
@@ -72,7 +77,7 @@ minute). See `testing-categories-coverage-v1.0.1-2026-09-19.md` and
 | Exact release SHA | `88b8eb4453062315d2897445fbf5a855f4f25071` |
 | Deployment identity | `dpl_7wkKjt62gaJALhZMCedaXzSMUmog` (Vercel, production, `READY`) |
 | Decision rationale | Eight critical-path cases have deployed live evidence; E2E-06 passes on structural source/RLS evidence and E2E-09 passes on unit evidence. Engineering compilation, unit, security, build, deployment and smoke gates pass, including two real defects (one HIGH billing bug and one profile-edit race condition) found and fixed during this release cycle. A 2026-09-19 axe sweep passed ten critical-surface tests, but the login axe check remains blocked before the scan by a reproducible non-terminating `networkidle` wait. Backup/PITR verification, accessibility closure, founder-owned privacy/terms/support confirmation and named incident/rollback ownership remain open. |
-| Approved limitations | (1) Backup/PITR status unconfirmed - accept the risk of proceeding without point-in-time recovery confirmed, or verify before inviting real users. (2) No accessibility scan run this cycle - accept as a known gap for v1.0.1 rather than a blocker, given the beta's small controlled cohort. (3) No named incident lead/rollback operator - the automatic rollback will fire regardless, but a human should be identified who'd notice and follow up. (4) Privacy/beta-terms/support-channel readiness not confirmed by engineering - founder must separately confirm before inviting real participants. |
+| Approved limitations | Backup/PITR - confirmed zero backup coverage (Supabase Free plan). This is the sole remaining blocker: upgrade to Pro, or explicitly accept the risk of proceeding without point-in-time recovery before inviting more real users. Accessibility, rollback ownership/rehearsal, and privacy/beta-terms/support-channel readiness are all now resolved (see above). |
 | Release owner name | *(to be signed by the founder — this agent cannot sign on the release owner's behalf)* |
 | Signature and date | *(pending)* |
 

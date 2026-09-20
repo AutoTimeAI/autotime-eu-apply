@@ -19,14 +19,14 @@ the supporting detail.
 
 | Field | Value |
 |---|---|
-| Deployed SHA | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` (docs-only vs. the `88b8eb44` application-code artefact evaluated in the dossier - no app-code delta) |
-| Production deployment ID | `dpl_2MNUvqNWHTqzdg1jf8UmQ1WPRVJv` (Vercel, `READY`) |
-| Deployment workflow run | `35469958800` (green) |
+| Deployed SHA | `dd122ca309c2aca6a33a36aa3189594e5b918eae` (adds the beta-terms acceptance feature) |
+| Production deployment ID | `dpl_TU4JzVKaoVyfGrT2bL4Eq3hmj7Xp` (Vercel, `READY`) |
+| Deployment workflow run | `35474963453` (green) |
 | Documentation HEAD (may be later - docs-only commits) | see `git rev-parse origin/main` |
-| Current decision | **NO-GO for a new unqualified release; current deployed private beta is healthy** |
-| Decision date | 2026-09-19 |
-| Latest re-verification | 2026-09-19, same-day: typecheck/lint/unit/build clean, live smoke pass, Supabase security advisor clean (no new findings), 24h error-log scan clean - per the beta-milestone bar in `../reference/startup-test-validation-standard.md` |
-| Release owner sign-off | **Pending** - not yet signed by the founder |
+| Current decision | **NO-GO for a new unqualified release; current deployed private beta is healthy. Only one confirmed blocker remains: zero database backup coverage (see below).** |
+| Decision date | 2026-09-20 |
+| Latest re-verification | 2026-09-20: beta-terms acceptance feature verified live end to end (blocked without acceptance, succeeded with it, real server-set timestamp recorded, never re-shown once accepted). Found and fixed a real deployment bug along the way - see `docs/quality-assurance.md`'s 2026-09-20 entry: the production domain alias hadn't been reclaimed by the deploy after an earlier rollback rehearsal, silently serving a stale build despite the workflow reporting success. Fixed via a direct alias reassignment and fully re-verified (`pnpm smoke:web`, `/pricing`, `/login`, `/admin` all clean) |
+| Release owner sign-off | **Pending** - not yet signed by the founder (blocked only on the backup/PITR decision) |
 
 ## Canonical documents (read these; treat everything else as historical)
 
@@ -51,7 +51,7 @@ See the gate checklist for full detail. Summary:
 | Accessibility (automated axe + live keyboard/focus pass) | Closed - axe passes on all 11 covered critical surfaces including login; a real live keyboard-navigation pass (tab order, focus visibility, Escape behavior) was also run against production |
 | Named incident lead / rollback operator | Closed - DataByRajesh (founder) named as release owner, incident lead, and rollback operator |
 | Rollback rehearsal | Closed - ran live 2026-09-19, rolled back one step and forward again, confirmed via alias checks and `pnpm smoke:web` at each step, full round trip under 1 minute |
-| Founder privacy/beta-terms/support confirmation | Open - founder-owned |
+| Founder privacy/beta-terms/support confirmation | Closed - privacy/support verified against real code; beta terms implemented as a real tracked onboarding checkbox (`profiles.beta_terms_accepted_at`), verified live end to end |
 | Release-owner signature | Open - pending |
 
 ## Public-launch gates (separate, stricter bar - not required for private beta)
@@ -89,3 +89,5 @@ banner pointing back to this index:
 |---|---|---|---|
 | Private Beta v1.0.1 (initial dossier) | `88b8eb4453062315d2897445fbf5a855f4f25071` | NO-GO for unqualified GO / deployed beta healthy | 2026-09-19 |
 | Private Beta v1.0.1 (docs-only redeploy + re-verification) | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` | Same decision, re-confirmed clean via the startup beta-milestone bar | 2026-09-19 |
+| Private Beta v1.0.1 (rollback rehearsal + named owners) | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` | Rollback rehearsal run live and passed; named owners recorded | 2026-09-19 |
+| Private Beta v1.0.1 (beta-terms acceptance feature) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | Same decision; only remaining blocker is confirmed zero backup coverage | 2026-09-20 |

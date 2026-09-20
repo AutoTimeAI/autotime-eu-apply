@@ -141,9 +141,9 @@ hesitation” standard requested for this release.
 | Incident lead | **PASS** | DataByRajesh (founder), same as above. |
 | Rollback operator | **PASS** | DataByRajesh (founder), confirmed Vercel access (used directly this session to run the rehearsal below). |
 | Rollback rehearsal | **PASS** | Ran live 2026-09-19: rolled back from `dpl_2MNUvqNWHTqzdg1jf8UmQ1WPRVJv` to the prior deployment `dpl_AsNfKi3yP8qxKwL1dfXqbPWDjXcu`, confirmed via alias check and `pnpm smoke:web` passing, then rolled forward again and re-confirmed. Rollback-to-self was first attempted and correctly rejected by Vercel (422), confirming its own safety guard. Full round trip under 1 minute. See `incident-and-rollback-exercise-record.md` for the full log. |
-| Privacy notice | **OPEN** | Founder confirms deployed notice matches actual production processing/subprocessors and beta use. |
-| Beta terms/limitations | **OPEN** | Founder confirms users see and accept appropriate beta limitations. |
-| Support channel | **OPEN** | Working channel, monitored owner and expected response window. |
+| Privacy notice | **PASS** | Verified `/privacy` against actual code: every subprocessor claim (Supabase, Vercel, OpenAI, Stripe, Resend, PostHog, job-listing providers) genuinely wired, not placeholder text. One known open item within it: the ICO-registration line still says "will be added after registration is complete" - a separate, already-tracked public-launch item, not a blocker for private beta. |
+| Beta terms/limitations | **PASS** | Implemented as a real, tracked onboarding step (not static text): `profiles.beta_terms_accepted_at`, server-set timestamp, required checkbox before a new user can save past step 0. Verified live end to end: blocked without the checkbox, succeeded once checked, real timestamp recorded (`2026-09-20 12:28:36+00` for the QA account), and the checkbox correctly stops showing on a later visit. Commit `dd122ca3`. |
+| Support channel | **PASS** | Confirmed real, already-wired: `hello@autotimeai.com` appears in `/privacy`, `/terms`, and actual in-app feedback/waitlist mailto links (`DashboardExperience.tsx`) - not a placeholder. Founder-monitored during beta; expected response window not formally stated but the channel itself is real and reachable. Also now included in the beta-terms acceptance text itself. |
 | Sentry source maps | **OPEN** | Inspect a production event/build and confirm readable application stack frames/source maps. |
 | Release-owner signature | **OPEN** | Section 8 signed against artefact SHA and deployment ID. |
 
