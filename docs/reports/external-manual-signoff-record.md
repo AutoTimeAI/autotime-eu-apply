@@ -18,6 +18,7 @@ transaction ID, etc.). An empty or template row must stay `Not started`.**
 |---|---|---|---|---|
 | Supabase backup/PITR confirmed | **Confirmed absent - risk explicitly accepted** | 2026-09-20 | DataByRajesh (founder) | Checked live: Supabase project `dorqxmnslzzmrpjbhlcl` is on the Free plan (zero scheduled backups, no PITR). Founder explicitly instructed this risk be accepted in writing rather than upgrading. See "Risk acceptance statement" below for the full terms of what's being accepted. |
 | Restore rehearsal (if feasible) | Not applicable | 2026-09-20 | - | No backup exists to restore from; not feasible until the plan is upgraded, at which point this should be re-attempted |
+| Leaked-password protection confirmed | **Confirmed unavailable - risk explicitly accepted** | 2026-09-20 | DataByRajesh (founder) | Confirmed: Supabase's leaked-password (HaveIBeenPwned) checking is gated behind the Pro plan and unreachable at any Free-tier dashboard location - not a setting that was simply hard to find. Founder explicitly instructed this risk be accepted in writing rather than upgrading. See "Risk acceptance statement" below for the full terms of what's being accepted. |
 | Named incident lead | Confirmed | 2026-09-19 | DataByRajesh (founder) | `docs/reports/incident-and-rollback-exercise-record.md` |
 | Named rollback operator | Confirmed | 2026-09-19 | DataByRajesh (founder) | Same record; confirmed Vercel access used directly to run a real rollback rehearsal |
 | Privacy notice shown to users confirmed accurate | Confirmed | 2026-09-20 | DataByRajesh (founder) / verified against code | `/privacy` checked against actual production code - every subprocessor claim (Supabase, Vercel, OpenAI, Stripe, Resend, PostHog, job-listing providers) genuinely wired, not placeholder text. One known open sub-item: ICO registration reference still pending - separately tracked as a public-launch item |
@@ -36,6 +37,18 @@ transaction ID, etc.). An empty or template row must stay `Not started`.**
 **Founder's decision:** proceed with the private beta in its current, small, invitation-only scope without upgrading to a paid Supabase tier for backup coverage at this time. This decision can be revisited at any point by upgrading to Supabase Pro (adds up to 7 days of scheduled backups and PITR).
 
 **Recommended trigger to revisit:** per `docs/reference/startup-test-validation-standard.md`'s own trigger table, this should be reconsidered before the beta scales past a small handful of users, and is treated as non-negotiable before any public launch.
+
+## Risk acceptance statement — Supabase leaked-password protection
+
+**Recorded 2026-09-20, per explicit founder instruction to accept this risk in writing rather than upgrade the Supabase plan at this time.**
+
+**What is being accepted:** Supabase Auth's leaked-password protection (which rejects a new or changed password if it appears in the HaveIBeenPwned compromised-password database) is a **Pro-plan-only feature and is not available on the Free tier** this project currently runs on. Concretely: a candidate can set (or already have set) a password that is publicly known to be compromised, and Supabase Auth will accept it with no warning or block. This is a real, current gap in credential-security defense-in-depth, not a configuration oversight - there is no setting to find and enable on this plan.
+
+**What is at risk:** any account whose password happens to match a known-breached password becomes easier to compromise via credential-stuffing attacks (an attacker trying passwords already leaked from other breaches). This does not affect accounts with strong, unique passwords, and does not indicate any breach of this project's own systems - it is the absence of one specific, automated defensive check.
+
+**Founder's decision:** proceed with the private beta in its current, small, invitation-only scope without upgrading to a paid Supabase tier for this check at this time. This decision can be revisited at any point by upgrading to Supabase Pro (which also resolves the backup/PITR gap above - both are Free-tier limitations on the same project, so a single plan upgrade would close both).
+
+**Recommended trigger to revisit:** same as backup/PITR - reconsider before the beta scales past a small handful of users, and treat as non-negotiable before any public launch. Given both open Free-tier gaps are resolved by the same upgrade, revisit them together.
 
 ## Public-launch-blocking items (not required for private beta)
 

@@ -147,6 +147,7 @@ hesitation” standard requested for this release.
 | Keyboard/focus critical-path review | **PASS** | Live keyboard-navigation pass run against production: login (6 tab stops) and dashboard (8 tab stops) - every focused element had a visible indicator (outline or box-shadow), tab order followed visual/logical order, and Escape correctly closed the account menu. Not an exhaustive walkthrough of every screen/modal in the app, but covers the core critical path. |
 | Supabase backup/PITR | **CONFIRMED: NOT AVAILABLE - risk explicitly accepted** | Checked live 2026-09-19: Supabase project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which explicitly excludes scheduled backups and PITR. Real production data has no recovery path if lost or corrupted. **2026-09-20: the release owner explicitly instructed this risk be accepted in writing** rather than upgrading - full statement in `external-manual-signoff-record.md`. The technical gap is unchanged; what changed is that it is now a knowing, documented governance decision rather than an unaddressed one. |
 | Restore readiness | **Not applicable - risk accepted instead of resolved** | A restore rehearsal remains genuinely impossible until backups exist. Should the plan be upgraded later, re-attempt this rehearsal at that time. |
+| Supabase leaked-password protection | **CONFIRMED: NOT AVAILABLE - risk explicitly accepted** | Confirmed 2026-09-20: this setting is gated behind Supabase's Pro plan and unreachable at any Free-tier dashboard location - not a config miss. Candidates can currently set a password already known to be compromised (HaveIBeenPwned), with no server-side check preventing it. **2026-09-20: the release owner explicitly instructed this risk be accepted in writing** rather than upgrading - full statement in `external-manual-signoff-record.md`. A single Pro-plan upgrade would resolve this and the backup/PITR gap together. |
 | Release owner | **PASS** | DataByRajesh (founder), accepted 2026-09-19 - single-person team, per the startup testing standard this is the correct answer rather than inventing separate roles. See `incident-and-rollback-exercise-record.md`. |
 | Incident lead | **PASS** | DataByRajesh (founder), same as above. |
 | Rollback operator | **PASS** | DataByRajesh (founder), confirmed Vercel access (used directly this session to run the rehearsal below). |
@@ -221,11 +222,13 @@ run the same live smoke, and roll back immediately on failure.
 
 ## 8. Final authorization
 
-Signed 2026-09-20. Every row in section 5 is now closed except backup/PITR,
-which remains a genuine technical Fail that the release owner has explicitly
-accepted in writing rather than resolved - see
-`external-manual-signoff-record.md` for the full risk-acceptance statement.
-This is therefore signed as **GO WITH LIMITATIONS**, not an unqualified GO.
+Signed 2026-09-20. Every row in section 5 is now closed except backup/PITR
+and leaked-password protection, both genuine technical Fails (both
+Free-tier Supabase plan limitations, both resolved by the same Pro-plan
+upgrade) that the release owner has explicitly accepted in writing rather
+than resolved - see `external-manual-signoff-record.md` for the full
+risk-acceptance statements. This is therefore signed as **GO WITH
+LIMITATIONS**, not an unqualified GO.
 
 | Field | Approval |
 |---|---|
@@ -238,7 +241,7 @@ This is therefore signed as **GO WITH LIMITATIONS**, not an unqualified GO.
 | Rollback operator name | DataByRajesh (founder) |
 | Decision date/time and timezone | 2026-09-20, recorded per explicit conversational instruction (not a physical/digital signature - see note below) |
 | Signature/explicit approval reference | The release owner explicitly instructed this risk be "accepted in writing" during this session; recorded here and in `external-manual-signoff-record.md` as the written record of that instruction. This is an attributable, unambiguous decision record, not a forged or inferred signature. |
-| Approved limitations, if any | **Supabase backup/PITR: zero backup coverage (Free plan), explicitly accepted.** No other limitations - every other gate in section 5 is a genuine Pass with real evidence, not an accepted gap. |
+| Approved limitations, if any | **Supabase backup/PITR: zero backup coverage (Free plan), explicitly accepted.** **Supabase leaked-password protection: unavailable (Free plan), explicitly accepted 2026-09-20.** No other limitations - every other gate in section 5 is a genuine Pass with real evidence, not an accepted gap. |
 
 ## 9. Post-deploy result
 

@@ -17,7 +17,7 @@ Confirmed 2026-09-19 by the founder checking the Supabase dashboard directly: pr
 
 Confirmed 2026-09-20 by the founder: Supabase's leaked-password protection (checks new/changed passwords against HaveIBeenPwned before accepting them) is **gated behind the Pro plan and unavailable at any Free-tier dashboard location** - not a setting that was simply hard to find. This project runs on the Free plan (same plan as the backup/PITR gap above). A candidate can currently set a password already known to be compromised, with no server-side check preventing it.
 
-Same category as the backup/PITR risk: a real, current, plan-tier-gated gap, not a documentation or configuration miss. No written risk-acceptance has been recorded for this one yet - flagging here so it doesn't quietly stay unaddressed. Revisit alongside the backup/PITR decision before scaling past the current small invited cohort.
+**2026-09-20 (same day): the release owner explicitly instructed this risk be accepted in writing** rather than upgrading the plan at this time, the same as the backup/PITR gap. Full risk-acceptance statement in `external-manual-signoff-record.md`. Same category as the backup/PITR risk: a real, current, plan-tier-gated gap, not a documentation or configuration miss - and notably, a single Supabase Pro upgrade would resolve both open Free-tier gaps at once. Revisit alongside the backup/PITR decision before scaling past the current small invited cohort.
 
 ## Current release cycle: Private Beta v1.0.1
 
@@ -56,6 +56,7 @@ See the gate checklist for full detail. Summary:
 | Gate | Status |
 |---|---|
 | Supabase backup/PITR | **FAIL (technical) - Risk explicitly accepted in writing (governance) 2026-09-20.** Founder checked the dashboard 2026-09-19: project is on Supabase's Free plan, which excludes scheduled backups and PITR entirely. Real production data has no recovery path right now - that fact is unchanged; the founder chose to proceed anyway rather than upgrade, in writing, per `external-manual-signoff-record.md` |
+| Supabase leaked-password protection | **FAIL (technical) - Risk explicitly accepted in writing (governance) 2026-09-20.** Confirmed the same day: this setting is gated behind Supabase's Pro plan and unreachable at any Free-tier dashboard location - not a config miss. Candidates can currently set a password already known to be compromised; the founder chose to proceed anyway rather than upgrade, in writing, per `external-manual-signoff-record.md`. A single Pro-plan upgrade would resolve this and the backup/PITR gap together |
 | Accessibility (automated axe + live keyboard/focus pass) | Closed - axe passes on all 11 covered critical surfaces including login; a real live keyboard-navigation pass (tab order, focus visibility, Escape behavior) was also run against production |
 | Named incident lead / rollback operator | Closed - DataByRajesh (founder) named as release owner, incident lead, and rollback operator |
 | Rollback rehearsal | Closed - ran live 2026-09-19, rolled back one step and forward again, confirmed via alias checks and `pnpm smoke:web` at each step, full round trip under 1 minute |
