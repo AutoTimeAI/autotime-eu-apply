@@ -1,0 +1,17 @@
+-- public.rls_auto_enable() is an event trigger function (RETURNS event_trigger)
+-- - Postgres only ever invokes it automatically when a matching DDL event
+-- fires; direct invocation is unconditionally rejected at the language
+-- level ("trigger functions can only be called as triggers"), confirmed
+-- live before this migration. The Supabase security advisor flagged
+-- EXECUTE grants to anon/authenticated/PUBLIC as callable via
+-- /rest/v1/rpc/rls_auto_enable - not actually exploitable (Postgres
+-- blocks the call regardless of grants), but revoking anyway for hygiene
+-- so this doesn't keep showing as advisor noise, matching the same
+-- excess-grant cleanup pattern applied to other functions earlier this
+-- release cycle (20260919180000_security_advisor_hardening.sql).
+--
+-- Verified after applying: a throwaway table created afterward still had
+-- RLS auto-enabled (relrowsecurity = true) - the event trigger itself is
+-- untouched by revoking direct-call EXECUTE, since Postgres invokes it
+-- through the event-trigger dispatch path, not a normal function call.
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;

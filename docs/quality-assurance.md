@@ -4146,3 +4146,42 @@ workspaces: 0 errors, 12 documented warnings. Verified throughout with
 `pnpm typecheck`, the full `pnpm test:unit` suite, `pnpm test:component`,
 and a full `pnpm build:web` (0 warnings in the build log) - all clean,
 zero regressions.
+
+## 2026-09-20 (continued): pre-deploy verification found and closed one more real security finding
+
+Before any of today's 28 commits get deployed, ran the full verification
+suite fresh on current `main` HEAD (`40a7cd0d`) - typecheck (both apps),
+`pnpm lint`, full `pnpm test:unit`, both production builds, and a fresh
+Supabase security-advisor query against production - rather than trusting
+earlier-in-session results, since the database especially can drift
+independently of the app code.
+
+Found two new WARN-level findings that hadn't appeared in this session's
+earlier advisor checks: `public.rls_auto_enable()` (the event-trigger
+function that auto-enables RLS on newly created tables - added by an
+earlier migration this session) was flagged as callable by both `anon`
+and `authenticated` via `/rest/v1/rpc/rls_auto_enable`, since it had
+`EXECUTE` granted to `anon`/`authenticated`/`PUBLIC`.
+
+Investigated before treating this as exploitable: the function's
+definition is `RETURNS event_trigger`, and Postgres unconditionally
+rejects direct invocation of event-trigger functions regardless of
+grants - confirmed live by actually attempting `select
+public.rls_auto_enable();`, which correctly errored with "trigger
+functions can only be called as triggers." So this was a real advisor
+finding but not a real exploit path - revoked the excess `EXECUTE`
+grants anyway for hygiene (zero behavioural risk, since the grant was
+already provably inert), matching the same excess-grant cleanup pattern
+from earlier in this release cycle. Verified both directions: the
+advisor's two new findings dropped to zero, and a throwaway table
+created afterward still had RLS auto-enabled (`relrowsecurity = true`),
+confirming the event trigger itself is untouched by revoking direct-call
+EXECUTE.
+
+Production security advisor is now back to exactly the two already-known,
+already-documented findings (53 RLS-enabled-no-policy INFO rows,
+leaked-password-protection WARN with a signed risk acceptance) - nothing
+new or unaddressed. All 28 commits from today's session are verified
+clean and ready; none have been deployed to production yet (still
+serving `dd122ca3` from the prior session) - deployment is a separate,
+explicit decision pending founder confirmation.
