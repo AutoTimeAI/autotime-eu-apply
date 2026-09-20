@@ -3295,3 +3295,25 @@ contains the sponsorship-denial message; `decision` stays "Investigate
 first" as before. Full `pnpm test:unit` re-run clean afterward (43
 environment-boundary tests, 19/19 Stripe webhook, 10/10 AI quality, MVP
 coverage 95% automated/5% manual - all passing, zero regressions).
+
+## 2026-09-20: further edge-case sweep - a fully out-of-scope country (India) handled safely, no bug found
+
+Continued the same rare-edge-case sweep with a fully out-of-scope
+non-European vacancy (Bangalore, India - not in `extractJob`'s
+recognized-country regex at all, unlike Switzerland). Ran `extractJob` +
+`analyseJob` directly (real production functions) with a candidate
+profile needing sponsorship.
+
+Result: correctly safe, no false positive. `extractJob` correctly leaves
+`facts.country` as `"missing"` (India genuinely isn't a country this
+Europe-focused product claims to cover) - but the vacancy's own explicit
+"Must have the right to work in India" line still correctly surfaces via
+the requirement-evidence matcher as `criticalRisk` (no confirmed evidence
+of Indian work rights in the candidate's supplied evidence), `decision`
+stays `"Consider"` (never a false-positive "Apply"), and
+`nextAction`/`unknowns` explicitly flag "Resolve: Vacancy country" as
+unresolved. This is a different, already-working mechanism
+(requirement-evidence matching) from the mobility-profile engine fixed
+above, and it already does the right thing here. No fix needed - logging
+as a confirmed-pass finding, not leaving the sweep's only checked case be
+the one that surfaced a bug.
