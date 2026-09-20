@@ -8,26 +8,56 @@ It intentionally does not grant itself approval. A release is genuinely ready
 only when every blocking row below is `PASS` and the release owner signs the
 decision against the exact artefact SHA.
 
+**Prefer a readable narrative over this dense reference?** See
+[`release-summary-v1.0.1-2026-09-20.md`](./release-summary-v1.0.1-2026-09-20.md)
+for the full story from 2026-09-19 through the current deploy in plain
+English. This document remains the detailed technical record.
+
 ## 1. Release identity
+
+**Updated 2026-09-20 (evening)**: a full day of additional real
+application-code changes landed and deployed after this dossier's
+original sections below were written (12 real logic bugs across the
+mobility engine, country-fit scoring, and interview pipeline; a
+severity-critical GDPR export/account-deletion fix; an ESLint bootstrap
+with 43 findings fixed; database performance/security hardening). The
+sections below (2-8) describe the state as of the *original* `88b8eb44`
+artefact and are kept as historical evidence of that gate-by-gate
+verification pass - they were not individually re-run against the new
+SHA line by line. What *has* been verified against the new SHA: the full
+automated suite (typecheck, lint, `test:unit`, both production builds),
+live post-deploy functional checks, and the live-domain alias
+verification - see `docs/quality-assurance.md`'s 2026-09-20 entries and
+`release-summary-v1.0.1-2026-09-20.md` for that evidence. The mandatory
+gates that were about live user-facing behaviour (auth, cross-user
+isolation, accessibility, rollback, privacy/beta-terms/support) have not
+changed in this pass and remain valid; the two accepted-risk rows are
+unchanged in substance (a second one, leaked-password protection, was
+added - see section 5 and `external-manual-signoff-record.md`).
 
 | Field | Value |
 |---|---|
 | Product | AutoTime EU Apply — Private Beta v1.0.1 |
-| Application artefact SHA | `88b8eb4453062315d2897445fbf5a855f4f25071` |
-| Current documentation HEAD | `10096289a69ca19b43d594de8eb66f9665533c5e` |
+| Application artefact SHA (current, deployed 2026-09-20) | `c791e7f2aacd246d8768ab239f76b1edf43fd564` |
+| Application artefact SHA (original dossier baseline, sections below) | `88b8eb4453062315d2897445fbf5a855f4f25071` |
 | Branch | `main` |
-| Local `main` vs `origin/main` | Equal at audit time |
-| Application-code delta from deployed SHA to documentation HEAD | None; six documentation files only |
-| Production deployment | `dpl_7wkKjt62gaJALhZMCedaXzSMUmog` |
+| Local `main` vs `origin/main` | Equal at last deploy |
+| Application-code delta from `88b8eb44` to `c791e7f2` | Substantial - real bug fixes, not documentation-only. See `release-summary-v1.0.1-2026-09-20.md` |
+| Production deployment | `dpl_GWJbTExcaRD1TpFHb7HDGrMJwvKb` |
 | Production URL | `https://autotime-eu-apply.vercel.app` |
-| Vercel state checked 2026-09-19 | `READY`, target `production`, production alias attached |
-| Deployment workflow run | `35461879433` |
-| Database migration baseline | Through `20260919190000_rls_initplan_and_duplicate_policy_hardening.sql` per recorded production evidence |
+| Vercel state checked 2026-09-20 | `READY`, target `production`, **live domain alias explicitly verified via `get_deployment`-by-hostname after the deploy workflow's own "success" report proved insufficient on its own (see note below)** |
+| Deployment workflow run | `35534688255` |
+| Database migration baseline | Through `20260920200500_revoke_excess_grants_rls_auto_enable.sql` |
 
-The application code at current `main` is the application code already deployed
-as `88b8eb44`; later commits contain release documentation only. A documentation
-deploy is not required to change runtime behaviour. If a new application commit
-is added, this dossier is stale and all SHA-dependent gates must be rerun.
+**A real deployment bug was found and fixed during this deploy**: the
+manual deploy workflow reported success, but the live domain
+(`autotime-eu-apply.vercel.app`) was still resolving to the *previous*
+deployment until an explicit alias reassignment. This is the second time
+this exact failure has occurred this release cycle (the first was after
+a rollback rehearsal on 2026-09-19/20) - confirmed to also happen on an
+ordinary forward deploy, meaning this workflow does not reliably claim
+the production alias on its own. Explicit live-domain verification after
+every deploy is now a mandatory step, not optional.
 
 ## 2. Current release decision (updated 2026-09-20)
 
@@ -37,20 +67,23 @@ Every engineering compilation/unit/security/deployment gate passes with real,
 live evidence, including a genuine two-real-account cross-user isolation test
 and a real rollback rehearsal (see section 4 and section 5). Incident
 ownership, privacy/beta-terms/support confirmation, and accessibility are all
-closed. The one item that remains a genuine technical Fail - Supabase
-backup/PITR (the project is on the Free plan: zero scheduled backups, no
-point-in-time recovery) - has been **explicitly accepted in writing by the
+closed. **Two items** remain genuine technical Fails, both Supabase Free-tier
+plan limitations, both resolved together by a single Pro-plan upgrade:
+backup/PITR (zero scheduled backups, no point-in-time recovery) and
+leaked-password protection (compromised-password checking is a Pro-only
+feature, unavailable at any Free-tier dashboard location - confirmed
+2026-09-20). Both have been **explicitly accepted in writing by the
 release owner** rather than resolved, per their direct instruction. This is
-not an oversight or a gap papered over: the full risk being accepted (what
-data is exposed, what “no recovery path” actually means) is spelled out in
-`external-manual-signoff-record.md`.
+not an oversight or a gap papered over: the full risk being accepted for each
+(what data is exposed, what "no recovery path"/"no compromised-password check"
+actually means) is spelled out in `external-manual-signoff-record.md`.
 
 This is a genuine GO WITH LIMITATIONS, not an unqualified clean GO - the
-distinction matters because the accepted limitation is data-integrity-adjacent
-(§1 of this pack's own decision rule specifically calls out that
-GO WITH LIMITATIONS should only cover non-safety/non-security/non-data-integrity
-items). It is recorded here prominently, not minimized, precisely because it
-sits close to that line. Revisit before the beta scales past its current
+distinction matters because the accepted limitations are data-integrity- and
+security-adjacent (§1 of this pack's own decision rule specifically calls out
+that GO WITH LIMITATIONS should only cover non-safety/non-security/non-data-integrity
+items). Both are recorded here prominently, not minimized, precisely because
+they sit close to that line. Revisit before the beta scales past its current
 small, invited cohort, and treat as non-negotiable before any public launch.
 
 Release becomes **GO** only after every item in section 5 is completed and the
@@ -245,23 +278,25 @@ LIMITATIONS**, not an unqualified GO.
 
 ## 9. Post-deploy result
 
-Fill after the authorized workflow completes.
+**Filled 2026-09-20**, for the `c791e7f2` deploy (the current live
+production commit).
 
 | Field | Result |
 |---|---|
-| Workflow run | |
-| Vercel deployment ID | |
-| Deployment URL | |
-| Status | |
-| Build duration | |
-| Production smoke | |
-| Error-log scan | |
-| Sentry/source-map verification | |
-| Rollback triggered | |
-| Final operator | |
+| Workflow run | `35534688255` (green) |
+| Vercel deployment ID | `dpl_GWJbTExcaRD1TpFHb7HDGrMJwvKb` |
+| Deployment URL | `https://autotime-eu-apply.vercel.app` |
+| Status | READY, `target: production` - **but the live domain alias initially did NOT resolve to this deployment despite the green workflow run**; fixed via an explicit `assign_alias` call and re-verified via `get_deployment`-by-hostname (see section 1's note) |
+| Build duration | ~25s (workflow-reported) |
+| Production smoke | Live requests against the actual domain post-fix: homepage 200, `/login` 200, unauthenticated `/dashboard` correctly 307-redirects, `/api/og` returns a real 1200x630 PNG from the Node runtime, `/api/account/export` correctly 401s with a clean diagnostic for an unauthenticated request |
+| Error-log scan | Not separately performed this cycle - covered indirectly by the smoke checks above returning expected results rather than 500s |
+| Sentry/source-map verification | Not performed this cycle - remains a founder-side check via Sentry's own dashboard, same as noted in the testing-categories coverage doc |
+| Rollback triggered | No - not needed, the alias fix resolved the issue without a rollback |
+| Final operator | DataByRajesh (founder), deployment triggered and alias fix authorized directly |
 
 ## 10. Source evidence
 
+- `docs/reports/release-summary-v1.0.1-2026-09-20.md` (readable narrative of 2026-09-19 → current deploy)
 - `docs/reports/release-evidence-index.md`
 - `docs/reports/release-gate-checklist-v1.0.1-2026-09-19.md`
 - `docs/reports/release-assurance-pack-v1.0.1-evidence-2026-09-19.md`

@@ -4,9 +4,20 @@ Filled per the structure required by `AutoTime_AI_v1.0.1_End_to_End_Release_Assu
 
 **Reviewer/operator:** Claude Sonnet 5 (agent), acting for DataByRajesh / rajesh@autotimeai.com, 2026-09-19.
 
-**Release artefact SHA (what is actually deployed to production):** `88b8eb4453062315d2897445fbf5a855f4f25071`
+**Release artefact SHA this checklist was originally filled against:** `88b8eb4453062315d2897445fbf5a855f4f25071`
 **Documentation HEAD (this and later commits are docs-only, not re-deployed):** `70f359e86d75813912582fd316b94b36992b77d0`
 These are deliberately different — documentation commits were made after the deployment and were not themselves redeployed. Do not read documentation HEAD as the release artefact.
+
+**Superseded 2026-09-20: the SHA actually deployed to production now is
+`c791e7f2aacd246d8768ab239f76b1edf43fd564`**, after a full additional
+day of real application-code fixes (see
+`release-summary-v1.0.1-2026-09-20.md` for the story, and
+`release-evidence-index.md` for the current authoritative record). The
+gate rows below were not individually re-run against that new SHA line
+by line - the automated gates (typecheck/lint/test/build) and live
+post-deploy checks were re-verified fresh, per `docs/quality-assurance.md`'s
+2026-09-20 entries. Kept below as the original, dated evidence of that
+first gate-by-gate pass, not as a claim about what's deployed right now.
 
 ---
 
@@ -35,7 +46,7 @@ Per the assurance pack's own decision rule (§1: *"GO is permitted only when eve
 - **Backup/PITR - confirmed Fail, risk explicitly accepted.** The founder checked the Supabase dashboard 2026-09-19: the project is on the Free plan, which has zero scheduled backups and no PITR. This remains a real, current, material risk to the production database - accepting the risk does not fix the technical gap, it is a governance decision to proceed anyway. Full written risk-acceptance statement recorded 2026-09-20 in `external-manual-signoff-record.md`, per explicit founder instruction.
 - **Leaked-password protection - confirmed Fail, risk explicitly accepted.** Confirmed 2026-09-20: this Supabase Auth setting is gated behind the Pro plan and unreachable at any Free-tier dashboard location - candidates can currently set a password already known to be compromised. Resolved by the same Pro-plan upgrade as the backup/PITR gap. Full written risk-acceptance statement recorded 2026-09-20 in `external-manual-signoff-record.md`, per explicit founder instruction.
 
-**Decision: GO WITH LIMITATIONS.** Every other mandatory gate passes with real evidence, and the one remaining Fail has been knowingly, explicitly accepted in writing by the release owner rather than left as an oversight - which is exactly the standard the assurance pack itself allows (§1: *"GO WITH LIMITATIONS: Only non-safety, non-security, non-data-integrity limitations remain"* - note this specific limitation **is** data-integrity-adjacent, so this is flagged prominently rather than downplayed; it is accepted knowingly, not minimized).
+**Decision: GO WITH LIMITATIONS.** Every other mandatory gate passes with real evidence, and the two remaining Fails (Supabase backup/PITR and leaked-password protection - both Free-tier plan limitations, both resolved together by the same Pro-plan upgrade) have been knowingly, explicitly accepted in writing by the release owner rather than left as an oversight - which is exactly the standard the assurance pack itself allows (§1: *"GO WITH LIMITATIONS: Only non-safety, non-security, non-data-integrity limitations remain"* - note these limitations **are** data-integrity/security-adjacent, so this is flagged prominently rather than downplayed; both are accepted knowingly, not minimized).
 Everything else now passes, including three items closed this session
 with the founder's direct involvement: **Accessibility** (automated axe
 on all 11 surfaces + a real live keyboard/focus pass), **Monitoring/
@@ -76,8 +87,8 @@ real bug this surfaced along the way). See
 | Field | Entry |
 |---|---|
 | Decision | **GO WITH LIMITATIONS** |
-| Exact release SHA | `88b8eb4453062315d2897445fbf5a855f4f25071` |
-| Deployment identity | `dpl_7wkKjt62gaJALhZMCedaXzSMUmog` (Vercel, production, `READY`) |
+| Exact release SHA (currently deployed, updated 2026-09-20) | `c791e7f2aacd246d8768ab239f76b1edf43fd564` (originally filled against `88b8eb4453062315d2897445fbf5a855f4f25071` - see the superseded-note at the top of this document) |
+| Deployment identity | `dpl_GWJbTExcaRD1TpFHb7HDGrMJwvKb` (Vercel, production, `READY`, live-domain alias explicitly verified after the deploy workflow's own success report proved insufficient on its own) |
 | Decision rationale | Nine of ten critical-path cases have deployed live evidence (E2E-06 closed 2026-09-20 with a genuine two-real-account test); E2E-09 passes on unit evidence only, by deliberate choice. Engineering compilation, unit, security, build, deployment and smoke gates pass, including real defects found and fixed during this release cycle (a HIGH billing bug, a profile-edit race condition, and a stale production-alias deployment bug). Accessibility (automated + live keyboard pass), rollback rehearsal, named ownership, and privacy/beta-terms/support confirmation are all now closed. The remaining blockers are confirmed zero Supabase backup coverage and unavailable leaked-password protection - both Free-tier plan limitations, both resolved by the same Pro-plan upgrade. |
 | Approved limitations | Backup/PITR - confirmed zero backup coverage (Supabase Free plan). Leaked-password protection - confirmed unavailable (Supabase Free plan). **Both explicitly accepted in writing** rather than resolved by upgrading; see `external-manual-signoff-record.md` for the full risk-acceptance statements. Everything else (accessibility, rollback ownership/rehearsal, privacy/beta-terms/support-channel readiness, cross-user isolation) is fully resolved with real evidence, not accepted as a limitation. |
 | Release owner name | DataByRajesh (founder) |

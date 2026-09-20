@@ -66,11 +66,13 @@ For categories not already covered by the P0/P1/P2 tables above:
 
 ## Bottom line
 
-Applying this exact 24-category framework and its own P0 decision rule
-produces the same answer as every other document in this evidence chain:
-**NO-GO for a new unqualified production release; the currently deployed
-private beta (artefact `88b8eb44`, redeployed docs-only as `43768ec2`)
-remains healthy and safe to keep serving its current invited users.**
+**Superseded by the final 2026-09-20 state below - kept as history to
+show how the picture evolved across the day rather than rewritten in
+place.** Applying this exact 24-category framework and its own P0
+decision rule initially produced: **NO-GO for a new unqualified
+production release; the currently deployed private beta (artefact
+`88b8eb44`, redeployed docs-only as `43768ec2`) remains healthy and safe
+to keep serving its current invited users.**
 
 **Update (same day, later pass):** closed several P1/other gaps that were
 safely closable without real user data or new production risk -
@@ -86,11 +88,30 @@ skipped by choice - see that row for detail. Declined to force Monitoring
 closed by re-enabling a debug endpoint this session had just hardened
 shut, since that would trade a real security improvement for a checkbox.
 
-The remaining gaps are concentrated in exactly the places already
-identified: database recovery verification, rollback rehearsal,
-privacy/founder sign-off, and the depth of two tests (cross-user isolation
-and AI provider fallback are verified structurally/at the unit level
-rather than via a deployed live two-account or live-failure test - one
-blocked by tooling, one by deliberate cost avoidance). None of this
-framework's categories surfaces a *new* gap beyond what
-`production-release-dossier-v1.0.1-2026-09-19.md` already tracks.
+**Final state, 2026-09-20 (evening) - every gap named above is now
+closed.** The `SUPABASE_SERVICE_ROLE_KEY` blocker was resolved and
+cross-user isolation closed with a genuine two-real-account live test
+(see the Authorisation/Cross-user isolation rows above). Database
+recovery and rollback rehearsal are both closed - recovery via a
+signed, written risk acceptance (the technical gap is real and
+unresolved; the *governance* decision to proceed anyway is closed), and
+rollback via an actual live rehearsal, twice now (a genuine deployment
+issue surfaced and was fixed both times). Privacy/founder sign-off is
+closed. GDPR account-export completeness, initially marked closed on
+thin evidence, was re-audited by querying the live database directly and
+found to have 10 real missing tables plus a live account-deletion
+failure bug - both fixed and re-verified; see the Security and privacy
+row and `quality-assurance.md`'s 2026-09-20 entries. A parallel,
+extensive logic-level audit (tracing what each field/label promises
+against what the code does) found and fixed 11 further real bugs across
+the mobility engine, country-fit scoring, and interview pipeline - none
+of which this 24-category framework's category-by-category lens
+surfaced on its own, since they were interaction/logic bugs within
+categories already marked Pass, not missing categories. **Current
+decision, matching every other document in this evidence chain: GO WITH
+LIMITATIONS - two disclosed, written risk acceptances (backup/PITR,
+leaked-password protection, both Supabase Free-tier plan limitations
+resolved by the same upgrade), everything else a genuine Pass with live
+evidence.** See `release-summary-v1.0.1-2026-09-20.md` for the full
+narrative and `release-evidence-index.md` for the current artefact SHA
+and deployment record.

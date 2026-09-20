@@ -7,6 +7,13 @@ this file whenever a new release cycle starts or a canonical evidence
 document changes — this page, not any individual report, is the entry
 point for "what is the current release status."
 
+**New to this release, or just want the story instead of a table?** Start
+with [`release-summary-v1.0.1-2026-09-20.md`](./release-summary-v1.0.1-2026-09-20.md)
+- a plain-English narrative of everything from 2026-09-19 through the
+current deploy, written for a human to read once instead of cross-referencing
+eight documents. This page stays the authoritative technical index; that one
+is the readable front door.
+
 ## ⚠ Active, accepted risk: zero database backup coverage
 
 Confirmed 2026-09-19 by the founder checking the Supabase dashboard directly: project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which has no scheduled backups and no point-in-time recovery. This is not a documentation gap - it is a live, current fact about production. If the database is lost or corrupted right now, **there is no way to restore it.**
