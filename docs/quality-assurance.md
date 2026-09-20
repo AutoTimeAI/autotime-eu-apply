@@ -4039,7 +4039,18 @@ traffic hits them. Full `pnpm test:unit` clean afterward (schema-only
 change, no application code touched).
 
 Deliberately left as real, disclosed decisions rather than executed:
-ESLint bootstrap (scope/strictness call), the 53 RLS-enabled-no-policy
-tables (needs per-feature policy design, not a blind blanket fix), and
-leaked-password-protection (dashboard-only toggle, no code/migration
-path exists for it).
+ESLint bootstrap (scope/strictness call) and the 53 RLS-enabled-no-policy
+tables (needs per-feature policy design, not a blind blanket fix).
+
+**Correction, same day**: leaked-password-protection was initially
+described here as "just a dashboard toggle." The founder confirmed this
+is incorrect - **this setting is gated behind Supabase's Pro plan and is
+not available at all on the Free tier this project currently runs on**,
+regardless of where you look in the dashboard. This is the same category
+of gap as the already-documented backup/PITR limitation
+(`release-evidence-index.md`'s risk callout) - a real, current security
+gate this project cannot close without a paid plan upgrade, not
+something fixable by finding the right menu. Recording this explicitly
+so it isn't mistaken for an actionable toggle in any future pass: **compromised-password
+checking (HaveIBeenPwned) is unavailable on Free-tier Supabase, full
+stop, until the project is upgraded to Pro or higher.**

@@ -13,6 +13,12 @@ Confirmed 2026-09-19 by the founder checking the Supabase dashboard directly: pr
 
 **2026-09-20: the release owner explicitly instructed this risk be accepted in writing** rather than upgrading the plan at this time. Full risk-acceptance statement in `external-manual-signoff-record.md`. The technical fact hasn't changed - this callout stays here, not because it's still an open question, but because an accepted risk this close to data-integrity should stay visible, not disappear from view once "resolved" on paper. Revisit before scaling past the current small invited cohort, and treat as non-negotiable before any public launch.
 
+## ⚠ Active, accepted risk: no leaked-password protection (Free-tier gate, not a toggle)
+
+Confirmed 2026-09-20 by the founder: Supabase's leaked-password protection (checks new/changed passwords against HaveIBeenPwned before accepting them) is **gated behind the Pro plan and unavailable at any Free-tier dashboard location** - not a setting that was simply hard to find. This project runs on the Free plan (same plan as the backup/PITR gap above). A candidate can currently set a password already known to be compromised, with no server-side check preventing it.
+
+Same category as the backup/PITR risk: a real, current, plan-tier-gated gap, not a documentation or configuration miss. No written risk-acceptance has been recorded for this one yet - flagging here so it doesn't quietly stay unaddressed. Revisit alongside the backup/PITR decision before scaling past the current small invited cohort.
+
 ## Current release cycle: Private Beta v1.0.1
 
 Start with [`production-release-dossier-v1.0.1-2026-09-19.md`](./production-release-dossier-v1.0.1-2026-09-19.md).
