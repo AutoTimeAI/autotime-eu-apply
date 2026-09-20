@@ -3756,3 +3756,51 @@ path, not a newer/less-exercised module. Found by the same technique:
 not testing more countries, but reading the actual signal list and
 asking "could any of these short strings collide with something else
 entirely."
+
+## 2026-09-20 (continued): swept the rest of country-rules.ts's locationSignals for the same collision class
+
+Continued the sweep across all 6 country rules' `locationSignals` lists
+rather than stopping at the two already-fixed cases, since several other
+entries are city names that happen to also be real US city names.
+
+**Two more real collisions found and fixed**: Dublin, California (a real
+Bay Area city) scored 84/"strong" against the Ireland rule via the
+"dublin" signal; Paris, Texas scored 84/"strong" against the France rule
+via "paris"; Manchester, New Hampshire scored 84/"strong" against the UK
+rule via "manchester" - all reproduced live. Word boundaries alone don't
+help here (these are genuine, unrelated whole-word city names), so added
+a second guard: `hasCityNameOnlyConflict` checks the job's own structured
+`location` field (deliberately not the free-text description, which can
+legitimately mention "USA" for an unrelated reason, e.g. scheduled travel)
+for an explicit "usa"/"united states" indicator, and suppresses
+`locationSignals` matches unless the rule's own full country name is also
+explicitly present - an explicit country name always wins over a
+suppressed city-name-only match.
+
+Verified thoroughly before trusting it: re-ran both original bug cases
+(still correctly weak), the three original legitimate controls (still
+correctly strong), plus two new edge cases specifically probing for
+over-correction - a real London vacancy whose *description* mentions
+occasional USA travel (must stay strong, and does, since the guard only
+inspects `job.location`) and a Dublin/Ireland vacancy with the country
+name explicitly stated (must stay strong even with the new guard active).
+All 7 checks passed. Also incidentally verified the guard suppresses two
+more speculative collisions for free - a person named "Lyon" and "cork
+flooring" mentioned in an Austin, Texas vacancy's description no longer
+false-match France/Ireland, because the explicit "USA" in that vacancy's
+location field already suppresses every city-based signal for those
+rules.
+
+**One residual gap found, deliberately not fixed**: French-language text
+using "eu" as an ordinary word (the past participle of "avoir") still
+false-matches the generic "European Union" fallback rule, since there's
+no clean opposing-country signal to hang an exclusion on the way "usa"
+worked for the other three. Lower severity than the fixed cases - it
+doesn't assert a specific wrong country's visa rules apply, just weakly
+suggests "possibly EU-relevant" for the already-vague fallback bucket -
+so left as a documented, known residual risk rather than forcing an
+under-tested language-detection fix for a comparatively low-harm case.
+
+Full `pnpm test:unit` re-run clean, zero regressions. This brings the
+country/location fit-scoring fixes to 5 real false-positive collisions
+found and fixed today, all in the tool's oldest, most-used scoring path.

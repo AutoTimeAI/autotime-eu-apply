@@ -624,6 +624,26 @@ function matchesLocationSignal(text: string, signal: string): boolean {
   return new RegExp(pattern, "i").test(text)
 }
 
+// Several of country-rules.ts's city signals share a name with a real,
+// unrelated US city - Dublin, California; Paris, Texas; Manchester, New
+// Hampshire (all found live: each scored 84/"strong" for the wrong
+// country purely off the city name). Word boundaries can't fix a genuine
+// whole-word city-name collision, so this checks the job's own structured
+// `location` field (not the free-text description, which can legitimately
+// mention "USA" for an unrelated reason, e.g. "travel to our USA office")
+// for an explicit US indicator, and only lets a bare city-name signal
+// stand if the rule's own country name is also stated - a location openly
+// naming a different country overrides a city-name-only match, but never
+// overrides the country's own name actually being present.
+const conflictingCountryPattern = /\b(usa|united states)\b/i
+function hasCityNameOnlyConflict(job: JobAnalysisDraft, rule: CountryRule): boolean {
+  const locationField = (job.location ?? "").toLowerCase()
+  return (
+    conflictingCountryPattern.test(locationField) &&
+    !matchesLocationSignal(locationField, rule.name.toLowerCase())
+  )
+}
+
 function getCountryLocationFit(
   profile: CandidateProfile,
   job: JobAnalysisDraft,
@@ -633,10 +653,12 @@ function getCountryLocationFit(
   const targetCountries = profile.targetCountries.toLowerCase()
   const targetCountry = context.targetCountry.toLowerCase()
   const jobLocation = [job.location, job.jobDescription].join(" ").toLowerCase()
+  const cityNameOnlyConflict = hasCityNameOnlyConflict(job, rule)
   const targetsCountry =
     matchesLocationSignal(targetCountries, targetCountry) ||
-    matchesLocationSignal(jobLocation, targetCountry) ||
-    rule.locationSignals.some((signal) => matchesLocationSignal(jobLocation, signal))
+    (!cityNameOnlyConflict && matchesLocationSignal(jobLocation, targetCountry)) ||
+    (!cityNameOnlyConflict &&
+      rule.locationSignals.some((signal) => matchesLocationSignal(jobLocation, signal)))
   const languageRisk =
     rule.languageSignals.length > 0 &&
     includesAny(jobLocation, rule.languageSignals) &&
