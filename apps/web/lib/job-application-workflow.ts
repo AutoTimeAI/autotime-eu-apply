@@ -390,6 +390,19 @@ function needsMobilityCheck(
   profile: MobilityProfile,
   targetCountry: string | null,
 ): boolean {
+  // A permission the candidate themselves recorded as already expired
+  // can't be relied on to justify skipping the check, regardless of which
+  // country the vacancy is in - `permissionExpiryDate` was captured by
+  // the mobility form but never actually read anywhere in this decision
+  // path until now. Found live: a UK-only permit expired ~2 years ago,
+  // applied to a same-country UK vacancy (which the country-match skip
+  // would otherwise correctly allow), produced a clean "Consider" with
+  // zero mention that the candidate's own recorded permission had lapsed.
+  if (
+    profile.permissionExpiryDate &&
+    new Date(profile.permissionExpiryDate) < new Date()
+  )
+    return true;
   if (
     profile.applicantPosition === "international-applicant" ||
     profile.applicantPosition === "sponsorship-required" ||

@@ -3577,3 +3577,45 @@ bugs found and fixed in the mobility/sponsorship decision logic, all from
 tracing what a field's own name/label promises against what the code
 actually does with it - none from testing additional edge-case
 countries.
+
+## 2026-09-20 (continued): a fifth bug - permissionExpiryDate captured but never checked
+
+Continued the audit onto the two remaining `MobilityProfileForm` fields
+not yet covered: `targetCountries` (multi-select) and
+`permissionExpiryDate`/`currentPermissionType` (free text/date).
+
+`targetCountries`: traced its full usage across both the legacy
+`CandidateProfile.targetCountries` (comma-separated string) and the newer
+`MobilityProfile.targetCountries` (structured array) - confirmed the
+comma-split path (`decision-adapter.ts`) is correctly trimmed downstream
+by `resolveAssessmentCountry`. No bug found.
+
+`currentPermissionType`: confirmed unused in any decision logic - but
+it's free text with no objectively checkable rule (unlike a date), so
+there's nothing for it to enforce. Reasonable as informational-only;
+not a bug.
+
+`permissionExpiryDate`: grep across the entire repo showed it is
+captured by the form and rendered back, but **read by nothing else at
+all** - not by `assessInternationalJob`, not by `needsMobilityCheck`,
+nowhere. Reproduced live: a candidate whose UK permission recorded as
+expired ~2 years ago (`permissionExpiryDate: "2024-11-01"`), applying to
+a same-country UK vacancy (which the country-match fix from earlier
+today correctly allows to skip), got a clean `"Consider"` with zero
+mention that their own recorded permission had lapsed. Unlike the
+country-mismatch bugs, this needed no interpretation of what a label
+means - it's a plain date-in-the-past check.
+
+**Fixed**: `needsMobilityCheck` now checks `permissionExpiryDate` first,
+before any other logic - if it's set and in the past, the check always
+runs regardless of country match or `applicantPosition`. Verified live
+both directions: the expired case now correctly surfaces "Mobility
+pathway verification"; a control case with the same profile but a valid
+future expiry date (2028) still correctly skips. Full `pnpm test:unit`
+re-run clean, zero regressions.
+
+This closes the `MobilityProfileForm` field-by-field audit: 5 real bugs
+found and fixed across 6 fields checked
+(`applicantPosition` x3 variants, `sponsorshipRequired`,
+`permissionExpiryDate`), 2 fields confirmed already safe
+(`targetCountries`, `currentPermissionType`).
