@@ -383,11 +383,14 @@ assert.ok(
   ),
 );
 
-// A locally work-authorised candidate needs no mobility check at all - the
-// new signal must never add noise for the majority of users it doesn't
-// apply to.
+// A candidate authorised to work in the SAME country as the vacancy needs
+// no mobility check - the signal must never add noise when it genuinely
+// doesn't apply. `job` is a Dublin/Ireland vacancy, so currentCountry is
+// set to match here (unlike `internationalApplicant`'s India, which
+// would be a genuine cross-border case - see the mismatch case below).
 const localCandidate = {
   ...internationalApplicant,
+  currentCountry: "Ireland",
   applicantPosition: "local-work-authorised",
   sponsorshipRequired: "no",
 };
@@ -400,6 +403,33 @@ assert.ok(
   ),
 );
 assert.deepEqual(localResult.decision, apply.decision);
+
+// "Local work-authorised" describes where the candidate is authorised -
+// it is not a blanket exemption from the mobility check for every job
+// they might apply to. Applying to a job in a different country is still
+// entirely valid; it just means that country's mobility question is
+// genuinely open, same as it would be for anyone else. Confirmed with
+// the product owner 2026-09-20 after this exact scenario (an
+// Ireland-authorised candidate applying to an unstated-authorisation
+// Germany vacancy) was found live to silently produce a clean "Consider"
+// with zero mobility flag - a real false-negative, not a false-positive
+// noise concern.
+const mismatchedCountryVacancy = strongVacancy.replace(
+  "Dublin, Ireland",
+  "Berlin, Germany",
+);
+const mismatchedCountryJob = extractJob({
+  description: mismatchedCountryVacancy,
+});
+const mismatchedCountryResult = analyseJob(mismatchedCountryJob, strongEvidence, {
+  mobilityProfile: localCandidate,
+});
+assert.ok(
+  mismatchedCountryResult.unknowns.includes(
+    "Mobility pathway verification against the governed sources",
+  ),
+  "an Ireland-authorised candidate applying to a Germany vacancy must not get a silent pass",
+);
 assert.match(
   component,
   /analyseJob\(job, evidence\.text, \{\s*careerLane: job\.lane,\s*sponsorshipRequired,\s*mobilityProfile,\s*\}\)/,

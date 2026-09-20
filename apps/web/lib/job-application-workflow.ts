@@ -410,23 +410,19 @@ function needsMobilityCheck(
   // per-target-country structure exists yet), so this only skips when the
   // vacancy is actually in that country - otherwise it still runs the
   // check rather than silently assuming coverage.
-  // NOTE: "local-work-authorised" was considered for the same
-  // country-scoped treatment as "existing-country-permission" below (its
-  // label - "Local work-authorised applicant" - reads the same way, and
-  // it produces an identical false-safe result live: an Ireland-authorised
-  // candidate applying to an unstated-authorisation Germany vacancy gets a
-  // clean "Consider" with zero mobility flag). NOT changed here, because
-  // `scripts/phase-3b-workflow.test.mjs` has a pre-existing, deliberately
-  // written test asserting the opposite as a requirement: "A locally
-  // work-authorised candidate needs no mobility check at all - the new
-  // signal must never add noise for the majority of users it doesn't
-  // apply to." That reads like an intentional product simplification
-  // (this bucket may be meant to opt a candidate out of mobility
-  // governance entirely, not to claim blanket geographic coverage), not
-  // an oversight - so unlike the two fixes above, this one needs a
-  // product decision, not a unilateral code change against a documented
-  // prior intent.
-  if (profile.applicantPosition === "existing-country-permission")
+  // "local-work-authorised" means the candidate is authorised in their
+  // current country specifically - it does not mean "never check mobility
+  // for this candidate no matter what job they apply to." Applying to a
+  // job in a different country is still entirely valid; it just means
+  // that country's mobility question is genuinely open and must be
+  // checked like anyone else's, not silently waved through. Confirmed
+  // with the product owner 2026-09-20 (see docs/quality-assurance.md) -
+  // gets the identical country-scoped treatment as
+  // "existing-country-permission" below.
+  if (
+    profile.applicantPosition === "existing-country-permission" ||
+    profile.applicantPosition === "local-work-authorised"
+  )
     return (
       !!targetCountry &&
       targetCountry.trim().toLowerCase() !==

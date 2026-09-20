@@ -3521,3 +3521,23 @@ unchanged for this value and documented the fork in a code comment,
 rather than unilaterally overriding a documented prior design decision on
 my own reading of a UI label. This needs a product answer, not a
 silent code change either way.
+
+**Resolved same day**: confirmed with the product owner - "local-work-
+authorised" means authorised in the candidate's current country
+specifically; applying to a job in a different country is still entirely
+valid, it just means that country's mobility question is genuinely open
+and must be checked like anyone else's. Applied the identical
+country-scoped fix as `existing-country-permission`. Also corrected the
+pre-existing test in `scripts/phase-3b-workflow.test.mjs` that had
+encoded the wrong assumption: split it into two cases - the original
+same-country scenario (now explicit: `currentCountry: "Ireland"` matching
+the Dublin vacancy, correctly still skips) and a new cross-country case
+(the same candidate applying to an otherwise-identical Germany vacancy,
+which now correctly surfaces "Mobility pathway verification against the
+governed sources" instead of a silent pass). Full `pnpm test:unit`
+re-run clean.
+
+This closes all three instances of the mobility-skip bug class found in
+this pass: `existing-country-permission`, `eu-eea-swiss-citizen`, and now
+`local-work-authorised` - all fixed, all verified live in both
+directions, zero regressions.
