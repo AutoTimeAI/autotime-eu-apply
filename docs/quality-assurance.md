@@ -3057,3 +3057,50 @@ dependency injection to live billing code that currently calls
 `createAdminClient()` directly - a larger, separate change with more
 regression surface than was proportionate to rush into the same pass as
 everything else today. Committed as `4436d838`, pushed.
+
+## 2026-09-20: real deployment bug found during beta-terms verification - stale production alias after the rollback rehearsal
+
+While live-verifying the new beta-terms acceptance feature (commit
+`dd122ca3`), the API response was missing the new `beta_terms_accepted_at`
+field even though the column existed in the database with the correct
+value. Initially misdiagnosed this as a Supabase PostgREST schema-cache
+issue and had the founder navigate the Supabase dashboard looking for a
+"reload schema cache" action - that was the wrong diagnosis and wasted
+their time; recorded here so the same mistake isn't repeated.
+
+**Real root cause**: the production domain alias (`autotime-eu-apply.vercel.app`)
+was still pointing at `dpl_2MNUvqNWHTqzdg1jf8UmQ1WPRVJv` (commit
+`43768ec2`, from *before* the beta-terms feature), not the newest
+deployment `dpl_TU4JzVKaoVyfGrT2bL4Eq3hmj7Xp` (commit `dd122ca3`) - even
+though the GitHub Actions workflow reported success and the new
+deployment showed `target: production` / `state: READY`. Confirmed via
+`list_deployment_aliases`: the new deployment only had the team-scoped
+subdomain alias, not the primary production domain.
+
+**Likely cause**: earlier the same session, a rollback rehearsal was run
+using Vercel's `request_rollback` API (rolling back one deployment, then
+forward again) as an explicit, approved exercise. That directly
+reassigns the domain alias outside the normal `vercel deploy --prod`
+flow. The next GitHub Actions deploy afterward built and marked its new
+deployment as production-target successfully, but did not re-claim the
+primary domain alias from wherever the manual rehearsal had left it -
+whether this is a genuine Vercel behavior gap or an ordering/timing
+quirk specific to mixing manual alias operations with the automated
+workflow is unconfirmed, but the practical lesson is clear:
+
+**After any manual rollback/alias operation, explicitly verify (not
+assume) that the *next* automated deploy actually reclaimed the primary
+production domain alias** - `list_deployment_aliases` on the latest
+deployment ID, checking for the bare `<project>.vercel.app` domain
+specifically, not just checking `state: READY` or the workflow's own
+green checkmark.
+
+**Fix**: `mcp__claude_ai_Vercel__assign_alias` to manually point
+`autotime-eu-apply.vercel.app` at the correct latest deployment. Verified
+immediately after: the API response now includes
+`beta_terms_accepted_at`, and the full live Playwright verification of
+the beta-terms checkbox flow passed cleanly (blocked without checkbox,
+succeeded with checkbox checked, real server-set timestamp recorded in
+the DB, and the checkbox correctly stopped showing on the next visit).
+Also re-ran `pnpm smoke:web` and spot-checked `/pricing`, `/login`,
+`/admin` to confirm the alias fix didn't disturb anything else.
