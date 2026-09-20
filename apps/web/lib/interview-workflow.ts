@@ -626,7 +626,22 @@ export function transitionInterview(
     getInterviewReadiness(interview).label !== "Ready for review"
   )
     throw new Error("Resolve preparation blockers before marking Ready.");
-  return { ...interview, status, updatedAt: new Date().toISOString() };
+  // `InterviewOutcome` has its own dedicated "cancelled" value, but nothing
+  // ever set it - recordInterviewOutcome only runs after status reaches
+  // "completed", so a direct scheduled/preparing/ready -> cancelled
+  // transition left outcome stuck at "awaiting" forever. No current UI
+  // consumer was misled by this (both display sites already check status
+  // before reading outcome), but it left a real, permanently-unreachable
+  // enum value and a stale field - closed here rather than left as debt.
+  return {
+    ...interview,
+    status,
+    outcome:
+      status === "cancelled" && interview.outcome === "awaiting"
+        ? "cancelled"
+        : interview.outcome,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 /** Marks final preparation review complete after readiness validation. */

@@ -3666,3 +3666,40 @@ this session because they directly handle money). That's useful
 information in itself: it suggests future scrutiny passes get better
 returns aimed at organically-grown decision logic than at
 already-hardened financial/cost-control code.
+
+## 2026-09-20 (continued): interview pipeline - one real data-model gap found and closed, no live-visible bug
+
+Third area checked, per the session's own list. `InterviewOutcome` and
+`InterviewStatus` are two independent enums, each with their own
+`"cancelled"` value. Traced `recordInterviewOutcome` (requires
+`status === "completed"` before it will set an outcome) against
+`transitionInterview` (the generic status-transition function) and found
+`outcome: "cancelled"` was structurally unreachable: a direct
+scheduled/preparing/ready -> cancelled transition never touched
+`outcome` at all, leaving it stuck at its default `"awaiting"` forever.
+
+Checked both live UI consumers of `outcome === "awaiting"`
+(`HomeExperience.tsx`, `InterviewsWorkspace.tsx`) before treating this as
+a bug, per the lesson from the mobility-engine work - both already guard
+on `status` before ever reading `outcome`, so no current display is
+actually misled by the stale value. This is real data-model debt (a
+type-implied contract - the enum value exists, implying it should be
+reachable - that the code silently never fulfils), not a live
+false-positive/false-negative like the five mobility fixes.
+
+No test defended the current behaviour either way, so this wasn't a
+forked-intent situation like `local-work-authorised` - fixed directly:
+`transitionInterview` now sets `outcome: "cancelled"` when transitioning
+status to `"cancelled"` while outcome is still at its `"awaiting"`
+default. Verified live (`{status:"cancelled"}` now correctly produces
+`{outcome:"cancelled"}`) and confirmed `"no_response"` (the other
+less-common outcome value) is properly reachable through the existing UI
+recording flow, ruling out a similar gap there. Full `pnpm test:unit`
+re-run clean, zero regressions.
+
+This closes the three-area scrutiny pass requested this session: mobility
+engine (5 bugs, fixed), Stripe billing + AI-call gating (0 bugs, clean),
+interview pipeline (1 data-model gap, fixed). 6 real fixes total from
+this method today, none from testing more input combinations against
+already-correct logic - all from tracing what a field, label, or enum
+value promises against what the code actually does with it.
