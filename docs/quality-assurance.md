@@ -4307,3 +4307,62 @@ against the source markdown.
 Committed as `905c047b` and pushed to `origin/main`, alongside the
 generator script (so the deliverable can be regenerated on demand
 rather than being a one-off artifact that goes stale).
+
+## 2026-09-20 (continued): audited Codex's LandWell validation-programme work, applied the missing seed migration
+
+A concurrent Codex session had built out the mobility-decision-recording
+flag split, the real-vacancy evaluation harness, and the blind-review
+export pipeline while this session was working on the release
+documentation above. Rather than re-implementing a plan already
+audited earlier today (`wondrous-nibbling-pizza` plan-mode audit), this
+session verified Codex's actual work directly against the live system
+before trusting it as done.
+
+**Confirmed genuinely solid**: the `MOBILITY_GOVERNANCE_ENFORCEMENT_ENABLED`
+/ `MOBILITY_DECISION_RECORDING_ENABLED` flag split
+(`decision-adapter.ts`, `mobility-governance-repository.ts`,
+`app/api/ai/content/route.ts`) is committed, pushed, and covered by 28
+passing tests, including one asserting byte-identical decisions with
+recording on vs off - exactly the regression check this session's own
+earlier audit had called for. The `append_atomic_mobility_decision_receipt`
+RPC is live in production with the exact signature the TypeScript caller
+expects, `security definer` with a locked `search_path`, and grants
+revoked from `public`/`anon`/`authenticated` (only `service_role`).
+The real-vacancy case corpus (`scripts/real-vacancy-evaluation-cases.mjs`)
+uses real, verbatim job-board postings with real source URLs; one
+surprising detail ("Fin, part of Salesforce") was independently verified
+via web search rather than assumed - Salesforce closed that acquisition
+2026-09-10, before the posting was captured on 2026-09-17, so the
+corpus is factually accurate, not embellished.
+
+**Real gap found and closed**: queried `mobility_rule_bundle_versions`
+directly in production and found zero rows for `bundle_id =
+'pilot-observation'` - the seed migration
+(`supabase/migrations/20260916120000_seed_pilot_observation_rule_bundle.sql`)
+existed in the repo but had never actually been run against the live
+database, despite the schema tables themselves being present. This
+matches a gap Codex's own `landwell-mission-plan-verified.md` had
+already self-flagged as action item #2, confirming it was still open
+rather than stale. Net effect before the fix: setting
+`MOBILITY_DECISION_RECORDING_ENABLED=true` today would have silently
+recorded nothing (a designed fail-safe no-op, not a crash, but not the
+intended behaviour either).
+
+Applied the seed migration's SQL directly via the Supabase SQL editor
+(founder-run, since this session's auto-mode classifier blocks direct
+production DB writes as a "Production Deploy" action). Verified after
+the fact: `mobility_rule_bundle_versions` now has exactly one
+`pilot-observation`/version 1/`state=draft` row; confirmed it is
+absent from `mobility_rule_bundle_current` (never activated) and that
+`mobility_country_readiness_snapshots` is still empty (0 rows) - both
+confirming the enforcement/cross-check path remains completely
+unaffected, only the recording no-op is now unblocked. Re-ran
+`scripts/decision-adapter-recording-flag.test.mjs` locally against
+this state: 3/3 still pass.
+
+**Still open, not part of this fix**: `MOBILITY_DECISION_RECORDING_ENABLED`
+itself is still `false` in `.env.production.example` and in the actual
+production environment - flipping it on to start real capture is a
+founder decision, not something this session should do unilaterally,
+and the 8-12 slice-selection interviews the validation plan gates on
+have not happened yet.
