@@ -212,7 +212,13 @@ everything objectively checkable" pass:
 - `release-evidence-index.md` - the canonical current-state pointer
   (artefact SHA, deployment ID, decision, links to every other document).
 - `testing-categories-coverage-v1.0.1-2026-09-19.md` - the 24-category
-  testing framework, category by category.
+  testing framework, category by category, as prose.
+- `testing-categories-v1.0.1-2026-09-20.csv` - the same 24-category
+  framework as structured data (priority, status, evidence type, bug
+  count, risk-accepted flag, verification date, owner, reference doc per
+  row) - import into a spreadsheet or tracker rather than reading prose,
+  useful for a pitch deck, an investor data room, or a recurring
+  release-readiness dashboard.
 - `external-manual-signoff-record.md` - the two formal written
   risk-acceptance statements, in full.
 - `docs/quality-assurance.md` - the exhaustive, dated, evidence-linked

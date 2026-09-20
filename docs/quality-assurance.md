@@ -4238,3 +4238,29 @@ confirming the route itself is live and the auth gate is active.
 Homepage, `/pricing`, and `/privacy` all 200. This closes today's
 session with real, live, post-deployment evidence rather than stopping
 at "the deploy succeeded."
+
+## 2026-09-20 (continued): structured CSV export of the 24-category testing framework
+
+Added `docs/reports/testing-categories-v1.0.1-2026-09-20.csv` - the same
+24-category testing framework already documented in prose
+(`testing-categories-coverage-v1.0.1-2026-09-19.md`), re-expressed as
+structured, tabular data: one row per category with Priority (P0/P1/P2),
+Status, Evidence Type, Bugs Found, Risk Accepted (Y/N), Last Verified
+date, Owner, a Key Evidence/Notes summary, and the source reference doc.
+Intended use: importable into a spreadsheet, an investor data room, or a
+recurring release-readiness tracker, rather than requiring someone to
+read prose to extract the same facts.
+
+Validated the CSV actually parses correctly before treating it as done -
+wrote a small quote-aware parser and ran it against the file rather than
+assuming the hand-authored commas were all correctly escaped. Found and
+fixed exactly the class of bug this kind of check exists to catch: two
+rows had an unescaped comma inside an unquoted parenthetical ("(production,
+partial)", "(Vitest + React Testing Library)" adjacent to a comma-containing
+field) that would have silently shifted every column after it in a naive
+CSV reader. Re-validated after fixing: 26 data rows, 10 columns each, zero
+parse errors. Row counts by priority (9 P0, 5 P1, 5 P2, 7 cross-reference)
+match the source prose document's own structure.
+
+Linked from `release-summary-v1.0.1-2026-09-20.md`'s reference section
+for discoverability.
