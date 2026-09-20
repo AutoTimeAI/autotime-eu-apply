@@ -158,8 +158,17 @@ export function assessInternationalJob(
   const input = internationalAssessmentInputSchema.parse(value);
   const pack = getInternationalCountryPack(input.country);
   const jobText = `${input.jobText} ${input.roleDuties}`.trim();
+  // "unsure" must never be treated more permissively than a confirmed
+  // "yes" - a candidate who doesn't know whether they'll need sponsorship
+  // is exactly who most needs an explicit sponsorship-rejection surfaced,
+  // not less. Previously only "yes" counted, so "unsure" silently got the
+  // same (non-)treatment as a confident "no": found live, the identical
+  // vacancy explicitly stating "unable to offer visa sponsorship" produced
+  // "Skip" with a clear criticalRisk for sponsorshipRequired: "yes", but
+  // "Consider" with zero mention of sponsorship at all for "unsure".
   const needsSponsorship =
     input.mobilityProfile.sponsorshipRequired === "yes" ||
+    input.mobilityProfile.sponsorshipRequired === "unsure" ||
     input.mobilityProfile.applicantPosition === "sponsorship-required";
   const rejectsSponsorship = vacancyRejectsSponsorship(jobText);
   const supportsSponsorship = includesAny(jobText, [

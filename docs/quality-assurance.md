@@ -3541,3 +3541,39 @@ This closes all three instances of the mobility-skip bug class found in
 this pass: `existing-country-permission`, `eu-eea-swiss-citizen`, and now
 `local-work-authorised` - all fixed, all verified live in both
 directions, zero regressions.
+
+## 2026-09-20 (continued): a fourth, related bug - "unsure" sponsorship treated more permissively than a confirmed "no"
+
+Continued the audit onto `sponsorshipRequired` (the tri-state "yes" /
+"no" / "unsure" field, distinct from `applicantPosition`). Inspection of
+`assessInternationalJob`'s `needsSponsorship` computation
+(`packages/shared/src/international/assessment.ts`) showed it only
+counted `sponsorshipRequired === "yes"` - both `"no"` and `"unsure"` were
+given identical (non-)treatment.
+
+Reproduced live: the exact same vacancy, explicitly stating "unable to
+offer visa sponsorship," produced completely different results depending
+only on this one field:
+- `sponsorshipRequired: "yes"` -> `decision: "Skip"`,
+  `criticalRisk: "The vacancy states that sponsorship or new work
+  permission is not available."` (correct)
+- `sponsorshipRequired: "unsure"` -> `decision: "Consider"`,
+  `criticalRisk: "Salary"` - **zero mention of sponsorship at all**
+
+This is backwards: a candidate who doesn't know whether they'll need
+sponsorship is exactly the population that most needs an explicit
+rejection surfaced, not less protection than someone who confidently
+said "yes." No pre-existing test defended this as intentional (checked
+first, given the `local-work-authorised` lesson) - this was a clean
+oversight, not a documented design choice.
+
+**Fixed**: `needsSponsorship` now treats `"unsure"` identically to
+`"yes"`. Verified live - the unsure case now produces the identical
+`"Skip"` / explicit criticalRisk result as the "yes" case. Full
+`pnpm test:unit` re-run clean, zero regressions.
+
+This brings the total for this scrutiny pass to 4 real, live-reproduced
+bugs found and fixed in the mobility/sponsorship decision logic, all from
+tracing what a field's own name/label promises against what the code
+actually does with it - none from testing additional edge-case
+countries.
