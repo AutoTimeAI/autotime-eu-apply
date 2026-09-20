@@ -3481,3 +3481,43 @@ This closes the UI-copy-to-code audit of every `workAuthorisationCategory`
 option: 2 of 5 had the identical silent-skip bug class (now fixed), 1 of
 5 has a real but non-safety precision gap (logged, not fixed), 2 of 5
 were already structurally safe.
+
+## 2026-09-20 (continued): a third candidate instance, deliberately NOT fixed - needs a product decision, not code
+
+Continued the same audit into `MobilityProfileForm.tsx` (the canonical,
+more precise mobility-profile editor, distinct from onboarding's looser
+category picker) via its `positionLabels` map
+(`apps/web/components/international/model.ts`). Its label for
+`existing-country-permission` - "Existing **country-specific** work
+permission" - is even more explicit than onboarding's wording, confirming
+the two fixes above were correct.
+
+That map also revealed a 6th `applicantPosition` value not exposed in
+onboarding at all: `"local-work-authorised"` ("Local work-authorised
+applicant"). It had no branch in `needsMobilityCheck` at all, falling
+through to the unconditional `return false`. Reproduced the identical
+failure shape live: an Ireland-authorised candidate applying to an
+unstated-authorisation Germany vacancy got a clean `"Consider"` with zero
+mobility flag - same as the two confirmed bugs.
+
+**Implemented the same fix, then reverted it** after `pnpm test:unit`
+caught something the two earlier fixes didn't run into:
+`scripts/phase-3b-workflow.test.mjs` has a pre-existing, deliberately
+written test asserting the *opposite* as a requirement - "A locally
+work-authorised candidate needs no mobility check at all - the new
+signal must never add noise for the majority of users it doesn't apply
+to" - using a fixture that is itself cross-country (India-based candidate,
+Dublin vacancy), so the test author clearly intended this as a genuine
+blanket skip, not an oversight.
+
+This makes `"local-work-authorised"` different in kind from the two fixed
+bugs: those had no test defending the buggy behaviour as intentional,
+this one does. Two readings are both plausible - the label could mean
+"authorised in my current country" (scoped, like
+`existing-country-permission`) or it could be a deliberate product
+simplification meaning "this candidate doesn't need mobility governance
+at all, regardless of where they apply." Left `needsMobilityCheck`
+unchanged for this value and documented the fork in a code comment,
+rather than unilaterally overriding a documented prior design decision on
+my own reading of a UI label. This needs a product answer, not a
+silent code change either way.
