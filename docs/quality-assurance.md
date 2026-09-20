@@ -3619,3 +3619,50 @@ found and fixed across 6 fields checked
 (`applicantPosition` x3 variants, `sponsorshipRequired`,
 `permissionExpiryDate`), 2 fields confirmed already safe
 (`targetCountries`, `currentPermissionType`).
+
+## 2026-09-20 (continued): same method applied to Stripe billing and AI-call gating - clean result, no bugs found
+
+Moved the same scrutiny method to two different systems, per the
+session's own suggested next targets. Recording the clean result
+honestly, since a verified-clean area is real evidence for the release
+record too, not just a place that happened not to yield a finding.
+
+**Stripe billing state transitions**: checked `mapStripeStatus`'s
+"canceled"->"cancelled" rename for any stale-spelling consumer (none -
+single consistent spelling throughout), `update_subscription_status_from_stripe`'s
+null-handling on `p_plan`/`p_current_period_end` (correctly uses
+`coalesce`, so a status-only update never wipes existing plan/period-end
+data), the checkout.session.completed routing to `grantCreditPack`
+(correctly no-ops via `validateCreditPackMetadata` returning null for a
+non-credit-pack session), and `markSubscriptionCancelled`'s use of the
+same ordering-guarded RPC as invoice-failure handling. No bug found -
+this area was already heavily hardened earlier this session (the Stripe
+billing audit, webhook idempotency work, RLS/RPC security sweep), and it
+shows.
+
+**AI content-generation gating** (`reserveAiCall`/`releaseAiCall`/
+`finalizeAiCall` in `feature-gate.ts`): checked all 13 routes that call
+`reserveAiCall` for reserve/release symmetry (all correct, including
+`content/route.ts` which passes the three functions by reference into
+`prepare-application-kit.ts` rather than calling them inline - initially
+looked like a gap via a naive grep count, traced through and confirmed
+correct). Found the `providerCompleted` flag pattern in
+`prepare-application-kit.ts` specifically designed to distinguish "the
+paid provider call happened" (never refund, even if a later step fails)
+from "it never happened" (always refund) - exactly the edge case this
+audit was probing for, already handled deliberately.
+`finalizeAiCall` is explicitly documented as best-effort/non-throwing:
+a tracking-write failure keeps the reservation's allowance consumed
+(fail-safe direction - never lets a candidate get a free call by
+exploiting a finalize failure) rather than silently losing the
+usage record. No bug found.
+
+**Takeaway for the release record**: this scrutiny method's yield isn't
+uniform across the codebase - it found 5 real bugs in the mobility engine
+(built and extended across many onboarding iterations without a single
+unifying design review) and zero in Stripe billing and AI-call gating
+(both already subject to deliberate, careful design attention earlier
+this session because they directly handle money). That's useful
+information in itself: it suggests future scrutiny passes get better
+returns aimed at organically-grown decision logic than at
+already-hardened financial/cost-control code.
