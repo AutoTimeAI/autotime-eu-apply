@@ -4225,3 +4225,16 @@ equivalent) is now a mandatory, non-skippable step after every
 deployment through this workflow, not a nice-to-have - added to
 `release-evidence-index.md`'s current-cycle table as the explicit
 verification record for this deploy.
+
+**Post-deploy live functional checks** (against the newly-aliased
+production domain, not just the deployment metadata): `/api/og` (today's
+Edge-runtime removal fix) returns a real 200 with a genuine 1200x630
+PNG (`image/png`, 102KB) from Vercel's actual Node runtime, not just
+local `next start` - confirms the fix works in the real production
+environment, not only in a local reproduction. `/api/account/export`
+(today's GDPR fix) correctly returns 401 with a clean, structured
+diagnostic body for an unauthenticated request - no raw error leak,
+confirming the route itself is live and the auth gate is active.
+Homepage, `/pricing`, and `/privacy` all 200. This closes today's
+session with real, live, post-deployment evidence rather than stopping
+at "the deploy succeeded."
