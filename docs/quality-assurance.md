@@ -4366,3 +4366,50 @@ production environment - flipping it on to start real capture is a
 founder decision, not something this session should do unilaterally,
 and the 8-12 slice-selection interviews the validation plan gates on
 have not happened yet.
+
+## 2026-09-20 (continued): release-readiness re-verification pass
+
+Re-checked release readiness from scratch rather than assuming the
+morning's dossier was still accurate, since several commits (the .docx
+deliverable, the QA log entries, the seed migration) landed since then.
+
+- **No app-code drift**: `git diff --stat` between the deployed
+  production SHA (`c791e7f2`) and current `HEAD` (`250c58e3`) across
+  `apps/`, `packages/`, and `supabase/migrations/` is empty - everything
+  since the last deploy has been documentation, scripts, or a direct DB
+  seed, not application code. The release SHA claim in
+  `release-summary-v1.0.1-2026-09-20.md` is still accurate; no redeploy
+  needed.
+- **Live verification, not just deploy metadata**: homepage (200),
+  `/login` (200), unauthenticated `/dashboard` (307-redirect) all
+  checked directly against the live production URL. Separately
+  confirmed via `get_deployment`-by-hostname that the production alias
+  still resolves to the correct deployment (`dpl_GWJbTExcaRD1TpFHb7HDGrMJwvKb`,
+  commit `c791e7f2`) - the stale-alias bug that recurred twice earlier
+  today did not recur here.
+- **Fresh advisor sweep**: the only WARN-level security finding is the
+  already-known, already-accepted leaked-password-protection gap -
+  unchanged. One new INFO-level finding not previously called out
+  anywhere in the release docs: 53 tables have RLS enabled with zero
+  policies. Investigated rather than dismissed - spot-checked
+  `stripe_webhook_events`, `beta_access`, and the rest against the
+  codebase and confirmed every one of them is only ever read/written
+  through a server route using the service-role/admin client (which
+  bypasses RLS entirely), never through a regular `anon`/`authenticated`
+  client. RLS-enabled-with-no-policy is Postgres's secure-by-default
+  deny-all for non-service-role callers, so this is the correct,
+  intentional state for service-role-only tables, not a gap - but it
+  hadn't been explicitly reviewed and documented before now. 105
+  unused-index findings (performance, INFO) are expected for a
+  low-traffic private beta and not actionable yet.
+- **Full local verification**: `pnpm typecheck` (all 3 workspaces) and
+  `pnpm test:unit` (diagnostic-response redaction scan across 68 routes,
+  component tests, AI-quality suite 10/10, MVP coverage target,
+  mobility/decision suites, and the rest) all ran clean - exit code 0,
+  every reported suite shows `fail 0`.
+
+**Conclusion: no change to the release decision.** Still GO WITH
+LIMITATIONS, same two accepted risks (backup/PITR, leaked-password
+protection), same deployed SHA. This pass found nothing new requiring a
+decision change - only one previously-unreviewed advisory finding, now
+investigated and confirmed intentional rather than left unexamined.
