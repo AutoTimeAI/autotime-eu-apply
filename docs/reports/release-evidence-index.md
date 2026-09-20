@@ -52,7 +52,8 @@ See the gate checklist for full detail. Summary:
 | Named incident lead / rollback operator | Closed - DataByRajesh (founder) named as release owner, incident lead, and rollback operator |
 | Rollback rehearsal | Closed - ran live 2026-09-19, rolled back one step and forward again, confirmed via alias checks and `pnpm smoke:web` at each step, full round trip under 1 minute |
 | Founder privacy/beta-terms/support confirmation | Closed - privacy/support verified against real code; beta terms implemented as a real tracked onboarding checkbox (`profiles.beta_terms_accepted_at`), verified live end to end |
-| Release-owner signature | Open - pending |
+| Cross-user isolation (E2E-06) | Closed 2026-09-20 - previously structural-only evidence, now a genuine deployed two-real-account test: a throwaway job row for a founder-authorized second real account was correctly denied when requested via the QA account's live session, zero data leaked |
+| Release-owner signature | Open - pending, blocked only on the backup/PITR decision |
 
 ## Public-launch gates (separate, stricter bar - not required for private beta)
 

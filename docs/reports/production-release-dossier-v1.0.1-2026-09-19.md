@@ -212,11 +212,15 @@ run the same live smoke, and roll back immediately on failure.
 ## 8. Final authorization
 
 Complete only after section 5 contains no OPEN, BLOCKED or PARTIAL row.
-As of this update, backup/PITR (confirmed FAIL) and privacy/beta-terms/
-support (OPEN) still block this table from being signed. Release owner,
-incident lead, and rollback operator are already named in section 5 and
+As of 2026-09-20, **backup/PITR (confirmed FAIL) is the only remaining
+row blocking this table from being signed** - privacy/beta-terms/support
+closed 2026-09-20 (real tracked onboarding acceptance, verified live),
+and the cross-user isolation gap (previously structural-only evidence)
+was also closed 2026-09-20 with a genuine deployed two-real-account test
+(see `docs/quality-assurance.md`). Release owner, incident lead, and
+rollback operator are already named in section 5 and
 `incident-and-rollback-exercise-record.md` (DataByRajesh, founder, all
-three roles) for when the remaining items close.
+three roles).
 
 | Field | Approval |
 |---|---|
