@@ -416,6 +416,22 @@ function needsMobilityCheck(
       targetCountry.trim().toLowerCase() !==
         profile.currentCountry.trim().toLowerCase()
     );
+  // "eu-eea-swiss-citizen" is a genuine blanket exemption for the EU/EEA/
+  // Switzerland free-movement zone, but the UK left that zone at the end
+  // of the Brexit transition - an EU/EEA/Swiss citizen has no automatic
+  // right to work there and needs settled/pre-settled status obtained
+  // before the cutoff, or a visa otherwise. This system already treats
+  // the UK as legally distinct (it has its own dedicated CountryPack,
+  // unlike other EU/EEA countries which share the generic explorer
+  // fallback), so the blanket skip is narrowly excluded for it rather
+  // than attempting to enumerate the full ~30-country EU/EEA/Swiss
+  // membership list here, which would be a larger, separately-reviewed
+  // change. Found live: an EU citizen applying to an unstated-
+  // authorisation UK vacancy got a clean "Consider" with zero mobility
+  // flag, identical failure shape to the existing-country-permission bug
+  // above.
+  if (profile.applicantPosition === "eu-eea-swiss-citizen")
+    return targetCountry?.trim().toLowerCase() === "united kingdom";
   return false;
 }
 

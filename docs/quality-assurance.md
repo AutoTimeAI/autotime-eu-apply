@@ -3433,3 +3433,51 @@ maps to which internal flag, and asking "does anything actually check
 what this flag's own UI label promises?" That's a different, and
 apparently higher-yield, kind of review than exercising more input
 combinations against already-correct logic.
+
+## 2026-09-20 (continued): the same UI-copy-to-code audit, applied to every remaining onboarding option
+
+Followed the lesson above through the rest of `workAuthorisationCategory`'s
+5 options rather than stopping at the one bug already found.
+
+**Second instance of the identical bug class, found and fixed.**
+`"eu-eea-swiss-citizen"` was also an unconditional blanket skip in
+`needsMobilityCheck` - correct for the EU/EEA/Switzerland free-movement
+zone, but the UK left that zone at the end of the Brexit transition, and
+this system already treats the UK as legally distinct (it has its own
+dedicated `CountryPack`, unlike other EU/EEA countries sharing the
+generic explorer fallback). Reproduced live: an EU citizen
+(`currentCountry: "Germany"`) applying to an unstated-authorisation UK
+vacancy got a clean `"Consider"` with zero mobility flag - identical
+failure shape to the existing-country-permission bug.
+
+Fixed narrowly: rather than hand-enumerating the ~30-country EU/EEA/Swiss
+membership list (a bigger, separately-reviewable change with its own risk
+of getting a country wrong), excluded specifically the UK - the one
+country this system already tracks as legally distinct from the rest of
+the zone. Verified live both directions: UK now correctly surfaces
+"Mobility pathway verification"; a Germany control case (same profile,
+EU destination) confirmed no regression - still correctly skips. Full
+`pnpm test:unit` re-run clean.
+
+**Third option checked, confirmed safe (no fix needed).**
+`"country_specific"` ("My position differs by target country") has no
+dedicated `applicantPosition` mapping at all in
+`JobApplicationWorkspace.tsx` - it silently falls through to `"unsure"`.
+Verified this is safely over-inclusive rather than a silent skip:
+`"unsure"` is unconditionally in `needsMobilityCheck`'s always-check list,
+so the mobility engine still runs. Not a safety bug - but it does discard
+real information the candidate provided (that their status varies by
+country) rather than using it, which is a quality/precision gap worth a
+future structured fix (e.g. a per-target-country permission field), not
+a release blocker.
+
+**Remaining known option, not yet re-verified**: `"sponsorship-required"`
+and `"international-applicant"` are both already unconditional triggers
+in `needsMobilityCheck` (correct - always run the check when sponsorship
+is explicitly needed), so no bug is possible there by construction; not
+re-tested since there's no gating logic left to audit.
+
+This closes the UI-copy-to-code audit of every `workAuthorisationCategory`
+option: 2 of 5 had the identical silent-skip bug class (now fixed), 1 of
+5 has a real but non-safety precision gap (logged, not fixed), 2 of 5
+were already structurally safe.
