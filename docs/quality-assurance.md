@@ -3703,3 +3703,56 @@ interview pipeline (1 data-model gap, fixed). 6 real fixes total from
 this method today, none from testing more input combinations against
 already-correct logic - all from tracing what a field, label, or enum
 value promises against what the code actually does with it.
+
+## 2026-09-20 (continued): SEVERITY-HIGH - country/location fit scoring confused Ukraine with the UK, and Northern Ireland with Ireland
+
+Moved the scrutiny method to a fourth, fresh area: `packages/shared/src/
+fit-model.ts`'s legacy country/location fit scorer (`getCountryLocationFit`,
+part of `evaluateCountryFit` - a different, older engine than the
+`international/assessment.ts` module the five mobility fixes targeted
+earlier today). Spotted the risk by inspection: country/location matching
+used plain, unbounded substring checks (`jobLocation.includes(signal)`),
+and `country-rules.ts`'s `locationSignals` included some short/ambiguous
+strings - notably the UK rule's bare `"uk"`.
+
+**Bug 1, reproduced live**: a job in **Kyiv, Ukraine** evaluated against
+the United Kingdom country rule scored **84/100, "strong"** match, with
+the rationale "The role aligns with United Kingdom" - purely because
+`"uk"` is a substring of `"ukraine"`. Ukraine is an entirely different
+country with entirely different immigration rules, and is a common real
+hiring location for this product's target market (European tech), making
+this a realistically frequent, not theoretical, false positive.
+
+**Bug 2, reproduced live**: a job in **Belfast, Northern Ireland** (part
+of the United Kingdom) evaluated against the Ireland country rule also
+scored **84/100, "strong"**, rationale "aligns with Ireland" - because
+`"ireland"` is a substring of `"northern ireland"`. Northern Ireland and
+the Republic of Ireland are different jurisdictions with different
+work-authorisation rules; a plain word-boundary fix does not resolve
+this one, since "Ireland" is a genuine standalone word inside "Northern
+Ireland" too.
+
+**Fixed**: added `matchesLocationSignal()`, a whole-word regex match used
+specifically for country/location-signal comparisons (not a change to
+`includesAny`, which stays as deliberately loose substring matching for
+sponsorship-keyword stems elsewhere - correctness stakes are different:
+a missed sponsorship keyword becomes "missing evidence", a false country
+match becomes an actively wrong "strong" score). Added a negative
+lookbehind excluding `"ireland"` specifically when preceded by
+`"northern"`.
+
+Verified live: both false-positive cases now correctly score 38/"weak"
+("not clearly tied to..."); three control cases re-verified unchanged at
+84/"strong" - a real London/UK job, a real Dublin/Ireland job, and a UK
+job using the bare "UK" abbreviation as its own standalone word (proving
+the fix didn't overcorrect into rejecting legitimate short-form
+mentions). Full `pnpm test:unit` re-run clean, zero regressions.
+
+This is the most severe finding of this scrutiny method today after the
+sponsorship-visibility/mobility-skip bugs - it's a silent false-positive
+(actively wrong "strong" match) rather than a false-negative (missing
+warning), and it was live in the tool's oldest, most-used fit-scoring
+path, not a newer/less-exercised module. Found by the same technique:
+not testing more countries, but reading the actual signal list and
+asking "could any of these short strings collide with something else
+entirely."

@@ -601,6 +601,29 @@ function getRelocationFit(
   )
 }
 
+/**
+ * Whole-word match for a country/location signal, used only where a wrong
+ * match actively misleads a candidate (a "strong" country-fit score),
+ * unlike `includesAny`'s deliberately loose substring matching elsewhere
+ * (e.g. sponsorship-keyword stems), which stays as-is. Plain `.includes()`
+ * here previously matched short/ambiguous signals inside unrelated words -
+ * found live: the UK rule's "uk" signal matched inside "Ukraine" (a
+ * different country entirely, common in this product's target market),
+ * scoring a Kyiv vacancy 84/"strong" as aligning with the United Kingdom.
+ * A negative lookbehind additionally excludes "ireland" when preceded by
+ * "northern" - word boundaries alone don't help there, since "Ireland" is
+ * a genuine standalone word inside "Northern Ireland" too, and Northern
+ * Ireland is UK territory, not the Republic of Ireland the "Ireland" rule
+ * means - found live the same way, a Belfast vacancy scored 84/"strong"
+ * as aligning with Ireland.
+ */
+function matchesLocationSignal(text: string, signal: string): boolean {
+  const escaped = signal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const pattern =
+    signal === "ireland" ? `(?<!northern\\s)\\b${escaped}\\b` : `\\b${escaped}\\b`
+  return new RegExp(pattern, "i").test(text)
+}
+
 function getCountryLocationFit(
   profile: CandidateProfile,
   job: JobAnalysisDraft,
@@ -611,9 +634,9 @@ function getCountryLocationFit(
   const targetCountry = context.targetCountry.toLowerCase()
   const jobLocation = [job.location, job.jobDescription].join(" ").toLowerCase()
   const targetsCountry =
-    targetCountries.includes(targetCountry) ||
-    jobLocation.includes(targetCountry) ||
-    rule.locationSignals.some((signal) => jobLocation.includes(signal))
+    matchesLocationSignal(targetCountries, targetCountry) ||
+    matchesLocationSignal(jobLocation, targetCountry) ||
+    rule.locationSignals.some((signal) => matchesLocationSignal(jobLocation, signal))
   const languageRisk =
     rule.languageSignals.length > 0 &&
     includesAny(jobLocation, rule.languageSignals) &&
