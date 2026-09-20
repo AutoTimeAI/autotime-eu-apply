@@ -16,14 +16,26 @@ transaction ID, etc.). An empty or template row must stay `Not started`.**
 
 | Item | Status | Date | Operator | Evidence reference |
 |---|---|---|---|---|
-| Supabase backup/PITR confirmed | Not started | | | |
-| Restore rehearsal (if feasible) | Not started | | | |
-| Named incident lead | Not started | | | |
-| Named rollback operator | Not started | | | |
-| Privacy notice shown to users confirmed accurate | Not started | | | |
-| Beta acknowledgement/limitations text confirmed | Not started | | | |
-| Support channel and response-time expectation confirmed | Not started | | | |
-| Release-owner sign-off (GO / NO-GO / risk-accepted) | Not started | | | |
+| Supabase backup/PITR confirmed | **Confirmed absent - risk explicitly accepted** | 2026-09-20 | DataByRajesh (founder) | Checked live: Supabase project `dorqxmnslzzmrpjbhlcl` is on the Free plan (zero scheduled backups, no PITR). Founder explicitly instructed this risk be accepted in writing rather than upgrading. See "Risk acceptance statement" below for the full terms of what's being accepted. |
+| Restore rehearsal (if feasible) | Not applicable | 2026-09-20 | - | No backup exists to restore from; not feasible until the plan is upgraded, at which point this should be re-attempted |
+| Named incident lead | Confirmed | 2026-09-19 | DataByRajesh (founder) | `docs/reports/incident-and-rollback-exercise-record.md` |
+| Named rollback operator | Confirmed | 2026-09-19 | DataByRajesh (founder) | Same record; confirmed Vercel access used directly to run a real rollback rehearsal |
+| Privacy notice shown to users confirmed accurate | Confirmed | 2026-09-20 | DataByRajesh (founder) / verified against code | `/privacy` checked against actual production code - every subprocessor claim (Supabase, Vercel, OpenAI, Stripe, Resend, PostHog, job-listing providers) genuinely wired, not placeholder text. One known open sub-item: ICO registration reference still pending - separately tracked as a public-launch item |
+| Beta acknowledgement/limitations text confirmed | Confirmed | 2026-09-20 | DataByRajesh (founder), approved the wording | Implemented as a real tracked onboarding checkbox (`profiles.beta_terms_accepted_at`, server-set timestamp) - verified live: blocked without acceptance, succeeded with it, timestamp recorded, never re-shown once accepted. Commit `dd122ca3` |
+| Support channel and response-time expectation confirmed | Confirmed | 2026-09-20 | DataByRajesh (founder) | `hello@autotimeai.com`, confirmed genuinely wired in `/privacy`, `/terms`, in-app feedback links, and the beta acknowledgement text itself. Response window: founder-monitored, no formal SLA stated (accurate for current scale) |
+| Release-owner sign-off (GO / NO-GO / risk-accepted) | **GO WITH LIMITATIONS - risk-accepted** | 2026-09-20 | DataByRajesh (founder) | See "Risk acceptance statement" below |
+
+## Risk acceptance statement — Supabase backup/PITR
+
+**Recorded 2026-09-20, per explicit founder instruction to accept this risk in writing rather than upgrade the Supabase plan at this time.**
+
+**What is being accepted:** the production Supabase project (`dorqxmnslzzmrpjbhlcl`, database for AutoTime EU Apply) is on Supabase's Free tier, which provides **zero scheduled backups and no point-in-time recovery (PITR)**. Concretely: if the production database is lost, corrupted, or subject to a destructive error (accidental `DROP`/`DELETE`, a bad migration, infrastructure failure, etc.), **there is currently no way to restore it** - not to any prior point in time, not even to a recent daily snapshot. Any data loss at the database level is permanent.
+
+**What data is at risk:** real invited beta users' account data, profile/CV evidence, job and application records, interview preparation history, and any billing/subscription state stored in this database.
+
+**Founder's decision:** proceed with the private beta in its current, small, invitation-only scope without upgrading to a paid Supabase tier for backup coverage at this time. This decision can be revisited at any point by upgrading to Supabase Pro (adds up to 7 days of scheduled backups and PITR).
+
+**Recommended trigger to revisit:** per `docs/reference/startup-test-validation-standard.md`'s own trigger table, this should be reconsidered before the beta scales past a small handful of users, and is treated as non-negotiable before any public launch.
 
 ## Public-launch-blocking items (not required for private beta)
 

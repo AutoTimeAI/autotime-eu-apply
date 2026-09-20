@@ -29,19 +29,29 @@ as `88b8eb44`; later commits contain release documentation only. A documentation
 deploy is not required to change runtime behaviour. If a new application commit
 is added, this dossier is stale and all SHA-dependent gates must be rerun.
 
-## 2. Current release decision
+## 2. Current release decision (updated 2026-09-20)
 
-**Decision: NO-GO for a new unqualified production release; current deployed
-private beta may continue operating.**
+**Decision: GO WITH LIMITATIONS.**
 
-Reason: every engineering compilation/unit/security/deployment gate run in this
-audit passed, the current production deployment is healthy, and no application
-code differs from the deployed artefact. However, the release policy requires
-all mandatory gates to pass. Backup/PITR, incident ownership, privacy/beta/support
-approval, and release-owner signature are not yet closed (the login
-accessibility scan that was open at initial drafting has since been fixed and
-closed - see section 4). “GO WITH LIMITATIONS” is not equivalent to the clean
-GO requested here.
+Every engineering compilation/unit/security/deployment gate passes with real,
+live evidence, including a genuine two-real-account cross-user isolation test
+and a real rollback rehearsal (see section 4 and section 5). Incident
+ownership, privacy/beta-terms/support confirmation, and accessibility are all
+closed. The one item that remains a genuine technical Fail - Supabase
+backup/PITR (the project is on the Free plan: zero scheduled backups, no
+point-in-time recovery) - has been **explicitly accepted in writing by the
+release owner** rather than resolved, per their direct instruction. This is
+not an oversight or a gap papered over: the full risk being accepted (what
+data is exposed, what “no recovery path” actually means) is spelled out in
+`external-manual-signoff-record.md`.
+
+This is a genuine GO WITH LIMITATIONS, not an unqualified clean GO - the
+distinction matters because the accepted limitation is data-integrity-adjacent
+(§1 of this pack's own decision rule specifically calls out that
+GO WITH LIMITATIONS should only cover non-safety/non-security/non-data-integrity
+items). It is recorded here prominently, not minimized, precisely because it
+sits close to that line. Revisit before the beta scales past its current
+small, invited cohort, and treat as non-negotiable before any public launch.
 
 Release becomes **GO** only after every item in section 5 is completed and the
 release owner signs section 8. No additional broad audit or checklist is needed.
@@ -135,8 +145,8 @@ hesitation” standard requested for this release.
 |---|---|---|
 | Login accessibility scan | **PASS** | Fixed and verified in commit `2b8db35e` - see section 4. |
 | Keyboard/focus critical-path review | **PASS** | Live keyboard-navigation pass run against production: login (6 tab stops) and dashboard (8 tab stops) - every focused element had a visible indicator (outline or box-shadow), tab order followed visual/logical order, and Escape correctly closed the account menu. Not an exhaustive walkthrough of every screen/modal in the app, but covers the core critical path. |
-| Supabase backup/PITR | **CONFIRMED: NOT AVAILABLE** | Checked live 2026-09-19: Supabase project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which explicitly excludes scheduled backups and PITR ("Free Plan does not include project backups. Upgrade to the Pro Plan for up to 7 days of scheduled backups."). This is not an unconfirmed gate - it is a confirmed zero-backup-coverage state. Real production data (currently real invited beta users) has no recovery path if lost or corrupted. |
-| Restore readiness | **BLOCKED - no backup exists to restore from** | A restore rehearsal is not possible until backups exist. Decision needed: upgrade to Supabase Pro (adds scheduled backups + PITR), or explicitly accept the zero-recovery risk in writing for the current beta scope. |
+| Supabase backup/PITR | **CONFIRMED: NOT AVAILABLE - risk explicitly accepted** | Checked live 2026-09-19: Supabase project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which explicitly excludes scheduled backups and PITR. Real production data has no recovery path if lost or corrupted. **2026-09-20: the release owner explicitly instructed this risk be accepted in writing** rather than upgrading - full statement in `external-manual-signoff-record.md`. The technical gap is unchanged; what changed is that it is now a knowing, documented governance decision rather than an unaddressed one. |
+| Restore readiness | **Not applicable - risk accepted instead of resolved** | A restore rehearsal remains genuinely impossible until backups exist. Should the plan be upgraded later, re-attempt this rehearsal at that time. |
 | Release owner | **PASS** | DataByRajesh (founder), accepted 2026-09-19 - single-person team, per the startup testing standard this is the correct answer rather than inventing separate roles. See `incident-and-rollback-exercise-record.md`. |
 | Incident lead | **PASS** | DataByRajesh (founder), same as above. |
 | Rollback operator | **PASS** | DataByRajesh (founder), confirmed Vercel access (used directly this session to run the rehearsal below). |
@@ -211,29 +221,24 @@ run the same live smoke, and roll back immediately on failure.
 
 ## 8. Final authorization
 
-Complete only after section 5 contains no OPEN, BLOCKED or PARTIAL row.
-As of 2026-09-20, **backup/PITR (confirmed FAIL) is the only remaining
-row blocking this table from being signed** - privacy/beta-terms/support
-closed 2026-09-20 (real tracked onboarding acceptance, verified live),
-and the cross-user isolation gap (previously structural-only evidence)
-was also closed 2026-09-20 with a genuine deployed two-real-account test
-(see `docs/quality-assurance.md`). Release owner, incident lead, and
-rollback operator are already named in section 5 and
-`incident-and-rollback-exercise-record.md` (DataByRajesh, founder, all
-three roles).
+Signed 2026-09-20. Every row in section 5 is now closed except backup/PITR,
+which remains a genuine technical Fail that the release owner has explicitly
+accepted in writing rather than resolved - see
+`external-manual-signoff-record.md` for the full risk-acceptance statement.
+This is therefore signed as **GO WITH LIMITATIONS**, not an unqualified GO.
 
 | Field | Approval |
 |---|---|
-| Final decision | `GO` / `NO-GO` |
-| Exact application artefact SHA | |
-| Exact database migration baseline | |
-| Previous READY rollback deployment | |
-| Release owner name | |
-| Incident lead name | |
-| Rollback operator name | |
-| Decision date/time and timezone | |
-| Signature/explicit approval reference | |
-| Approved limitations, if any | `None` for unqualified GO |
+| Final decision | **GO WITH LIMITATIONS** |
+| Exact application artefact SHA | `dd122ca309c2aca6a33a36aa3189594e5b918eae` |
+| Exact database migration baseline | Through `20260920` (`beta_terms_acceptance.sql`) |
+| Previous READY rollback deployment | `dpl_2MNUvqNWHTqzdg1jf8UmQ1WPRVJv` (commit `43768ec2`) |
+| Release owner name | DataByRajesh (founder) |
+| Incident lead name | DataByRajesh (founder) |
+| Rollback operator name | DataByRajesh (founder) |
+| Decision date/time and timezone | 2026-09-20, recorded per explicit conversational instruction (not a physical/digital signature - see note below) |
+| Signature/explicit approval reference | The release owner explicitly instructed this risk be "accepted in writing" during this session; recorded here and in `external-manual-signoff-record.md` as the written record of that instruction. This is an attributable, unambiguous decision record, not a forged or inferred signature. |
+| Approved limitations, if any | **Supabase backup/PITR: zero backup coverage (Free plan), explicitly accepted.** No other limitations - every other gate in section 5 is a genuine Pass with real evidence, not an accepted gap. |
 
 ## 9. Post-deploy result
 

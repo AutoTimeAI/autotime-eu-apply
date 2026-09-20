@@ -7,9 +7,11 @@ this file whenever a new release cycle starts or a canonical evidence
 document changes — this page, not any individual report, is the entry
 point for "what is the current release status."
 
-## ⚠ Active risk: zero database backup coverage
+## ⚠ Active, accepted risk: zero database backup coverage
 
-Confirmed 2026-09-19 by the founder checking the Supabase dashboard directly: project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which has no scheduled backups and no point-in-time recovery. This is not a documentation gap - it is a live, current fact about production. If the database is lost or corrupted right now, **there is no way to restore it.** See the gate checklist for detail. This is the single highest-priority open item in this entire evidence chain and should be resolved (Pro-plan upgrade, or an explicit written risk acceptance) before this beta scales beyond its current small invited cohort.
+Confirmed 2026-09-19 by the founder checking the Supabase dashboard directly: project `dorqxmnslzzmrpjbhlcl` is on the **Free plan**, which has no scheduled backups and no point-in-time recovery. This is not a documentation gap - it is a live, current fact about production. If the database is lost or corrupted right now, **there is no way to restore it.**
+
+**2026-09-20: the release owner explicitly instructed this risk be accepted in writing** rather than upgrading the plan at this time. Full risk-acceptance statement in `external-manual-signoff-record.md`. The technical fact hasn't changed - this callout stays here, not because it's still an open question, but because an accepted risk this close to data-integrity should stay visible, not disappear from view once "resolved" on paper. Revisit before scaling past the current small invited cohort, and treat as non-negotiable before any public launch.
 
 ## Current release cycle: Private Beta v1.0.1
 
@@ -23,10 +25,10 @@ the supporting detail.
 | Production deployment ID | `dpl_TU4JzVKaoVyfGrT2bL4Eq3hmj7Xp` (Vercel, `READY`) |
 | Deployment workflow run | `35474963453` (green) |
 | Documentation HEAD (may be later - docs-only commits) | see `git rev-parse origin/main` |
-| Current decision | **NO-GO for a new unqualified release; current deployed private beta is healthy. Only one confirmed blocker remains: zero database backup coverage (see below).** |
+| Current decision | **GO WITH LIMITATIONS.** Every mandatory gate passes with real evidence except backup/PITR, which remains a genuine technical Fail explicitly accepted in writing by the release owner (see risk callout above). |
 | Decision date | 2026-09-20 |
-| Latest re-verification | 2026-09-20: beta-terms acceptance feature verified live end to end (blocked without acceptance, succeeded with it, real server-set timestamp recorded, never re-shown once accepted). Found and fixed a real deployment bug along the way - see `docs/quality-assurance.md`'s 2026-09-20 entry: the production domain alias hadn't been reclaimed by the deploy after an earlier rollback rehearsal, silently serving a stale build despite the workflow reporting success. Fixed via a direct alias reassignment and fully re-verified (`pnpm smoke:web`, `/pricing`, `/login`, `/admin` all clean) |
-| Release owner sign-off | **Pending** - not yet signed by the founder (blocked only on the backup/PITR decision) |
+| Latest re-verification | 2026-09-20: beta-terms acceptance feature verified live end to end; cross-user isolation closed with a genuine two-real-account test (previously structural only). Found and fixed a real deployment bug along the way - see `docs/quality-assurance.md`'s 2026-09-20 entries: the production domain alias hadn't been reclaimed by the deploy after an earlier rollback rehearsal, silently serving a stale build despite the workflow reporting success. Fixed via a direct alias reassignment and fully re-verified |
+| Release owner sign-off | **Signed 2026-09-20** - DataByRajesh (founder), GO WITH LIMITATIONS, per §8 of the production dossier |
 
 ## Canonical documents (read these; treat everything else as historical)
 
@@ -47,13 +49,13 @@ See the gate checklist for full detail. Summary:
 
 | Gate | Status |
 |---|---|
-| Supabase backup/PITR | **FAIL - confirmed zero backup coverage.** Founder checked the dashboard 2026-09-19: project is on Supabase's Free plan, which excludes scheduled backups and PITR entirely. Real production data has no recovery path right now. Needs a Pro-plan upgrade decision or explicit written risk acceptance |
+| Supabase backup/PITR | **FAIL (technical) - Risk explicitly accepted in writing (governance) 2026-09-20.** Founder checked the dashboard 2026-09-19: project is on Supabase's Free plan, which excludes scheduled backups and PITR entirely. Real production data has no recovery path right now - that fact is unchanged; the founder chose to proceed anyway rather than upgrade, in writing, per `external-manual-signoff-record.md` |
 | Accessibility (automated axe + live keyboard/focus pass) | Closed - axe passes on all 11 covered critical surfaces including login; a real live keyboard-navigation pass (tab order, focus visibility, Escape behavior) was also run against production |
 | Named incident lead / rollback operator | Closed - DataByRajesh (founder) named as release owner, incident lead, and rollback operator |
 | Rollback rehearsal | Closed - ran live 2026-09-19, rolled back one step and forward again, confirmed via alias checks and `pnpm smoke:web` at each step, full round trip under 1 minute |
 | Founder privacy/beta-terms/support confirmation | Closed - privacy/support verified against real code; beta terms implemented as a real tracked onboarding checkbox (`profiles.beta_terms_accepted_at`), verified live end to end |
 | Cross-user isolation (E2E-06) | Closed 2026-09-20 - previously structural-only evidence, now a genuine deployed two-real-account test: a throwaway job row for a founder-authorized second real account was correctly denied when requested via the QA account's live session, zero data leaked |
-| Release-owner signature | Open - pending, blocked only on the backup/PITR decision |
+| Release-owner signature | Closed - signed 2026-09-20, GO WITH LIMITATIONS, per §8 of the production dossier |
 
 ## Public-launch gates (separate, stricter bar - not required for private beta)
 
@@ -91,4 +93,5 @@ banner pointing back to this index:
 | Private Beta v1.0.1 (initial dossier) | `88b8eb4453062315d2897445fbf5a855f4f25071` | NO-GO for unqualified GO / deployed beta healthy | 2026-09-19 |
 | Private Beta v1.0.1 (docs-only redeploy + re-verification) | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` | Same decision, re-confirmed clean via the startup beta-milestone bar | 2026-09-19 |
 | Private Beta v1.0.1 (rollback rehearsal + named owners) | `43768ec22c0f08fcc81ab95a7ad6d69747efdac5` | Rollback rehearsal run live and passed; named owners recorded | 2026-09-19 |
-| Private Beta v1.0.1 (beta-terms acceptance feature) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | Same decision; only remaining blocker is confirmed zero backup coverage | 2026-09-20 |
+| Private Beta v1.0.1 (beta-terms acceptance feature) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | NO-GO for unqualified GO; only remaining blocker is confirmed zero backup coverage | 2026-09-20 |
+| Private Beta v1.0.1 (cross-user isolation closed; risk accepted; signed) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | **GO WITH LIMITATIONS - signed** | 2026-09-20 |
