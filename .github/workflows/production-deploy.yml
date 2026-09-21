@@ -113,12 +113,50 @@ jobs:
           WEB_SMOKE_URL: ${{ steps.deploy.outputs.url }}
         run: pnpm smoke:web
 
-      # Runs only if a prior step in this job failed (typically the smoke
-      # check above) and there is a previous deployment to restore to.
-      # Vercel's own aliasing already pointed the production domain at the
-      # new (broken) build as part of "vercel deploy --prod" above, so
-      # without this, the broken build stays live until someone notices
-      # the red CI run and rolls back manually.
+      # `vercel deploy --prod` is documented to auto-claim the project's
+      # default production alias, but has been observed three times in
+      # production (2026-09-20 morning, 2026-09-20 evening, 2026-09-21 -
+      # see docs/quality-assurance.md) reporting success while silently
+      # leaving autotime-eu-apply.vercel.app pointed at a stale, older
+      # deployment - across three different trigger scenarios, so this is
+      # a systemic gap in this CLI-token-based deploy path, not a fluke.
+      # Making the claim explicit and independently verifying it, instead
+      # of trusting either "vercel deploy"'s or this step's own exit code,
+      # closes that gap: a mismatch here fails the job and triggers the
+      # rollback step below, same as a failed smoke check would.
+      - name: Claim and verify the production domain alias
+        id: alias
+        shell: bash
+        env:
+          PROD_DOMAIN: autotime-eu-apply.vercel.app
+        run: |
+          set -euo pipefail
+          : "${VERCEL_TOKEN:?Configure VERCEL_TOKEN in the production GitHub environment}"
+          pnpm dlx vercel@59.7.0 alias set "${{ steps.deploy.outputs.url }}" "$PROD_DOMAIN" --token="$VERCEL_TOKEN"
+
+          # `vercel inspect --json` prints a "Fetching deployment ..." line
+          # before the JSON body, so keep only from the first `{` onward.
+          resolved_id="$(pnpm dlx vercel@59.7.0 inspect "$PROD_DOMAIN" --json --token="$VERCEL_TOKEN" | sed -n '/^{/,$p' | jq -r '.id // empty')"
+          expected_id="$(pnpm dlx vercel@59.7.0 inspect "${{ steps.deploy.outputs.url }}" --json --token="$VERCEL_TOKEN" | sed -n '/^{/,$p' | jq -r '.id // empty')"
+
+          echo "Production domain ($PROD_DOMAIN) currently resolves to deployment: ${resolved_id:-<none>}"
+          echo "This run's deployment id: ${expected_id:-<unknown>}"
+
+          if [ -z "$resolved_id" ] || [ -z "$expected_id" ] || [ "$resolved_id" != "$expected_id" ]; then
+            echo "::error::Production domain $PROD_DOMAIN does not resolve to this run's deployment ($expected_id) even after an explicit alias claim (resolved: ${resolved_id:-<none>}). Treating this deploy as failed."
+            exit 1
+          fi
+
+      # Runs only if a prior step in this job failed (the smoke check or
+      # the alias claim/verification above) and there is a previous
+      # deployment to restore to.
+      # A smoke-check failure happens before this run's deploy has claimed
+      # the production alias at all (see "Claim and verify the production
+      # domain alias" above, which now runs after the smoke check), so the
+      # live domain should still be on the previous deployment already in
+      # that case; this rollback call is what actively restores it when
+      # the alias step itself is what failed (e.g. the claim succeeded but
+      # verification caught a mismatch) or as a defensive no-op otherwise.
       - name: Roll back to previous production deployment
         if: failure() && steps.previous.outputs.url != ''
         shell: bash
@@ -131,7 +169,7 @@ jobs:
             echo "## Automatic rollback"
             echo "- Failed deployment: \`$DEPLOY_SHA\` (${{ steps.deploy.outputs.url }})"
             echo "- Rolled back to: https://${{ steps.previous.outputs.url }}"
-            echo "- Reason: post-deploy verification (pnpm smoke:web) failed - see the failed step's log above."
+            echo "- Reason: either the post-deploy smoke check (pnpm smoke:web) or the production alias claim/verification failed - see the failed step's log above."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Warn when no rollback target exists after a failure
@@ -150,5 +188,5 @@ jobs:
             echo "## Production deployment"
             echo "- Commit: \`$DEPLOY_SHA\`"
             echo "- URL: $DEPLOYMENT_URL"
-            echo "- Verification: typecheck, mobility suite, production build, deployed smoke"
+            echo "- Verification: typecheck, mobility suite, production build, deployed smoke, production alias claim+verification"
           } >> "$GITHUB_STEP_SUMMARY"
