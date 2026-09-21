@@ -4413,3 +4413,33 @@ LIMITATIONS, same two accepted risks (backup/PITR, leaked-password
 protection), same deployed SHA. This pass found nothing new requiring a
 decision change - only one previously-unreviewed advisory finding, now
 investigated and confirmed intentional rather than left unexamined.
+
+## 2026-09-21: browser extension published to the Chrome Web Store
+
+The founder reported the extension (`apps/extension`) has been published:
+https://chromewebstore.google.com/detail/autotime-eu-apply/cnddgochpdijpljflnbhpngacmmglmfn
+
+Verified directly rather than taking the listing's existence on faith:
+fetched the URL and confirmed a real 200 response (not a "no longer
+available"/"not found" placeholder), with `og:title` "AutoTime EU Apply
+- Chrome Web Store", `og:description` "Cross-border job application
+copilot for Europe" - an exact match to `apps/extension/package.json`'s
+own description - and a genuine Google-hosted icon image. This
+confirms the listing is real, public, and describes this exact
+codebase's extension, not a stale or mismatched listing.
+
+**Why this matters for release readiness**: this is a new distribution
+channel beyond the private-beta invited cohort the rest of this
+release cycle's decision (GO WITH LIMITATIONS) was scoped around. The
+extension itself only captures/references public job-posting data and
+autofills forms locally in the browser (see `apps/extension/contents/autofill.ts`
+and the platform-coverage registry, `packages/shared/src/platform-coverage.ts`)
+- it does not bypass the web app's own authentication, authorization,
+or the two accepted Supabase Free-tier risks, which live entirely on
+the backend the extension talks to. No re-assessment of the two
+accepted risks is triggered by this alone. Worth a founder decision,
+not an engineering one: whether public store distribution should wait
+for the private-beta risk posture to close (Pro-plan upgrade) before
+being promoted more widely, since anyone can now discover and install
+the extension from the store regardless of whether they have a beta
+invite to the web app itself.
