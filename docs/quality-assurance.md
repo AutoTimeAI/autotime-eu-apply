@@ -4443,3 +4443,71 @@ for the private-beta risk posture to close (Pro-plan upgrade) before
 being promoted more widely, since anyone can now discover and install
 the extension from the store regardless of whether they have a beta
 invite to the web app itself.
+
+## 2026-09-21: deep authenticated live-production test via the QA test account
+
+Ran the founder-requested "does the backend actually work, not just the
+frontend" test properly - signed in as a real authenticated user against
+live production and exercised genuine data paths, not just page-load
+status codes.
+
+**Setting up the QA session surfaced a real, third recurrence of this
+project's stale-alias deploy bug.** After creating the QA test account
+(`scripts/create-qa-test-account.mjs`, user id
+`21e880f8-75c8-4a94-8952-5e77bf7e0b89`) and setting
+`QA_SESSION_BOOTSTRAP_SECRET`/`QA_TEST_ACCOUNT_USER_ID` in Vercel, the
+bootstrap route (`/api/qa/session`) 404'd across roughly ten attempts,
+through several genuinely fresh production deploys (the
+`production-deploy.yml` workflow every time reported green/success) and
+several different methods of setting the secret (web dashboard paste,
+`vercel env add` interactively, and non-interactively via a piped file -
+each ruled out in turn as the cause, including a hypothesis about a
+PowerShell `Set-Content -Encoding Byte` pipeline corrupting the value).
+The actual root cause, found by checking `vercel inspect
+autotime-eu-apply.vercel.app` directly rather than trusting any more
+green workflow runs: the live domain was still aliased to a deployment
+from **22 hours earlier**, from none of that morning's deploys. This is
+the same failure mode documented twice already in this log (2026-09-20
+morning and evening) - now a confirmed third occurrence, on yet another
+trigger path (this time, a chain of ordinary manual `workflow_dispatch`
+runs, not a rollback). Fixed with `vercel alias set <latest-ready-url>
+autotime-eu-apply.vercel.app`; immediately after, the bootstrap route
+worked on the first try with no other changes. **This closes the loop
+on this bug's cause: it is not specific to any one trigger scenario -
+this project's deploy workflow does not reliably claim the production
+alias, full stop, and every future deploy through it must be verified
+against `vercel inspect <domain>` (or the equivalent Vercel API/MCP
+call), never just the workflow's own exit status.**
+
+**Once actually authenticated, the backend was verified live and
+working correctly**, not just reachable:
+- `/dashboard` (200, correct authenticated page) and `/admin` (307
+  redirect - the QA account is deliberately non-admin, confirming
+  authorization gating is genuinely enforced, not just present in code)
+- `/api/account/export` (GDPR export) returned real, correctly-isolated
+  seeded data across all 40 tracked tables for this one account (6
+  applications, 4 evidence records, 3 outcome records, 3 cover letters,
+  2 outreach messages, etc.), with `incompleteTables: []` - confirming
+  the GDPR completeness fix from earlier this cycle is still holding in
+  live production, not just in the fix's own original verification.
+- `/api/ai/content` (POST, real payload: a backend-engineer CV against
+  a Dublin backend-engineer vacancy) returned a genuine, live-generated
+  cover letter and application answers from a real OpenAI call (not
+  cached, not a stub - 10.3s response time) that were accurately
+  grounded in exactly the supplied evidence (correctly cited the 5
+  years' experience, Node.js/TypeScript/AWS/PostgreSQL, the 40%
+  latency improvement, the 2M-transactions/month project, and the
+  one-month notice period) with no fabricated claims beyond what was
+  supplied - consistent with this cycle's AI-quality testing category.
+
+All temporary artifacts (session cookies, request/response payloads,
+the service-role key file used transiently for account creation) were
+deleted after use; nothing sensitive was committed.
+
+**Conclusion: both frontend and backend are confirmed genuinely
+working in live production**, under a real authenticated session, not
+just via status-code smoke checks. No change to the release decision.
+The one actionable follow-up is the deploy-workflow alias bug itself -
+now confirmed a systemic gap in the workflow (not scenario-specific),
+worth an actual engineering fix rather than continued manual
+verification after every deploy.
