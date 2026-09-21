@@ -4511,3 +4511,40 @@ The one actionable follow-up is the deploy-workflow alias bug itself -
 now confirmed a systemic gap in the workflow (not scenario-specific),
 worth an actual engineering fix rather than continued manual
 verification after every deploy.
+
+## 2026-09-21 (continued): fixed the deploy-workflow alias bug at its source
+
+Root-caused rather than just documented again: `autotime-eu-apply.vercel.app`
+is the project's default Vercel subdomain, not a purchased custom domain
+(confirmed via `vercel domains ls` - the only domain owned is
+`autotimeai.com`, unused in production so far). `vercel deploy --prod`
+is documented to auto-claim this default alias, but this project's
+deploy path builds and deploys via the Vercel CLI with a bare API
+token (`vercel build` + `vercel deploy --prebuilt --prod`) rather than
+through Vercel's native Git-integration deploys, and that CLI-token
+path has now been confirmed, empirically, not to reliably claim the
+alias - three real occurrences (2026-09-20 morning, 2026-09-20
+evening, 2026-09-21) across three different trigger scenarios, ruling
+out any single scenario as the explanation.
+
+Fixed in `.github/workflows/production-deploy.yml`: added a "Claim and
+verify the production domain alias" step, running after the existing
+smoke check, that (1) explicitly calls `vercel alias set` instead of
+relying on `vercel deploy --prod` to have already done it, then (2)
+independently confirms via `vercel inspect <domain> --json` and
+`vercel inspect <this-run's-deployment-url> --json` that the domain's
+resolved deployment ID actually matches this run's - failing the job
+(and triggering the existing rollback step) on any mismatch, rather
+than trusting either command's own exit code. Every individual command
+in the new step (`vercel alias set`, `vercel inspect --json`, and its
+output's stray "Fetching deployment ..." line ahead of the JSON body)
+was verified directly against the live project before being written
+into the workflow, not assumed from documentation.
+
+**Not yet validated by an actual CI run** - this fix has been reviewed
+and is believed correct (each command working individually, confirmed
+live), but the workflow itself hasn't executed this new step yet. The
+next real production deploy through this workflow is the real test;
+if the alias step fires and this specific bug class doesn't recur,
+that closes the loop. If it fails in some unanticipated way, the
+existing rollback step should still protect production regardless.
