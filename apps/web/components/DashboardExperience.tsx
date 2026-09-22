@@ -197,7 +197,7 @@ type DashboardFocus =
   | "match-score"
   | "cv-tailor"
   | "application-answers"
-  | "autofill-profile"
+  | "profile-evidence"
   | "application-tracker"
   | "follow-ups"
   | "interview-prep"
@@ -405,7 +405,7 @@ const dashboardFocusCopy: Record<
     title: "Application Kit",
     body: "Generate job-specific wording from saved proof, then save the useful parts back to Proof Library."
   },
-  "autofill-profile": {
+  "profile-evidence": {
     eyebrow: "Profile setup",
     title: "Profile Evidence",
     body: "Add the facts AutoTime needs before it checks jobs, writes proof-backed answers or prepares interviews."
@@ -442,7 +442,7 @@ const defaultDashboardFocusByView: Record<
   DashboardFocus
 > = {
   overview: "dashboard",
-  profile: "autofill-profile",
+  profile: "profile-evidence",
   jobs: "match-score",
   applications: "application-tracker",
   interview: "interview-prep"
@@ -1072,12 +1072,12 @@ export default function HomePage({
   const showActionPanel =
     !isOverview &&
     currentTab !== "jobs" &&
-    activeFocus !== "autofill-profile" &&
+    activeFocus !== "profile-evidence" &&
     activeFocus !== "application-tracker"
   const showExecutivePanel =
     isOverview || (profileReadyForExecution && currentTab === "jobs")
   const showProfileSettingsPanel =
-    activeFocus === "autofill-profile" || activeFocus === "settings"
+    activeFocus === "profile-evidence" || activeFocus === "settings"
   const showApplicationAnalytics =
     activeFocus === "insights" && !selectedApplication
   const showFollowUpQueue = activeFocus === "follow-ups" && !selectedApplication
@@ -1302,7 +1302,7 @@ export default function HomePage({
   ]
   const onboardingSteps = [
     {
-      href: "/dashboard/autofill-profile",
+      href: "/dashboard/profile-evidence",
       step: "Step 1",
       title: "Complete Profile Evidence",
       status: profileReadyForExecution ? "Ready" : "Needs evidence",
@@ -1412,7 +1412,7 @@ export default function HomePage({
     ? {
         body: "Locked until your profile has enough detail for job checks, tracker actions and interview answers.",
         cta: "Unlock profile",
-        href: "/dashboard/autofill-profile",
+        href: "/dashboard/profile-evidence",
         label: "Locked",
         title: "Evidence gate is active"
       }
@@ -4239,7 +4239,7 @@ export default function HomePage({
           <li>Interview answers use your saved profile details.</li>
         </ol>
       </details>
-      <Link className="secondary-button" href="/dashboard/autofill-profile">
+      <Link className="secondary-button" href="/dashboard/profile-evidence">
         Unlock profile
       </Link>
     </section>
@@ -4332,7 +4332,7 @@ export default function HomePage({
             </ol>
             <div className="walkthrough-actions">
               <a
-                href="/dashboard/autofill-profile"
+                href="/dashboard/profile-evidence"
                 onClick={dismissFirstRunWalkthrough}
               >
                 Start setup
@@ -4391,7 +4391,7 @@ export default function HomePage({
                     tools. Current profile readiness is {readinessScore}%.
                   </p>
                 </div>
-                <Link className="secondary-button" href="/dashboard/autofill-profile">
+                <Link className="secondary-button" href="/dashboard/profile-evidence">
                   Complete profile
                 </Link>
               </div>
@@ -4421,7 +4421,7 @@ export default function HomePage({
                   <>
                     <a
                       className="secondary-button"
-                      href="/dashboard/autofill-profile"
+                      href="/dashboard/profile-evidence"
                     >
                       Finish profile
                     </a>
@@ -4445,7 +4445,7 @@ export default function HomePage({
                 ) : isProfileGateRequired ? (
                   <a
                     className="secondary-button"
-                    href="/dashboard/autofill-profile"
+                    href="/dashboard/profile-evidence"
                   >
                     Complete profile
                   </a>
@@ -4471,7 +4471,7 @@ export default function HomePage({
                   <>
                     <a
                       className="secondary-button"
-                      href="/dashboard/autofill-profile"
+                      href="/dashboard/profile-evidence"
                     >
                       Update source profile
                     </a>
@@ -4582,7 +4582,7 @@ export default function HomePage({
                           Candidate evidence, work-right details and role
                           targets.
                         </p>
-                        <Link href="/dashboard/autofill-profile">Edit profile</Link>
+                        <Link href="/dashboard/profile-evidence">Edit profile</Link>
                       </article>
                       <article>
                         <span>Account saving</span>
@@ -5383,7 +5383,7 @@ export default function HomePage({
 
               {!isOverview &&
                 currentTab === "profile" &&
-                activeFocus === "autofill-profile" && (
+                activeFocus === "profile-evidence" && (
                 <section className="workspace-grid">
                   <div className="input-column">
                     <section

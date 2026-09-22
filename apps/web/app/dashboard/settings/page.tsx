@@ -130,7 +130,7 @@ export default async function DashboardSettingsPage() {
               Last account profile save:{" "}
               {formatDate(profileResult.data?.updated_at)}
             </p>
-            <a href="/dashboard/autofill-profile">Profile Evidence</a>
+            <a href="/dashboard/profile-evidence">Profile Evidence</a>
           </article>
           <article>
             <span>Extension</span>

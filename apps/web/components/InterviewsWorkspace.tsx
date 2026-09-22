@@ -811,7 +811,7 @@ function InterviewOverview({
           <a href={`/dashboard/applications/${application.id}`}>
             Application workspace
           </a>
-          <Link href="/dashboard/autofill-profile">Proof Library</Link>
+          <Link href="/dashboard/profile-evidence">Proof Library</Link>
         </div>
       </section>
       <section className="workflow-section phase-four-section">

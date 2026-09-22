@@ -264,7 +264,7 @@ function OnboardingStep({
               ? "Add your CV"
               : "Continue"}
           </button>
-          <Link className="secondary-button" href="/dashboard/autofill-profile">
+          <Link className="secondary-button" href="/dashboard/profile-evidence">
             Add evidence in Profile
           </Link>
         </div>
@@ -695,7 +695,7 @@ export default function HomeExperience({
             hasCvEvidence={Boolean(dashboardState?.profile.baseCvText.trim())}
             onChange={persist}
             onComplete={finishOnboarding}
-            onNeedsCvEvidence={() => router.push("/dashboard/autofill-profile")}
+            onNeedsCvEvidence={() => router.push("/dashboard/profile-evidence")}
             state={onboarding}
           />
           <button

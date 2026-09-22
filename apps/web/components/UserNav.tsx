@@ -124,7 +124,7 @@ const dashboardWorkflowNavItems: DashboardNavItem[] = [
     description: "Country and mobility facts",
   },
   {
-    aliases: ["/dashboard/autofill-profile", "/dashboard/cv-tailor"],
+    aliases: ["/dashboard/profile-evidence", "/dashboard/cv-tailor"],
     href: "/dashboard/profile",
     icon: "profile",
     label: "Profile",

@@ -1153,7 +1153,7 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
             <p>Mobility facts stay separate from capability scoring.</p>
             <nav aria-label="Related checks">
               <Link href="/dashboard/international">View country facts</Link>
-              <Link href="/dashboard/autofill-profile">Review profile evidence</Link>
+              <Link href="/dashboard/profile-evidence">Review profile evidence</Link>
             </nav>
           </section>
         </aside>

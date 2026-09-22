@@ -153,7 +153,7 @@ export function evaluateCapabilityReadiness(
     evidence.projects,
   );
   const profileAction = {
-    href: "/dashboard/autofill-profile",
+    href: "/dashboard/profile-evidence",
     label: "Add the missing information",
     returnTo,
   };
