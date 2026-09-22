@@ -127,8 +127,8 @@ const dashboardWorkflowNavItems: DashboardNavItem[] = [
     aliases: ["/dashboard/profile-evidence", "/dashboard/cv-tailor"],
     href: "/dashboard/profile",
     icon: "profile",
-    label: "Profile",
-    description: "Facts and proof",
+    label: "Profile & CV",
+    description: "Facts, proof and your canonical CV",
   },
 ];
 
