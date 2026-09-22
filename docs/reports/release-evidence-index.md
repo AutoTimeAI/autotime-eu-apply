@@ -38,9 +38,9 @@ the dossier/checklist as current for everything up to that point.**
 
 | Field | Value |
 |---|---|
-| Deployed SHA | `023ad6db612efc3019ec5e4cee006c34204dc77a` (deployed 2026-09-22, run `35715668199` - carries the deploy-workflow alias fix and the trace-budget correction; no further app-code changes since `c791e7f2`'s 2026-09-20 full scrutiny pass) |
-| Production deployment ID | See run `35715668199` evidence; live-verified via direct HTTP checks 2026-09-22 |
-| Deployment workflow run | `35715668199` (green, alias-claim step passed) |
+| Deployed SHA | `e3b7c6b1ac3a2a88464755feb1e08731873306d5` (deployed 2026-09-22, run `35752891873` - docs-only commit; app code unchanged since `023ad6db`) |
+| Production deployment ID | See run `35752891873` evidence; live-verified via direct HTTP checks 2026-09-22 |
+| Deployment workflow run | `35752891873` (green, alias-claim step passed). **Note**: the first attempt to deploy this commit (run `35752710965`) failed at the authorization step with `fatal: Not a valid commit name` - the commit existed locally but had not actually been pushed to `origin/main` yet. Pushed, then redeployed successfully. Production was never at risk (the failed run never reached the build/deploy steps) - confirmed via an immediate live smoke check before investigating |
 | Documentation HEAD (may be later - docs-only commits) | see `git rev-parse origin/main` |
 | Current decision | **GO WITH LIMITATIONS.** Every mandatory gate passes with real evidence except backup/PITR and leaked-password protection, both genuine technical Fails explicitly accepted in writing by the release owner (see risk callouts above - both are the same Supabase Free-tier plan limitation, resolved together by one Pro-plan upgrade). |
 | Decision date | 2026-09-20 |
@@ -54,6 +54,7 @@ the dossier/checklist as current for everything up to that point.**
 | Purpose | Document | Status |
 |---|---|---|
 | Consolidated production go/no-go dossier | [`production-release-dossier-v1.0.1-2026-09-19.md`](./production-release-dossier-v1.0.1-2026-09-19.md) | **Canonical entry point — current** |
+| Complete version/dependency lock (modules, tools, libraries, SHAs) | [`production-version-lock-2026-09-22.md`](./production-version-lock-2026-09-22.md) | Current - regenerate as a new dated file on meaningful dependency/infra changes, don't overwrite |
 | Mandatory gate table + decision record | [`release-gate-checklist-v1.0.1-2026-09-19.md`](./release-gate-checklist-v1.0.1-2026-09-19.md) | Current - update after every remaining gate closes |
 | Detailed narrative evidence | [`release-assurance-pack-v1.0.1-evidence-2026-09-19.md`](./release-assurance-pack-v1.0.1-evidence-2026-09-19.md) | Current, but read the gate checklist first for the authoritative pass/fail state |
 | Documentation audit (meta) | [`release-readiness-documentation-audit-2026-09-19.md`](./release-readiness-documentation-audit-2026-09-19.md) | Current - explains why the two documents above exist and what corrections were applied |
