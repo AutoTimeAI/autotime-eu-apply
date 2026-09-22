@@ -5903,7 +5903,7 @@ export default function HomePage({
 
               {!isOverview && currentTab === "jobs" && (
                 <section
-                  className="workspace-grid job-check-grid"
+                  className="workspace-grid job-check-grid jobs-redesign"
                   id="analyse-fit-role"
                 >
                   <div className="input-column job-check-input">

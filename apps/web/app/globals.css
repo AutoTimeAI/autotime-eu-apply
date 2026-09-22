@@ -3621,6 +3621,78 @@ h4 {
   transform: translateY(-1px);
 }
 
+/* Jobs page redesign (2026-09-22) - scoped to .jobs-redesign so it cannot
+   affect any other view that reuses these base classnames (.panel is
+   shared with applications/interview-prep sections). CSS-only pass;
+   collapsing the deeper result sections into tabs is a separate,
+   follow-up task that needs careful reading of this block's conditional
+   rendering before it's safe to restructure. */
+.jobs-redesign .panel,
+.jobs-redesign .job-source-panel,
+.jobs-redesign .decision-brief-panel,
+.jobs-redesign .evidence-ledger-panel,
+.jobs-redesign .fit-trust-panel,
+.jobs-redesign .official-source-panel,
+.jobs-redesign .content-guardrail-panel,
+.jobs-redesign .verification-panel,
+.jobs-redesign .fit-check-dashboard,
+.jobs-redesign .fit-outcome-dashboard,
+.jobs-redesign .fit-detail-dashboard,
+.jobs-redesign .fit-outcome-card,
+.jobs-redesign .fit-component-grid .fit-component,
+.jobs-redesign .country-fit-panel,
+.jobs-redesign .ai-audit-summary,
+.jobs-redesign .official-source-freshness {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+}
+
+.jobs-redesign .job-source-panel {
+  background: var(--bg);
+  box-shadow: none;
+}
+
+.jobs-redesign .fit-gate-banner {
+  border: 1px solid rgba(23, 78, 166, 0.24);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--surface-blue);
+  box-shadow: none;
+}
+
+.jobs-redesign input,
+.jobs-redesign textarea,
+.jobs-redesign select {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.jobs-redesign input:focus,
+.jobs-redesign textarea:focus,
+.jobs-redesign select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.jobs-redesign .secondary-button {
+  border-radius: var(--radius-sm);
+  transition: border-color 140ms ease, transform 100ms ease;
+}
+
+.jobs-redesign .secondary-button:hover {
+  transform: translateY(-1px);
+}
+
+.jobs-redesign .source-mode-pill,
+.jobs-redesign .tag {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
 .ai-claim-boundary {
   display: grid;
   gap: 6px;
