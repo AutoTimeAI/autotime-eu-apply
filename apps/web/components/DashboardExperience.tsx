@@ -5384,7 +5384,7 @@ export default function HomePage({
               {!isOverview &&
                 currentTab === "profile" &&
                 activeFocus === "profile-evidence" && (
-                <section className="workspace-grid">
+                <section className="workspace-grid profile-evidence-redesign">
                   <div className="input-column">
                     <section
                       className="profile-purpose-panel"

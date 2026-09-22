@@ -3310,6 +3310,205 @@ h4 {
   line-height: 1.48;
 }
 
+/* Profile Evidence redesign (2026-09-22) - scoped to
+   .profile-evidence-redesign so it never affects any other page that
+   shares these base classnames (profile-form-section, output-column,
+   etc. are reused elsewhere). Modernizes spacing, typography and card
+   treatment; adds no new markup and changes no state/logic. */
+.profile-evidence-redesign .profile-purpose-panel,
+.profile-evidence-redesign .profile-form-section,
+.profile-evidence-redesign .output-column .panel {
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+  padding: 22px;
+}
+
+.profile-evidence-redesign .profile-form-section::before {
+  content: none;
+}
+
+.profile-evidence-redesign .profile-form-section.important {
+  border-color: rgba(23, 78, 166, 0.28);
+  background: var(--surface-blue);
+}
+
+.profile-evidence-redesign .profile-purpose-panel {
+  border-left: 4px solid var(--accent);
+  background: var(--surface-raised);
+}
+
+.profile-evidence-redesign .profile-purpose-panel h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.profile-evidence-redesign .profile-purpose-main {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.32fr);
+}
+
+.profile-evidence-redesign .profile-readiness-badge {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-blue);
+  padding: 14px;
+}
+
+.profile-evidence-redesign .profile-readiness-badge span,
+.profile-evidence-redesign .profile-readiness-badge small {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.profile-evidence-redesign .profile-readiness-badge strong {
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+
+.profile-evidence-redesign .profile-readiness-badge em {
+  height: 6px;
+  background: var(--surface-muted);
+}
+
+.profile-evidence-redesign .profile-readiness-badge i {
+  background: var(--accent);
+}
+
+.profile-evidence-redesign .profile-purpose-steps {
+  gap: 8px;
+}
+
+.profile-evidence-redesign .profile-purpose-steps button {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 100ms ease;
+}
+
+.profile-evidence-redesign .profile-purpose-steps button:hover {
+  border-color: var(--accent);
+  background: var(--surface-blue);
+  transform: translateY(-1px);
+}
+
+.profile-evidence-redesign .profile-purpose-steps button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.profile-evidence-redesign .profile-form-section {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.profile-evidence-redesign .profile-form-section:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring), var(--shadow-tight);
+}
+
+.profile-evidence-redesign .profile-form-section .section-heading h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.profile-evidence-redesign .profile-form-section label {
+  font-weight: 650;
+}
+
+.profile-evidence-redesign .profile-form-section input,
+.profile-evidence-redesign .profile-form-section textarea {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.profile-evidence-redesign .profile-form-section input:focus,
+.profile-evidence-redesign .profile-form-section textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.profile-evidence-redesign .high-risk-field-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--accent-strong);
+  background: var(--surface-blue);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-weight: 600;
+}
+
+.profile-evidence-redesign .high-risk-field-note::before {
+  content: "i";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.profile-evidence-redesign .profile-form-toolbar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+}
+
+.profile-evidence-redesign .sync-status-pill {
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.profile-evidence-redesign .danger-button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  box-shadow: none;
+  font-weight: 600;
+  text-decoration: underline;
+  padding: 4px 0;
+}
+
+.profile-evidence-redesign .danger-button:hover {
+  color: var(--red);
+  background: transparent;
+}
+
+.profile-evidence-redesign .output-column .panel {
+  transition: box-shadow 160ms ease;
+}
+
+.profile-evidence-redesign .profile-quality-item {
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: none;
+}
+
+.profile-evidence-redesign .reusable-answers-panel {
+  border-radius: var(--radius-md);
+}
+
+.profile-evidence-redesign .reusable-answers-panel summary {
+  cursor: pointer;
+}
+
 .ai-claim-boundary {
   display: grid;
   gap: 6px;
