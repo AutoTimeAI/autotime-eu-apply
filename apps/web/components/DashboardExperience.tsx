@@ -4894,7 +4894,7 @@ export default function HomePage({
 
               {isOverview && (
                 <section
-                  className="command-centre-overview"
+                  className="command-centre-overview dashboard-home-redesign"
                   aria-label="Homepage sections"
                 >
                   <div className="section-intro">

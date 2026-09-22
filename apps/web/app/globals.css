@@ -2042,6 +2042,81 @@ h4 {
   font-weight: 800;
 }
 
+/* Dashboard Home redesign (2026-09-22) - scoped to .dashboard-home-redesign
+   so it cannot affect any other view that reuses these base classnames.
+   Modernizes spacing, typography and card treatment; adds no new markup
+   and changes no state/logic. */
+.dashboard-home-redesign .today-focus-panel,
+.dashboard-home-redesign .strategic-quality-panel,
+.dashboard-home-redesign .overview-workflow-map a,
+.dashboard-home-redesign .command-centre-card,
+.dashboard-home-redesign .dashboard-more-details {
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+}
+
+.dashboard-home-redesign .today-focus-panel {
+  border-left: 4px solid var(--accent);
+  padding: 24px;
+}
+
+.dashboard-home-redesign .today-focus-panel h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.dashboard-home-redesign .today-focus-panel a {
+  border-radius: 10px;
+  font-weight: 700;
+  transition: background 140ms ease, transform 100ms ease;
+}
+
+.dashboard-home-redesign .strategic-quality-panel {
+  padding: 22px;
+}
+
+.dashboard-home-redesign .strategic-quality-panel h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.dashboard-home-redesign .strategic-signal-grid article {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.dashboard-home-redesign .overview-workflow-map a {
+  padding: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 140ms ease;
+}
+
+.dashboard-home-redesign .overview-workflow-map a::after {
+  display: none;
+}
+
+.dashboard-home-redesign .overview-workflow-map a:hover {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring), var(--shadow-tight);
+  transform: translateY(-2px);
+}
+
+.dashboard-home-redesign .overview-workflow-map em {
+  background: var(--surface-blue);
+  border-color: var(--border);
+}
+
+.dashboard-home-redesign .command-centre-grid {
+  gap: 14px;
+}
+
+.dashboard-home-redesign .command-centre-card {
+  padding: 16px;
+}
+
 .command-action-dock strong {
   color: var(--ink);
   font-size: 1rem;
