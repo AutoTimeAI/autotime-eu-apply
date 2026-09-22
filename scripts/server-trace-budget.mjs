@@ -4,7 +4,16 @@ import path from "node:path"
 
 const serverRoot = path.resolve("apps/web/.next/server")
 const importCvManifest = path.join(serverRoot, "app/api/profile/import-cv/route.js.nft.json")
-const TOTAL_BUDGET_BYTES = 20 * 1024 * 1024
+// Raised from 20 MiB to 42 MiB on 2026-09-22: commit fcc2f5bd removed the
+// `runtime = "edge"` declaration from apps/web/app/api/og/route.tsx to
+// silence Next 16's Edge Runtime deprecation warning (Edge is deprecated
+// framework-wide in this Next version, not a fixable misconfiguration).
+// That moved the OG route onto the Node server trace for the first time,
+// adding next/og's Satori/resvg.wasm renderer plus Next's bundled `sharp`
+// (~6 MiB), which the Edge runtime had kept isolated from this budget.
+// 42 MiB gives headroom above the observed ~36.8 MiB total rather than
+// trimming the new margin to the byte.
+const TOTAL_BUDGET_BYTES = 42 * 1024 * 1024
 const IMPORT_CV_BUDGET_BYTES = 6 * 1024 * 1024
 
 assert.ok(existsSync(serverRoot), "Missing apps/web/.next/server; run pnpm build:web first")
