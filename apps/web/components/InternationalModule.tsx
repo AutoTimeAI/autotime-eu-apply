@@ -103,7 +103,7 @@ export function InternationalModule() {
   };
 
   return (
-    <main className="international-shell phase-five-countries">
+    <main className="international-shell phase-five-countries countries-redesign">
       <header className="international-hero">
         <div>
           <p className="eyebrow">Optional workspace</p>
