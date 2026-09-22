@@ -317,6 +317,11 @@ export default async function HomePage() {
             <Link className="secondary-link" href="/pricing">
               View plans
             </Link>
+            {!account ? (
+              <Link className="secondary-link" href="/join-waitlist">
+                Join the waitlist
+              </Link>
+            ) : null}
           </div>
           <div className="landing-hero-signals" aria-label="Product strengths">
             <span>Strategic targeting</span>

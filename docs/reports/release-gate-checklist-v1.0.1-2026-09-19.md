@@ -47,6 +47,18 @@ Per the assurance pack's own decision rule (§1: *"GO is permitted only when eve
 - **Leaked-password protection - confirmed Fail, risk explicitly accepted.** Confirmed 2026-09-20: this Supabase Auth setting is gated behind the Pro plan and unreachable at any Free-tier dashboard location - candidates can currently set a password already known to be compromised. Resolved by the same Pro-plan upgrade as the backup/PITR gap. Full written risk-acceptance statement recorded 2026-09-20 in `external-manual-signoff-record.md`, per explicit founder instruction.
 
 **Decision: GO WITH LIMITATIONS.** Every other mandatory gate passes with real evidence, and the two remaining Fails (Supabase backup/PITR and leaked-password protection - both Free-tier plan limitations, both resolved together by the same Pro-plan upgrade) have been knowingly, explicitly accepted in writing by the release owner rather than left as an oversight - which is exactly the standard the assurance pack itself allows (§1: *"GO WITH LIMITATIONS: Only non-safety, non-security, non-data-integrity limitations remain"* - note these limitations **are** data-integrity/security-adjacent, so this is flagged prominently rather than downplayed; both are accepted knowingly, not minimized).
+
+**Addendum 2026-09-21:** decision and both accepted risks are unchanged.
+A deep authenticated production test found the deploy-alias bug (see the
+"Monitoring, incident and rollback ready" row and dossier notes) recurring
+a third time; it has now been root-caused and fixed in
+`.github/workflows/production-deploy.yml`, but that fix is **not yet
+validated by a real CI run** - the "Monitoring, incident and rollback
+ready" row above should be read as Pass-with-a-known-open-follow-up, not
+a closed loop, until the next production deploy confirms the new alias
+step fires correctly. Separately, the Chrome Web Store publication
+public-launch item closed 2026-09-21. See `release-evidence-index.md` for
+the current authoritative pointer.
 Everything else now passes, including three items closed this session
 with the founder's direct involvement: **Accessibility** (automated axe
 on all 11 surfaces + a real live keyboard/focus pass), **Monitoring/

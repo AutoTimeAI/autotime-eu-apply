@@ -59,6 +59,24 @@ ordinary forward deploy, meaning this workflow does not reliably claim
 the production alias on its own. Explicit live-domain verification after
 every deploy is now a mandatory step, not optional.
 
+**Addendum 2026-09-21 (docs + deploy-workflow fix, no app-code redeploy):**
+a deep authenticated live-production test hit the exact same stale-alias
+bug a **third** time, ruling out any single trigger scenario. Root-caused:
+this project deploys via the Vercel CLI with a bare API token
+(`vercel build` + `vercel deploy --prebuilt --prod`), not Git-integration
+deploys, and that path does not reliably auto-claim the default
+`autotime-eu-apply.vercel.app` subdomain alias. Fixed at the source in
+`.github/workflows/production-deploy.yml`: a new step explicitly runs
+`vercel alias set` and independently verifies via `vercel inspect --json`
+that the domain's resolved deployment ID matches the run's, failing (and
+triggering rollback) on any mismatch. **Not yet validated by an actual CI
+run** - reviewed and command-verified individually against the live
+project, but the workflow hasn't executed this step in a real deploy yet;
+the next production deploy is the real test. Also 2026-09-21: the browser
+extension was published to the Chrome Web Store, closing that
+public-launch item. Deployed SHA is unchanged at `c791e7f2` - see
+`release-evidence-index.md` for the current authoritative pointer.
+
 ## 2. Current release decision (updated 2026-09-20)
 
 **Decision: GO WITH LIMITATIONS.**

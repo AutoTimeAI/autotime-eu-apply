@@ -822,6 +822,33 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      beta_waitlist_signups: {
+        Row: {
+          id: string;
+          email: string;
+          status: string;
+          source: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          status?: string;
+          source?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          status?: string;
+          source?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       ai_rate_limits: {
         Row: {
           rate_limit_key: string;

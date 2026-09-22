@@ -30,17 +30,23 @@ Confirmed 2026-09-20 by the founder: Supabase's leaked-password protection (chec
 
 Start with [`production-release-dossier-v1.0.1-2026-09-19.md`](./production-release-dossier-v1.0.1-2026-09-19.md).
 It is the canonical consolidated go/no-go record. The documents below provide
-the supporting detail.
+the supporting detail. **Note (2026-09-21): the dossier and gate-checklist
+files below are still dated 2026-09-19/20 and have not been re-issued to
+reflect the 2026-09-21 activity in this table - treat this index and
+`docs/quality-assurance.md` as current for anything after 2026-09-20, and
+the dossier/checklist as current for everything up to that point.**
 
 | Field | Value |
 |---|---|
-| Deployed SHA | `c791e7f2aacd246d8768ab239f76b1edf43fd564` (closes today's full scrutiny pass - 12 real bugs fixed, GDPR export/deletion fixes, ESLint bootstrap, Supabase advisor hardening) |
-| Production deployment ID | `dpl_GWJbTExcaRD1TpFHb7HDGrMJwvKb` (Vercel, `READY`) |
-| Deployment workflow run | `35534688255` (green) |
+| Deployed SHA | `023ad6db612efc3019ec5e4cee006c34204dc77a` (deployed 2026-09-22, run `35715668199` - carries the deploy-workflow alias fix and the trace-budget correction; no further app-code changes since `c791e7f2`'s 2026-09-20 full scrutiny pass) |
+| Production deployment ID | See run `35715668199` evidence; live-verified via direct HTTP checks 2026-09-22 |
+| Deployment workflow run | `35715668199` (green, alias-claim step passed) |
 | Documentation HEAD (may be later - docs-only commits) | see `git rev-parse origin/main` |
 | Current decision | **GO WITH LIMITATIONS.** Every mandatory gate passes with real evidence except backup/PITR and leaked-password protection, both genuine technical Fails explicitly accepted in writing by the release owner (see risk callouts above - both are the same Supabase Free-tier plan limitation, resolved together by one Pro-plan upgrade). |
 | Decision date | 2026-09-20 |
 | Latest re-verification | 2026-09-20: **the exact same stale-alias deployment bug from the prior cycle recurred** - the manual deploy workflow reported success (green run, `READY`/`target: production` deployment created) but the live domain `autotime-eu-apply.vercel.app` was still serving the *previous* deployment (`dd122ca3`) until explicitly checked via `get_deployment` by hostname and fixed with a direct alias reassignment. Re-verified via `get_deployment` (now resolves to `c791e7f2`) and a live smoke check (homepage 200, login 200, unauthenticated `/dashboard` correctly 307s). This confirms the workflow's own "deploy succeeded" signal is not sufficient evidence on its own - explicit alias verification by hostname is now a required step, not optional, every time |
+| 2026-09-21 follow-up | A deep authenticated live-production pass via a real QA test account hit **the same alias bug a third time**, ruling out any single trigger scenario. Root-caused: the deploy path uses the Vercel CLI with a bare API token (not Git-integration deploys), which does not reliably auto-claim the default `autotime-eu-apply.vercel.app` subdomain alias. **Fixed at the source** in `.github/workflows/production-deploy.yml` - a new step explicitly runs `vercel alias set` and independently verifies via `vercel inspect --json` that the domain's resolved deployment ID matches the run's, failing (and triggering rollback) on any mismatch. Also on 2026-09-21: the browser extension was published to the Chrome Web Store (see quality-assurance.md 2026-09-21 entry) |
+| 2026-09-22 validation | **Alias fix now validated by a real deploy.** Separately, CI had been failing on every push since 2026-09-20 (`Enforce Vercel server trace budget`: the OG route's Edge-runtime deprecation cleanup moved `next/og`'s Satori/resvg renderer and Next's bundled `sharp` onto the Node server trace for the first time, pushing the real total from ~20 MiB to ~36.8 MiB) - fixed by deliberately raising the budget to 42 MiB (commit `023ad6db`, reasoning documented in `scripts/server-trace-budget.mjs`). CI green again, then production deploy run `35715668199` triggered on that commit: the **"Claim and verify the production domain alias" step ran for the first time and passed** - the stale-alias bug did not recur. Confirmed independently via live HTTP checks: homepage `200`, login `200`, unauthenticated `/dashboard` correctly `307`. Both the deploy-workflow fix and the CI blocker are now closed with real evidence, not just reviewed code |
 | Release owner sign-off | **Signed 2026-09-20** - DataByRajesh (founder), GO WITH LIMITATIONS, per §8 of the production dossier |
 
 ## Canonical documents (read these; treat everything else as historical)
@@ -77,9 +83,12 @@ Not evaluated as blocking this private-beta cycle, but block any move to a
 public launch. See the documentation audit's "Public-launch work not
 started or not completed" table for the full list: founder-led UAT (3-5
 users), outcome usefulness/trust validation, live Sentry event/alert
-verification, ICO registration, a manual Chrome Web Store publication
-pass, real email delivery evidence, and a real (test-mode or live) Stripe
-end-to-end transaction.
+verification, ICO registration, real email delivery evidence, and a real
+(test-mode or live) Stripe end-to-end transaction.
+
+**Closed 2026-09-21:** the Chrome Web Store publication pass - the browser
+extension is now live in the store (see `docs/quality-assurance.md`,
+"2026-09-21: browser extension published to the Chrome Web Store").
 
 ## Superseded / historical documents
 
@@ -110,3 +119,4 @@ banner pointing back to this index:
 | Private Beta v1.0.1 (beta-terms acceptance feature) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | NO-GO for unqualified GO; only remaining blocker is confirmed zero backup coverage | 2026-09-20 |
 | Private Beta v1.0.1 (cross-user isolation closed; risk accepted; signed) | `dd122ca309c2aca6a33a36aa3189594e5b918eae` | **GO WITH LIMITATIONS - signed** | 2026-09-20 |
 | Private Beta v1.0.1 (full scrutiny pass: 12 real bugs, GDPR fixes, ESLint bootstrap, DB hardening, second risk accepted) | `c791e7f2aacd246d8768ab239f76b1edf43fd564` | **GO WITH LIMITATIONS - signed** (two accepted risks, one Pro-plan upgrade resolves both) | 2026-09-20 |
+| Private Beta v1.0.1 (3rd stale-alias occurrence found and fixed at the source; Chrome Web Store extension published) | `86f5dd40684475f51a52845b35faf36a79b01235` (docs + deploy-workflow fix only - no app-code redeploy) | Decision unchanged: **GO WITH LIMITATIONS**. Deploy-workflow fix reviewed and command-verified but not yet exercised by a real CI run - treat as unvalidated until the next production deploy confirms the alias step fires correctly | 2026-09-21 |
