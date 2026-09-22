@@ -3693,6 +3693,141 @@ h4 {
   font-weight: 700;
 }
 
+/* Applications page redesign (2026-09-22) - scoped to .applications-redesign,
+   applied only to ApplicationsList's root <main> in JobApplicationWorkspace.tsx
+   (not JobsList or the detail views, which share some of the same workflow-*
+   base classes). This row layout (.phase-three-application-row etc.) had no
+   prior CSS at all, so this adds real styling rather than overriding
+   anything - low regression risk. */
+.applications-redesign .phase-three-stage-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.applications-redesign .phase-three-stage-filters > span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint, var(--muted));
+}
+
+.applications-redesign .phase-three-stage-filters [role="group"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.applications-redesign .phase-three-stage-filters button {
+  font-weight: 700;
+  font-size: 0.82rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.applications-redesign .phase-three-stage-filters button span {
+  color: var(--ink-faint, var(--muted));
+  font-weight: 650;
+  margin-left: 4px;
+}
+
+.applications-redesign .phase-three-stage-filters button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-blue);
+  color: var(--accent-strong);
+}
+
+.applications-redesign .phase-three-application-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.applications-redesign .phase-three-application-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+  padding: 16px 18px;
+  transition: border-color 140ms ease, transform 100ms ease;
+}
+
+.applications-redesign .phase-three-application-row:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.applications-redesign .phase-three-application-context h2 {
+  font-size: 1rem;
+  margin: 3px 0;
+}
+
+.applications-redesign .phase-three-application-context p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.applications-redesign .phase-three-application-state {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.applications-redesign .phase-three-application-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.applications-redesign .phase-three-application-activity span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-faint, var(--muted));
+}
+
+.applications-redesign .phase-three-application-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  text-align: right;
+}
+
+.applications-redesign .phase-three-application-action span {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.applications-redesign .phase-three-application-action .button-secondary {
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 780px) {
+  .applications-redesign .phase-three-application-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .applications-redesign .phase-three-application-action {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
 .ai-claim-boundary {
   display: grid;
   gap: 6px;

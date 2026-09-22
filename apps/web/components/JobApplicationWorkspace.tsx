@@ -1655,7 +1655,7 @@ function ApplicationsList({
     (item) => filter === "all" || item.status === filter,
   );
   return (
-    <main className="workflow-page phase-three-applications phase-three-pipeline">
+    <main className="workflow-page phase-three-applications phase-three-pipeline applications-redesign">
       <ProductPageHeader
         eyebrow="Applications"
         title="Your application pipeline"
