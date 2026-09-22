@@ -10,7 +10,11 @@ import UpgradeConfirmedEmail from "../emails/upgrade-confirmed"
 import WelcomeEmail from "../emails/welcome"
 import { getResendEnv } from "./env.server"
 
-const emailFrom = "AutoTime EU Apply <hello@autotime-eu-apply.com>"
+// autotime-eu-apply.com was never registered/verified in Resend (confirmed
+// 2026-09-22: DNS lookup returns "domain not found"), so every transactional
+// email sent from it has been silently failing to deliver. autotimeai.com is
+// the real, owned, Resend-verified domain - use it instead.
+const emailFrom = "AutoTime EU Apply <hello@autotimeai.com>"
 
 let resendClient: Resend | null = null
 
