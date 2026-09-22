@@ -3828,6 +3828,65 @@ h4 {
   }
 }
 
+/* Interviews page redesign (2026-09-22) - scoped to .interviews-redesign,
+   applied only to InterviewList's root <main> in InterviewsWorkspace.tsx
+   (not the detail view). .workflow-list-row and .workflow-filters are
+   shared base classes (also used by the Jobs-list view), so overrides are
+   scoped under this wrapper rather than changed globally. */
+.interviews-redesign .workflow-filters {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.interviews-redesign .workflow-filters select {
+  border-radius: var(--radius-sm);
+}
+
+.interviews-redesign .workflow-list-row {
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  transition: border-color 140ms ease, transform 100ms ease;
+}
+
+.interviews-redesign .workflow-list-row:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.interviews-redesign .workflow-list-row h2 {
+  font-size: 1rem;
+}
+
+.interviews-redesign .workflow-list-row p {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.interviews-redesign .workflow-list-row .eyebrow {
+  color: var(--accent-strong);
+}
+
+.interviews-redesign .button-secondary,
+.interviews-redesign .button-primary {
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 780px) {
+  .interviews-redesign .workflow-list-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+}
+
 .ai-claim-boundary {
   display: grid;
   gap: 6px;

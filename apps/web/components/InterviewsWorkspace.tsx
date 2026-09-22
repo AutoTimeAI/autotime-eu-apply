@@ -355,7 +355,7 @@ function InterviewList({
     }
   };
   return (
-    <main className="workflow-page phase-four-interviews phase-four-interview-list">
+    <main className="workflow-page phase-four-interviews phase-four-interview-list interviews-redesign">
       <ProductPageHeader
         eyebrow="Interviews"
         title="Prepare from the application evidence"
