@@ -603,10 +603,19 @@ export default async function HomePage() {
       </section>
 
       <footer className="landing-footer">
-        <p>&copy; {new Date().getFullYear()} AutoTime AI Ltd. EU Apply is a product of AutoTime AI Ltd.</p>
+        <p>
+          &copy; {new Date().getFullYear()}{" "}
+          <a href="https://autotimeai.com" target="_blank" rel="noreferrer">
+            AutoTime AI Ltd
+          </a>
+          . EU Apply is a product of AutoTime AI Ltd.
+        </p>
         <nav aria-label="Footer">
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
+          <a href="https://autotimeai.com" target="_blank" rel="noreferrer">
+            Company site
+          </a>
         </nav>
       </footer>
     </main>
