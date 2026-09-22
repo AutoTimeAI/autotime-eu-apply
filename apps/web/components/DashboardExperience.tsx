@@ -4656,7 +4656,11 @@ export default function HomePage({
                 currentTab === "profile" &&
                 showProfileSettingsPanel && (
                   <section
-                    className="market-context-panel"
+                    className={
+                      activeFocus === "profile-evidence"
+                        ? "market-context-panel profile-evidence-redesign"
+                        : "market-context-panel"
+                    }
                     aria-label="Profile settings"
                   >
                     <section

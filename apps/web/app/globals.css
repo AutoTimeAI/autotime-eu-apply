@@ -3584,6 +3584,43 @@ h4 {
   cursor: pointer;
 }
 
+/* The CV-intake + goals panel (market-context-panel / resume-intake-panel
+   / context-explainer / context-controls) renders ABOVE the workspace-grid
+   section and is shared with the Settings view - only apply the redesign
+   class to this whole block for profile-evidence (see the conditional
+   className in DashboardExperience.tsx), never for Settings. */
+.profile-evidence-redesign.market-context-panel,
+.profile-evidence-redesign .resume-intake-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+}
+
+.profile-evidence-redesign .context-explainer article {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.profile-evidence-redesign .context-controls {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.profile-evidence-redesign .context-guidance {
+  border-left-color: var(--accent);
+}
+
+.profile-evidence-redesign .segment-button {
+  transition: border-color 140ms ease, background-color 140ms ease, transform 100ms ease;
+}
+
+.profile-evidence-redesign .segment-button:hover {
+  transform: translateY(-1px);
+}
+
 .ai-claim-boundary {
   display: grid;
   gap: 6px;
