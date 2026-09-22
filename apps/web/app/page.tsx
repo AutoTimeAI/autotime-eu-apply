@@ -586,6 +586,47 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="landing-section" aria-labelledby="privacy-title">
+        <div className="section-heading">
+          <p className="eyebrow">Privacy first</p>
+          <h2 id="privacy-title">What we do and don&apos;t do with your data</h2>
+        </div>
+        <div className="feature-band">
+          <article className="landing-feature">
+            <h3>We don&apos;t sell your data</h3>
+            <p>Your profile, CV and application history are never sold, full stop.</p>
+          </article>
+          <article className="landing-feature">
+            <h3>Job boards never see your profile</h3>
+            <p>
+              Job-listing providers (Adzuna, Jooble, EURES, employer ATS
+              systems) supply job data to us - your CV and profile are never
+              sent back to them.
+            </p>
+          </article>
+          <article className="landing-feature">
+            <h3>AI providers don&apos;t train on your data</h3>
+            <p>
+              A data-processing agreement is in place with our AI provider;
+              your job descriptions and profile data are never used to train
+              their models.
+            </p>
+          </article>
+          <article className="landing-feature">
+            <h3>Export or delete anytime</h3>
+            <p>
+              Settings &gt; Your data rights lets you download everything
+              stored about your account, or permanently delete it, yourself,
+              with no support ticket required.
+            </p>
+          </article>
+        </div>
+        <p className="section-footnote">
+          Full detail, including every sub-processor, in our{" "}
+          <Link href="/privacy">privacy policy</Link>.
+        </p>
+      </section>
+
       <section className="landing-cta-band" aria-labelledby="landing-cta-title">
         <div>
           <p className="eyebrow">Release path</p>

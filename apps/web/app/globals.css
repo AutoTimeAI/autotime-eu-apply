@@ -6805,6 +6805,17 @@ h4 {
   align-items: stretch;
 }
 
+.section-footnote {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.section-footnote a {
+  color: var(--accent-strong);
+  font-weight: 650;
+}
+
 .eu-fit-engine {
   display: grid;
   gap: 18px;
