@@ -322,6 +322,14 @@ export default async function HomePage() {
                 Join the waitlist
               </Link>
             ) : null}
+            <a
+              className="secondary-link"
+              href="https://chromewebstore.google.com/detail/autotime-eu-apply/cnddgochpdijpljflnbhpngacmmglmfn"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Get the Chrome extension
+            </a>
           </div>
           <div className="landing-hero-signals" aria-label="Product strengths">
             <span>Strategic targeting</span>

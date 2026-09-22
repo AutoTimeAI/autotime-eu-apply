@@ -64,7 +64,20 @@ export function PublicWaitlistContent() {
         </div>
 
         {joined ? (
-          <p className={`status-banner ${getStatusTone(status ?? "")}`}>{status}</p>
+          <>
+            <p className={`status-banner ${getStatusTone(status ?? "")}`}>{status}</p>
+            <p>
+              While you wait, you can already{" "}
+              <a
+                href="https://chromewebstore.google.com/detail/autotime-eu-apply/cnddgochpdijpljflnbhpngacmmglmfn"
+                target="_blank"
+                rel="noreferrer"
+              >
+                install the AutoTime EU Apply Chrome extension
+              </a>
+              .
+            </p>
+          </>
         ) : (
           <>
             <form onSubmit={joinWaitlist} className="header-actions auth-provider-actions">
