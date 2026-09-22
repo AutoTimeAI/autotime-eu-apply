@@ -4548,3 +4548,69 @@ next real production deploy through this workflow is the real test;
 if the alias step fires and this specific bug class doesn't recur,
 that closes the loop. If it fails in some unanticipated way, the
 existing rollback step should still protect production regardless.
+
+## 2026-09-22: added a public beta-waitlist signup page, and found a real, pre-existing transactional-email delivery bug while verifying it
+
+Built `/join-waitlist` - a public, unauthenticated signup page for visitors
+without an account yet (distinct from the existing authenticated
+`/waitlist` page shown to a signed-up user whose `beta_access` isn't
+`active`). New `beta_waitlist_signups` table (service-role only, RLS
+enabled, no public policies), `/api/waitlist/join` route (same-origin
+check, IP-keyed rate limit via the existing `increment_ai_rate_limit`
+RPC), Chrome extension links on the landing hero and post-signup
+confirmation, and a footer link to the company site. Migration applied
+directly to production; verified live end to end (signup, DB write, then
+independently confirmed via a direct query, not just the API's own
+success response) before cleaning up the test row.
+
+**Then added a founder email notification on new signups, reusing the
+existing `lib/email.ts` Resend integration - and the live verification of
+that notification surfaced a real, previously-undocumented production
+bug: transactional email has likely never actually delivered in this
+project.**
+
+`docs/quality-assurance.md` had already flagged *"live email delivery via
+Resend was never verified"* as an open public-launch item - today turned
+that from a documented suspicion into a confirmed, reproduced bug. The
+send call to Resend's API never threw an error (nothing logged, response
+looked like success), but the notification email never arrived in a real,
+checked inbox (`hello@autotimeai.com`, confirmed checked including spam).
+
+**Root cause**: `apps/web/lib/email.ts`'s sender address was
+`hello@autotime-eu-apply.com` - a domain that, per Resend's own domain
+page, was **not registered at all** (`Domain not found: This domain
+wasn't found in any DNS servers yet`), not merely pending DNS propagation.
+Confirmed by the founder checking the Resend dashboard directly: the
+domain had just been added (14 minutes old at the time), status
+`Pending`, zero DNS records found anywhere. Since every transactional
+email this app sends (`sendWelcomeEmail`, `sendUpgradeConfirmed`, and the
+new waitlist notification) shares this same sender address and the same
+"log, don't throw" failure handling by design, **this means welcome
+emails and upgrade-confirmation emails have likely never reliably
+delivered in production**, silently, with no error surfaced anywhere -
+exactly the kind of gap that "no error in the logs" can't catch.
+
+**Further complication found while diagnosing**: the project's
+`RESEND_API_KEY` pointed to a Resend account (`autotimeai`) different
+from the one where `autotimeai.com` - the real, owned, live domain - was
+already verified. Fixed in two parts: (1) the founder generated a new
+sending-scoped API key from the Resend account where `autotimeai.com` is
+verified and updated `RESEND_API_KEY` in Vercel production directly
+(env var writes are outside this session's automated permissions); (2)
+`emailFrom` in `lib/email.ts` changed from
+`hello@autotime-eu-apply.com` to `hello@autotimeai.com`.
+
+**Verified live end to end after the fix**: deployed, submitted a real
+waitlist signup against production, confirmed no send error in the
+runtime logs, and - critically, since "no error" was exactly what looked
+like success before the fix too - **the founder confirmed the
+notification email actually arrived** in `hello@autotimeai.com`. Test
+signup row cleaned up from the database afterward.
+
+**Not yet re-verified**: `sendWelcomeEmail` and `sendUpgradeConfirmed`
+share the same fixed sender address and client, so the same fix should
+resolve them too, but neither has been independently re-tested live
+since the domain switch - only the waitlist notification path was
+directly exercised. Worth a real signup-flow and upgrade-flow smoke test
+before treating those two as confirmed fixed rather than "should also be
+fixed by the same change."
