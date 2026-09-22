@@ -13,6 +13,7 @@ import {
 } from "./product-ui";
 import { useDashboardPlan } from "./UserNav";
 import { ApplicationChecklist } from "./ApplicationChecklist";
+import { Badge } from "./ui";
 import {
   analyseJob,
   cloudApplicationToWorkspaceJob,
@@ -1741,15 +1742,7 @@ function ApplicationsList({
                   >
                     {application.status}
                   </ProductStatusBadge>
-                  <span
-                    className={
-                      blocked
-                        ? "blocked"
-                        : readiness.ready
-                          ? "ready"
-                          : "unknown"
-                    }
-                  >
+                  <Badge tone={blocked ? "danger" : readiness.ready ? "good" : "warn"}>
                     <b aria-hidden="true">
                       {blocked ? "×" : readiness.ready ? "✓" : "!"}
                     </b>{" "}
@@ -1758,7 +1751,7 @@ function ApplicationsList({
                       : readiness.ready
                         ? "Checks complete"
                         : `${readiness.blockers.length} check${readiness.blockers.length === 1 ? "" : "s"} open`}
-                  </span>
+                  </Badge>
                 </div>
                 <div className="phase-three-application-activity">
                   <span>Last activity</span>
