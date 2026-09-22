@@ -4257,6 +4257,132 @@ h4 {
   color: var(--accent-strong);
 }
 
+/* Settings page redesign (2026-09-23) - page 8 of the redesign rollout.
+   The overview-grid strip stays as today's simple status cards, restyled
+   with the .ui-card treatment (see settings-hub-panel/grid overrides
+   below). This block covers the new sidebar + single-panel pattern in
+   SettingsControls.tsx, which replaced 5 always-visible stacked panels
+   (approved v2 mockup - the flat card grid in v1 was rejected as
+   confusing). Scoped generically since SettingsControls only renders on
+   this one page. */
+.settings-hub-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+  padding: 22px;
+}
+
+.settings-hub-grid article {
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  transition: border-color 140ms ease, transform 100ms ease;
+}
+
+.settings-hub-grid article:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.settings-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+  overflow: hidden;
+}
+
+.settings-nav {
+  border-right: 1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+
+.settings-nav-item:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+.settings-nav-item.active {
+  background: var(--surface-blue);
+  color: var(--accent-strong);
+  font-weight: 750;
+}
+
+.settings-nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+}
+
+.settings-nav-item.active .settings-nav-dot {
+  background: var(--accent);
+}
+
+.settings-nav-meta {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.settings-nav-item.active .settings-nav-meta {
+  color: var(--accent-strong);
+}
+
+.settings-panel {
+  padding: 26px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-panel .section-heading h2 {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .settings-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .settings-panel {
+    padding: 20px;
+  }
+}
+
 .ai-claim-boundary {
   display: grid;
   gap: 6px;

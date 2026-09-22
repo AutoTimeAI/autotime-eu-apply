@@ -15,6 +15,17 @@ import {
 } from "../lib/international-mobility-storage";
 import { createBrowserClient } from "../lib/supabase/client";
 import type { AccountAiTone, SubscriptionPlan } from "../lib/supabase/types";
+import { Button } from "./ui";
+
+type SettingsSection = "account" | "billing" | "data" | "rights" | "preferences";
+
+const sections: Array<{ id: SettingsSection; label: string }> = [
+  { id: "account", label: "Account" },
+  { id: "billing", label: "Plan & billing" },
+  { id: "data", label: "Data & privacy" },
+  { id: "rights", label: "Your data rights" },
+  { id: "preferences", label: "Preferences" },
+];
 
 type SettingsControlsProps = {
   email: string;
@@ -58,11 +69,28 @@ export function SettingsControls({
   const [preferences, setPreferences] =
     useState<Preferences>(defaultPreferences);
   const [status, setStatus] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<SettingsSection>("account");
   const [isBillingPending, setIsBillingPending] = useState(false);
   const [isDeletePending, setIsDeletePending] = useState(false);
   const [isPreferencesPending, setIsPreferencesPending] = useState(false);
   const [isExportPending, setIsExportPending] = useState(false);
   const [isAccountDeletePending, setIsAccountDeletePending] = useState(false);
+
+  useEffect(() => {
+    // The overview cards on the parent page link to #billing-controls /
+    // #data-controls, and used to jump straight to that always-visible
+    // panel. Now that only one section renders at a time, honor the hash
+    // as the initial section instead, so those links keep working.
+    const hashToSection: Record<string, SettingsSection> = {
+      "billing-controls": "billing",
+      "data-controls": "data",
+      "gdpr-controls": "rights",
+    };
+    const hash = window.location.hash.replace("#", "");
+    if (hash && hash in hashToSection) {
+      setActiveSection(hashToSection[hash]);
+    }
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -346,155 +374,178 @@ export function SettingsControls({
     }
   };
   return (
-    <section className="settings-control-grid" aria-label="Settings controls">
-      <article className="settings-control-panel">
-        <div className="section-heading">
-          <p className="eyebrow">Account</p>
-          <h2>{email}</h2>
-          <p>Manage sign-in methods and session controls.</p>
-        </div>
-        <div className="profile-action-row">
-          <button className="secondary-button" type="button" onClick={signOut}>
-            Sign out
-          </button>
-        </div>
-      </article>
-
-      <article className="settings-control-panel" id="billing-controls">
-        <div className="section-heading">
-          <p className="eyebrow">Plan & billing</p>
-          <h2>
-            {plan === "pro" ? "Pro plan" : "Free plan"}
-          </h2>
-          <p>
-            Open checkout or the billing portal without duplicating pricing.
-          </p>
-        </div>
-        <button
-          disabled={isBillingPending}
-          type="button"
-          onClick={openBillingPortal}
-        >
-          {plan !== "free" ? "Manage billing" : "Upgrade plan"}
-        </button>
-      </article>
-
-      <article className="settings-control-panel" id="data-controls">
-        <div className="section-heading">
-          <p className="eyebrow">Data & privacy</p>
-          <h2>Backup and account data</h2>
-          <p>
-            Export a browser backup or remove synced profile data. This does not
-            delete your sign-in account.
-          </p>
-        </div>
-        <div className="profile-action-row">
+    <section className="settings-shell" aria-label="Settings controls">
+      <nav className="settings-nav" aria-label="Settings sections">
+        {sections.map((section) => (
           <button
-            className="secondary-button"
+            key={section.id}
+            className={`settings-nav-item${activeSection === section.id ? " active" : ""}`}
             type="button"
-            onClick={exportBrowserBackup}
+            aria-current={activeSection === section.id ? "page" : undefined}
+            onClick={() => setActiveSection(section.id)}
           >
-            Export backup
+            <span className="settings-nav-dot" aria-hidden="true" />
+            {section.label}
+            {section.id === "billing" ? (
+              <span className="settings-nav-meta">{plan === "pro" ? "Pro" : "Free"}</span>
+            ) : null}
           </button>
-          <button
-            className="danger-button"
-            disabled={isDeletePending}
-            type="button"
-            onClick={deleteAccountProfile}
-          >
-            Delete account profile
-          </button>
-        </div>
-      </article>
+        ))}
+      </nav>
 
-      <article className="settings-control-panel" id="gdpr-controls">
-        <div className="section-heading">
-          <p className="eyebrow">Your data rights</p>
-          <h2>Export or delete your account</h2>
-          <p>
-            Export everything stored about you server-side, or permanently
-            delete your sign-in account and all associated data.
-          </p>
-        </div>
-        <div className="profile-action-row">
-          <button
-            className="secondary-button"
-            disabled={isExportPending}
-            type="button"
-            onClick={() => void exportAccountData()}
-          >
-            {isExportPending ? "Exporting…" : "Export my data"}
-          </button>
-          <button
-            className="danger-button"
-            disabled={isAccountDeletePending}
-            type="button"
-            onClick={() => void deleteAccount()}
-          >
-            {isAccountDeletePending ? "Deleting…" : "Delete my account"}
-          </button>
-        </div>
-      </article>
+      <div className="settings-panel">
+        {activeSection === "account" && (
+          <article id="account-panel" aria-labelledby="settings-account-heading">
+            <div className="section-heading">
+              <p className="eyebrow">Account</p>
+              <h2 id="settings-account-heading">{email}</h2>
+              <p>Manage sign-in methods and session controls.</p>
+            </div>
+            <div className="profile-action-row">
+              <Button variant="secondary" onClick={signOut}>
+                Sign out
+              </Button>
+            </div>
+          </article>
+        )}
 
-      <article className="settings-control-panel">
-        <div className="section-heading">
-          <p className="eyebrow">Preferences</p>
-          <h2>Defaults</h2>
-          <p>
-            Keep lightweight defaults here; evidence stays in Profile Evidence.
-          </p>
-        </div>
-        <label>
-          Default region
-          <input
-            value={preferences.defaultRegion}
-            onBlur={() => void savePreferences(preferences)}
-            onChange={(event) =>
-              setPreferences({
-                ...preferences,
-                defaultRegion: event.target.value,
-              })
-            }
-          />
-        </label>
-        <label>
-          AI response style
-          <select
-            value={preferences.aiTone}
-            onChange={(event) =>
-              void savePreferences({
-                ...preferences,
-                aiTone: event.target.value as AccountAiTone,
-              })
-            }
-          >
-            <option value="concise">Concise</option>
-            <option value="coaching">Coaching</option>
-            <option value="detailed">Detailed</option>
-          </select>
-        </label>
-        <label className="sync-consent-control">
-          <input
-            checked={preferences.notificationsEnabled}
-            type="checkbox"
-            onChange={(event) =>
-              void savePreferences({
-                ...preferences,
-                notificationsEnabled: event.target.checked,
-              })
-            }
-          />
-          <span>
-            {isPreferencesPending
-              ? "Saving preferences..."
-              : "Enable notification preferences when reminders ship."}
-          </span>
-        </label>
-      </article>
+        {activeSection === "billing" && (
+          <article id="billing-controls" aria-labelledby="settings-billing-heading">
+            <div className="section-heading">
+              <p className="eyebrow">Plan & billing</p>
+              <h2 id="settings-billing-heading">
+                {plan === "pro" ? "Pro plan" : "Free plan"}
+              </h2>
+              <p>
+                Open checkout or the billing portal without duplicating pricing.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              disabled={isBillingPending}
+              onClick={openBillingPortal}
+            >
+              {plan !== "free" ? "Manage billing" : "Upgrade plan"}
+            </Button>
+          </article>
+        )}
 
-      {status ? (
-        <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
-      ) : null}
+        {activeSection === "data" && (
+          <article id="data-controls" aria-labelledby="settings-data-heading">
+            <div className="section-heading">
+              <p className="eyebrow">Data & privacy</p>
+              <h2 id="settings-data-heading">Backup and account data</h2>
+              <p>
+                Export a browser backup or remove synced profile data. This does not
+                delete your sign-in account.
+              </p>
+            </div>
+            <div className="profile-action-row">
+              <Button variant="secondary" onClick={exportBrowserBackup}>
+                Export backup
+              </Button>
+              <Button
+                variant="danger"
+                disabled={isDeletePending}
+                onClick={deleteAccountProfile}
+              >
+                Delete account profile
+              </Button>
+            </div>
+          </article>
+        )}
+
+        {activeSection === "rights" && (
+          <article id="gdpr-controls" aria-labelledby="settings-rights-heading">
+            <div className="section-heading">
+              <p className="eyebrow">Your data rights</p>
+              <h2 id="settings-rights-heading">Export or delete your account</h2>
+              <p>
+                Export everything stored about you server-side, or permanently
+                delete your sign-in account and all associated data.
+              </p>
+            </div>
+            <div className="profile-action-row">
+              <Button
+                variant="secondary"
+                disabled={isExportPending}
+                onClick={() => void exportAccountData()}
+              >
+                {isExportPending ? "Exporting…" : "Export my data"}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={isAccountDeletePending}
+                onClick={() => void deleteAccount()}
+              >
+                {isAccountDeletePending ? "Deleting…" : "Delete my account"}
+              </Button>
+            </div>
+          </article>
+        )}
+
+        {activeSection === "preferences" && (
+          <article aria-labelledby="settings-preferences-heading">
+            <div className="section-heading">
+              <p className="eyebrow">Preferences</p>
+              <h2 id="settings-preferences-heading">Defaults</h2>
+              <p>
+                Keep lightweight defaults here; evidence stays in Profile Evidence.
+              </p>
+            </div>
+            <label>
+              Default region
+              <input
+                value={preferences.defaultRegion}
+                onBlur={() => void savePreferences(preferences)}
+                onChange={(event) =>
+                  setPreferences({
+                    ...preferences,
+                    defaultRegion: event.target.value,
+                  })
+                }
+              />
+            </label>
+            <label>
+              AI response style
+              <select
+                value={preferences.aiTone}
+                onChange={(event) =>
+                  void savePreferences({
+                    ...preferences,
+                    aiTone: event.target.value as AccountAiTone,
+                  })
+                }
+              >
+                <option value="concise">Concise</option>
+                <option value="coaching">Coaching</option>
+                <option value="detailed">Detailed</option>
+              </select>
+            </label>
+            <label className="sync-consent-control">
+              <input
+                checked={preferences.notificationsEnabled}
+                type="checkbox"
+                onChange={(event) =>
+                  void savePreferences({
+                    ...preferences,
+                    notificationsEnabled: event.target.checked,
+                  })
+                }
+              />
+              <span>
+                {isPreferencesPending
+                  ? "Saving preferences..."
+                  : "Enable notification preferences when reminders ship."}
+              </span>
+            </label>
+          </article>
+        )}
+
+        {status ? (
+          <p className={`status-banner ${getStatusTone(status)}`}>{status}</p>
+        ) : null}
+      </div>
     </section>
   );
 }
