@@ -68,3 +68,19 @@ export async function sendUpgradeConfirmed(
     logEmailError("upgrade-confirmed", error)
   }
 }
+
+/** Internal notification to the founder when a visitor joins the public beta waitlist. Logs (does not throw) on failure. */
+export async function sendWaitlistJoinedNotification(
+  signupEmail: string,
+): Promise<void> {
+  try {
+    await getResendClient().emails.send({
+      from: emailFrom,
+      to: "hello@autotimeai.com",
+      subject: "New beta waitlist signup",
+      html: `<p>${signupEmail} just joined the EU Apply private beta waitlist.</p>`,
+    })
+  } catch (error: unknown) {
+    logEmailError("waitlist-joined-notification", error)
+  }
+}

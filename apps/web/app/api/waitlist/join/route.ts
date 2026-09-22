@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { isSameOriginMutation } from "../../../../lib/admin-authorization";
+import { sendWaitlistJoinedNotification } from "../../../../lib/email";
 import { getRequestIp } from "../../../../lib/request-ip";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
@@ -43,13 +44,20 @@ export async function POST(request: NextRequest) {
     const body = schema.parse(await request.json());
     const client = createAdminClient();
 
-    const { error } = await client
+    const { data: upserted, error } = await client
       .from("beta_waitlist_signups")
       .upsert(
         { email: body.email, source: "landing_page" },
         { onConflict: "email", ignoreDuplicates: true },
-      );
+      )
+      .select("email");
     if (error) throw error;
+
+    // ignoreDuplicates means a repeat email returns no row here - only
+    // notify on a genuinely new signup, not every resubmission.
+    if (upserted && upserted.length > 0) {
+      await sendWaitlistJoinedNotification(body.email);
+    }
 
     return NextResponse.json({ data: { joined: true }, error: null });
   } catch (error) {
