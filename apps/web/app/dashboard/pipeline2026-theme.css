@@ -196,6 +196,31 @@
   color: var(--at-primary);
 }
 
+/* WCAG 1.4.3: the shared BrandBackdrop's decorative watermark text was
+   near-invisible by design (opacity 0.075) but still fails the contrast
+   check that applies to rendered text regardless of aria-hidden - raising
+   opacity and using the theme's own muted token keeps it clearly
+   background-decorative while clearing 3:1 for this large, bold text. */
+.pipeline2026-theme .eu-brand-motto {
+  color: var(--at-muted);
+  opacity: 0.85;
+}
+
+/* WCAG 1.4.3 continued - these three inherit hardcoded light-theme colors
+   from globals.css (dark ink, a purple design-system accent, and the
+   browser's literal default link blue #0000ee) that were never
+   theme-aware, so they go near-invisible against this theme's dark
+   surfaces. */
+.pipeline2026-theme .brand-name {
+  color: var(--at-ink);
+}
+.pipeline2026-theme .product-eyebrow {
+  color: var(--at-primary) !important;
+}
+.pipeline2026-theme .text-link {
+  color: var(--at-primary);
+}
+
 /* ---- Site-wide bare-button gradient (globals.css) ----
  * !important: Next.js gives globals.css (imported by the root layout)
  * priority over this nested dashboard-layout stylesheet regardless of
@@ -272,7 +297,7 @@
   gap: 8px;
   padding: 2px 4px;
 }
-.pipeline-column-head h3 {
+.pipeline-column-head h2 {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;

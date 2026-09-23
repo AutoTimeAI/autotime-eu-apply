@@ -1934,7 +1934,7 @@ function PipelineBoard({
               return (
                 <section className="pipeline-column" key={column}>
                   <header className="pipeline-column-head">
-                    <h3>{column}</h3>
+                    <h2>{column}</h2>
                     <span className="pipeline-column-count">
                       {columnApplications.length}
                     </span>

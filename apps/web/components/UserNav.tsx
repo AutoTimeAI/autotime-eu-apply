@@ -222,10 +222,10 @@ export function DashboardWorkflowSidebar() {
     return (
       <a
         aria-current={isActive ? "page" : undefined}
-        aria-label={compact ? item.label : undefined}
         className={isActive ? "active" : undefined}
         href={item.href}
         key={item.href}
+        title={compact && visualLabel !== item.label ? item.label : undefined}
       >
         <span className="workflow-nav-title">
           <NavIcon name={item.icon} />
@@ -406,6 +406,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
         aria-controls={isOpen ? menuId : undefined}
         aria-expanded={isOpen}
         aria-haspopup="menu"
+        aria-label={`Account menu for ${email}`}
         className="secondary-button user-nav-trigger"
         type="button"
         onKeyDown={(event) => {
