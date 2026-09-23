@@ -1,0 +1,126 @@
+/*
+ * 2026 redesign theme — scoped entirely under `.ux2026-theme` (applied to
+ * `.dashboard-app-shell` in DashboardShell.tsx) so it never leaks onto
+ * marketing/public pages. Redefines the shared `--at-*` tokens the rest of
+ * the dashboard CSS already reads, plus restyles the topbar/sidebar shell
+ * to match the approved concept (teal accent, Sora/IBM Plex type, pill nav).
+ * Concept reference: https://claude.ai/artifact/PGTRnxctt6RcjF5Aat8PPd
+ */
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+.ux2026-theme {
+  --at-canvas: #f7f8f6;
+  --at-surface: #ffffff;
+  --at-ink: #12181a;
+  --at-muted: #5c6b67;
+  --at-border: #dfe4e0;
+  --at-primary: #0e8f7c;
+  --at-primary-pressed: #0b6c5f;
+  --at-selected: #e1f3ee;
+  --at-info: #0e8f7c;
+  --at-warning: #9a6b12;
+  --at-error: #b4402a;
+  --at-radius-sm: 8px;
+  --at-radius-md: 11px;
+  --at-radius-lg: 14px;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ux2026-theme:not([data-theme="light"]) {
+    --at-canvas: #101413;
+    --at-surface: #181e1c;
+    --at-ink: #edf2ef;
+    --at-muted: #93a29c;
+    --at-border: #2a322f;
+    --at-primary: #28c4a8;
+    --at-primary-pressed: #1f9f88;
+    --at-selected: #1b3833;
+  }
+}
+
+.ux2026-theme h1,
+.ux2026-theme h2,
+.ux2026-theme h3,
+.ux2026-theme .brand-name {
+  font-family: "Sora", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Topbar ---- */
+.ux2026-theme .dashboard-topbar {
+  background: var(--at-surface);
+  border-bottom: 1px solid var(--at-border);
+}
+
+.ux2026-theme .brand-mark.phase-one-brand-mark {
+  background: linear-gradient(135deg, var(--at-primary), var(--at-primary-pressed));
+  color: #fff;
+  border-radius: 9px;
+  font-family: "Sora", system-ui, sans-serif;
+  font-weight: 700;
+}
+
+.ux2026-theme .beta-badge {
+  background: var(--at-selected);
+  color: var(--at-primary-pressed);
+}
+
+/* ---- Sidebar / workflow nav ---- */
+.ux2026-theme .dashboard-sidebar {
+  padding-right: 4px;
+}
+
+.ux2026-theme .dashboard-workflow-nav {
+  gap: 3px;
+}
+
+.ux2026-theme .dashboard-workflow-nav a {
+  border-radius: var(--at-radius-md);
+  padding: 9px 12px;
+}
+
+.ux2026-theme .dashboard-workflow-nav a:hover {
+  background: var(--at-canvas);
+}
+
+.ux2026-theme .dashboard-workflow-nav a.active,
+.ux2026-theme .dashboard-workflow-nav a[aria-current="page"] {
+  background: var(--at-selected);
+  color: var(--at-primary-pressed);
+  font-weight: 600;
+}
+
+.ux2026-theme .dashboard-workflow-nav a.active::before,
+.ux2026-theme .dashboard-workflow-nav a[aria-current="page"]::before {
+  background: var(--at-primary);
+  border-radius: 0 4px 4px 0;
+}
+
+.ux2026-theme .workflow-nav-icon,
+.ux2026-theme .dashboard-workflow-nav a.active .workflow-nav-icon,
+.ux2026-theme .dashboard-workflow-nav a[aria-current="page"] .workflow-nav-icon {
+  color: var(--at-primary);
+}
+
+/* ---- Buttons / cards (shared UI component library) ---- */
+.ux2026-theme .ui-btn-primary {
+  background: var(--at-primary);
+  border-color: var(--at-primary);
+}
+
+.ux2026-theme .ui-btn-primary:hover {
+  background: var(--at-primary-pressed);
+  border-color: var(--at-primary-pressed);
+}
+
+.ux2026-theme .ui-card,
+.ux2026-theme .ui-card-emphasis {
+  border-radius: var(--at-radius-lg);
+}
+
+.ux2026-theme .ui-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px -18px rgba(18, 24, 26, 0.28);
+  border-color: var(--at-primary);
+}
