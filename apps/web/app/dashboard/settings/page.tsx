@@ -151,7 +151,7 @@ export default async function DashboardSettingsPage() {
         </div>
       </section>
 
-      <section id="account-controls">
+      <section id="account-controls" className="settings-page-redesign">
         <AccountIdentityLinker />
       </section>
 

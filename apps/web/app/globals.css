@@ -4314,6 +4314,19 @@ h4 {
   transform: translateY(-1px);
 }
 
+/* AccountIdentityLinker (.identity-link-panel) is shared with a second,
+   dead call site in DashboardExperience.tsx (activeFocus === "settings",
+   confirmed unreachable) - scoped to .settings-page-redesign, the real
+   Settings page's own wrapper, rather than changed globally. Found via
+   live user feedback that surfaced this same "sibling block missed"
+   pattern twice already on Profile Evidence. */
+.settings-page-redesign .identity-link-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+}
+
 .settings-shell {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
