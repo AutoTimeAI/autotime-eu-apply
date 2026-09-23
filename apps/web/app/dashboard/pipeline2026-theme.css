@@ -1,0 +1,219 @@
+/*
+ * Third UI/UX concept — "Pipeline Command Board" — scoped entirely under
+ * `.pipeline2026-theme` (applied to `.dashboard-app-shell` in
+ * DashboardShell.tsx) so it never leaks outside the dashboard and never
+ * collides with the `.ux2026-theme` branch's own theme file.
+ * Dark-first, amber accent, Plus Jakarta Sans/Public Sans/JetBrains Mono -
+ * deliberately distinct from both the original blue and the teal redesign.
+ * Concept reference: https://claude.ai/artifact/MzsY5SbbyNy1RD42R7KzsF
+ *
+ * This first commit re-themes the shared shell (topbar + workflow sidebar)
+ * and the page-phase token system, matching the same low-risk, verify-first
+ * approach as the ux-2026-redesign branch's foundation commit. The
+ * concept's Kanban pipeline board itself (drag/drop columns, inspector
+ * panel, command bar) is a structural rebuild, not a reskin, and is
+ * deliberately left for a separate follow-up once this foundation is
+ * approved.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap");
+
+.pipeline2026-theme {
+  --at-canvas: #131217;
+  --at-surface: #1b1a21;
+  --at-ink: #f1efe9;
+  --at-muted: #948f9c;
+  --at-border: #302e37;
+  --at-primary: #e0a53a;
+  --at-primary-pressed: #c98b22;
+  --at-selected: #332810;
+  --at-info: #e0a53a;
+  --at-warning: #e0a53a;
+  --at-error: #e37a6c;
+  --at-radius-sm: 7px;
+  --at-radius-md: 10px;
+  --at-radius-lg: 13px;
+  font-family: "Public Sans", system-ui, sans-serif;
+  background: var(--at-canvas);
+  color: var(--at-ink);
+}
+
+.pipeline2026-theme h1,
+.pipeline2026-theme h2,
+.pipeline2026-theme h3,
+.pipeline2026-theme .brand-name {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* ---- Topbar ---- */
+.pipeline2026-theme .dashboard-topbar {
+  background: var(--at-surface);
+  border-bottom: 1px solid var(--at-border);
+  color: var(--at-ink);
+}
+
+.pipeline2026-theme .brand-mark.phase-one-brand-mark {
+  background: var(--at-primary);
+  color: #1b1a21;
+  border-radius: 9px;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-weight: 800;
+}
+
+.pipeline2026-theme .brand-tagline {
+  color: var(--at-muted);
+}
+
+.pipeline2026-theme .beta-badge {
+  background: var(--at-selected);
+  color: var(--at-primary);
+}
+
+/* ---- Sidebar / workflow nav ---- */
+.pipeline2026-theme .dashboard-sidebar {
+  background: var(--at-canvas);
+}
+
+.pipeline2026-theme .dashboard-workflow-nav a {
+  border-radius: var(--at-radius-md);
+  padding: 9px 12px;
+  color: var(--at-ink);
+}
+
+.pipeline2026-theme .dashboard-workflow-nav small {
+  color: var(--at-muted);
+}
+
+.pipeline2026-theme .dashboard-workflow-nav a:hover {
+  background: var(--at-surface);
+}
+
+.pipeline2026-theme .dashboard-workflow-nav a.active,
+.pipeline2026-theme .dashboard-workflow-nav a[aria-current="page"] {
+  background: var(--at-selected);
+  color: var(--at-primary);
+  font-weight: 600;
+}
+
+.pipeline2026-theme .dashboard-workflow-nav a.active::before,
+.pipeline2026-theme .dashboard-workflow-nav a[aria-current="page"]::before {
+  background: var(--at-primary);
+  border-radius: 0 4px 4px 0;
+}
+
+.pipeline2026-theme .workflow-nav-icon,
+.pipeline2026-theme .dashboard-workflow-nav a.active .workflow-nav-icon,
+.pipeline2026-theme .dashboard-workflow-nav a[aria-current="page"] .workflow-nav-icon {
+  color: var(--at-primary);
+}
+
+.pipeline2026-theme .dashboard-main-region {
+  background: var(--at-canvas);
+  color: var(--at-ink);
+}
+
+/* ---- Retarget each page-phase's own local primary-color tokens ----
+ * Same mechanism as ux-2026-redesign's theme file: every phase-N
+ * stylesheet hardcodes its own --p*-primary custom property, so
+ * redefining each one here (higher specificity) recolors every rule
+ * built on top of it without touching those files directly. */
+.pipeline2026-theme .phase-two-jobs {
+  --phase-two-primary: var(--at-primary);
+  --phase-two-primary-strong: var(--at-primary-pressed);
+  --phase-two-selected: var(--at-selected);
+  --phase-two-ink: var(--at-ink);
+  --phase-two-muted: var(--at-muted);
+  --phase-two-canvas: var(--at-canvas);
+}
+.pipeline2026-theme .phase-three-applications {
+  --p3-primary: var(--at-primary);
+  --p3-primary-strong: var(--at-primary-pressed);
+  --p3-selected: var(--at-selected);
+  --p3-ink: var(--at-ink);
+  --p3-muted: var(--at-muted);
+  --p3-canvas: var(--at-canvas);
+}
+.pipeline2026-theme .phase-four-interviews {
+  --p4-primary: var(--at-primary);
+  --p4-primary-strong: var(--at-primary-pressed);
+  --p4-selected: var(--at-selected);
+  --p4-ink: var(--at-ink);
+  --p4-muted: var(--at-muted);
+  --p4-canvas: var(--at-canvas);
+}
+.pipeline2026-theme .phase-five-countries {
+  --p5-primary: var(--at-primary);
+  --p5-primary-strong: var(--at-primary-pressed);
+  --p5-selected: var(--at-selected);
+  --p5-ink: var(--at-ink);
+}
+.pipeline2026-theme .phase-six-career-direction {
+  --p6-primary: var(--at-primary);
+  --p6-primary-strong: var(--at-primary-pressed);
+  --p6-selected: var(--at-selected);
+  --p6-ink: var(--at-ink);
+}
+.pipeline2026-theme .phase-seven-profile {
+  --accent: var(--at-primary);
+  --accent-strong: var(--at-primary-pressed);
+  --green: var(--at-primary);
+  --p7-selected: var(--at-selected);
+}
+
+/* ---- Hardcoded blue literals outside the token system ---- */
+.pipeline2026-theme .onboarding-choice-grid label:has(input:checked),
+.pipeline2026-theme .onboarding-direction-grid button.selected {
+  border-color: var(--at-primary);
+}
+.pipeline2026-theme .home-experience .profile-guidance-meter span {
+  background: var(--at-primary);
+}
+.pipeline2026-theme .home-experience .status-banner.info,
+.pipeline2026-theme .home-experience .status-banner.success {
+  border-color: var(--at-primary);
+  background: var(--at-selected);
+  color: var(--at-primary);
+}
+.pipeline2026-theme .home-system-state {
+  border-left-color: var(--at-primary);
+  background: var(--at-surface);
+  border-color: var(--at-border);
+}
+.pipeline2026-theme .onboarding-choice-grid label:has(input:focus-visible) {
+  outline-color: var(--at-primary);
+}
+.pipeline2026-theme .eu-brand-orb-one {
+  background: var(--at-primary);
+}
+.pipeline2026-theme .eu-brand-tags span {
+  border-color: var(--at-primary);
+  color: var(--at-primary);
+}
+
+/* ---- Site-wide bare-button gradient (globals.css) ----
+ * !important: Next.js gives globals.css (imported by the root layout)
+ * priority over this nested dashboard-layout stylesheet regardless of
+ * selector specificity - confirmed empirically on the ux-2026-redesign
+ * branch via computed styles. */
+.pipeline2026-theme
+  button:not(.secondary-button):not(.button-secondary):not(.danger-button),
+.pipeline2026-theme .primary-link {
+  background: var(--at-primary) !important;
+  color: #1b1a21 !important;
+}
+
+.pipeline2026-theme .secondary-button,
+.pipeline2026-theme .button-secondary,
+.pipeline2026-theme .secondary-link {
+  background: var(--at-surface) !important;
+  border-color: var(--at-border) !important;
+  color: var(--at-ink) !important;
+}
+
+.pipeline2026-theme input,
+.pipeline2026-theme select,
+.pipeline2026-theme textarea {
+  background: var(--at-surface) !important;
+  border-color: var(--at-border) !important;
+  color: var(--at-ink) !important;
+}

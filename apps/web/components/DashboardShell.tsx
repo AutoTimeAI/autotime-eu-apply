@@ -59,7 +59,7 @@ export function DashboardShell({
   return (
     <DashboardPlanProvider plan={plan} userId={userId}>
       <InactivityLogout />
-      <div className="dashboard-app-shell">
+      <div className="dashboard-app-shell pipeline2026-theme">
         <BrandBackdrop />
         <a className="skip-link" href="#dashboard-content">
           Skip to main content
