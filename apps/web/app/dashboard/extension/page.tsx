@@ -248,17 +248,17 @@ export default async function DashboardExtensionPage() {
         <div className="extension-distribution-grid">
           <section className="extension-install-steps extension-action-card">
             <p className="eyebrow">
-              {activeConnection ? "Connected browser" : "Private beta"}
+              {activeConnection ? "Connected browser" : "Now on the Chrome Web Store"}
             </p>
             <h2>
               {activeConnection
                 ? "Extension is already connected"
-                : "Manual developer-mode install"}
+                : "Install from the Chrome Web Store"}
             </h2>
             <p>
               {activeConnection
                 ? "Use the tracker to review synced jobs. Reconnect only if you changed browser profile, reinstalled the extension, or sync stops."
-                : "Use this for founder validation, trusted testers and early customer pilots before the Chrome Web Store listing is approved."}
+                : "AutoTime EU Apply is live and publicly listed on the Chrome Web Store. Install it, then click Connect from the extension popup to link it to your account."}
             </p>
             <div className="extension-download-actions">
               {activeConnection ? (
@@ -281,9 +281,14 @@ export default async function DashboardExtensionPage() {
                 </>
               ) : (
                 <>
-                  <span className="status warning">
-                    Extension download is temporarily unavailable.
-                  </span>
+                  <a
+                    className="primary-link"
+                    href="https://chromewebstore.google.com/detail/autotime-eu-apply/cnddgochpdijpljflnbhpngacmmglmfn"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Get it from the Chrome Web Store
+                  </a>
                   <InstalledExtensionConnectButton
                     candidateExtensionId={candidateExtensionId}
                   />
@@ -296,9 +301,18 @@ export default async function DashboardExtensionPage() {
             <p className="eyebrow">Setup checklist</p>
             <h2>Install path</h2>
             <ol>
-              <li>Use the currently approved unpacked extension package.</li>
-              <li>Open Chrome extensions and enable Developer mode.</li>
-              <li>Load the unzipped folder as an unpacked extension.</li>
+              <li>
+                Open the{" "}
+                <a
+                  href="https://chromewebstore.google.com/detail/autotime-eu-apply/cnddgochpdijpljflnbhpngacmmglmfn"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  AutoTime EU Apply listing
+                </a>{" "}
+                on the Chrome Web Store and click Add to Chrome.
+              </li>
+              <li>Pin the extension for quick access from your toolbar.</li>
               <li>Click the AutoTime icon in Chrome, then click Connect.</li>
             </ol>
           </section>

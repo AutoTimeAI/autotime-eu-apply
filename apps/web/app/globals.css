@@ -6363,6 +6363,93 @@ h4 {
   gap: var(--space-4);
 }
 
+/* .home-progress / .home-facts (the "Current search" card on the real
+   Dashboard Home, HomeExperience.tsx) had zero CSS anywhere in the
+   codebase before this - not old-styled, genuinely unstyled. Matches
+   the treatment its own sibling .next-best-action-card already uses on
+   this same page, for consistency with what's already there rather than
+   importing a different page's token scale. */
+.home-progress {
+  display: grid;
+  gap: var(--space-4);
+  padding: clamp(var(--space-5), 4vw, var(--space-8));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-tight);
+}
+
+.home-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.home-progress-heading h2 {
+  margin: 0;
+}
+
+.home-progress-heading a {
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.home-progress-heading a:hover {
+  text-decoration: underline;
+}
+
+.home-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.home-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.home-facts dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.home-facts dd {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.home-progress-details {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.home-progress-details summary {
+  cursor: pointer;
+  font-weight: 650;
+  color: var(--accent-strong);
+  font-size: 0.86rem;
+}
+
+.home-progress-details p {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+}
+
 .progressive-profile-summary,
 .home-context-panel {
   padding: var(--space-5);
