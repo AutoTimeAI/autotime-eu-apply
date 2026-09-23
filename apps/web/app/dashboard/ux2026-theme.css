@@ -124,3 +124,92 @@
   box-shadow: 0 16px 34px -18px rgba(18, 24, 26, 0.28);
   border-color: var(--at-primary);
 }
+
+/* ---- Retarget each page-phase's own local primary-color tokens ----
+ * Every phase-N stylesheet (jobs, applications, interviews, countries,
+ * role-pathways, profile) hardcodes its own --p*-primary custom property
+ * to the old blue instead of reading --at-primary, so buttons/links/
+ * borders on those pages don't pick up a shell-level palette change.
+ * Redefining each local token here (higher specificity than the phase
+ * file's single-class selector) recolors every rule built on top of it
+ * without touching those ~15 files directly. */
+.ux2026-theme .phase-two-jobs {
+  --phase-two-primary: var(--at-primary);
+  --phase-two-primary-strong: var(--at-primary-pressed);
+  --phase-two-selected: var(--at-selected);
+}
+.ux2026-theme .phase-three-applications {
+  --p3-primary: var(--at-primary);
+  --p3-primary-strong: var(--at-primary-pressed);
+  --p3-selected: var(--at-selected);
+}
+.ux2026-theme .phase-four-interviews {
+  --p4-primary: var(--at-primary);
+  --p4-primary-strong: var(--at-primary-pressed);
+  --p4-selected: var(--at-selected);
+}
+.ux2026-theme .phase-five-countries {
+  --p5-primary: var(--at-primary);
+  --p5-primary-strong: var(--at-primary-pressed);
+  --p5-selected: var(--at-selected);
+}
+.ux2026-theme .phase-six-career-direction {
+  --p6-primary: var(--at-primary);
+  --p6-primary-strong: var(--at-primary-pressed);
+  --p6-selected: var(--at-selected);
+}
+.ux2026-theme .phase-seven-profile {
+  --accent: var(--at-primary);
+  --accent-strong: var(--at-primary-pressed);
+  --green: var(--at-primary);
+  --p7-selected: var(--at-selected);
+}
+
+/* ---- Hardcoded blue literals outside the token system ----
+ * These don't route through any custom property, so they need direct
+ * overrides. Scoped narrowly to the exact selectors carrying the old
+ * blue (onboarding controls, brand backdrop, home status banners,
+ * system-state cards) to avoid any unrelated regression. */
+.ux2026-theme .onboarding-choice-grid label:has(input:checked),
+.ux2026-theme .onboarding-direction-grid button.selected {
+  border-color: var(--at-primary);
+}
+.ux2026-theme .home-experience .profile-guidance-meter span {
+  background: var(--at-primary);
+}
+.ux2026-theme .home-experience .status-banner.info,
+.ux2026-theme .home-experience .status-banner.success {
+  border-color: var(--at-primary);
+  background: var(--at-selected);
+  color: var(--at-primary-pressed);
+}
+.ux2026-theme .home-system-state {
+  border-left-color: var(--at-primary);
+}
+.ux2026-theme .onboarding-choice-grid label:has(input:focus-visible) {
+  outline-color: var(--at-primary);
+}
+.ux2026-theme .eu-brand-orb-one {
+  background: var(--at-primary);
+}
+.ux2026-theme .eu-brand-tags span {
+  border-color: var(--at-primary);
+  color: var(--at-primary);
+}
+
+/* ---- Site-wide bare-button gradient (globals.css) ----
+ * Pages outside the phase-N system (Settings, AccountIdentityLinker,
+ * SettingsControls) fall back to this global default gradient, hardcoded
+ * to the old blue with no custom property behind it. */
+.ux2026-theme
+  button:not(.secondary-button):not(.button-secondary):not(.danger-button),
+.ux2026-theme .primary-link {
+  /* !important: Next.js gives globals.css (imported by the root layout)
+     priority over this nested dashboard-layout stylesheet regardless of
+     selector specificity, so a plain override is silently outranked. */
+  background: linear-gradient(
+    135deg,
+    var(--at-primary),
+    var(--at-primary-pressed)
+  ) !important;
+}
