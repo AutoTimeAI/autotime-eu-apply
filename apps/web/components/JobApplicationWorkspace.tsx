@@ -60,7 +60,8 @@ type View =
   | { kind: "jobs" }
   | { kind: "job"; id: string }
   | { kind: "applications" }
-  | { kind: "application"; id: string };
+  | { kind: "application"; id: string }
+  | { kind: "pipeline" };
 
 function legacyEvidence(userId: string) {
   try {
@@ -301,6 +302,17 @@ export default function JobApplicationWorkspace({ view }: { view: View }) {
         state={state}
         cloudOnly={cloudOnly}
         onOpen={(id) => router.push(`/dashboard/applications/${id}`)}
+        sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
+      />
+    );
+  if (view.kind === "pipeline")
+    return (
+      <PipelineBoard
+        state={state}
+        onChange={persist}
+        onOpen={(id) => router.push(`/dashboard/applications/${id}`)}
+        status={status}
+        setStatus={setStatus}
         sync={{ state: jobWorkflowSync.state, status: jobWorkflowSync.status }}
       />
     );
@@ -1666,6 +1678,7 @@ function ApplicationsList({
       <div className="workflow-actions">
         <Link className="button-secondary" href="/dashboard/cv-tailor">Tailor CV</Link>
         <Link className="button-secondary" href="/dashboard/follow-ups">Recruiter outreach</Link>
+        <Link className="button-secondary" href="/dashboard/pipeline">Pipeline board</Link>
       </div>
       {reviewQueue.length ? (
         <section className="workflow-section" aria-labelledby="review-queue-title">
@@ -1822,6 +1835,216 @@ function ApplicationsList({
           ))}
         </section>
       ) : null}
+    </main>
+  );
+}
+
+const PIPELINE_COLUMNS: ApplicationWorkspaceStatus[] = [
+  "Preparing",
+  "Needs review",
+  "Ready",
+  "Applied",
+  "Interview",
+  "Offer",
+  "Rejected",
+  "Withdrawn",
+];
+
+function PipelineBoard({
+  state,
+  onChange,
+  onOpen,
+  status,
+  setStatus,
+  sync,
+}: {
+  state: JobWorkflowState;
+  onChange: (value: JobWorkflowState) => void;
+  onOpen: (id: string) => void;
+  status: string;
+  setStatus: (value: string) => void;
+  sync: { state: SyncStatusLineState; status: string };
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(
+    state.applications[0]?.id ?? null,
+  );
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const selected = state.applications.find((item) => item.id === selectedId);
+  const selectedJob =
+    selected && state.jobs.find((item) => item.id === selected.jobId);
+
+  const moveApplication = (
+    applicationId: string,
+    next: ApplicationWorkspaceStatus,
+  ) => {
+    const application = state.applications.find(
+      (item) => item.id === applicationId,
+    );
+    const job = application && state.jobs.find((item) => item.id === application.jobId);
+    if (!application || !job) return;
+    if (application.status === next) return;
+    const confirmed =
+      next === "Applied"
+        ? window.confirm(
+            "Confirm that you submitted this application outside AutoTime.",
+          )
+        : true;
+    if (next === "Applied" && !confirmed) return;
+    try {
+      const changed = transitionApplication(application, next, job, confirmed);
+      onChange({
+        ...state,
+        applications: state.applications.map((item) =>
+          item.id === changed.id ? changed : item,
+        ),
+      });
+      setStatus(`Application marked ${next}.`);
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Status could not be changed.",
+      );
+    }
+  };
+
+  return (
+    <main className="workflow-page phase-three-applications pipeline-board-page">
+      <ProductPageHeader
+        eyebrow="Applications"
+        title="Pipeline board"
+        description="Drag a company to move it forward. AutoTime still enforces the same readiness checks as the list view - a move that isn't allowed yet is rejected, not silently applied."
+        action={
+          <Link className="button-secondary" href="/dashboard/applications">
+            List view
+          </Link>
+        }
+      />
+      <SyncStatusLine state={sync.state} status={sync.status} />
+      {status ? (
+        <p className="status info" role="status">
+          {status}
+        </p>
+      ) : null}
+      <div className="pipeline-board-layout">
+        <div className="pipeline-board-scroll">
+          <div className="pipeline-board">
+            {PIPELINE_COLUMNS.map((column) => {
+              const columnApplications = state.applications.filter(
+                (item) => item.status === column,
+              );
+              return (
+                <section className="pipeline-column" key={column}>
+                  <header className="pipeline-column-head">
+                    <h3>{column}</h3>
+                    <span className="pipeline-column-count">
+                      {columnApplications.length}
+                    </span>
+                  </header>
+                  <div
+                    className="pipeline-column-cards"
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      if (draggingId) moveApplication(draggingId, column);
+                      setDraggingId(null);
+                    }}
+                  >
+                    {columnApplications.map((application) => {
+                      const job = state.jobs.find(
+                        (item) => item.id === application.jobId,
+                      );
+                      const blocked = application.unsupportedClaims.length > 0;
+                      return (
+                        <article
+                          className={
+                            "pipeline-card" +
+                            (application.id === selectedId ? " selected" : "")
+                          }
+                          draggable
+                          key={application.id}
+                          onClick={() => setSelectedId(application.id)}
+                          onDragEnd={() => setDraggingId(null)}
+                          onDragStart={() => setDraggingId(application.id)}
+                        >
+                          <div className="pipeline-card-top">
+                            <div>
+                              <p className="pipeline-card-co">
+                                {job?.employer.value || "Employer unknown"}
+                              </p>
+                              <p className="pipeline-card-role">
+                                {job?.title.value || "Application"}
+                              </p>
+                            </div>
+                          </div>
+                          {blocked ? (
+                            <span className="pipeline-card-chip gap">
+                              Unsupported claim
+                            </span>
+                          ) : null}
+                          <div className="pipeline-card-foot">
+                            <span>{formatDate(application.updatedAt)}</span>
+                            <button
+                              className="text-link"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onOpen(application.id);
+                              }}
+                              type="button"
+                            >
+                              Open
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+
+        <aside className="pipeline-inspector" aria-label="Selected application">
+          {selected && selectedJob ? (
+            <>
+              <h2>{selectedJob.title.value || "Application"}</h2>
+              <p className="pipeline-inspector-sub">
+                {selectedJob.employer.value || "Employer unknown"} ·{" "}
+                {selectedJob.facts.location.value ||
+                  selectedJob.facts.country.value ||
+                  "Location unknown"}
+              </p>
+              <ProductStatusBadge status={applicationTone(selected.status)}>
+                {selected.status}
+              </ProductStatusBadge>
+              <div className="pipeline-inspector-section">
+                <h4>Next action</h4>
+                <p>{applicationNextAction(selected, selectedJob)}</p>
+              </div>
+              <div className="pipeline-inspector-section">
+                <h4>Readiness</h4>
+                <p>
+                  {getApplicationReadiness(selected, selectedJob).ready
+                    ? "Every check has passed."
+                    : getApplicationReadiness(selected, selectedJob).blockers.join(
+                        ", ",
+                      )}
+                </p>
+              </div>
+              <button
+                className="button-primary"
+                onClick={() => onOpen(selected.id)}
+                type="button"
+              >
+                Open full application →
+              </button>
+            </>
+          ) : (
+            <p className="pipeline-inspector-empty">
+              Select a company on the board to see its details here.
+            </p>
+          )}
+        </aside>
+      </div>
     </main>
   );
 }

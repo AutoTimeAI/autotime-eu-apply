@@ -217,3 +217,183 @@
   border-color: var(--at-border) !important;
   color: var(--at-ink) !important;
 }
+
+/* ---- Pipeline board (the structural piece of this concept) ---- */
+.pipeline-board-page .status.info {
+  border: 1px solid var(--at-border);
+  border-radius: var(--at-radius-md);
+  padding: 8px 12px;
+  background: var(--at-surface);
+  color: var(--at-muted);
+  font-size: 0.85rem;
+}
+
+.pipeline-board-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+@media (max-width: 960px) {
+  .pipeline-board-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pipeline-board-scroll {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.pipeline-board {
+  display: flex;
+  gap: 12px;
+  min-width: max-content;
+}
+
+.pipeline-column {
+  width: 240px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pipeline-column-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+.pipeline-column-head h3 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--at-muted);
+  margin: 0;
+}
+.pipeline-column-count {
+  margin-left: auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--at-muted);
+}
+
+.pipeline-column-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 60px;
+  border-radius: var(--at-radius-md);
+  padding: 2px;
+}
+
+.pipeline-card {
+  background: var(--at-surface);
+  border: 1px solid var(--at-border);
+  border-radius: var(--at-radius-md);
+  padding: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  cursor: grab;
+  color: var(--at-ink);
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+.pipeline-card:hover {
+  border-color: var(--at-primary);
+  transform: translateY(-1px);
+}
+.pipeline-card.selected {
+  border-color: var(--at-primary);
+  box-shadow: 0 0 0 3px var(--at-selected);
+}
+.pipeline-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pipeline-card-co {
+  font-size: 12.5px;
+  font-weight: 700;
+  margin: 0;
+}
+.pipeline-card-role {
+  font-size: 11.5px;
+  color: var(--at-muted);
+  margin: 1px 0 0;
+}
+.pipeline-card-fit {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--at-primary);
+  background: var(--at-selected);
+  border-radius: 6px;
+  padding: 2px 6px;
+  flex: none;
+}
+.pipeline-card-chip.gap {
+  align-self: flex-start;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--at-error);
+  color: #1b1a21;
+}
+.pipeline-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--at-muted);
+}
+.pipeline-card-foot .text-link {
+  background: none !important;
+  border: none;
+  padding: 0;
+  color: var(--at-primary) !important;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.pipeline-inspector {
+  background: var(--at-surface);
+  border: 1px solid var(--at-border);
+  border-radius: var(--at-radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 12px;
+}
+.pipeline-inspector h2 {
+  font-size: 15px;
+}
+.pipeline-inspector-sub {
+  font-size: 12.5px;
+  color: var(--at-muted);
+  margin: 2px 0 8px;
+}
+.pipeline-inspector-section h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--at-muted);
+  margin: 0 0 4px;
+}
+.pipeline-inspector-section p {
+  font-size: 12.5px;
+  color: var(--at-ink);
+  margin: 0;
+}
+.pipeline-inspector-empty {
+  color: var(--at-muted);
+  font-size: 13px;
+}
