@@ -9,6 +9,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
+import { JetBrains_Mono, Plus_Jakarta_Sans, Public_Sans } from "next/font/google";
 import {
   DashboardPlanProvider,
   DashboardWorkflowSidebar,
@@ -19,6 +20,28 @@ import type { SubscriptionPlan } from "../lib/supabase/types";
 import { BrandBackdrop } from "./BrandBackdrop";
 
 const chromeFreePaths = new Set(["/dashboard/onboarding"]);
+
+// Self-hosted via next/font/google rather than a CSS @import: the app's CSP
+// (style-src 'self' 'unsafe-inline', no fonts.googleapis.com) silently
+// blocked a plain @import of these fonts - Chrome's own Issues panel
+// flagged it as a real CSP violation, confirmed via a Lighthouse audit.
+// next/font downloads at build time and serves the font files same-origin,
+// so no external request (and no CSP change) is needed at all.
+const pipelineDisplayFont = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-pipeline-display",
+});
+const pipelineBodyFont = Public_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-pipeline-body",
+});
+const pipelineMonoFont = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-pipeline-mono",
+});
 
 /**
  * Renders the dashboard shell (topbar, workflow sidebar, brand backdrop)
@@ -59,7 +82,9 @@ export function DashboardShell({
   return (
     <DashboardPlanProvider plan={plan} userId={userId}>
       <InactivityLogout />
-      <div className="dashboard-app-shell pipeline2026-theme">
+      <div
+        className={`dashboard-app-shell pipeline2026-theme ${pipelineDisplayFont.variable} ${pipelineBodyFont.variable} ${pipelineMonoFont.variable}`}
+      >
         <BrandBackdrop />
         <a className="skip-link" href="#dashboard-content">
           Skip to main content

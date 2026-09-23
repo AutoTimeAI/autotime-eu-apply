@@ -14,8 +14,14 @@
  * panel, command bar) is a structural rebuild, not a reskin, and is
  * deliberately left for a separate follow-up once this foundation is
  * approved.
+ *
+ * Fonts are loaded via next/font/google in DashboardShell.tsx (which sets
+ * --font-pipeline-display/-body/-mono as CSS variables on the shell root),
+ * not a CSS @import - the app's CSP has no fonts.googleapis.com in
+ * style-src, so a plain @import here was being silently blocked (confirmed
+ * via a real Chrome DevTools Issues-panel / Lighthouse finding: these
+ * fonts never actually loaded, in dev or deployed).
  */
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap");
 
 .pipeline2026-theme {
   --at-canvas: #131217;
@@ -32,7 +38,7 @@
   --at-radius-sm: 7px;
   --at-radius-md: 10px;
   --at-radius-lg: 13px;
-  font-family: "Public Sans", system-ui, sans-serif;
+  font-family: var(--font-pipeline-body), system-ui, sans-serif;
   background: var(--at-canvas);
   color: var(--at-ink);
 }
@@ -41,7 +47,7 @@
 .pipeline2026-theme h2,
 .pipeline2026-theme h3,
 .pipeline2026-theme .brand-name {
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: var(--font-pipeline-display), system-ui, sans-serif;
   letter-spacing: -0.01em;
 }
 
@@ -56,7 +62,7 @@
   background: var(--at-primary);
   color: #1b1a21;
   border-radius: 9px;
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: var(--font-pipeline-display), system-ui, sans-serif;
   font-weight: 800;
 }
 
@@ -276,7 +282,7 @@
 }
 .pipeline-column-count {
   margin-left: auto;
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-pipeline-mono), monospace;
   font-size: 11px;
   color: var(--at-muted);
 }
@@ -327,7 +333,7 @@
   margin: 1px 0 0;
 }
 .pipeline-card-fit {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--font-pipeline-mono), monospace;
   font-size: 11px;
   font-weight: 700;
   color: var(--at-primary);
