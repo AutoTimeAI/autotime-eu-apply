@@ -13,3 +13,5 @@ build
 .wxt
 docs
 *.tsbuildinfo
+.pytest_cache
+**/.pytest_cache
