@@ -203,8 +203,20 @@ test("profile evidence sync is production cloud-first with local cache", () => {
   )
 })
 
-test("Proof Library stays a standalone reusable-proof workspace", () => {
-  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+test("Profile & CV nav item points at the real profile-evidence and CV-tailor pages", () => {
+  // Was "Proof Library stays a standalone reusable-proof workspace". The
+  // DashboardExperience.tsx assertions this test used to carry (eyebrow/
+  // title/aria-label "Proof Library", the CV-proof/reusable-answers
+  // wiring) tested a `currentTab === "profile" && activeFocus ===
+  // "cv-tailor"` block that is confirmed unreachable: activeFocus is
+  // `focus ?? defaultDashboardFocusByView[view]`, and the sole
+  // <DashboardExperience> call site (app/dashboard/profile-evidence/
+  // page.tsx) always passes focus="profile-evidence" - "cv-tailor" can
+  // never be selected, with no setter anywhere to change it client-side.
+  // Removed 2026-09-23 as confirmed dead code (superseded by CVWorkspace.tsx
+  // at the real /dashboard/cv-tailor route on 2026-08-02, never cleaned up).
+  // What remains here - the nav item's real wiring - still matters and
+  // still passes.
   const userNav = read("apps/web/components/UserNav.tsx")
   const publicNav = read("apps/web/components/PublicNav.tsx")
 
@@ -214,84 +226,28 @@ test("Proof Library stays a standalone reusable-proof workspace", () => {
   assert.doesNotMatch(userNav, /protocol-locked-link|90% before using/)
   assert.match(userNav, /href=\{item\.href\}/)
   assert.doesNotMatch(publicNav, /protocol-locked-link|90% before using/)
-  assert.match(dashboard, /eyebrow: "Proof Library"/)
-  assert.match(dashboard, /title: "Proof Library"/)
-  assert.match(dashboard, /aria-label="Proof Library workspace"/)
-  assert.match(dashboard, /Reusable reasons and proof/)
-  assert.match(dashboard, /Keep the strongest reasons, evidence and answer/)
-  assert.match(dashboard, /Profile first, job proof second/)
-  assert.match(dashboard, /Application Kit\s*and Interview Prep feed reusable proof back here/)
-  assert.match(dashboard, /Proof Library is saved with your profile/)
-  assert.match(dashboard, /state\.profile\.baseCvText/)
-  assert.match(dashboard, /state\.profile\.experienceHighlights/)
-  assert.match(dashboard, /state\.profile\.projectSummaries/)
-  assert.match(dashboard, /state\.reusableAnswers\[key\]/)
-  assert.match(dashboard, /Update source profile/)
-  assert.match(dashboard, /Write from proof/)
-  assert.doesNotMatch(dashboard, /Edit profile evidence/)
 })
 
-test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
-  const dashboard = read("apps/web/components/DashboardExperience.tsx")
+test("EU fit review model wires createApplication into the real Jobs flow", () => {
+  // Was "Analyse Fit pillar keeps 360 workflow wiring intact", asserting on
+  // a `currentTab === "jobs"` block in DashboardExperience.tsx. Confirmed
+  // unreachable 2026-09-23 (see the "Profile & CV nav item" test above for
+  // why) - the real job-fit-check flow is JobApplicationWorkspace.tsx's
+  // JobDetail component (real route: /dashboard/jobs/[jobId]), which calls
+  // the same fit-review/fit-model modules directly, more simply than the
+  // dead dashboard copy did (no createEvidenceRecords/createOutcomeRecord/
+  // syncDashboardStateToCloud - those were specific to the dead flow's own
+  // bookkeeping). This test now verifies the modules' real contract and
+  // the real caller's wiring instead.
   const fitModel = read("packages/shared/src/fit-model.ts")
   const fitReview = read("apps/web/domains/eu-fit/fit-review.ts")
+  const jobWorkspace = read("apps/web/components/JobApplicationWorkspace.tsx")
 
-  assert.match(dashboard, /title: "Check EU fit before you apply"/)
-  assert.match(
-    dashboard,
-    /Check one role against your profile, country context and missing proof/
-  )
-  assert.match(dashboard, /Check EU fit/)
-  assert.match(dashboard, /Strengthen the review/)
-  assert.match(dashboard, /Rules first/)
-  assert.match(dashboard, /AI strengthens the review, but evidence\s*controls the outcome/)
-  assert.match(dashboard, /Official sources and saved proof outrank AI/)
-  assert.match(dashboard, /Official source check needed/)
-  assert.match(dashboard, /Official source reviewed/)
-  assert.match(
-    dashboard,
-    /Official sources and employer wording must be\s*checked before relying on work-right, sponsorship,\s*relocation or location-fit advice\./
-  )
-  assert.match(
-    dashboard,
-    /AI output cannot override official sources, saved\s*profile evidence, parsed job text or your review\./
-  )
-  assert.match(dashboard, /setOfficialSourceReviewed\(event\.target\.checked\)/)
-
-  const saveStart = dashboard.indexOf("const saveApplicationFromJob = async () =>")
-  const aiStart = dashboard.indexOf("const runAiJobAnalysis = async () =>")
-  const updateStart = dashboard.indexOf("const updateApplication = (")
-
-  assert.notEqual(aiStart, -1)
-  assert.notEqual(saveStart, -1)
-  assert.notEqual(updateStart, -1)
-
-  const saveFlow = dashboard.slice(saveStart, aiStart)
-  const aiFlow = dashboard.slice(aiStart, updateStart)
-
-  // createApplication moved to the eu-fit domain module as part of the
-  // Phase 4 dashboard decomposition; the dashboard now only calls it (see
-  // saveFlow below), so its own fit-to-record wiring is checked here.
   assert.match(fitReview, /export function createApplication\(/)
   assert.match(fitReview, /nextAction: fitEvaluation\.nextBestAction/)
   assert.match(fitReview, /fitScore: autoTimeFitReview\.fitScore/)
   assert.match(fitReview, /fitDecision: fitEvaluation\.decision/)
   assert.match(fitReview, /contentGate: fitEvaluation\.contentGate/)
-
-  assert.match(aiFlow, /requireCapability\("analyse_job"\)/)
-  assert.match(aiFlow, /hasJobDraft\(state\.jobAnalysis\)/)
-  assert.match(aiFlow, /fetchAiJobAnalysis\(/)
-  assert.match(aiFlow, /profile: state\.profile/)
-  assert.match(aiFlow, /persist\(next, "AI fit assistant updated the role analysis"\)/)
-
-  assert.match(saveFlow, /requireCapability\("analyse_job"\)/)
-  assert.match(saveFlow, /hasJobDraft\(state\.jobAnalysis\)/)
-  assert.match(saveFlow, /createApplication\(/)
-  assert.match(saveFlow, /autoTimeFitReview/)
-  assert.match(saveFlow, /createEvidenceRecords\(/)
-  assert.match(saveFlow, /createOutcomeRecord\(application\)/)
-  assert.match(saveFlow, /syncDashboardStateToCloud\(nextState/)
-  assert.match(saveFlow, /openDashboardView\("applications"\)/)
 
   assert.match(fitModel, /export function evaluateCountryFit/)
   assert.match(fitModel, /export function evaluateAutoTimeFitScore/)
@@ -299,48 +255,45 @@ test("Analyse Fit pillar keeps 360 workflow wiring intact", () => {
   assert.match(fitModel, /getRightToWorkCompatibility/)
   assert.match(fitModel, /getCountryLocationFit/)
   assert.match(fitModel, /contentGate/)
+
+  assert.match(jobWorkspace, /createApplication,/)
+  assert.match(jobWorkspace, /const application = createApplication\(job\)/)
 })
 
-test("Interview Prep keeps coaching, prep packs and reusable answers separated", () => {
+test("Interview coaching keeps validated input and reusable-answer wiring intact", () => {
+  // Was "Interview Prep keeps coaching, prep packs and reusable answers
+  // separated". Its JSX-text assertions and the whole `prepFlow` half
+  // (generateInterviewPrep, getInterviewPrepGuardrails, POST /api/ai/
+  // interview, createLocalInterviewPrepPack) tested a `currentTab ===
+  // "interview"` block confirmed unreachable 2026-09-23 (see the "Profile
+  // & CV nav item" test above) - generateInterviewPrep now has zero
+  // remaining call sites anywhere in the file. The real, reachable
+  // InterviewsWorkspace.tsx (the actual /dashboard/interviews route) has
+  // no equivalent AI-prep-pack feature at all currently - this was an
+  // orphaned capability, not a duplicate of something real elsewhere,
+  // worth a product decision on whether to rebuild it there or drop it.
+  //
+  // The saveAnswerFlow/interviewPolicy assertions below are NOT part of
+  // that removal - generateInterviewBuddyAnswers (a different function)
+  // still calls validateInterviewBuddyInput from a live call site
+  // (line ~4539, pre-existing, untouched by the 2026-09-23 cleanup), so
+  // that wiring remains real and worth checking.
   const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const interviewPolicy = read("apps/web/domains/interviews/interview-buddy-policy.ts")
 
-  assert.match(dashboard, /title: "Interview Prep"/)
-  assert.match(dashboard, /Turn saved job proof into interview answers and prep packs/)
-  assert.match(dashboard, /aria-label="Interview Prep workflow"/)
-  assert.match(dashboard, /Choose the question/)
-  assert.match(dashboard, /Add rough notes/)
-  assert.match(dashboard, /Review the coach/)
-  assert.match(dashboard, /Save reusable wording/)
-  assert.match(dashboard, /aria-label="Interview Prep responsibility"/)
-  assert.match(dashboard, /Reusable reasons go to Proof Library/)
-  assert.match(
-    dashboard,
-    /The full prep pack stays with the job/
-  )
-  assert.match(dashboard, /Interview prep and Proof Library synced/)
-  assert.match(dashboard, /Saved prep packs from tracked jobs/)
   assert.match(dashboard, /validateInterviewBuddyInput/)
   assert.match(interviewPolicy, /const tokens = getMeaningfulTokens\(value\)/)
   assert.match(interviewPolicy, /tokens\.some\(\(token\) => \/\(\.\)\\1\{3,\}\//)
 
-  const prepStart = dashboard.indexOf("const generateInterviewPrep = async")
   const saveAnswerStart = dashboard.indexOf(
     "const saveFinalInterviewAnswer = () =>"
   )
   const speakStart = dashboard.indexOf("const speakInterviewAnswer = (")
 
-  assert.notEqual(prepStart, -1)
   assert.notEqual(saveAnswerStart, -1)
   assert.notEqual(speakStart, -1)
 
-  const prepFlow = dashboard.slice(prepStart, saveAnswerStart)
   const saveAnswerFlow = dashboard.slice(saveAnswerStart, speakStart)
-
-  assert.match(prepFlow, /getInterviewPrepGuardrails\(/)
-  assert.match(prepFlow, /createLocalInterviewPrepPack\(/)
-  assert.match(prepFlow, /fetch\("\/api\/ai\/interview"/)
-  assert.match(prepFlow, /saveInterviewPrepPack\(/)
 
   assert.match(saveAnswerFlow, /requireCapability\("prepare_interview"/)
   assert.match(
@@ -364,11 +317,19 @@ test("live follow-up and application routes do not depend on the legacy dashboar
   assert.doesNotMatch(insightsPage, /DashboardExperience/)
 })
 test("Public product promise matches the strategic European tech positioning", () => {
+  // The dashboard-echo assertions this test used to carry (aria-label
+  // "Strategic quality system", strategicQualitySignals, etc.) tested
+  // DashboardExperience.tsx's dead `isOverview` home-screen block,
+  // confirmed unreachable 2026-09-23 (see the "Profile & CV nav item"
+  // test above) - strategicQualitySignals is now defined but never
+  // referenced in any JSX in the file. The real dashboard home is
+  // HomeExperience.tsx (app/dashboard/page.tsx), which this test does not
+  // currently cover; the public-facing positioning checks below (login,
+  // layout, pricing, OG image) are unaffected and still real.
   const login = read("apps/web/components/LoginContent.tsx")
   const layout = read("apps/web/app/layout.tsx")
   const pricing = read("apps/web/app/pricing/page.tsx")
   const pricingCard = read("apps/web/components/PricingCard.tsx")
-  const dashboard = read("apps/web/components/DashboardExperience.tsx")
   const og = read("apps/web/app/api/og/route.tsx")
 
   assert.match(login, /Strategic European tech applications/)
@@ -386,14 +347,6 @@ test("Public product promise matches the strategic European tech positioning", (
   assert.match(pricing, /strategic targeting, country-aware fit/)
   assert.match(pricing, /quality-over-quantity workflow/)
   assert.match(pricingCard, /interview-conversion prep/)
-
-  assert.match(dashboard, /aria-label="Strategic quality system"/)
-  assert.match(dashboard, /Your application workflow/)
-  assert.match(dashboard, /strategicQualitySignals/)
-  assert.match(dashboard, /Target roles/)
-  assert.match(dashboard, /Country-aware fit/)
-  assert.match(dashboard, /Profile proof/)
-  assert.match(dashboard, /Interview prep/)
 
   assert.match(og, /STRATEGIC TECH APPLY/)
   assert.match(og, /Better applications/)
