@@ -3597,6 +3597,34 @@ h4 {
   box-shadow: var(--shadow-tight);
 }
 
+/* The "Profile readiness" banner (profile-bridge-panel) renders ABOVE
+   both the CV-intake panel and the workspace-grid section, and was
+   missed by both earlier passes - it's a separate top-level sibling
+   block, not nested inside either of them. Confirmed live via the
+   activeFocus reachability check (2026-09-23): this is the only banner
+   ever shown at this position in practice. */
+.profile-evidence-redesign.profile-bridge-panel {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-tight);
+}
+
+.profile-evidence-redesign.profile-bridge-panel.ready {
+  border-left-color: var(--green);
+}
+
+.profile-evidence-redesign.profile-bridge-panel.blocked {
+  border-left-color: var(--amber);
+  background: var(--surface-raised);
+}
+
+.profile-evidence-redesign .inline-lock-symbol {
+  border-radius: var(--radius-sm);
+  background: var(--surface-blue);
+}
+
 .profile-evidence-redesign .context-explainer article {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

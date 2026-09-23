@@ -4903,8 +4903,8 @@ export default function HomePage({
                   <section
                     className={
                       profileReadyForExecution
-                        ? "profile-bridge-panel ready"
-                        : "profile-bridge-panel blocked"
+                        ? "profile-bridge-panel ready profile-evidence-redesign"
+                        : "profile-bridge-panel blocked profile-evidence-redesign"
                     }
                     aria-label="Profile readiness"
                   >
