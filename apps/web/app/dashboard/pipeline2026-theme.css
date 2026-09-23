@@ -196,7 +196,7 @@
  * selector specificity - confirmed empirically on the ux-2026-redesign
  * branch via computed styles. */
 .pipeline2026-theme
-  button:not(.secondary-button):not(.button-secondary):not(.danger-button),
+  button:not(.secondary-button):not(.button-secondary):not(.danger-button):not(.pipeline-card-open),
 .pipeline2026-theme .primary-link {
   background: var(--at-primary) !important;
   color: #1b1a21 !important;
@@ -352,12 +352,19 @@
   font-size: 11px;
   color: var(--at-muted);
 }
-.pipeline-card-foot .text-link {
+.pipeline-card-foot .pipeline-card-open {
+  /* !important: same Next.js layout-CSS-priority quirk documented above
+     on the site-wide bare-button override - globals.css's unscoped
+     `button` gradient otherwise wins regardless of specificity. */
   background: none !important;
-  border: none;
-  padding: 0;
+  border: none !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   color: var(--at-primary) !important;
   font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
 }
 

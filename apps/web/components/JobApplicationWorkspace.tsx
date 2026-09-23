@@ -1983,7 +1983,7 @@ function PipelineBoard({
                           <div className="pipeline-card-foot">
                             <span>{formatDate(application.updatedAt)}</span>
                             <button
-                              className="text-link"
+                              className="text-link pipeline-card-open"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 onOpen(application.id);
