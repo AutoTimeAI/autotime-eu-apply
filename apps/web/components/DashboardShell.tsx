@@ -9,6 +9,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
+import { IBM_Plex_Sans, Sora } from "next/font/google";
 import {
   DashboardPlanProvider,
   DashboardWorkflowSidebar,
@@ -19,6 +20,23 @@ import type { SubscriptionPlan } from "../lib/supabase/types";
 import { BrandBackdrop } from "./BrandBackdrop";
 
 const chromeFreePaths = new Set(["/dashboard/onboarding"]);
+
+// Self-hosted via next/font/google rather than a CSS @import: the app's CSP
+// (style-src 'self' 'unsafe-inline', no fonts.googleapis.com) silently
+// blocked a plain @import of these fonts - confirmed as a real CSP
+// violation via a Chrome DevTools Issues-panel / Lighthouse audit.
+// next/font downloads at build time and serves the font files same-origin,
+// so no external request (and no CSP change) is needed at all.
+const ux2026DisplayFont = Sora({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-ux2026-display",
+});
+const ux2026BodyFont = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-ux2026-body",
+});
 
 /**
  * Renders the dashboard shell (topbar, workflow sidebar, brand backdrop)
@@ -59,7 +77,9 @@ export function DashboardShell({
   return (
     <DashboardPlanProvider plan={plan} userId={userId}>
       <InactivityLogout />
-      <div className="dashboard-app-shell ux2026-theme">
+      <div
+        className={`dashboard-app-shell ux2026-theme ${ux2026DisplayFont.variable} ${ux2026BodyFont.variable}`}
+      >
         <BrandBackdrop />
         <a className="skip-link" href="#dashboard-content">
           Skip to main content

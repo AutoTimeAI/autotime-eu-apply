@@ -5,8 +5,15 @@
  * the dashboard CSS already reads, plus restyles the topbar/sidebar shell
  * to match the approved concept (teal accent, Sora/IBM Plex type, pill nav).
  * Concept reference: https://claude.ai/artifact/PGTRnxctt6RcjF5Aat8PPd
+ *
+ * Fonts are loaded via next/font/google in DashboardShell.tsx (which sets
+ * --font-ux2026-display/-body as CSS variables on the shell root), not a
+ * CSS @import - the app's CSP has no fonts.googleapis.com in style-src, so
+ * a plain @import here was being silently blocked (confirmed via a real
+ * Chrome DevTools Issues-panel / Lighthouse finding: Sora/IBM Plex Sans
+ * never actually loaded, in dev or deployed, since this branch's first
+ * commit).
  */
-@import url("https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
 
 .ux2026-theme {
   --at-canvas: #f7f8f6;
@@ -23,7 +30,7 @@
   --at-radius-sm: 8px;
   --at-radius-md: 11px;
   --at-radius-lg: 14px;
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-family: var(--font-ux2026-body), system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,7 +50,7 @@
 .ux2026-theme h2,
 .ux2026-theme h3,
 .ux2026-theme .brand-name {
-  font-family: "Sora", system-ui, sans-serif;
+  font-family: var(--font-ux2026-display), system-ui, sans-serif;
   letter-spacing: -0.01em;
 }
 
@@ -57,7 +64,7 @@
   background: linear-gradient(135deg, var(--at-primary), var(--at-primary-pressed));
   color: #fff;
   border-radius: 9px;
-  font-family: "Sora", system-ui, sans-serif;
+  font-family: var(--font-ux2026-display), system-ui, sans-serif;
   font-weight: 700;
 }
 
