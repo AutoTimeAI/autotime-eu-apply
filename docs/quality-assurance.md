@@ -4806,3 +4806,75 @@ by this session, and the production test-auth guard is correctly
 un-bypassable). These remain the one category of production flow this
 session cannot verify without the founder personally walking through
 them.
+
+## 2026-09-26 (continued): full-round audit, closing pass - dependency scan, full codebase security review, and the existing DAST/CodeQL pipeline
+
+Requested as a "full round audit." The project's own `security-review`
+skill needs a pending diff to review, and there was none (the previous
+entry's doc commit was already pushed) - redirected to a full-codebase
+security pass instead, plus checked what automated security tooling
+already exists in this repo rather than re-inventing it.
+
+**Dependency vulnerabilities**: `pnpm audit` (both `--prod` and full,
+including dev dependencies) - **no known vulnerabilities found**.
+
+**Full codebase security review** (not diff-based - the whole app as it
+stands on `main`), covering all ~55 API routes, the dashboard
+beta-access gate, Stripe webhook verification, IDOR checks on
+mobility-decision and outreach routes, and Supabase RLS policies:
+**no high-confidence, concretely exploitable finding.** Specifically
+checked and confirmed sound: `getRequestUser` (`lib/api-auth.ts`)
+always derives identity server-side, never trusts a client-supplied
+user id; the dashboard beta-gate condition is correctly non-inverted;
+mobility-decision and outreach routes explicitly re-verify record
+ownership before touching related tables (visible fix from a prior
+audit pass); admin routes layer permission checks plus same-origin
+CSRF checks on top of session auth; the Stripe webhook verifies
+`stripe-signature` before trusting payload content; the only
+`USING (true)` RLS policies found are on public reference/taxonomy
+tables (job listings, ESCO occupations) with no per-user data, which is
+correct, not a leak; no raw SQL string concatenation anywhere. One
+theoretical, not-reported item for the record: `beta/redeem-invite`
+compares the invite code with `!==` rather than a constant-time
+comparison - a timing side-channel against a shared code, impractical
+to exploit remotely and low-impact (self-service beta unlock, not data
+access) even if it worked.
+
+**Existing automated security pipeline** (already configured, checked
+rather than re-built): CodeQL and CI both green on the latest push;
+a scheduled OWASP ZAP baseline (DAST) scan against live production is
+already running every few days and passing. Pulled the actual ZAP
+report rather than trusting the green checkmark alone, since a ZAP
+baseline scan reports without failing the build on medium/low findings
+by design:
+
+- **Real, worth fixing (Medium)**: the CSP allows `'unsafe-inline'` for
+  both `script-src` and `style-src`. This is a genuine XSS
+  defense-in-depth gap - not the app trusting unescaped user input
+  anywhere found in this pass, but if a future bug ever did introduce
+  one, `unsafe-inline` removes CSP's ability to block the resulting
+  inline-script/style payload. Tightening this would mean moving any
+  inline `<style>`/`<script>` usage to nonces or hashes - a real but
+  non-urgent hardening item, not an active exploit.
+- **Noise, checked and ruled out, not real findings**: "Cross-Domain
+  Misconfiguration" (`Access-Control-Allow-Origin: *` - but only on
+  static `/_next/static/*` JS chunks, which are meant to be publicly
+  cacheable and contain no per-user data; correct, not a leak).
+  "User Controllable HTML Element Attribute (Potential XSS)" on
+  `/compatibility` (ZAP's own heuristic hot-spot flag, no confirmed
+  unsafe reflection - checked `apps/web/app/compatibility/page.tsx`
+  directly: no `dangerouslySetInnerHTML`, so React's default escaping
+  applies and there is no actual injection point). The remaining items
+  (missing `Cross-Origin-Embedder-Policy`, missing `Sec-Fetch-*`
+  headers, "Base64 Disclosure" on JWT-shaped cookies, cache-control
+  notes) are informational/low, standard for this kind of app, and not
+  worth chasing.
+
+**Net result of the full round**: no new exploitable vulnerability
+found anywhere in the app. The one concrete action item from this pass
+is the CSP `unsafe-inline` hardening above - real, but not urgent. The
+two items that actually matter for this beta right now remain the ones
+already flagged: the **production billing outage** (severity-high,
+needs the founder to check Vercel's Stripe price env vars) and the
+**four accessibility bugs** already fixed on both redesign branches but
+not yet ported to `main`.
