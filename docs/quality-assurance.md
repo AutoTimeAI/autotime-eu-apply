@@ -4614,3 +4614,195 @@ since the domain switch - only the waitlist notification path was
 directly exercised. Worth a real signup-flow and upgrade-flow smoke test
 before treating those two as confirmed fixed rather than "should also be
 fixed by the same change."
+
+## 2026-09-26: production quality/performance baseline audit, ahead of handing two UI redesigns to beta testers
+
+Requested before sharing `ux-2026-redesign` and `ux2026-pipeline-board`
+previews with real beta testers: a baseline read on production `main` so
+any future comparison has something real to compare against, not
+assumption. `main` itself was not touched by either redesign branch
+throughout their work.
+
+**Automated checks**: full `pnpm test:unit` suite green (Stripe webhook
+logic, diagnostic-response redaction scan across 69 routes, component
+tests, AI-quality evaluation 10/10, MVP coverage target met at
+95%/5% manual) - no regressions, no drift since the redesign work began.
+
+**Lighthouse, live against the real production domain**
+(`autotime-eu-apply.vercel.app`, not a preview), four public pages:
+
+| Page | Perf | A11y | Best Practices | SEO | LCP | TBT |
+|---|---|---|---|---|---|---|
+| Home | 81-85 (two runs) | 100 | 100 | 100 | 3.2-3.4s | 290-330ms |
+| Pricing | 88 | 100 | 96 | 100 | 3.2s | 270ms |
+| Login | 93 | 100 | 100 | 100 | 2.8s | 170ms |
+| Waitlist | 92 | 100 | 100 | 100 | 2.7s | 220ms |
+
+Accessibility and SEO are clean across the board. Two things worth
+flagging, neither a regression from anything touched recently:
+
+1. **Home's performance score is noisier and lower than a reading taken
+   earlier this same week** (was 95 with LCP 2.9s/Speed Index 1.5s; now
+   81-85 with LCP 3.2-3.4s/Speed Index 3.2-5.2s across two back-to-back
+   runs). Re-ran twice to rule out a one-off fluke - it didn't resolve,
+   the range just moved (5.2s -> 3.2s Speed Index between runs). This
+   reads more like local-machine/network run-to-run variance in the
+   Lighthouse CLI than a real server-side regression (nothing shipped to
+   `main` this week that would explain it), but it's a wide enough swing
+   to be worth re-checking from a cleaner environment (CI, or
+   PageSpeed Insights' own infrastructure) rather than trusting a local
+   run at face value before making any real claim about production
+   speed.
+2. **Pricing page**: Chrome's own Issues panel flags a
+   "Content Security Policy" issue, but neither Lighthouse's structured
+   audit output nor a direct Playwright console listener on the live
+   page could surface which specific resource it's about (no blocked
+   URL, no console.error, empty subitems in both). Checked the obvious
+   suspect - Stripe.js loading client-side - and ruled it out: the
+   codebase has no `js.stripe.com` script tag or `@stripe/stripe-js`
+   import anywhere; checkout goes through a server-side redirect to
+   Stripe's own hosted page, consistent with the CSP's `frame-src`
+   (not `script-src`) allowlist for `js.stripe.com`. Flagging this as
+   **unresolved, not fixed** - it needs an actual DevTools Issues-panel
+   inspection on a real browser session (this session's automated tools
+   couldn't pin down the offending resource) before anyone attempts a
+   fix blind.
+
+**Not covered by this pass**: authenticated dashboard pages on
+production. Test-auth is deliberately hard-disabled in any production
+build (`NODE_ENV !== "production"` gate in `lib/test-auth.ts`) - correctly,
+since it's a full auth bypass - which also means there is no way to
+Lighthouse-audit the real authenticated dashboard against production
+without a real Supabase login. That gap was already documented earlier
+this week when the same wall was hit while trying to performance-test
+the two redesign branches' dashboard pages.
+
+## 2026-09-26 (continued): authenticated dashboard audit - found four real, pre-existing accessibility bugs live in production today
+
+The founder asked for this to be done properly rather than skipped. Two
+paths to a real authenticated session were tried and correctly refused
+by this session's own safety tooling before landing on the one that
+worked cleanly:
+
+- **Blocked, and rightly so**: the founder pasted a live Supabase session
+  cookie (a real, valid bearer token for their own account) into chat so
+  it could be reused for the audit. Every attempt to write that token to
+  disk or pass it through a shell command was refused outright by the
+  harness's own credential-leakage protection - twice, via two different
+  approaches. No workaround was attempted; both refusals were correct.
+  The founder was advised to sign out/back in on production afterward to
+  invalidate that specific token, since it's now sitting in chat history
+  regardless of never having touched disk.
+- **Also declined**: temporarily relaxing the `NODE_ENV !== "production"`
+  guard in `lib/test-auth.ts` on a real, internet-reachable deployment
+  just to get past login. Technically possible; refused anyway - a stray
+  link to that deployment would let anyone in as an authenticated user,
+  and weakening a real auth guard on live infrastructure isn't a
+  reasonable trade for saving a few minutes.
+- **What actually happened**: ran production's exact committed code
+  (`main` @ `576ff60b`, the same SHA currently live) locally with
+  test-auth enabled - which only ever works in dev mode, never in any
+  built/deployed instance, by the same guard above. Same caveat as the
+  redesign-branch comparisons earlier this week: dev-mode Performance
+  scores run low versus real production (no minification, HMR overhead)
+  and aren't presented as real production numbers here. Accessibility
+  and Best Practices findings are unaffected by dev-vs-prod build mode
+  and are reported as real.
+
+**Real findings - all four already found, fixed, and verified on both
+redesign branches earlier this week, now confirmed as live, unfixed bugs
+on production `main` today:**
+
+| Page | A11y | Best Practices |
+|---|---|---|
+| Jobs | 89 | 96 |
+| Applications | 93 | 96 |
+| Settings | 91 | 100 |
+
+1. **`button-name`** - the account-menu button in the topbar
+   (`UserNav.tsx`) has no reliably accessible name.
+2. **`label-content-name-mismatch`** - the mobile nav's abbreviated
+   "Apps" link carries `aria-label="Applications"`, a real WCAG 2.5.3
+   label-in-name mismatch (same file).
+3. **`heading-order`** - Settings skips from the page's `h1` straight to
+   an `h3` (`AccountIdentityLinker.tsx`'s own heading, which renders
+   before `SettingsControls`' `h2`s in DOM order).
+4. **`color-contrast`** (Jobs only) - `BrandBackdrop`'s decorative
+   watermark text (`.eu-brand-motto`) fails contrast even though it's
+   `aria-hidden` - WCAG 1.4.3 applies to visually rendered text
+   regardless of screen-reader exposure.
+
+Visiting `/dashboard` directly redirected to `/dashboard/onboarding` for
+this test-auth account, which is real, correct app behavior (this
+account has no completed profile) - not a bug, not evidence of anything
+broken.
+
+**Fix status**: not yet applied to `main`. The exact fixes for all four
+already exist, are tested, and are live on both `ux-2026-redesign` and
+`ux2026-pipeline-board` (aria-label on the account button, dropping the
+mismatched aria-label on the mobile "Apps" link in favor of a `title`
+tooltip, promoting `AccountIdentityLinker`'s heading to `h2`, and a
+contrast-safe opacity/color bump on the brand motto). Porting them to
+`main` is a small, low-risk change since they're the same shared
+components either way - not done yet because it wasn't asked for, only
+the audit was.
+
+## 2026-09-26 (continued): real functional testing against live production - found a live billing outage
+
+The founder pushed back that page-load metrics alone weren't a real
+audit and asked for actual functional testing of core flows. Did this
+safely, without ever needing a login credential, using the project's
+own service-role Supabase key (already configured in `.env.local`, the
+same one used in the 2026-09-22 email-bug audit) to verify and clean up
+real writes against the live production database.
+
+**1. Public waitlist signup, end to end - works correctly.** Submitted a
+real signup through the actual `/join-waitlist` page in a real browser
+(not a bare API call - a first attempt via direct `fetch` was correctly
+rejected `403 Invalid origin` by the route's own same-origin check,
+which is itself a good sign, not a bug). The real browser submission
+succeeded, and a direct database query confirmed the row landed exactly
+as expected (`status: "pending"`, `source: "landing_page"`). Test row
+deleted immediately after confirming.
+
+**2. Google OAuth sign-in - fully wired correctly.** The button is
+correctly disabled until the account-linking consent checkbox is
+ticked (not a bug - initial test missed the checkbox and misread this
+as broken). With consent given, the click produces a real, correctly-
+formed redirect to Google's own sign-in page with the right
+`client_id`, `redirect_uri` pointing at the Supabase auth callback, and
+`redirectTo=/dashboard` - i.e. everything short of actually completing
+a real Google login, which would require real Google credentials this
+session doesn't have and shouldn't obtain. Zero console errors.
+
+**3. Pricing/checkout - SEVERITY-HIGH, all billing is currently disabled
+in live production.** Every purchase path on `/pricing` - Pro Monthly,
+Pro Quarterly, and the 25-credit AI pack - renders as disabled with
+"Billing is temporarily unavailable. You can continue using the Free
+plan." `getBillingControlState()` in
+`lib/pricing-configuration.ts` disables all three together whenever
+`getStripePriceEnv()` (`lib/env.server.ts`) throws, which it does the
+moment any one of `STRIPE_AI_CREDIT_PACK_PRICE_ID`,
+`STRIPE_PRO_MONTHLY_PRICE_ID`, or `STRIPE_PRO_QUARTERLY_PRICE_ID` is
+missing or empty. Confirmed live on the real production domain, not a
+preview or local artifact. No console error or user-visible failure
+beyond the quiet "unavailable" message - someone would have to actually
+try to buy something to notice.
+
+**Not determined**: whether this is a known, deliberate "billing not
+turned on yet" state for the beta, or an unnoticed misconfiguration.
+Either way, it means **no beta tester can currently give this product
+money** - worth the founder's own attention regardless of which it is,
+since fixing it (if unintentional) means setting the three Stripe price
+ID env vars in Vercel's production environment, which is outside this
+session's automated permissions (env var writes), same limitation
+already noted for the Resend API key fix on 2026-09-22.
+
+**Not tested, and still can't be**: job capture/analysis, application
+submission, and interview-prep flows - all require being logged in as a
+real user, which remains blocked by the same credential-handling limits
+covered above (no live session token can be safely obtained or reused
+by this session, and the production test-auth guard is correctly
+un-bypassable). These remain the one category of production flow this
+session cannot verify without the founder personally walking through
+them.
