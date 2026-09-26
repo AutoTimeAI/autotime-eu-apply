@@ -43,6 +43,25 @@
   color: var(--at-ink);
 }
 
+/* A blanket retarget of the site-wide --ink/--surface tokens was tried
+ * here and reverted (same lesson as ux-2026-redesign's --ink attempt):
+ * most of the app's white "card" components (empty states, evidence
+ * panels, hero shells) pair --ink with an explicit or var(--surface)
+ * white background, by design, regardless of theme - flipping --ink
+ * globally to a light dark-mode color makes all of that text vanish
+ * into its own white background. Fixed each genuinely-dark-canvas
+ * element that needed it individually instead (below, plus the
+ * .profile-connect-page class added in ProfileConnect.tsx). */
+.pipeline2026-theme .eyebrow {
+  color: var(--at-primary) !important;
+}
+.pipeline2026-theme .profile-connect-page {
+  color: var(--at-ink);
+}
+.pipeline2026-theme .profile-connect-page > h2 {
+  color: var(--at-ink) !important;
+}
+
 .pipeline2026-theme h1,
 .pipeline2026-theme h2,
 .pipeline2026-theme h3,
@@ -147,17 +166,21 @@
   --p4-muted: var(--at-muted);
   --p4-canvas: var(--at-canvas);
 }
+/* --p5-ink/--p6-ink are deliberately NOT retargeted here: both phase
+   files pair that token exclusively with hardcoded `background: #fff`
+   shells (the hero card, tab hovers, country-choice-grid buttons) that
+   stay white by original per-page design regardless of theme - flipping
+   the ink to a light dark-mode color would make that text vanish into
+   its own white background. */
 .pipeline2026-theme .phase-five-countries {
   --p5-primary: var(--at-primary);
   --p5-primary-strong: var(--at-primary-pressed);
   --p5-selected: var(--at-selected);
-  --p5-ink: var(--at-ink);
 }
 .pipeline2026-theme .phase-six-career-direction {
   --p6-primary: var(--at-primary);
   --p6-primary-strong: var(--at-primary-pressed);
   --p6-selected: var(--at-selected);
-  --p6-ink: var(--at-ink);
 }
 .pipeline2026-theme .phase-seven-profile {
   --accent: var(--at-primary);
@@ -220,14 +243,26 @@
 .pipeline2026-theme .text-link {
   color: var(--at-primary);
 }
+/* Base fallback for plain, unclassed <a> tags (e.g. the walkthrough
+   panel's "Start setup" link) that never had their own color rule and
+   were rendering as the browser's literal default link blue. Low
+   specificity on purpose so any link with its own class/rule wins. */
+.pipeline2026-theme a {
+  color: var(--at-primary);
+}
 
 /* ---- Site-wide bare-button gradient (globals.css) ----
  * !important: Next.js gives globals.css (imported by the root layout)
  * priority over this nested dashboard-layout stylesheet regardless of
  * selector specificity - confirmed empirically on the ux-2026-redesign
  * branch via computed styles. */
+/* .phase-five-countries and .phase-six-career-direction are excluded:
+ * both already fully style every bare <button> themselves (tabs, country
+ * cards, stepper) against their own retargeted --p5-primary/--p6-primary
+ * tokens, intentionally as white-shell outline buttons, not filled
+ * pills - this override would otherwise paint all of them solid amber. */
 .pipeline2026-theme
-  button:not(.secondary-button):not(.button-secondary):not(.danger-button):not(.pipeline-card-open),
+  button:not(.secondary-button):not(.button-secondary):not(.danger-button):not(.pipeline-card-open):not(.phase-five-countries *):not(.phase-six-career-direction *),
 .pipeline2026-theme .primary-link {
   background: var(--at-primary) !important;
   color: #1b1a21 !important;
@@ -434,4 +469,32 @@
 .pipeline-inspector-empty {
   color: var(--at-muted);
   font-size: 13px;
+}
+
+/* ---- Restore phase-five/-six's own outline-button treatment ----
+ * A pre-existing, unrelated .dashboard-app-shell button rule (not part
+ * of this theme, present on every branch) repaints any bare <button>
+ * without role="tab" with a filled gradient - it was already clobbering
+ * the countries/role-pathways tabs and country-choice-grid before this
+ * theme existed, just invisibly so (both gradient stops were shades of
+ * the same site blue as the rest of the page). Under this theme's amber
+ * accent the mismatch became obvious: every tab and country card looked
+ * "selected" at once. Restoring each page's own transparent/white
+ * button treatment here, scoped to this theme only. */
+.pipeline2026-theme .phase-five-countries button {
+  background: var(--at-surface) !important;
+  color: var(--at-primary) !important;
+}
+.pipeline2026-theme .phase-six-career-direction .pathway-steps button {
+  background: transparent !important;
+}
+.pipeline2026-theme .phase-five-countries .international-tabs button {
+  background: transparent !important;
+  color: var(--at-muted) !important;
+}
+.pipeline2026-theme .phase-five-countries .international-tabs button.active {
+  color: var(--at-primary-pressed) !important;
+}
+.pipeline2026-theme .phase-six-career-direction .pathway-notice strong {
+  color: var(--at-ink) !important;
 }
