@@ -204,6 +204,48 @@
   color: var(--at-primary);
 }
 
+/* WCAG 1.4.3: these inherit hardcoded colors from globals.css (dark ink,
+   a purple design-system accent, and the browser's literal default link
+   blue #0000ee) that were tuned for the light palette, so they go
+   near-invisible against this theme's dark-mode variant
+   (@media prefers-color-scheme: dark, defined above). */
+.ux2026-theme .brand-name {
+  color: var(--at-ink);
+}
+.ux2026-theme .brand-tagline {
+  color: var(--at-muted) !important;
+}
+.ux2026-theme .product-eyebrow {
+  color: var(--at-primary-pressed) !important;
+}
+.ux2026-theme .text-link {
+  color: var(--at-primary-pressed);
+}
+.ux2026-theme .eu-brand-motto {
+  color: var(--at-muted);
+  opacity: 0.85;
+}
+@media (prefers-color-scheme: dark) {
+  .ux2026-theme:not([data-theme="light"]) .product-eyebrow {
+    color: var(--at-primary) !important;
+  }
+  .ux2026-theme:not([data-theme="light"]) .text-link {
+    color: var(--at-primary);
+  }
+  /* --at-primary-pressed (#1f9f88 in dark mode) is 3.83:1 on the active
+     nav-item pill background - just under the 4.5:1 text minimum. The
+     brighter --at-primary reads correctly there without changing the
+     pill's own background. */
+  .ux2026-theme:not([data-theme="light"])
+    .dashboard-workflow-nav
+    a.active,
+  .ux2026-theme:not([data-theme="light"])
+    .dashboard-workflow-nav
+    a[aria-current="page"] {
+    color: var(--at-primary);
+  }
+}
+
 /* ---- Site-wide bare-button gradient (globals.css) ----
  * Pages outside the phase-N system (Settings, AccountIdentityLinker,
  * SettingsControls) fall back to this global default gradient, hardcoded
