@@ -406,7 +406,7 @@ export function UserNav({ email, isAdmin = false, plan }: UserNavProps) {
         aria-controls={isOpen ? menuId : undefined}
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        aria-label={`Account menu for ${email}`}
+        aria-label={`Account menu for ${email}, ${planLabel} plan`}
         className="secondary-button user-nav-trigger"
         type="button"
         onKeyDown={(event) => {
