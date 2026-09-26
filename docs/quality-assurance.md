@@ -4878,3 +4878,70 @@ already flagged: the **production billing outage** (severity-high,
 needs the founder to check Vercel's Stripe price env vars) and the
 **four accessibility bugs** already fixed on both redesign branches but
 not yet ported to `main`.
+
+## 2026-09-26 (continued): extended the full round to both preview branches - found a preview-only environment gap, distinct from the production billing bug
+
+The founder asked for everything possible to be completed without
+further input. Ran the same checks against `ux-2026-redesign` and
+`ux2026-pipeline-board`:
+
+- `pnpm audit` on both branches - clean, same result as `main`.
+- Checked the one genuinely new piece of code either branch adds (the
+  Kanban pipeline board in `JobApplicationWorkspace.tsx`, on
+  `ux2026-pipeline-board`) for injection surface - no
+  `dangerouslySetInnerHTML`, no new API routes, writes only to local
+  client state. Nothing to flag.
+- Re-ran the same functional tests (waitlist signup, OAuth wiring,
+  pricing state) against both branches' live preview URLs.
+
+**Found a real difference from production, isolated to preview
+deployments specifically**: waitlist signup fails on both preview URLs
+with a 500. Pulled the actual Vercel function log rather than trusting
+the sanitized client-facing error - the real server-side reason is
+`Required service configuration is unavailable`, thrown before the
+database write even happens (confirmed via a direct query: no row is
+created, unlike the production test earlier today which succeeded and
+left a real row). This points to Vercel's **Preview** environment
+variable scope being incomplete relative to **Production** - the same
+Supabase credentials that work perfectly when run locally against this
+exact live project don't resolve the same way inside these preview
+deployments' own serverless functions, meaning some required env var is
+set for Production but missing or different for Preview.
+
+Pricing also shows "Billing unavailable" on both previews, same
+symptom as production - consistent with the same category of gap
+(Preview scope likely missing the same Stripe price env vars).
+
+**Google OAuth not completing on either preview is expected, not a
+bug**: clicking through reliably lands back on `/login` rather than
+Google's consent screen. OAuth providers only redirect to
+pre-registered callback URLs, and Vercel preview URLs are generated
+per-deployment - no preview deployment of any branch could ever
+complete a real OAuth round-trip without that URL being registered in
+advance with Google/Supabase, which isn't practical for throwaway
+preview URLs. This is a structural limitation of testing OAuth on
+previews at all, not something to fix.
+
+**Why this matters, scoped correctly**: this does not affect real
+users - production's waitlist and billing were independently confirmed
+working/broken exactly as already documented, and preview deployments
+are for internal design comparison, not real signups. It matters only
+if a beta tester reviewing these two UI redesigns happens to try
+submitting the waitlist form or opening pricing on the preview link and
+gets confused by a silent failure - worth a heads-up if that happens,
+not a production incident. Same fix category and same permission
+limitation as the two other environment-variable findings today:
+setting/copying the correct Preview-scope env vars in Vercel is outside
+this session's automated permissions.
+
+**This closes out everything achievable without further input from the
+founder.** Remaining open items, in order of what still needs their
+action: (1) production billing outage - check Stripe price env vars in
+Vercel Production, (2) preview environment variable gap found just now
+- check/copy the same vars into Vercel's Preview scope if the redesign
+previews need to support real signups during review, (3) port the four
+already-fixed accessibility bugs from the redesign branches to `main`,
+(4) the authenticated production functional flows (job capture,
+application submission, interview prep) still require the founder's
+own walkthrough, since no credential-handling path for this session was
+both safe and available.
