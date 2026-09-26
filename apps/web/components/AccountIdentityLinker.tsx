@@ -185,7 +185,7 @@ export function AccountIdentityLinker({
     >
       <div>
         <p className="eyebrow">Account linking</p>
-        <h3>Use Google and GitHub for the same profile</h3>
+        <h2>Use Google and GitHub for the same profile</h2>
         <p>
           Link another sign-in method while you are already signed in. After
           linking, both providers should open this same AutoTime account.

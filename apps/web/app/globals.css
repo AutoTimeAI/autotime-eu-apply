@@ -8999,12 +8999,12 @@ h4 {
   padding: 12px;
 }
 
-.identity-link-panel h3,
+.identity-link-panel h2,
 .identity-link-panel p {
   margin: 0;
 }
 
-.identity-link-panel h3 {
+.identity-link-panel h2 {
   color: var(--ink);
   font-size: 1rem;
 }
