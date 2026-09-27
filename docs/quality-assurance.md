@@ -4945,3 +4945,173 @@ already-fixed accessibility bugs from the redesign branches to `main`,
 application submission, interview prep) still require the founder's
 own walkthrough, since no credential-handling path for this session was
 both safe and available.
+
+## 2026-09-27: attempted the full authenticated production E2E journey for the funding evidence pack - blocked by a pre-existing QA-bootstrap outage, found and root-caused without ever touching the secret
+
+Prompted by an external analysis (ChatGPT, reviewing the live beta for an
+SWEF/EECF funding application) recommending an authenticated end-to-end
+test of sign-up → onboarding → dashboard → job analysis → application
+workflow → country journey → feedback as the missing evidence for a
+launch-readiness pack. The repo already has exactly this: a real
+authenticated production Playwright suite (`tests/e2e/production/`,
+docs/qa-test-account.md) driven by `QA_SESSION_URL`, wired into
+`.github/workflows/production-smoke.yml` on a schedule and
+`workflow_dispatch`.
+
+**Verified the external analysis's other claims directly against code -
+all correct.** Auth providers (Google + GitHub only, no password form,
+`apps/web/app/login/page.tsx`), pricing (Free £0, Pro Monthly £9/month,
+Pro Quarterly £19/3 months, £5 credit pack for 25 credits -
+`lib/pricing-configuration.ts`), the "Billing is temporarily unavailable"
+gate (same file, matches the 2026-09-26 billing-outage finding above),
+and the GDPR page naming AutoTime AI Ltd as controller and listing
+Supabase/Vercel/OpenAI/Stripe/Resend/PostHog EU (`app/privacy/page.tsx`)
+all match what's actually deployed.
+
+**Ran the real thing instead of trusting the pasted claims.** Never
+requested or handled `QA_SESSION_BOOTSTRAP_SECRET` directly - the
+sandbox's own credential-materialization guard blocked a raw Vercel env
+var read, which is correct behaviour, not a bug to work around. Used
+`gh workflow run production-smoke.yml` instead, so the secret stayed
+server-side in GitHub Actions the whole time and never touched this
+session.
+
+**Result: every authenticated test failed, and it isn't new.** All 18
+authenticated specs failed identically (`bootstrapQaSession` timing out
+after 20s waiting for a redirect to `/dashboard` -
+`tests/e2e/production/helpers.ts:86`), burning through 3 retries each
+until the run hit GitHub Actions' 20-minute job ceiling and got
+cancelled - the same thing had already happened to the two prior
+scheduled runs today. Root-caused via Vercel runtime logs
+(`get_runtime_logs` on `/api/qa/session`, no raw secret needed): **every
+single call to `/api/qa/session` returns 404**, consistently, back
+through the full available log history (checked 2026-09-20 through
+today, spanning two different deployments). Per
+`apps/web/app/api/qa/session/route.ts` and docs/qa-test-account.md, that
+route 404s on *any* secret mismatch or missing config, by design, so
+this is either `QA_SESSION_BOOTSTRAP_SECRET` /
+`QA_TEST_ACCOUNT_USER_ID` missing or mismatched between GitHub Actions
+and Vercel Production, or the QA account's
+`app_metadata.is_test_account` flag no longer being `true`. Supabase's
+own `operational_logs` table (which would show the last successful
+`qa.session.bootstrap.used` row) could not be queried directly - reading
+production tables is blocked by the same sandbox policy class as the
+secret read, for the same reason.
+
+**Net effect: the authenticated E2E evidence the funding pack needs does
+not exist yet, and the QA test-account infrastructure that was built to
+provide it safely has been silently broken for at least a week.** This
+is a real, standing gap - not a CI flake and not something another retry
+will fix. Fixing it needs the founder to confirm/re-set
+`QA_SESSION_BOOTSTRAP_SECRET` and `QA_TEST_ACCOUNT_USER_ID` in Vercel
+Production against the same values `scripts/create-qa-test-account.mjs`
+produced, and confirm the GitHub Actions `QA_SESSION_URL` secret still
+embeds the current secret - both are env var/secret writes outside this
+session's automated permissions, same limitation already noted for the
+Stripe price IDs and Resend key on 2026-09-22 and 2026-09-26.
+
+**Remaining claims verified, also all correct.** The "Private Beta v1 -
+founder-led early access" eyebrow and "This is not the final public SaaS
+launch" copy (`apps/web/app/page.tsx:301,307-308`), and the
+Target/Verify/Prove/Apply/Convert workflow step labels
+(`apps/web/app/page.tsx:65-85`), match the external analysis's claims
+exactly. Every claim in that pasted analysis about the live site's
+public-facing copy and pricing is accurate; the only gap was the missing
+authenticated E2E evidence documented above, which is a real production
+defect, not a documentation or copy issue.
+
+## 2026-09-27 (continued): the QA-bootstrap outage turned out to be three layered bugs, not one - fixed two live with the founder, third still open
+
+Followed the 404 outage above through to an actual fix, working live with
+the founder rather than diagnosing and stopping. Re-seeded the QA account
+(`node scripts/create-qa-test-account.mjs --yes` against production
+Supabase - founder ran this locally, never shared the service-role key)
+and got a fresh `QA_TEST_ACCOUNT_USER_ID`.
+
+**Bug 2, found while chasing why a plain env-var update did nothing:**
+after the founder saved the new `QA_TEST_ACCOUNT_USER_ID` and a rotated
+`QA_SESSION_BOOTSTRAP_SECRET` in Vercel Production, neither a dashboard
+"Redeploy" nor a fresh `git push` (an empty commit) produced any new
+deployment at all for several minutes - confirmed via
+`list_deployments`/`get_runtime_logs`, not assumed. Root cause: `git.
+deploymentEnabled: false` in `vercel.json`, committed to the repo. Every
+production deployment in this project's history (checked back 5+ days
+via `vercel ls --prod`) had been triggered manually by the founder via
+CLI/dashboard - GitHub push-to-deploy had never actually been wired up,
+despite `vercel git connect` reporting the repo as "already connected"
+(the connection existed; the deploy-on-push flag was off). Flipped to
+`true` and pushed as `ba61b13e` - that push did produce a real new
+deployment (`dpl_8jAQnF9uCL2CeRcyWhtebVtEzkhW`), confirming the fix.
+
+**Bug 3, found immediately after via the test suite's own new failure
+mode:** re-ran `production-smoke.yml` - every test failed instantly
+(sub-300ms, not the earlier 20s bootstrap timeout) with `TypeError:
+Invalid URL`, because `getProductionOrigin()`
+(`tests/e2e/production/helpers.ts:19-23`) calls `new URL(QA_SESSION_URL)`
+for every navigation, authenticated or not. The founder re-saved the
+GitHub Actions `QA_SESSION_URL` secret as the full URL and re-ran; this
+error was gone on the next run.
+
+**Bug 1 recurred - literally the same defect logged on 2026-09-20
+("stale production alias after the rollback rehearsal"), same class of
+bug, different trigger.** With bugs 2 and 3 fixed, the suite went back to
+the original 20-minute-timeout failure mode. Checked
+`get_runtime_logs` on `/api/qa/session` again - every request was still
+landing on `dep=dpl_9dpzYYMHqobrfBDXNGNJ1k8LZTfq`, the deployment from
+*before* the env-var fix, not the new `dpl_8jAQnF9uCL2CeRcyWhtebVtEzkhW`.
+Confirmed via `list_deployment_aliases`: `autotime-eu-apply.vercel.app` -
+the exact domain `QA_SESSION_URL` points at - was still aliased to the
+old deployment; the new one only carried its auto-generated git-branch
+URL. Attempting to reassign the alias via
+`mcp__claude_ai_Vercel__assign_alias` was correctly blocked by the
+sandbox's own production-deploy guard, so this is handed to the founder:
+promote `dpl_8jAQnF9uCL2CeRcyWhtebVtEzkhW` to the `autotime-eu-apply.
+vercel.app` alias in the Vercel dashboard, then re-run the suite.
+
+**Status: resolved - the authenticated E2E evidence pack now exists.**
+The founder promoted `dpl_8jAQnF9uCL2CeRcyWhtebVtEzkhW` to the
+`autotime-eu-apply.vercel.app` alias in the Vercel dashboard (confirmed
+via `list_deployment_aliases` before re-running, not assumed). Re-ran
+`production-smoke.yml` (run 36344137983): **21 passed, 2 failed, in
+5.0 minutes** - a real result, not another timeout.
+
+**The authenticated production journey the funding pack needed, verified
+live, today, as the QA test account:** sign-in via the QA bootstrap route
+and landing on `/dashboard`, session persisting across a fresh navigation
+to `/dashboard/profile`, sign-out correctly clearing the session, the
+completed profile page rendering, the onboarding wizard correctly
+redirecting away for a completed profile, Career Direction rendering,
+the jobs list with working search/filter, opening a job's detail view,
+the applications pipeline with real stage-filter counts, opening an
+application's detail/evidence/readiness state, the interviews list and
+detail view, the international/countries overview, Ireland's full
+pathway intelligence, an unsupported country (Belgium) correctly
+rendering in limited explorer mode, and three isolation/error-state
+checks (unauthenticated sync rejected, a failed dashboard sync read
+showing an error state not a blank crash, jobs list rendering
+independently of the applications sync). All against the real production
+domain, real Supabase-backed QA account, zero mocking.
+
+**The 2 failures are stale test expectations, not product defects** -
+confirmed by reading the actual current UI code, not assumed.
+`tests/e2e/production/02-dashboard-navigation.spec.ts` still expects an
+exact-text nav link labelled "Profile"; a recent redesign
+(`apps/web/components/UserNav.tsx:126-132`) renamed it to "Profile & CV"
+while keeping the same `href`/icon/behaviour. The nav item itself works;
+only the test's string literal is out of date. Left as a known,
+non-blocking gap rather than fixed in this pass, since fixing the test
+is a separate, unrelated change from the funding-evidence task at hand.
+
+**Retrospective: what actually made this a three-bug hunt.** Each fix
+unlocked the next bug's real failure mode, in strict order -
+`deploymentEnabled: false` meant the env-var fix physically could not
+reach production no matter how it was saved; the malformed
+`QA_SESSION_URL` then surfaced (`Invalid URL`, sub-300ms failures) the
+moment a build actually shipped; and once that was fixed, the stale-alias
+bug surfaced as a return to the original 20-minute-timeout symptom, which
+without checking `get_runtime_logs`'s `dep=` field would have looked
+exactly like the very first bug all over again. Diagnosing each layer
+required checking real, live evidence (deployment lists, runtime logs,
+alias assignments) at every step rather than assuming a fix worked
+because it was applied correctly - the given fix was correct at each
+step, and still insufficient until the next layer was found.

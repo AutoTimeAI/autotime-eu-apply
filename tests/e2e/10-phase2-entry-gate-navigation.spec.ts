@@ -11,17 +11,19 @@ const destinations = [
   ["Profile", "/dashboard/profile"],
 ] as const;
 
+// Compact mobile layout shortens "Applications" to "Apps" - see
+// UserNav.tsx's visualLabel logic.
 const primaryMobileDestinations = [
   ["Home", "/dashboard"],
   ["Jobs", "/dashboard/jobs"],
-  ["Applications", "/dashboard/applications"],
+  ["Apps", "/dashboard/applications"],
   ["Interviews", "/dashboard/interviews"],
 ] as const;
 
 const moreMobileDestinations = [
   ["Career Direction", "/dashboard/role-pathways"],
   ["Countries", "/dashboard/international"],
-  ["Profile", "/dashboard/profile"],
+  ["Profile & CV", "/dashboard/profile"],
 ] as const;
 
 async function assertLanded(

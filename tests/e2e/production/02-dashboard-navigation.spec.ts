@@ -9,7 +9,7 @@ import { bootstrapQaSession } from "./helpers"
 // desktop, behind a "more" menu on mobile).
 
 const primaryLinks = ["Home", "Jobs", "Applications", "Interviews"]
-const secondaryLinks = ["Career Direction", "Countries", "Profile"]
+const secondaryLinks = ["Career Direction", "Countries", "Profile & CV"]
 
 test.beforeEach(async ({ page }) => {
   await bootstrapQaSession(page)
@@ -58,8 +58,11 @@ test.describe("mobile layout", () => {
     page
   }) => {
     const nav = page.locator(".mobile-workflow-nav")
+    // Compact mobile layout shortens "Applications" to "Apps" - see
+    // UserNav.tsx's visualLabel logic.
     for (const name of primaryLinks) {
-      await expect(nav.getByRole("link", { name, exact: true })).toBeVisible()
+      const mobileName = name === "Applications" ? "Apps" : name
+      await expect(nav.getByRole("link", { name: mobileName, exact: true })).toBeVisible()
     }
 
     const more = nav.locator(".mobile-more-menu")

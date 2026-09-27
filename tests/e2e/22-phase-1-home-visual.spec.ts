@@ -53,22 +53,25 @@ test("Home keeps one action and every primary journey reachable", async ({
     const workflowNav = page.locator(
       mobile ? ".mobile-workflow-nav" : ".dashboard-workflow-nav",
     );
+    // Compact mobile layout shortens "Applications" to "Apps" - see
+    // UserNav.tsx's visualLabel logic.
     for (const name of ["Home", "Jobs", "Applications", "Interviews"]) {
+      const displayName = mobile && name === "Applications" ? "Apps" : name;
       await expect(
-        workflowNav.getByRole("link", { name, exact: true }),
+        workflowNav.getByRole("link", { name: displayName, exact: true }),
       ).toBeVisible();
     }
     if (mobile) {
       const more = workflowNav.locator(".mobile-more-menu");
       await more.locator("summary").click();
-      for (const name of ["Career Direction", "Countries", "Profile"]) {
+      for (const name of ["Career Direction", "Countries", "Profile & CV"]) {
         await expect(
           more.getByRole("link", { name, exact: true }),
         ).toBeVisible();
       }
       await more.locator("summary").click();
     } else {
-      for (const name of ["Career Direction", "Countries", "Profile"]) {
+      for (const name of ["Career Direction", "Countries", "Profile & CV"]) {
         await expect(
           workflowNav.getByRole("link", { name, exact: true }),
         ).toBeVisible();
