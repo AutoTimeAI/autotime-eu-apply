@@ -4,7 +4,7 @@
     "deploymentEnabled": true
   },
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm exec next build",
+  "buildCommand": "pnpm exec node scripts/ensure-stripe-prices.mjs && pnpm exec next build",
   "outputDirectory": ".next",
   "crons": [
     {
