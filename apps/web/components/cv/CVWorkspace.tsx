@@ -138,9 +138,13 @@ export default function CVWorkspace({
                   imported.experience?.length && "experience",
                   imported.education?.length && "education",
                 ].filter((part): part is string => Boolean(part));
+                const importedList =
+                  importedParts.length > 1
+                    ? `${importedParts.slice(0, -1).join(", ")} and ${importedParts.at(-1)}`
+                    : importedParts[0];
                 setStatus(
                   importedParts.length
-                    ? `Imported ${importedParts.join(", ")} from your saved CV. Review every claim.`
+                    ? `Imported ${importedList} from your saved CV. Review every claim.`
                     : "Your saved CV didn't contain enough detail to import automatically - fill in the fields below.",
                 );
               })
