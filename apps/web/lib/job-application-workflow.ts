@@ -225,6 +225,36 @@ const lineAfter = (text: string, label: RegExp) =>
     .find((line) => label.test(line))
     ?.replace(label, "")
     .trim() ?? "";
+// Real vacancy pastes are far more often "title on line 1, then
+// 'Company - Location' on line 2" than the labelled "Role: ..."/
+// "Company: ..." format lineAfter looks for above - found live via a
+// vacancy that had been sitting as "Untitled role"/"Employer unknown"
+// in production for over a week despite a clean, plainly-formatted
+// description. These are conservative, line-shape-only heuristics (no
+// label required) that only fire when a caller left title/employer
+// blank, so they can only improve on the empty string they'd otherwise
+// get - short lines only, since a long line is prose, not a heading.
+const firstNonBlankLine = (text: string) =>
+  text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0) ?? "";
+const guessTitleFromFirstLine = (text: string) => {
+  const line = firstNonBlankLine(text);
+  return line.length > 0 && line.length <= 100 && !/[.!?]$/.test(line)
+    ? line
+    : "";
+};
+const guessEmployerFromSecondLine = (text: string) => {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const second = lines[1] ?? "";
+  if (second.length === 0 || second.length > 100) return "";
+  const [company] = second.split(/\s[-–—]\s/);
+  return company && company.length < second.length ? company.trim() : "";
+};
 
 export function extractJob(input: {
   description: string;
@@ -239,10 +269,12 @@ export function extractJob(input: {
   const now = input.now ?? new Date().toISOString();
   const title =
     input.title?.trim() ||
-    lineAfter(description, /^(role|job title|position)\s*:\s*/i);
+    lineAfter(description, /^(role|job title|position)\s*:\s*/i) ||
+    guessTitleFromFirstLine(description);
   const employer =
     input.employer?.trim() ||
-    lineAfter(description, /^(company|employer)\s*:\s*/i);
+    lineAfter(description, /^(company|employer)\s*:\s*/i) ||
+    guessEmployerFromSecondLine(description);
   const labelledLocation = lineAfter(description, /^(location)\s*:\s*/i);
   const detectedCity = findKnownCity(description.slice(0, 1200));
   const location = labelledLocation || detectedCity;
