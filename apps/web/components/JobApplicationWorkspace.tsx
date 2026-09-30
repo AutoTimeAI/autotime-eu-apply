@@ -671,14 +671,32 @@ function JobDetail({
     "overview" | "analysis" | "application" | "activity"
   >("overview");
   const analysis = currentAnalysis(job);
-  const [cloudEvidence, setCloudEvidence] = useState<ReturnType<typeof legacyEvidence> | null>(null);
+  // A ref, not useState: analyse() reads this synchronously right after
+  // awaiting profileSyncRef.current below, and a state variable read from
+  // that same closure could still reflect the value from the render that
+  // registered the click handler, not the update the just-awaited promise
+  // triggered - a ref sidesteps that render-timing gap entirely.
+  const cloudEvidenceRef = useRef<ReturnType<typeof legacyEvidence> | null>(null);
+  // analyse() reads loadMobilityProfile(localStorage, userId) synchronously,
+  // but on a browser where nothing has synced yet, that call falls through
+  // to emptyMobilityProfile (sponsorshipRequired: "unsure") until this
+  // effect's fetch below writes the real derived profile into storage.
+  // "unsure" is treated the same as a confirmed "yes" for blocking purposes
+  // (assessInternationalJob), so a user who clicks Analyse before this fetch
+  // resolves - no loading indicator existed for it - could get a false
+  // "vacancy rejects sponsorship" blocker for a candidate who needs no
+  // sponsorship at all. Found via a real production walkthrough: the exact
+  // same job produced a false sponsorship blocker on first analysis, then a
+  // correct result on reanalysis once this fetch had time to complete.
+  // profileSyncRef lets analyse() await this fetch instead of racing it.
+  const profileSyncRef = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
     let active = true;
-    void fetch("/api/profile/onboarding").then(async (response) => ({ response, payload: await response.json() })).then(({ response, payload }) => {
+    profileSyncRef.current = fetch("/api/profile/onboarding").then(async (response) => ({ response, payload: await response.json() })).then(({ response, payload }) => {
       if (!active || !response.ok || !payload.data) return;
       const profile = payload.data as { base_cv_text?: string | null; work_authorisation_category?: string | null; country_current?: string | null; countries_target?: string[] | null };
       const sponsorshipRequired = profile.work_authorisation_category === "sponsorship_required";
-      setCloudEvidence({ text: profile.base_cv_text ?? "", sponsorshipRequired });
+      cloudEvidenceRef.current = { text: profile.base_cv_text ?? "", sponsorshipRequired };
       const applicantPosition = profile.work_authorisation_category === "eu_eea_swiss_citizen" ? "eu-eea-swiss-citizen" : profile.work_authorisation_category === "existing_permission" ? "existing-country-permission" : sponsorshipRequired ? "sponsorship-required" : "unsure";
       const existingMobility = loadMobilityProfile(localStorage, userId);
       if (existingMobility.source !== "saved") {
@@ -699,8 +717,15 @@ function JobDetail({
       ...state,
       jobs: state.jobs.map((item) => (item.id === job.id ? nextJob : item)),
     });
-  const analyse = () => {
-    const evidence = cloudEvidence ?? legacyEvidence(userId);
+  const [analysing, setAnalysing] = useState(false);
+  const analyse = async () => {
+    setAnalysing(true);
+    try {
+      await profileSyncRef.current;
+    } finally {
+      setAnalysing(false);
+    }
+    const evidence = cloudEvidenceRef.current ?? legacyEvidence(userId);
     const mobilityProfile = loadMobilityProfile(localStorage, userId).profile;
     const sponsorshipRequired =
       mobilityProfile.sponsorshipRequired === "unsure"
@@ -800,13 +825,16 @@ function JobDetail({
         action={
           <button
             className="button-primary"
+            disabled={analysing}
             onClick={analysis?.decision === "Apply" ? prepare : analyse}
           >
-            {analysis?.decision === "Apply"
-              ? "Prepare application"
-              : analysis
-                ? "Reanalyse job"
-                : "Analyse job"}
+            {analysing
+              ? "Loading your profile..."
+              : analysis?.decision === "Apply"
+                ? "Prepare application"
+                : analysis
+                  ? "Reanalyse job"
+                  : "Analyse job"}
           </button>
         }
       />
@@ -837,7 +865,7 @@ function JobDetail({
           />
         </>
       ) : tab === "analysis" ? (
-        <Analysis job={job} analyse={analyse} />
+        <Analysis job={job} analyse={analyse} analysing={analysing} />
       ) : tab === "application" ? (
         <section className="workflow-section">
           <h2>Application</h2>
@@ -963,7 +991,7 @@ function JobOverview({
   );
 }
 
-function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
+function Analysis({ job, analyse, analysing }: { job: JobRecord; analyse: () => void; analysing: boolean }) {
   const { userId } = useDashboardPlan();
   const [mobilitySponsorship, setMobilitySponsorship] =
     useState<MobilityProfile["sponsorshipRequired"]>("unsure");
@@ -983,8 +1011,8 @@ function Analysis({ job, analyse }: { job: JobRecord; analyse: () => void }) {
         title="Analyse this vacancy"
         description="AutoTime will compare actual requirements with confirmed profile evidence and keep unknowns visible."
         action={
-          <button className="button-primary" onClick={analyse}>
-            Analyse job
+          <button className="button-primary" disabled={analysing} onClick={analyse}>
+            {analysing ? "Loading your profile..." : "Analyse job"}
           </button>
         }
       />
