@@ -5260,3 +5260,42 @@ The pre-existing stray job (`5c3e759e...`) itself was left untouched -
 it was created before this fix existed, is not data from this session,
 and backfilling it wasn't requested; flagged to the user for a decision
 rather than fixed unilaterally.
+
+## 2026-09-30 - further digging: aggregated EU jobs cross-browser tracking
+
+Continued the live QA-account stress-test through "Browse aggregated EU
+jobs" using headed Playwright against production. The feed loaded 200
+current listings, the initial 25-row pagination window rendered correctly,
+search matched title/employer/location, a deliberately impossible search
+showed the correct "No matching listings" state, and tracking a real listing
+(`Head of Fraud and Risk Oversight` at OpenPayd) copied it into the private
+Jobs workflow with the expected title/employer/ATS metadata.
+
+**Bug found and fixed:** tracking deduplication only checked
+`loadJobWorkflow(userId)` - the current browser's local storage. It never
+consulted the signed-in account copy before saving. Reproduced with two
+genuinely fresh browser contexts: browser 1 tracked the OpenPayd listing and
+synced it to `job_workflow_jobs`; browser 2 had empty local storage, tracked
+the exact same listing, and production accepted a second row with a new ID.
+This made the same account accumulate duplicates simply by changing browser
+or device, despite the UI's existing "This job is already tracked" guard.
+
+Root cause was in `AggregatedJobsBrowser.tsx`: `duplicateJob` received only
+the local `state.jobs`. Added a just-in-time read of
+`/api/sync/job-workflow` before the local save and runs the same canonical
+duplicate check against its account jobs. A failed account read deliberately
+falls back to the existing local-first behaviour, so temporary sync failure
+or offline use does not block capture. The button is disabled during the
+check to prevent same-page double clicks. Focused tests cover both an account
+duplicate whose URL differs only by tracking parameters and the unavailable-
+sync fallback. Typechecked, linted, built, committed (`afd47fef`), pushed,
+and deployed as `dpl_FNf5v74y1Q6pD2RwLTQRzowVMUcK` (Ready with the
+production alias).
+
+**Re-verified live against the exact two-browser repro:** browser 1 created
+and synced one row (`1857e4ca-8821-42c2-9a82-316ad75f5ad8`); browser 2,
+again with a fresh local profile, received "This job is already tracked."
+and the account still contained exactly that single row. The verification
+row and the two duplicate rows from the original reproduction were deleted,
+all deletions were scoped to the QA account's `auth.users.id`, and the
+temporary Playwright/cleanup scripts were removed.
