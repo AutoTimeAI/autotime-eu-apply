@@ -122,6 +122,7 @@ Last consolidated: 2026-09-09.
 | [testing/private-beta-v1-flaw-closure-report.md](testing/private-beta-v1-flaw-closure-report.md)   | Private beta v1 flaw closure report  |
 | [testing/private-beta-v1-next-session-handoff.md](testing/private-beta-v1-next-session-handoff.md) | Private beta v1 handoff              |
 | [testing/early-user-beta-onboarding-checklist.md](testing/early-user-beta-onboarding-checklist.md) | Early-user beta onboarding checklist |
+| [testing/beta-onboarding/README.md](testing/beta-onboarding/README.md)                             | Per-tester onboarding pack: welcome email, testing guide, feedback template, tracker |
 
 ## Release readiness & launch gates
 

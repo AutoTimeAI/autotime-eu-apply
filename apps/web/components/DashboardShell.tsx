@@ -17,6 +17,7 @@ import {
 import { InactivityLogout } from "./InactivityLogout";
 import type { SubscriptionPlan } from "../lib/supabase/types";
 import { BrandBackdrop } from "./BrandBackdrop";
+import { FeedbackWidget } from "./FeedbackWidget";
 
 const chromeFreePaths = new Set(["/dashboard/onboarding"]);
 
@@ -87,6 +88,7 @@ export function DashboardShell({
             {children}
           </div>
         </div>
+        <FeedbackWidget />
       </div>
     </DashboardPlanProvider>
   );

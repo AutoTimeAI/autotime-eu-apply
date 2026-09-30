@@ -11696,3 +11696,73 @@ textarea:focus {
     padding: 12mm !important;
   }
 }
+
+.feedback-widget-toggle {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.feedback-widget-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  width: min(360px, calc(100vw - 40px));
+  max-height: min(520px, calc(100vh - 40px));
+  overflow-y: auto;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d8dfe4);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  padding: 16px;
+}
+
+.feedback-widget-panel .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.feedback-widget-panel .section-heading h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.feedback-widget-panel .section-heading button {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
+.feedback-widget-panel form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedback-widget-panel label {
+  font-size: 0.82rem;
+  font-weight: 650;
+  margin-top: 4px;
+}
+
+.feedback-widget-panel select,
+.feedback-widget-panel input,
+.feedback-widget-panel textarea {
+  width: 100%;
+  border: 1px solid var(--border, #d8dfe4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.feedback-widget-panel button[type="submit"] {
+  margin-top: 8px;
+}
