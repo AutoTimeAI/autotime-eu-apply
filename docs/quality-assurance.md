@@ -5115,3 +5115,50 @@ required checking real, live evidence (deployment lists, runtime logs,
 alias assignments) at every step rather than assuming a fix worked
 because it was applied correctly - the given fix was correct at each
 step, and still insufficient until the next layer was found.
+
+## 2026-09-30 - manual stress-test pass, QA account (job-workflow sync race)
+
+Live interactive stress-testing through the QA test account
+(`qa-test@autotimeai.com`) via headed Playwright, simulating realistic
+candidate scenarios end-to-end against production - not fabricated beta
+users, real navigation through the real UI at human-like pacing.
+
+**Scenarios run:** a sponsorship-required foreign candidate targeting a
+country with a full CountryRule pack (temporarily mutated the QA profile
+to `sponsorship_needed: true`, an explicit `work_right_details`, and
+`work_authorisation_category: sponsorship_required`, then restored it);
+the explorer-mode fallback for a country with no dedicated CountryRule
+pack (France), same sponsorship-required profile, confirming the correct
+generic-EURES-source/"mobility pathway verification" caveat behaviour;
+and repeated create-job-then-analyse flows to chase an intermittent
+"stuck on empty state" symptom.
+
+**Bug found and fixed:** newly created jobs analysed shortly after
+creation could have that analysis silently discarded. Root cause:
+`useJobWorkflowSync`'s one-time mount effect (`apps/web/lib/useJobWorkflowSync.ts`)
+kicks off a GET reconcile against the server and never re-runs it; the
+effect closed over `localJobs`/`localApplications`/`onReconciled` from
+the render at mount time. If a user added a job and ran "Analyse job"
+before that GET resolved, the eventual `onReconciled` call fired with a
+reconciliation computed against the pre-mutation snapshot, overwriting
+the just-added analysis in local state - "Analysis version 1 saved."
+would flash, then the page would silently revert to the empty "Analyse
+this vacancy" state until a full reload re-fetched the real data from
+the server. Reproduced twice with realistic (non-rushed) pacing before
+diagnosis; confirmed root cause by reading the effect's dependency array
+and its own comment explaining why it intentionally never re-runs.
+Fixed by reading `localJobs`/`localApplications`/`onReconciled` through
+refs kept current on every render, so the reconcile uses whatever is
+actually local at the moment the GET resolves rather than a stale
+mount-time snapshot. `reconcileJobWorkflow` (`apps/web/lib/job-workflow-sync.ts`)
+is last-write-wins by `updatedAt`, so feeding it fresh local data is
+sufficient - no change needed there. Typechecked, linted, built,
+committed (`fd60833b`), deployed to production, and re-verified live
+against the exact original repro: the analysis now renders immediately
+and correctly with no reload required. Cleanup: QA profile restored to
+the documented baseline (`scripts/create-qa-test-account.mjs`), all
+test jobs created during this pass deleted from `job_workflow_jobs`,
+temporary scripts removed.
+
+No other new functional bugs found in this pass. The remaining planned
+scenario (incomplete/partial profile) was not started this session.
