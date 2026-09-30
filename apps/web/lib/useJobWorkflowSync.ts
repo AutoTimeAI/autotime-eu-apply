@@ -75,6 +75,28 @@ export function useJobWorkflowSync({
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(true);
+  // The mount effect below kicks off the initial GET reconcile once and
+  // never re-runs it (see the exhaustive-deps note on that effect), but the
+  // GET can still be in flight when the user makes local changes (add a
+  // job, run an analysis) before it resolves. Reading localJobs/
+  // localApplications/onReconciled directly in that effect would close over
+  // their mount-time values, so onReconciled would fire with a
+  // reconciliation computed against pre-mutation local data - silently
+  // discarding whatever the user did in between. Refs kept current on every
+  // render let the effect read the latest values at the moment the GET
+  // actually resolves instead.
+  const localJobsRef = useRef(localJobs);
+  const localApplicationsRef = useRef(localApplications);
+  const onReconciledRef = useRef(onReconciled);
+  useEffect(() => {
+    localJobsRef.current = localJobs;
+  }, [localJobs]);
+  useEffect(() => {
+    localApplicationsRef.current = localApplications;
+  }, [localApplications]);
+  useEffect(() => {
+    onReconciledRef.current = onReconciled;
+  }, [onReconciled]);
 
   const upload = useCallback(
     async (jobs: JobRecord[], applications: ApplicationWorkspace[]) => {
@@ -187,11 +209,11 @@ export function useJobWorkflowSync({
           );
         }
         const reconciliation = reconcileJobWorkflow({
-          localJobs,
-          localApplications,
+          localJobs: localJobsRef.current,
+          localApplications: localApplicationsRef.current,
           server,
         });
-        onReconciled({ jobs: reconciliation.jobs, applications: reconciliation.applications });
+        onReconciledRef.current({ jobs: reconciliation.jobs, applications: reconciliation.applications });
         setState("synced");
         setStatus("Loaded your account copy.");
         if (
