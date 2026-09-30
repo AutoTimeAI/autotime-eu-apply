@@ -11698,18 +11698,25 @@ textarea:focus {
 }
 
 .feedback-widget-toggle {
-  position: fixed;
+  /* !important: DashboardShell renders this as a direct child of
+     .dashboard-app-shell, which has its own higher-specificity rule
+     (.dashboard-app-shell > :not(.eu-brand-backdrop)) forcing
+     position: relative; z-index: 1 on every direct child. This is a
+     fixed-position overlay that must survive that regardless of future
+     ancestor CSS changes. */
+  position: fixed !important;
   right: 20px;
   bottom: 20px;
-  z-index: 40;
+  z-index: 40 !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 .feedback-widget-panel {
-  position: fixed;
+  /* Same ancestor-specificity override as .feedback-widget-toggle above. */
+  position: fixed !important;
   right: 20px;
   bottom: 20px;
-  z-index: 40;
+  z-index: 40 !important;
   width: min(360px, calc(100vw - 40px));
   max-height: min(520px, calc(100vh - 40px));
   overflow-y: auto;
