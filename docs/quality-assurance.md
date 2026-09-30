@@ -5218,3 +5218,35 @@ step, since that triggers a real, billed OpenAI call with no further
 diagnostic value over the CV-tailor AI calls already exercised earlier
 in this session's testing. Test application and job deleted after the
 pass; temp scripts removed.
+
+**Bug found and fixed:** Jobs list browsing turned up a real,
+still-live production job (`job_workflow_jobs`, id
+`5c3e759e-7d4f-4bf7-b2f3-0be42b192116`, captured 2026-09-20 - predates
+this session) rendering as "Untitled role"/"Employer unknown" despite
+having a complete, cleanly-formatted description. Root cause:
+`extractJob()` (`apps/web/lib/job-application-workflow.ts`) only ever
+extracted title/employer from explicit `Role:`/`Job title:`/`Position:`
+and `Company:`/`Employer:` labelled lines - the far more common
+unlabelled real-world paste shape ("title on line 1, then
+`Company - Location` on line 2," which is exactly this job's own
+description) was left to fall through to an empty string with no
+warning, silently producing a permanently blank/"Untitled" job that the
+analysis engine and UI then had to work around indefinitely. Fixed by
+adding conservative, line-shape-only fallbacks (first short non-blank
+line for title, the part before a `-`/`–` separator on the second line
+for employer) that only fire when the caller left both fields blank and
+the labelled-line lookup found nothing - explicit caller input and
+labelled lines still take priority. Covered by
+`scripts/extract-job-title-employer-fallback.test.mjs` (4 cases:
+unlabelled inference, explicit-input priority, labelled-line priority,
+and a negative case confirming a long prose first line is correctly
+left un-guessed rather than mis-titled). Typechecked, linted, built,
+committed (`191f7b3e`), deployed, and re-verified live: a fresh
+QA-account paste in the unlabelled shape, with the Job title/Employer
+inputs left blank, now correctly shows the inferred title and employer
+instead of falling back to "Untitled role"/"Employer unknown."
+
+The pre-existing stray job (`5c3e759e...`) itself was left untouched -
+it was created before this fix existed, is not data from this session,
+and backfilling it wasn't requested; flagged to the user for a decision
+rather than fixed unilaterally.
