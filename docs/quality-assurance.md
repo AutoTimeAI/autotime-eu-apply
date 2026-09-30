@@ -5299,3 +5299,31 @@ and the account still contained exactly that single row. The verification
 row and the two duplicate rows from the original reproduction were deleted,
 all deletions were scoped to the QA account's `auth.users.id`, and the
 temporary Playwright/cleanup scripts were removed.
+
+## 2026-09-30 - further digging: Settings/export and outreach controls
+
+Continued the same headed-Playwright production pass through two previously
+untested account surfaces. No new bugs were found in either flow.
+
+**Settings and account export: clean.** Walked all five Settings sections
+(Account, Plan & billing, Data & privacy, Your data rights, Preferences) and
+confirmed each rendered its correct panel rather than stale content. Ran the
+real "Export my data" action: it returned HTTP 200, downloaded as
+`eu-apply-account-export.json`, identified the QA account by its actual
+`auth.users.id` and email, included 42 server-side data collections (including
+1 profile, 3 current job-workflow jobs and 6 seeded applications), and reported
+an empty `incompleteTables` array - no query was silently omitted. Also changed
+Default region through the UI to a temporary sentinel, verified the database
+row changed, then restored the exact baseline from
+`scripts/create-qa-test-account.mjs` (`Germany`) through the UI and verified
+the complete preferences row matched its pre-test state.
+
+**Recruiter outreach: clean.** Opened the real Follow-ups workspace and
+confirmed both seeded drafts loaded. On the QA account's Alex Recruiter
+LinkedIn-note draft, changed the body and saved it, verified the real
+`outreach_messages` row, changed status from `drafted` to `replied` and
+verified that transition, then entered 301 characters and confirmed the Copy
+draft action was disabled with "301 of 300 characters - shorten before
+copying." No message was sent and no AI drafting call was made. The original
+body, subject, status and follow-up value were restored directly afterward
+and the temporary Playwright scripts were removed.
