@@ -5160,5 +5160,18 @@ the documented baseline (`scripts/create-qa-test-account.mjs`), all
 test jobs created during this pass deleted from `job_workflow_jobs`,
 temporary scripts removed.
 
-No other new functional bugs found in this pass. The remaining planned
-scenario (incomplete/partial profile) was not started this session.
+A third scenario was then run: an incomplete profile (blanked the QA
+account's `linkedin_url`, the only field of `getMissingOnboardingEvidence`'s
+required set that was quick to null out safely, leaving
+`onboarding_completed_at` set - the exact "legacy flow" edge case the
+function's own comment describes). Visiting `/dashboard/jobs` correctly
+redirected server-side (`proxy.ts`) to
+`/dashboard/onboarding?required=1`, and the wizard deep-linked straight
+to "Step 3 of 6 - Professional links," the exact step owning the missing
+field, with the LinkedIn input correctly empty while other already-filled
+fields (GitHub URL) stayed intact. No bug found; profile restored
+immediately after.
+
+No other new functional bugs found in this pass. All three planned
+stress-test scenarios (sponsorship-required candidate, explorer-mode
+country, incomplete profile) are now complete.
