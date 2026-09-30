@@ -5175,3 +5175,46 @@ immediately after.
 No other new functional bugs found in this pass. All three planned
 stress-test scenarios (sponsorship-required candidate, explorer-mode
 country, incomplete profile) are now complete.
+
+## 2026-09-30 - further digging: CV tailor auto-import, application prepare flow
+
+Continued the same QA-account stress-test approach into two areas not
+yet covered this session.
+
+**Bug found and fixed:** the profile-CV auto-import on the CV Tailor
+page (`apps/web/components/cv/CVWorkspace.tsx`) always set its status to
+"Imported experience, education and skills from your saved CV. Review
+every claim." regardless of what the AI extraction actually returned.
+`cv-enrich`'s schema (hardened in this session's earlier `cv-enrich` 500
+fix) correctly filters out blank experience/education entries, so a
+prose-style CV that doesn't parse into clean structured entries - the
+QA account's own CV is exactly this - yields empty experience/education
+arrays. The result: a false "success" message sitting directly above a
+"Complete the required CV fields: a complete experience entry, a
+complete education entry" validation banner for the identical fields,
+reproduced live. Fixed to list only what actually came back non-empty
+(summary/skills/experience/education), with a plain "didn't contain
+enough detail to import automatically" message when nothing did.
+Typechecked, linted, built, committed (`e5d998af`, grammar polish in
+`1a741b63`), deployed, and re-verified live: status now correctly read
+"Imported a summary, skills from your saved CV."
+
+**Application prepare/readiness flow: no bugs found.** Walked a
+`Consider`-decision job through "Prepare anyway" (confirm dialog),
+confirmed the correct gating copy, checked both real actionable
+checkboxes ("I confirmed the selected evidence supports the
+application," "I reviewed every consequential answer directly"), and
+confirmed the status banner correctly updated to "Required checks are
+complete / Ready for the next step." The 8-item "Application checklist"
+list renders as disabled/program-controlled step indicators, not
+user-clickable checkboxes - working as designed, not a bug. A transient
+"Some items changed elsewhere and were not overwritten" conflict banner
+appeared once, immediately after the prepare action (plausibly from the
+test script's own rapid-fire scripted clicks racing the account sync);
+it cleared cleanly on the page's own suggested reload with no data loss,
+consistent with the sync conflict UI's intended behaviour. Did not
+proceed into the "Generate application kit" AI cover-letter generation
+step, since that triggers a real, billed OpenAI call with no further
+diagnostic value over the CV-tailor AI calls already exercised earlier
+in this session's testing. Test application and job deleted after the
+pass; temp scripts removed.
