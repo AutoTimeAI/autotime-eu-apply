@@ -11703,18 +11703,25 @@ textarea:focus {
      (.dashboard-app-shell > :not(.eu-brand-backdrop)) forcing
      position: relative; z-index: 1 on every direct child. This is a
      fixed-position overlay that must survive that regardless of future
-     ancestor CSS changes. */
+     ancestor CSS changes.
+     left, not right: .consent-banner already owns the bottom-right
+     corner (right: 18px, z-index: 60) until dismissed, which otherwise
+     sits on top of and intercepts clicks on this button - same
+     bottom-right-corner conflict this file already solves for the
+     pricing page's CTA by moving the banner to the opposite corner
+     there instead. */
   position: fixed !important;
-  right: 20px;
+  left: 20px;
   bottom: 20px;
   z-index: 40 !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
 .feedback-widget-panel {
-  /* Same ancestor-specificity override as .feedback-widget-toggle above. */
+  /* Same ancestor-specificity override and consent-banner corner
+     conflict as .feedback-widget-toggle above. */
   position: fixed !important;
-  right: 20px;
+  left: 20px;
   bottom: 20px;
   z-index: 40 !important;
   width: min(360px, calc(100vw - 40px));
