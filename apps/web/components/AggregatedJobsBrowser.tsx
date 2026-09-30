@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useDashboardPlan } from "./UserNav";
 import { extractJob, duplicateJob } from "../lib/job-application-workflow";
 import { loadJobWorkflow, saveJobWorkflow } from "../lib/job-workflow-storage";
-import { accountAlreadyTracksJob } from "../lib/aggregated-job-tracking";
+import { accountAlreadyTracksJob, prioritizeSelectedListing } from "../lib/aggregated-job-tracking";
 import { ProductEmptyState, ProductPageHeader, ProductStatusBadge } from "./product-ui";
 
 type Listing = { id: string; title: string; company: string; location: string | null; url: string; posted_date: string | null; source: string; ats_platform: string; description_raw: string | null };
@@ -28,13 +28,17 @@ type Listing = { id: string; title: string; company: string; location: string | 
  * @param unavailable - When non-null, the listings source could not be
  *   read (e.g. missing Supabase migration); an empty state is shown instead.
  */
-export default function AggregatedJobsBrowser({ listings, unavailable }: { listings: Listing[]; unavailable: string | null }) {
+export default function AggregatedJobsBrowser({ listings, unavailable, initialJobId = null }: { listings: Listing[]; unavailable: string | null; initialJobId?: string | null }) {
   const { userId } = useDashboardPlan();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [trackingId, setTrackingId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(25);
-  const visible = useMemo(() => listings.filter((item) => `${item.title} ${item.company} ${item.location ?? ""}`.toLowerCase().includes(query.toLowerCase())), [listings, query]);
+  const orderedListings = useMemo(
+    () => prioritizeSelectedListing(listings, initialJobId),
+    [initialJobId, listings],
+  );
+  const visible = useMemo(() => orderedListings.filter((item) => `${item.title} ${item.company} ${item.location ?? ""}`.toLowerCase().includes(query.toLowerCase())), [orderedListings, query]);
 
   // Resets the pagination window when the search query changes - done
   // during render (React's own recommended pattern for "adjusting state

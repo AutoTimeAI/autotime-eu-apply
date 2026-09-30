@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { accountAlreadyTracksJob } from "../../lib/aggregated-job-tracking";
+import {
+  accountAlreadyTracksJob,
+  prioritizeSelectedListing,
+} from "../../lib/aggregated-job-tracking";
 import { extractJob } from "../../lib/job-application-workflow";
 
 describe("aggregated job account deduplication", () => {
+  it("pins a deep-linked ESCO match ahead of the first pagination window", () => {
+    const listings = Array.from({ length: 30 }, (_, index) => ({
+      id: `job-${index}`,
+    }));
+
+    expect(prioritizeSelectedListing(listings, "job-29")[0]?.id).toBe(
+      "job-29",
+    );
+  });
+
   it("detects the same listing already tracked by another browser", async () => {
     const existing = extractJob({
       title: "Platform Engineer",

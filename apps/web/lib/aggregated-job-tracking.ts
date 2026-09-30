@@ -3,6 +3,17 @@ import { jobWorkflowApiResponseSchema } from "./job-workflow-sync";
 
 type FetchAccountWorkflow = (input: string, init?: RequestInit) => Promise<Response>;
 
+export function prioritizeSelectedListing<T extends { id: string }>(
+  listings: T[],
+  selectedId: string | null,
+): T[] {
+  if (!selectedId) return listings;
+  const selected = listings.find((listing) => listing.id === selectedId);
+  return selected
+    ? [selected, ...listings.filter((listing) => listing.id !== selectedId)]
+    : listings;
+}
+
 /** Checks the account copy before an aggregated listing is tracked. */
 export async function accountAlreadyTracksJob(
   candidate: JobRecord,

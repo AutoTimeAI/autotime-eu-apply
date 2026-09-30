@@ -18,7 +18,14 @@ export const dynamic = "force-dynamic";
  * Supabase and hands them, along with any query error message, to
  * `AggregatedJobsBrowser`.
  */
-export default async function AggregatedJobsPage() {
+export default async function AggregatedJobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ job_id?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const requestedJobId =
+    typeof params.job_id === "string" ? params.job_id : null;
   const client = await createServerClient();
   const { data, error } = await client
     .from("job_listings")
@@ -27,9 +34,21 @@ export default async function AggregatedJobsPage() {
     )
     .order("posted_date", { ascending: false })
     .limit(200);
+  let listings = data ?? [];
+  if (requestedJobId && !listings.some((item) => item.id === requestedJobId)) {
+    const { data: selected } = await client
+      .from("job_listings")
+      .select(
+        "id,title,company,location,url,posted_date,source,ats_platform,description_raw",
+      )
+      .eq("id", requestedJobId)
+      .maybeSingle();
+    if (selected) listings = [selected, ...listings];
+  }
   return (
     <AggregatedJobsBrowser
-      listings={data ?? []}
+      initialJobId={requestedJobId}
+      listings={listings}
       unavailable={error?.message ?? null}
     />
   );
