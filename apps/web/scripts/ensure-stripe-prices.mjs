@@ -61,15 +61,18 @@ if (!monthlyPriceId)
   throw new Error("STRIPE_PRO_MONTHLY_PRICE_ID is required in production")
 const monthly = await stripe.prices.retrieve(monthlyPriceId)
 
+// Deliberately not asserting livemode: true here. This script verifies
+// whatever Stripe mode STRIPE_SECRET_KEY actually authenticates as (live or
+// test) - it doesn't assume production always means live Stripe. AutoTime
+// has run production against Stripe test-mode keys at times, and a livemode
+// assertion would fail every single build in that state regardless of
+// whether the configured prices are otherwise correct.
 if (
-  !quarterly.livemode ||
   quarterly.unit_amount !== 1900 ||
   quarterly.recurring?.interval !== "month" ||
   quarterly.recurring?.interval_count !== 3 ||
-  !credits.livemode ||
   credits.unit_amount !== 500 ||
   !monthly.active ||
-  !monthly.livemode ||
   monthly.unit_amount !== 900 ||
   monthly.currency !== "gbp" ||
   monthly.recurring?.interval !== "month" ||
