@@ -14,8 +14,9 @@ import {
   companionDashboardStateSchema,
   createMockApplicationPositioningPack,
   createMockEUFitEngineResult,
-  evaluateCountryFit,
+  evaluateJobDecision,
   getCandidateProfileBridgeIssues,
+  getTrackedRecommendation,
   resolveAIProvider,
   type ApplicationOutcomeReason,
   type ApplicationRecord,
@@ -806,23 +807,28 @@ export default function HomePage({
     profileQualitySignals.reduce((sum, item) => sum + item.score, 0) /
       profileQualitySignals.length
   )
+  // Decision now comes from evaluateJobDecision: the stricter of the legacy
+  // country-fit average and orchestrateJobDecision (role fit + international
+  // evidence), so the dashboard and the content route agree.
   const fitEvaluation = useMemo(
     () =>
-      evaluateCountryFit({
+      evaluateJobDecision({
         profile: state.profile,
         job: {
           ...state.jobAnalysis,
           fitScore
         },
+        fit: autoTimeFitReview,
         context: {
           candidatePosition: resolvedProductContext.candidatePosition,
           targetCountry: resolvedProductContext.targetCountry,
           outcomeSignals: outcomeLearningSignals
         }
-      }),
+      }).evaluation,
     [
       state.profile,
       state.jobAnalysis,
+      autoTimeFitReview,
       resolvedProductContext,
       fitScore,
       outcomeLearningSignals
@@ -2937,15 +2943,16 @@ export default function HomePage({
             job: jobForTracking,
             profile: state.profile
           })
-          evaluationForTracking = evaluateCountryFit({
+          evaluationForTracking = evaluateJobDecision({
             profile: state.profile,
             job: { ...jobForTracking, fitScore: reviewForTracking.fitScore },
+            fit: reviewForTracking,
             context: {
               candidatePosition: resolvedProductContext.candidatePosition,
               targetCountry: resolvedProductContext.targetCountry,
               outcomeSignals: outcomeLearningSignals
             }
-          })
+          }).evaluation
         }
         // If the AI check failed, hit a rate limit, or needs an upgrade,
         // tracking still proceeds with the local heuristic review - same
@@ -2956,15 +2963,13 @@ export default function HomePage({
       const application = createApplication(
         {
           ...jobForTracking,
-          fitScore: evaluationForTracking.overallScore,
-          recommendation:
-            evaluationForTracking.decision === "Apply now"
-              ? "High Priority"
-              : evaluationForTracking.decision === "Stretch application"
-                ? "Stretch"
-                : evaluationForTracking.decision === "Skip for now"
-                  ? "Skip"
-                  : "Worth Applying",
+          // Role-fit score, matching the euFitScore the dashboard displays
+          // (previously the legacy country-component average was saved).
+          fitScore: reviewForTracking.fitScore,
+          recommendation: getTrackedRecommendation(
+            evaluationForTracking.decision,
+            reviewForTracking.fitScore
+          ),
           positioningAngle: evaluationForTracking.positioningAngle,
           scoreFactors: evaluationForTracking.components.map(
             (item) => `${item.label}: ${item.rationale}`

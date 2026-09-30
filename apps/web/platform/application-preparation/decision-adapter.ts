@@ -8,6 +8,7 @@ import {
   migrateCandidateProfileToMobilityProfile,
   orchestrateJobDecision,
   resolveAssessmentCountry,
+  resolveInternationalRequirement,
 } from "shared";
 import type {
   ApplicationDecisionResult,
@@ -42,12 +43,14 @@ export async function assessApplicationDecision(
     !input.profile.workRightDetails.trim() && "work-right details",
     !input.job.jobDescription.trim() && "job description",
   ].filter(Boolean) as string[];
-  const candidatePosition =
-    input.context?.candidatePosition ??
-    (input.profile.sponsorshipNeeded ? "foreign-candidate" : "native-candidate");
   const fit = evaluateAutoTimeFitScore({ profile: input.profile, job: input.job });
-  const internationalRequirement =
-    candidatePosition === "foreign-candidate" ? "required" : "not-relevant";
+  // An unsure candidate (no explicit position, sponsorshipNeeded false, no
+  // work-right details) previously fell through to "native-candidate" and
+  // skipped the international check entirely.
+  const internationalRequirement = resolveInternationalRequirement({
+    candidatePosition: input.context?.candidatePosition,
+    profile: input.profile,
+  });
 
   if (internationalRequirement === "required") {
     const targetCountry = resolveAssessmentCountry({

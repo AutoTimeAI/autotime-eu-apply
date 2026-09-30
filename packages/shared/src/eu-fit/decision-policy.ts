@@ -157,3 +157,28 @@ export function getApplicationPriority(
   return "Skip"
 }
 
+
+/**
+ * Maps a final decision plus role-fit score to the tracker's recommendation
+ * vocabulary. Any non-apply decision ("Skip for now", "Improve profile
+ * first") is tracked as "Skip" - previously "Improve profile first" fell
+ * through to "Worth Applying", ranking a gated job above a stretch.
+ */
+export function getTrackedRecommendation(
+  decision: CountryFitDecision,
+  fitScore: number
+): EUFitEngineResult["applicationPriority"] {
+  if (decision === "Apply now") {
+    // The fit score caps the priority, so this stays correct even for a
+    // caller outside evaluateJobDecision's "Apply now" implies fit >= 65
+    // strictness guarantee.
+    return getApplicationPriority(fitScore)
+  }
+
+  if (decision === "Stretch application") {
+    return "Stretch"
+  }
+
+  return "Skip"
+}
+

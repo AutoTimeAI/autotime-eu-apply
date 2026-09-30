@@ -80,7 +80,11 @@ test("a foreign-candidate can supply the target country via context instead of t
 
 test("a native candidate is unaffected by the missing target country - the mobility check does not apply", async () => {
   const result = await assessApplicationDecision({
-    profile: { ...baseProfile(), sponsorshipNeeded: false },
+    profile: {
+      ...baseProfile(),
+      sponsorshipNeeded: false,
+      workRightDetails: "Irish citizen, no sponsorship required.",
+    },
     job: baseJob(),
     reusableAnswers: null,
   })
@@ -99,4 +103,32 @@ test("job location is used as a fallback target country when the profile has non
   })
 
   assert.notEqual(result.decision, "Insufficient evidence")
+})
+
+test("an unsure candidate (no sponsorship flag, no work-right details, no context) still gets the mobility check", async () => {
+  const result = await assessApplicationDecision({
+    profile: { ...baseProfile(), sponsorshipNeeded: false, workRightDetails: "" },
+    job: baseJob(),
+    reusableAnswers: null,
+  })
+
+  // No target country anywhere, so the check cannot run - but it must be
+  // reported as missing evidence rather than silently skipped.
+  assert.equal(result.decision, "Insufficient evidence")
+  assert.ok(
+    result.missingEvidence.includes("target country for mobility assessment"),
+  )
+})
+
+test("an explicit native-candidate context is respected even with empty work-right details", async () => {
+  const result = await assessApplicationDecision({
+    profile: { ...baseProfile(), sponsorshipNeeded: false, workRightDetails: "" },
+    job: baseJob(),
+    reusableAnswers: null,
+    context: { candidatePosition: "native-candidate" },
+  })
+
+  assert.ok(
+    !result.missingEvidence.includes("target country for mobility assessment"),
+  )
 })

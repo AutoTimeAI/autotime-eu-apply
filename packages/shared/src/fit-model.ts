@@ -248,6 +248,21 @@ function includesAny(value: string, words: string[]) {
     .some((word) => text.includes(word))
 }
 
+/**
+ * Whole-word, case-insensitive match. Used for seniority and domain signals,
+ * where plain substring matching produced false positives: "intern" inside
+ * "international"/"internal", "lead" inside "leadership", "head" inside
+ * "headquarters", "mid" inside "Midlands", and "ai" inside "maintain",
+ * "email" or "detail" (a free domain match for almost every job and CV).
+ */
+function matchesWholeWord(text: string, word: string): boolean {
+  const escaped = word.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  if (!escaped) {
+    return false
+  }
+  return new RegExp(`\\b${escaped}\\b`, "i").test(text)
+}
+
 function normaliseTextList(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value
@@ -752,10 +767,10 @@ export function evaluateAutoTimeFitScore({
       : Math.max(5, skillCoverage * 25)
 
   const jobSeniority = senioritySignals.find((signal) =>
-    jobText.includes(signal)
+    matchesWholeWord(jobText, signal)
   )
   const profileSeniority = senioritySignals.find((signal) =>
-    [profileText, job.seniority ?? ""].join(" ").toLowerCase().includes(signal)
+    matchesWholeWord([profileText, job.seniority ?? ""].join(" "), signal)
   )
   const seniorityPoints =
     !jobSeniority
@@ -767,9 +782,11 @@ export function evaluateAutoTimeFitScore({
           : 5
 
   const jobDomainSignals = domainSignals.filter((signal) =>
-    jobText.includes(signal)
+    matchesWholeWord(jobText, signal)
   )
-  const matchedDomainSignals = getSharedSignals(profileText, jobDomainSignals)
+  const matchedDomainSignals = jobDomainSignals.filter((signal) =>
+    matchesWholeWord(profileText, signal)
+  )
   const domainPoints =
     jobDomainSignals.length === 0
       ? 6
@@ -993,6 +1010,27 @@ export function evaluateAutoTimeFitScore({
   }
 }
 
+/** User-facing positioning and next-action copy for a content-generation gate. */
+export function getContentGateCopy(contentGate: ContentGenerationGate): {
+  positioningAngle: string
+  nextBestAction: string
+} {
+  return {
+    positioningAngle:
+      contentGate === "ready"
+        ? "Lead with matched proof, country readiness, and the strongest role-language overlap before writing content."
+        : contentGate === "stretch"
+          ? "Label this as a stretch: only generate content after the weak country/work-right points are acknowledged."
+          : "Do not generate application content yet; resolve the country, work-right, or sponsorship blocker first.",
+    nextBestAction:
+      contentGate === "ready"
+        ? "Save the job, tailor content, then set a follow-up or interview-prep action."
+        : contentGate === "stretch"
+          ? "Clarify the weakest fit component, then decide whether the strategic value justifies applying."
+          : "Fix the blocker before spending time on resume or cover-letter content."
+  }
+}
+
 /**
  * @deprecated Country, work-right, sponsorship and relocation conclusions are
  * legacy advisory output. Use assessInternationalJob plus
@@ -1027,18 +1065,7 @@ export function evaluateCountryFit({
     hasHardBlockers: blockers.length > 0
   })
   const contentGate = getContentGenerationGate(decision)
-  const positioningAngle =
-    contentGate === "ready"
-      ? "Lead with matched proof, country readiness, and the strongest role-language overlap before writing content."
-      : contentGate === "stretch"
-        ? "Label this as a stretch: only generate content after the weak country/work-right points are acknowledged."
-        : "Do not generate application content yet; resolve the country, work-right, or sponsorship blocker first."
-  const nextBestAction =
-    contentGate === "ready"
-      ? "Save the job, tailor content, then set a follow-up or interview-prep action."
-      : contentGate === "stretch"
-        ? "Clarify the weakest fit component, then decide whether the strategic value justifies applying."
-        : "Fix the blocker before spending time on resume or cover-letter content."
+  const { positioningAngle, nextBestAction } = getContentGateCopy(contentGate)
   const evidenceChecklist = [
     rule.marketNote,
     ...rule.evidencePrompts,

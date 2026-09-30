@@ -95,7 +95,11 @@ test("recording attaches pilot governance metadata without changing the decision
 
 test("a native candidate (mobility check not applicable) is never touched by the recording client", async () => {
   const input = {
-    profile: { ...baseProfile(), sponsorshipNeeded: false },
+    profile: {
+      ...baseProfile(),
+      sponsorshipNeeded: false,
+      workRightDetails: "Irish citizen, no sponsorship required.",
+    },
     job: baseJob(),
     reusableAnswers: null,
   }

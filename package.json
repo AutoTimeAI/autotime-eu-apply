@@ -25,6 +25,7 @@
     "test:country-fit": "node --experimental-strip-types scripts/country-fit-model.test.mjs",
     "test:evidence-integrity": "node --experimental-strip-types --test scripts/evidence-integrity.test.mjs",
     "test:international-orchestration": "node --experimental-strip-types --test scripts/international-orchestration.test.mjs",
+    "test:job-decision": "node --experimental-strip-types --test scripts/job-decision.test.mjs",
     "test:sponsorship-readiness": "node --experimental-strip-types --test scripts/sponsorship-readiness.test.mjs",
     "test:international-module": "node --experimental-strip-types --test scripts/international-module.test.mjs",
     "test:international-mobility-persistence": "node --experimental-strip-types --test scripts/international-mobility-persistence.test.mjs",
