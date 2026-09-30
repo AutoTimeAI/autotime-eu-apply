@@ -863,11 +863,49 @@ export async function tailorCoverLetterWithOpenAI({ cv, jobDescription, companyN
   return { ...result, value: [result.value.opening, ...result.value.bodyParagraphs, result.value.closing].join("\n\n") };
 }
 
+// Every field below a top-level array has its own default/optional
+// fallback, not just the arrays themselves. The prompt tells the model to
+// omit uncertain facts rather than invent them, and it sometimes follows
+// that literally by emitting a partial entry (e.g. an experience item with
+// no title/company/dates because the source text was a summary paragraph
+// with no structured work history) instead of omitting the entry outright.
+// A strict schema (string, not string.default("")) turned that well-behaved
+// "I don't know" into a 500 on every such request - reproduced live: the
+// "Importing your saved CV from Profile..." auto-import 500'd on every
+// attempt for a profile whose base_cv_text is prose without an explicit
+// job title/company/date structure.
 const cvEnrichmentSchema = z.object({
   summary: z.string().default(""),
   skills: z.array(z.string()).default([]),
-  experience: z.array(z.object({ title: z.string(), company: z.string(), dates: z.string(), bullets: z.array(z.string()) })).default([]),
-  education: z.array(z.object({ degree: z.string(), institution: z.string(), dates: z.string() })).default([]),
+  experience: z
+    .array(
+      z.object({
+        title: z.string().default(""),
+        company: z.string().default(""),
+        dates: z.string().default(""),
+        bullets: z.array(z.string()).default([]),
+      }),
+    )
+    .default([])
+    // Drop entries the model left entirely blank rather than showing the
+    // user an empty, unlabelled experience card to delete by hand.
+    .transform((entries) =>
+      entries.filter(
+        (entry) => entry.title || entry.company || entry.dates || entry.bullets.length > 0,
+      ),
+    ),
+  education: z
+    .array(
+      z.object({
+        degree: z.string().default(""),
+        institution: z.string().default(""),
+        dates: z.string().default(""),
+      }),
+    )
+    .default([])
+    .transform((entries) =>
+      entries.filter((entry) => entry.degree || entry.institution || entry.dates),
+    ),
 });
 
 export async function extractCvEnrichmentWithOpenAI({ content, sourceLabel }: { content: string; sourceLabel: string }) {
@@ -876,7 +914,8 @@ export async function extractCvEnrichmentWithOpenAI({ content, sourceLabel }: { 
       "Extract a conservative CV enrichment draft from user-provided source content.",
       "Return JSON with summary, skills, experience, and education matching the supplied schema.",
       "Use only explicit evidence. Never invent employers, roles, dates, qualifications, metrics, tools, or outcomes.",
-      "Omit uncertain facts. Keep experience bullets concise and factual. This is a suggestion the user will review before saving.",
+      "Omit uncertain facts: if a work-history or education entry lacks a clear title/degree, company/institution, or date range, leave it out of the array entirely rather than including a partial entry.",
+      "Keep experience bullets concise and factual. This is a suggestion the user will review before saving.",
       UNTRUSTED_CONTENT_GUARD,
     ].join(" "),
     input: { sourceLabel, content },
