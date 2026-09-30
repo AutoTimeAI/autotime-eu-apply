@@ -490,19 +490,19 @@ export function OnboardingWizard() {
             </p>
             {(
               [
-                ["fullName", "Full name", "text", "name", 100],
+                ["fullName", "Full name *", "text", "name", 100],
                 ["phone", "Phone *", "tel", "tel", 25],
                 ["email", "Contact email (optional)", "email", "email", 254],
                 [
                   "countryCurrent",
-                  "Current location",
+                  "Current location *",
                   "text",
                   "address-level2",
                   120,
                 ],
                 [
                   "countriesTarget",
-                  "Target countries (comma separated)",
+                  "Target countries (comma separated) *",
                   "text",
                   "country-name",
                   500,
