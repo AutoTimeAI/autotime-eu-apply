@@ -5242,9 +5242,19 @@ unlabelled inference, explicit-input priority, labelled-line priority,
 and a negative case confirming a long prose first line is correctly
 left un-guessed rather than mis-titled). Typechecked, linted, built,
 committed (`191f7b3e`), deployed, and re-verified live: a fresh
-QA-account paste in the unlabelled shape, with the Job title/Employer
-inputs left blank, now correctly shows the inferred title and employer
-instead of falling back to "Untitled role"/"Employer unknown."
+QA-account paste in the unlabelled shape (`Principal Quantum Reliability
+Engineer` followed by `Orion Meridian Labs - London, United Kingdom`),
+with the Job title/Employer inputs left blank, now correctly shows the
+inferred title and employer instead of falling back to "Untitled
+role"/"Employer unknown." Vercel deployment
+`dpl_BsTpRWkRvyEHwgRzhjNwJKbE4zAq` was confirmed Ready and carrying the
+production `autotime-eu-apply.vercel.app` alias before the check. The
+verification row (`d83f0992-e586-4be3-a2cb-cfab37315455`) was then
+deleted from `job_workflow_jobs`, scoped to the QA account's actual
+`auth.users.id` (`21e880f8-75c8-4a94-8952-5e77bf7e0b89`, looked up by
+email rather than assuming it matched `profiles.id`), and absence was
+confirmed. Temporary verification scripts and the earlier
+`scripts/qa-explore-pages.mjs` were removed.
 
 The pre-existing stray job (`5c3e759e...`) itself was left untouched -
 it was created before this fix existed, is not data from this session,
