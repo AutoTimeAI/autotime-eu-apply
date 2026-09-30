@@ -131,8 +131,17 @@ export default function CVWorkspace({
                   localStorage.setItem(key, JSON.stringify(next));
                   return next;
                 });
+                const imported = enrichPayload.data as CVEnrichment;
+                const importedParts = [
+                  imported.summary?.trim() && "a summary",
+                  imported.skills?.length && "skills",
+                  imported.experience?.length && "experience",
+                  imported.education?.length && "education",
+                ].filter((part): part is string => Boolean(part));
                 setStatus(
-                  "Imported experience, education and skills from your saved CV. Review every claim.",
+                  importedParts.length
+                    ? `Imported ${importedParts.join(", ")} from your saved CV. Review every claim.`
+                    : "Your saved CV didn't contain enough detail to import automatically - fill in the fields below.",
                 );
               })
               .catch(() => {
