@@ -38,6 +38,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: { ...result.value, sourceLabel: result.sourceUrl, notes: ["AI-extracted suggestion. Verify every claim before applying it to your CV."] }, error: null });
   } catch (error) {
     const status = error instanceof z.ZodError ? 400 : error instanceof PortfolioFetchError ? 400 : error instanceof FeatureGateError ? 402 : error instanceof RateLimitError ? 429 : 500;
-    return NextResponse.json({ data: null, error: toPublicApiError(error instanceof Error ? error.message : "CV enrichment failed", status) }, { status });
+    const message = error instanceof Error ? error.message : "CV enrichment failed";
+    // toPublicApiError replaces this message with a generic one for any
+    // status >= 500 (correctly - it must never leak internals to the
+    // client), which meant a genuine server-side failure here was
+    // previously invisible everywhere: never logged, and never surfaced in
+    // the client response either. Found via a real reproduction: the
+    // profile_cv auto-import (CVWorkspace.tsx, fires once on page load
+    // whenever the canonical CV is empty and the profile has a base_cv_text)
+    // 500'd on every attempt in production, silently, for any user who had
+    // never yet built a canonical CV.
+    if (status >= 500) {
+      console.error("ai.cv-enrich.unexpected-error", { message, status });
+    }
+    return NextResponse.json({ data: null, error: toPublicApiError(message, status) }, { status });
   }
 }
